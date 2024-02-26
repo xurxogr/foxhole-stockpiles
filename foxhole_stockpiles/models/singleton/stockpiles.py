@@ -1,10 +1,8 @@
 from asyncio import create_task
 import json
 import logging
-import uuid
 
 from pydantic import TypeAdapter
-from keras.models import load_model
 
 from foxhole_stockpiles.models.singleton.singletonmeta import SingletonMeta
 from foxhole_stockpiles.models.stockpile import Stockpile
@@ -75,12 +73,6 @@ class Stockpiles(metaclass=SingletonMeta):
             self.__logger.debug("name: '{}' and region: {}'. Stockpile already exists".format(stockpile.name, stockpile.region))
             return message
 
-        if stockpile.uid is not None:
-            message = "name: '{}' and region: {}'. Uid should be none".format(stockpile.name, stockpile.region)
-            self.__logger.info(message)
-            return message
-
-        stockpile.uid = str(uuid.uuid4())
         self.__stockpiles[stockpile.uid] = stockpile
         self.__logger.info("name: '{}' and region: {}'. Stockpile added with uid: '{}'".format(stockpile.name, stockpile.region, stockpile.uid))
 
