@@ -3,7 +3,6 @@ import logging
 import os.path
 
 import cv2
-import easyocr
 import numpy
 
 from foxhole_stockpiles.config.settings import Settings
@@ -27,35 +26,17 @@ class Stockpiles(metaclass=SingletonMeta):
         self.__item_spacing_width = int(settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_ITEM_SPACING_WIDTH))
         self.__debug = int(settings.get(section=Settings.SECTION_GENERAL, option=Settings.OPTION_DEBUG))
         path = settings.get(section=Settings.SECTION_GENERAL, option=Settings.OPTION_ICONS_PATH)
-        self.__items = None
-        self.__load_items(path=path)
-        self.__ocrreader = easyocr.Reader(lang_list=['en'])
+        ocr_class = settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_CLASS)
+        self.__ocr = None
+        if ocr_class == 'easyocr':
+            from foxhole_stockpiles.models.ocr.easyocr_ocr import EasyocrOCR
+            self.__ocr = EasyocrOCR(path=path)
+        else:
+            raise ValueError("ocr class should be set to 'easyocr': '{}'".format(ocr_class))
+        #elif ocr_class == 'tensorflow':
 
     def get_debug(self) -> bool:
         return self.__debug == 1
-
-    def __load_items(self, path: str):
-        """
-        Loads the db items
-        :param path: str = Path to load the icons from
-        """
-
-        if not path:
-            raise Exception("Icons path not defined")
-
-        self.__items = []
-        for file_name in glob.glob("{}/*.*".format(path)):
-            image = cv2.imread(filename=file_name, flags=cv2.IMREAD_GRAYSCALE)
-            item = Item(
-                id=os.path.splitext(os.path.basename(file_name))[0],
-                image=image
-            )
-            self.__items.append(item)
-
-        if not self.__items:
-            message = "No icons found in the icons folder: {}".format(path)
-            self.__logger.error(message)
-            raise Exception(message)
 
     def extract_stockpile_from_file(self, file_name: str, flags: int = cv2.IMREAD_COLOR) -> Stockpile | None:
         """
@@ -83,120 +64,6 @@ class Stockpiles(metaclass=SingletonMeta):
         bytes_as_np_array = numpy.frombuffer(buffer.read(), dtype=numpy.uint8)
         image = cv2.imdecode(bytes_as_np_array, flags)
         return self.__extract_stockpile_from_image(image=image)
-
-    def __resize_image(self, image: cv2.typing.MatLike, scale: float = 4.4) -> cv2.typing.MatLike:
-        """
-        Resizes an image keeping the aspect ratio
-        :param image: Image to rescale
-        :param scale: Scale to resize
-        :returns cv2.typing.MatLike: Rescaled image
-        """
-        if image is None:
-            return None
-
-        if scale == 1:
-            return image
-
-        return cv2.resize(image, None, fx=scale, fy=scale)
-
-    def __extract_text_from_image(self, image: cv2.typing.MatLike) -> str:
-        """
-        Extracts text from an image
-        :param image: Image to extract text from
-        :returns str: Text found
-        """
-        if image is None:
-            return None
-
-        text = ""
-        scale_used = 0
-
-        # FIXME - Find a better way to find the text. It many cases it didn't detected "-"
-        # Depending on the resolution the scale 11 or 18 is needed
-        for scale in [4, 11, 18]:
-            resized_image = self.__resize_image(image=image, scale=scale)
-            text_found = ""
-            try:
-                ocr_text = self.__ocrreader.readtext(image=resized_image)
-                if ocr_text:
-                    text_found = ocr_text[0][1]
-            except:
-                continue
-
-            if len(text) < len(text_found):
-                text = text_found
-                scale_used = scale
-
-        #self.__logger.warning("Text found: {}. Scale: {}".format(text, scale_used))
-
-        return text
-
-    def __extract_quantity_from_image(self, image: cv2.typing.MatLike) -> int:
-        """
-        Extract the quantity from an image
-        Image: [ "Number" ]
-        The number could contain k to indicate 1000+
-
-        :param image: Image to detect the type and name from
-        :returns int: Quantity detected
-        """
-
-        if image is None:
-            return None
-
-        # most of the values are detected with the first scale.
-        # The rest of the scales have been proved to detect other numbers depending on the resolution of the image
-        for scale in [2.2, 4,4, 8, 20]:
-            resized_image = self.__resize_image(image=image, scale=scale)
-            ocr_text = None
-            try:
-                ocr_text = self.__ocrreader.readtext(image=resized_image, allowlist='0123456789k')
-            except Exception as ex:
-                self.__logger.error("Error processing text from an image: {}".format(str(ex)))
-
-            if ocr_text:
-                text = ocr_text[0][1]
-                number = -1
-                try:
-                    if 'k' in text:
-                        number = int(text.replace('k', ''))*1000
-                    else:
-                        number = int(text)
-                except:
-                    pass
-
-                return number
-
-        return -1
-
-    def __extract_item_from_image(self, image: cv2.typing.MatLike) -> tuple[str, int]:
-        """
-        Given an image extracts the id of the identified item
-
-        :param image: cv2.typing.MatLike = Image to detect the item from
-        :returns tuple[str, int]: item id and threshold
-        """
-        id = None
-        item_threshold = 0
-
-        # Cache the rescaled image to fit the different icons size
-        # TODO: Check if this resize is really needed...
-        rescaled_images = {}
-        for item in self.__items:
-            icon_image = item.image
-            dims = (icon_image.shape[1], icon_image.shape[0])
-            if dims not in rescaled_images:
-                rescaled_images[dims] = cv2.resize(image, dims)
-
-            rescaled_image = rescaled_images[dims]
-            res = cv2.matchTemplate(rescaled_image, icon_image, cv2.TM_CCOEFF_NORMED)
-            threshold = numpy.amax(res)
-
-            if threshold > item_threshold:
-                id = item.id
-                item_threshold = threshold
-
-        return id, item_threshold
 
     def __extract_stockpile_from_image(self, image: cv2.typing.MatLike, file_name: str = "Buffer") -> Stockpile:
         """
@@ -271,11 +138,11 @@ class Stockpiles(metaclass=SingletonMeta):
 
             # Detect quantity
             quantity_image = image[y:y2, x:x2]
-            quantity = self.__extract_quantity_from_image(image=quantity_image)
+            quantity = self.__ocr.extract_quantity_from_image(image=quantity_image)
 
             # Detect icon
             icon_image = image[y:y2, x1:x1+h]
-            item_id, threshold = self.__extract_item_from_image(image=icon_image)
+            item_id, threshold = self.__ocr.extract_item_from_image(image=icon_image)
 
             # Add item to the list
             item = StockpileItem(
@@ -307,12 +174,12 @@ class Stockpiles(metaclass=SingletonMeta):
                 else:
                     color = (0, 255, 0)
                 cv2.rectangle(original_image, (x, y), (x + w, y + h), color, 2)
+                # draw the quantity detected
+                cv2.putText(original_image, str(quantity), (int(x + w/2), y), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2, cv2.LINE_AA)
 
                 # draw a rectangle where the icon was found
                 color = (255, 0, 255)
                 cv2.rectangle(original_image, (x1, y), (x1 + h, y2), color, 2)
-
-
 
         # Include the title in the cropped image
         # [title] <-- same height that the items (detected_item_height)
@@ -344,10 +211,10 @@ class Stockpiles(metaclass=SingletonMeta):
         stockpile_name_image = image[ny1:ny2, nx1:nx2]
         if self.__debug:
             # Add rectangles over the title and name
-            cv2.rectangle(original_image, (tx1, my1), (tx2, ty2), (255, 0, 255), 2)
+            cv2.rectangle(original_image, (tx1, ty1), (tx2, ty2), (255, 0, 255), 2)
             cv2.rectangle(original_image, (nx1, ny1), (nx2, ny2), (255, 0, 255), 2)
 
-        type_text = self.__extract_text_from_image(image=stockpile_type_image)
+        type_text = self.__ocr.extract_text_from_image(image=stockpile_type_image)
         try:
             type_ = stockpile_type(type_text)
         except:
@@ -355,7 +222,7 @@ class Stockpiles(metaclass=SingletonMeta):
 
         name = ""
         if type_ in [stockpile_type.SEAPORT, stockpile_type.STORAGE_DEPOT]:
-            name = self.__extract_text_from_image(image=stockpile_name_image)
+            name = self.__ocr.extract_text_from_image(image=stockpile_name_image)
 
         # Crop the image to store only the stockpile with the title and the items
         cropped_image = original_image[my1:my2, mx1:mx2]

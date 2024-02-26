@@ -16,6 +16,7 @@ class Settings(metaclass=SingletonMeta):
     SECTION_GENERAL = 'GENERAL'
 
     # OCR Options
+    OPTION_OCR_CLASS = 'ocr_class'
     OPTION_OCR_ITEM_MIN_WIDTH = 'item_min_w'
     OPTION_OCR_ITEM_MAX_WIDTH = 'item_max_w'
     OPTION_OCR_ITEM_MIN_WH_RATIO = 'item_min_ratio'
@@ -73,7 +74,8 @@ class Settings(metaclass=SingletonMeta):
             raise NoSectionError(section)
 
         for option in [self.OPTION_OCR_ITEM_MIN_WIDTH, self.OPTION_OCR_ITEM_MAX_WIDTH, self.OPTION_OCR_ITEM_MIN_WH_RATIO,
-                       self.OPTION_OCR_ITEM_MAX_WH_RATIO, self.OPTION_OCR_ITEM_SPACING_HEIGHT, self.OPTION_OCR_ITEM_SPACING_WIDTH]:
+                       self.OPTION_OCR_ITEM_MAX_WH_RATIO, self.OPTION_OCR_ITEM_SPACING_HEIGHT, self.OPTION_OCR_ITEM_SPACING_WIDTH,
+                       self.OPTION_OCR_CLASS]:
             if not self.__config_parser.has_option(section, option):
                  raise NoOptionError(option, section)
 
