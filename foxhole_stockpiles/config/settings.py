@@ -13,8 +13,9 @@ class Settings(metaclass=SingletonMeta):
     SECTION_OCR = 'OCR'
     SECTION_LOGGING = 'LOGGING'
     SECTION_DISCORD_BOT = 'DISCORD_BOT'
-    SECTION_GENERAL = 'GENERAL'
+    SECTION_MODELS = 'MODELS'
     SECTION_DEVELOPER = 'DEVELOPER'
+    SECTION_API = 'API'
 
     # OCR Options
     OPTION_OCR_ITEM_MIN_WIDTH = 'item_min_w'
@@ -46,6 +47,10 @@ class Settings(metaclass=SingletonMeta):
     OPTION_DEV_DETECT_STOCKPILE_TYPE = 'detect_stockpile_type'
     OPTION_DEV_DRAW_RECTANGLES = 'draw_rectangles'
 
+    # API options
+    OPTION_USERNAME = 'username'
+    OPTION_PASSWORD = 'password'
+
     def __init__(self) -> None:
         self.__logger = logging.getLogger(__name__)
         self.__config_parser = None
@@ -57,8 +62,9 @@ class Settings(metaclass=SingletonMeta):
         self.__check_section_logging()
         self.__check_section_ocr()
         self.__check_section_discord_bot()
-        self.__check_section_general()
+        self.__check_section_models()
         self.__check_section_developer()
+        self.__check_section_api()
 
     def get_section(self, section: str) -> dict:
         """
@@ -146,9 +152,9 @@ class Settings(metaclass=SingletonMeta):
             for option in options:
                 self.__config_parser.set(section, option, None)
 
-    def __check_section_general(self):
-        """Checks for needed options in GENERAL section"""
-        section = self.SECTION_GENERAL
+    def __check_section_models(self):
+        """Checks for needed options in MODELS section"""
+        section = self.SECTION_MODELS
         if not self.__config_parser.has_section(section):
             raise NoSectionError(section)
 
@@ -170,3 +176,13 @@ class Settings(metaclass=SingletonMeta):
             value = self.__config_parser.get(section=section, option=option)
             if value not in ["0", "1"]:
                 raise ValueError("Section: {}, option: {}: {} found but only 0 or 1 are valid values".format(section, option, value))
+
+    def __check_section_api(self):
+        """Checks for needed options in API section"""
+        section = self.SECTION_API
+        if not self.__config_parser.has_section(section):
+            raise NoSectionError(section)
+
+        for option in [self.OPTION_USERNAME, self.OPTION_PASSWORD]:
+            if not self.__config_parser.has_option(section, option):
+                raise NoOptionError(option, section)

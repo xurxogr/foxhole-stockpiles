@@ -1,3 +1,4 @@
+from asyncio import create_task
 import json
 import logging
 import os.path
@@ -6,7 +7,7 @@ import easyocr
 import cv2
 import numpy
 from pydantic import TypeAdapter
-from tensorflow.keras.models import load_model
+from keras.models import load_model
 
 from foxhole_stockpiles.config.settings import Settings
 from foxhole_stockpiles.models.catalog_item import CatalogItem
@@ -36,20 +37,28 @@ class Stockpiles(metaclass=SingletonMeta):
         self.__dev_draw_rectangles = int(settings.get(section=Settings.SECTION_DEVELOPER, option=Settings.OPTION_DEV_DRAW_RECTANGLES))
 
         # Models and catalogs path
-        icons_path = settings.get(section=Settings.SECTION_GENERAL, option=Settings.OPTION_ICONS_PATH)
-        quantity_path = settings.get(section=Settings.SECTION_GENERAL, option=Settings.OPTION_QUANTITIES_PATH)
-        catalog_items_path = settings.get(section=Settings.SECTION_GENERAL, option=Settings.OPTION_CATALOG_ITEMS_PATH)
+        self.__icons_path = settings.get(section=Settings.SECTION_MODELS, option=Settings.OPTION_ICONS_PATH)
+        self.__quantity_path = settings.get(section=Settings.SECTION_MODELS, option=Settings.OPTION_QUANTITIES_PATH)
+        self.__catalog_items_path = settings.get(section=Settings.SECTION_MODELS, option=Settings.OPTION_CATALOG_ITEMS_PATH)
 
-        # Load models and item catalog
-        self.__icons_model, self.__icons_classes = self.__load_model(path=icons_path)
-        self.__quantity_model, self.__quantity_classes = self.__load_model(path=quantity_path)
-        self.__catalog_items = self.__load_catalog(path=catalog_items_path)
+        self.__icons_model = None
+        self.__icons_classes = None
+        self.__quantity_model = None
+        self.__quantity_classes = None
+        self.__catalog_items = None
 
         # Initalize ocr
         # TODO: Extend to other languages
         self.__ocrreader = easyocr.Reader(lang_list=['en', 'es'])
 
-    def __load_catalog(self, path: str) -> dict:
+    async def __init_models(self):
+        # Load models and item catalog
+        self.__icons_model, self.__icons_classes = await self.__load_model(path=self.__icons_path)
+        self.__quantity_model, self.__quantity_classes = await self.__load_model(path=self.__quantity_path)
+        self.__catalog_items = await self.__load_catalog(path=self.__catalog_items_path)
+
+
+    async def __load_catalog(self, path: str) -> dict:
         """
         Loads the item catalog
         :param path: str = Path of the file to read the catalog from
@@ -65,7 +74,7 @@ class Stockpiles(metaclass=SingletonMeta):
 
         return catalog
 
-    def __load_model(self, path: str) -> tuple:
+    async def __load_model(self, path: str) -> tuple:
         model = None
         classes = None
         try:
@@ -77,14 +86,16 @@ class Stockpiles(metaclass=SingletonMeta):
 
         return model, classes
 
-    def get_catalog(self) -> list[CatalogItem]:
+    async def get_catalog(self) -> list[CatalogItem]:
         """
         Returns the items catalog
         """
+        if not self.__catalog_items:
+            await self.__init_models()
 
         return self.__catalog_items
 
-    def __extract_item_from_image(self, image: cv2.typing.MatLike) -> str:
+    async def __extract_item_from_image(self, image: cv2.typing.MatLike) -> str:
         """
         Given an image extracts the id of the identified item
 
@@ -102,7 +113,7 @@ class Stockpiles(metaclass=SingletonMeta):
         item = self.__icons_classes[numpy.argmax(prediction)]
         return item
 
-    def __extract_quantity_from_image(self, image: cv2.typing.MatLike) -> int:
+    async def __extract_quantity_from_image(self, image: cv2.typing.MatLike) -> int:
         """
         Extract the quantity from an image
         Image: [ "Number" ]
@@ -144,7 +155,7 @@ class Stockpiles(metaclass=SingletonMeta):
 
         return ret_val
 
-    def __extract_text_from_image(self, image: cv2.typing.MatLike) -> str:
+    async def __extract_text_from_image(self, image: cv2.typing.MatLike) -> str:
         """
         Extracts text from an image
         :param image: Image to extract text from
@@ -175,7 +186,7 @@ class Stockpiles(metaclass=SingletonMeta):
 
         return text_found
 
-    def __extract_stockpile_type_from_image(self, image: cv2.typing.MatLike) -> stockpile_type:
+    async def __extract_stockpile_type_from_image(self, image: cv2.typing.MatLike) -> stockpile_type:
         """
         Extracts the stockpile type from an image
         :param image: Image to extract text from
@@ -185,7 +196,7 @@ class Stockpiles(metaclass=SingletonMeta):
         if image is None or not self.__dev_dectect_stockpile_type:
             return stockpile_type.UNDEFINED
 
-        type_text = self.__extract_text_from_image(image=image)
+        type_text = await self.__extract_text_from_image(image=image)
 
         try:
             type_ = stockpile_type(type_text)
@@ -194,7 +205,7 @@ class Stockpiles(metaclass=SingletonMeta):
 
         return type_
 
-    def __extract_stockpile_name_from_image(self, image: cv2.typing.MatLike) -> str:
+    async def __extract_stockpile_name_from_image(self, image: cv2.typing.MatLike) -> str:
         """
         Extracts the stockpile name from an image
         :param image: Image to extract text from
@@ -204,9 +215,9 @@ class Stockpiles(metaclass=SingletonMeta):
         if image is None or not self.__dev_dectect_stockpile_name:
             return ""
 
-        return self.__extract_text_from_image(image=image)
+        return await self.__extract_text_from_image(image=image)
 
-    def extract_stockpile_from_file(self, file_name: str, flags: int = cv2.IMREAD_COLOR) -> Stockpile | None:
+    async def extract_stockpile_from_file(self, file_name: str, flags: int = cv2.IMREAD_COLOR) -> Stockpile | None:
         """
         Extract the stockfile information from a file.
         :param file_name: str = File name to extract the information from
@@ -220,20 +231,20 @@ class Stockpiles(metaclass=SingletonMeta):
             return None
 
         image = cv2.imread(filename=file_name, flags=flags)
-        return self.__extract_stockpile_from_image(image=image, file_name=file_name)
+        return await self.__extract_stockpile_from_image(image=image, file_name=file_name)
 
-    def extract_stockpile_from_buffer(self, buffer, flags: int = cv2.IMREAD_COLOR) -> cv2.typing.MatLike:
+    async def extract_stockpile_from_buffer(self, buffer, flags: int = cv2.IMREAD_COLOR) -> cv2.typing.MatLike:
         """
         Reads an image from an existing buffer
         :param buffer: Buffer to read the image from
         :param flags: cv2 read flags. Defaults to cv2.IMREAD_COLOR
         :returns cv2.typing.MatLike: decoded image
         """
-        bytes_as_np_array = numpy.frombuffer(buffer.read(), dtype=numpy.uint8)
+        bytes_as_np_array = numpy.frombuffer(await buffer.read(), dtype=numpy.uint8)
         image = cv2.imdecode(bytes_as_np_array, flags)
-        return self.__extract_stockpile_from_image(image=image)
+        return await self.__extract_stockpile_from_image(image=image)
 
-    def __extract_stockpile_from_image(self, image: cv2.typing.MatLike, file_name: str = "Buffer") -> Stockpile:
+    async def __extract_stockpile_from_image(self, image: cv2.typing.MatLike, file_name: str = "Buffer") -> Stockpile:
         """
         Given an image extracts the portion that contains the stockpile and information about the location of the items.
         This method does not returns the items themselves but the location in the image
@@ -244,6 +255,10 @@ class Stockpiles(metaclass=SingletonMeta):
 
         if image is None:
             return None
+
+        # Lazy initialization.
+        if not self.__icons_model:
+            await self.__init_models()
 
         # Values have been configured for a resolution of 1440. Reshape the min-max width accordingly
         # Detection tested with vertical resolutions: 2160, 1440, 1200, 1080, 1050, 1024, 992, 664
@@ -306,11 +321,11 @@ class Stockpiles(metaclass=SingletonMeta):
 
             # Detect quantity
             quantity_image = image[quantity_y1:quantity_y2, quantity_x1:quantity_x2]
-            quantity = self.__extract_quantity_from_image(image=quantity_image)
+            quantity = await self.__extract_quantity_from_image(image=quantity_image)
 
             # Detect icon
             icon_image = image[icon_y1:icon_y2, icon_x1:icon_x2]
-            item_id = self.__extract_item_from_image(image=icon_image)
+            item_id = await self.__extract_item_from_image(image=icon_image)
 
             # Add item to the list
             crated = False
@@ -381,8 +396,8 @@ class Stockpiles(metaclass=SingletonMeta):
             cv2.rectangle(image, (type_x1, type_y1), (type_x2, type_y2), (255, 0, 255), 2)
             cv2.rectangle(image, (name_x1, name_y1), (name_x2, name_y2), (255, 0, 255), 2)
 
-        type_ = self.__extract_stockpile_type_from_image(image=stockpile_type_image)
-        name = self.__extract_stockpile_name_from_image(image=stockpile_name_image)
+        type_ = await self.__extract_stockpile_type_from_image(image=stockpile_type_image)
+        name = await self.__extract_stockpile_name_from_image(image=stockpile_name_image)
 
         # Crop the image to store only the stockpile with the type, name and the items
         cropped_image = image[min_y:max_y, min_x:max_x]

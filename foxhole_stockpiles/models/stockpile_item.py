@@ -17,8 +17,6 @@ class StockpileItem(BaseModel):
             "example": {
                 "code": "GrenadeLauncherC",
                 "quantity": "3",
-                "crated": False,
-                "icon_image": [],
-                "quantity_crated": []
+                "crated": False
             }
         }

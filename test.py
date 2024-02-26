@@ -1,17 +1,17 @@
+import asyncio
 import cv2
 import glob
-import json
 import logging
 
 from foxhole_stockpiles.models.singleton.stockpiles import Stockpiles
 
-def main():
+async def test():
     logger = logging.getLogger(__name__)
     stockpiles = Stockpiles()
-    catalog = stockpiles.get_catalog()
+    catalog = await stockpiles.get_catalog()
 
     for file_name in glob.glob("images/all/*m3.jpg"):
-        stockpile = stockpiles.extract_stockpile_from_file(file_name=file_name)
+        stockpile = await stockpiles.extract_stockpile_from_file(file_name=file_name)
         if stockpile is None:
             logger.warning("No stockpile found in file '{}'".format(file_name))
             continue
@@ -25,8 +25,7 @@ def main():
         #print(json.dumps(stockpile.model_dump(), indent=2))
         #cv2.imshow(file_name, stockpile.image)
 
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+asyncio.run(test())
 
-if __name__ == '__main__':
-    main()
+cv2.waitKey(0)
+cv2.destroyAllWindows()
