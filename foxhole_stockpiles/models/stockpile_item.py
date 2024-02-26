@@ -2,19 +2,23 @@ from numpy import ndarray
 from pydantic import BaseModel
 from pydantic import Field
 
+
 class StockpileItem(BaseModel):
-    id: str | None = Field(description="Id of the item", default=None)
-    image: ndarray | None = Field(description="Image with the icon", default=None)
+    code: str = Field(description="Code of item detected from the icon")
+    icon_image: ndarray | None = Field(description="Icon image", default=None, exclude=True)
     quantity: int = Field(description="Quantity of the item", ge=-1, default=-1)
-    threshold: float | None = Field(description="threshold for icon matching", deffault=None)
+    quantity_image: ndarray | None = Field(description="Quantity image", default=None, exclude=True)
+    crated: bool = Field(description="Is the item crated?", default=False)
 
     class Config:
         arbitrary_types_allowed=True
         extra = "forbid"
         json_schema_extra = {
             "example": {
-                "id": "34",
-                "image": [],
-                "quantity": 30
+                "code": "GrenadeLauncherC",
+                "quantity": "3",
+                "crated": False,
+                "icon_image": [],
+                "quantity_crated": []
             }
         }

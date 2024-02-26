@@ -36,6 +36,8 @@ class Settings(metaclass=SingletonMeta):
     # General options
     OPTION_DEBUG = 'debug'
     OPTION_ICONS_PATH = 'icons_path'
+    OPTION_QUANTITIES_PATH = 'quantities_path'
+    OPTION_CATALOG_ITEMS_PATH = 'catalog_items_path'
 
     def __init__(self) -> None:
         self.__logger = logging.getLogger(__name__)
@@ -120,6 +122,6 @@ class Settings(metaclass=SingletonMeta):
         if not self.__config_parser.has_section(section):
             raise NoSectionError(section)
 
-        for option in [self.OPTION_DEBUG, self.OPTION_ICONS_PATH]:
+        for option in [self.OPTION_DEBUG, self.OPTION_ICONS_PATH, self.OPTION_QUANTITIES_PATH, self.OPTION_CATALOG_ITEMS_PATH]:
             if not self.__config_parser.has_option(section, option):
                  raise NoOptionError(option, section)

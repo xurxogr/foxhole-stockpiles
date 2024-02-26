@@ -1,23 +1,25 @@
-import glob
+import json
 import logging
 import os.path
 
+import easyocr
 import cv2
 import numpy
+from pydantic import TypeAdapter
+from tensorflow.keras.models import load_model
 
 from foxhole_stockpiles.config.settings import Settings
+from foxhole_stockpiles.models.catalog_item import CatalogItem
 from foxhole_stockpiles.models.enums.stockpile_type import stockpile_type
-from foxhole_stockpiles.models.stockpile_item import StockpileItem
-from foxhole_stockpiles.models.image import Image
-from foxhole_stockpiles.models.item import Item
 from foxhole_stockpiles.models.singleton.singletonmeta import SingletonMeta
 from foxhole_stockpiles.models.stockpile import Stockpile
-
+from foxhole_stockpiles.models.stockpile_item import StockpileItem
 
 class Stockpiles(metaclass=SingletonMeta):
     def __init__(self):
         settings = Settings()
         self.__logger = logging.getLogger(__name__)
+
         self.__item_min_width = int(settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_ITEM_MIN_WIDTH))
         self.__item_max_width = int(settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_ITEM_MAX_WIDTH))
         self.__item_min_ratio = float(settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_ITEM_MIN_WH_RATIO))
@@ -25,18 +27,164 @@ class Stockpiles(metaclass=SingletonMeta):
         self.__item_spacing_height = int(settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_ITEM_SPACING_HEIGHT))
         self.__item_spacing_width = int(settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_ITEM_SPACING_WIDTH))
         self.__debug = int(settings.get(section=Settings.SECTION_GENERAL, option=Settings.OPTION_DEBUG))
-        path = settings.get(section=Settings.SECTION_GENERAL, option=Settings.OPTION_ICONS_PATH)
-        ocr_class = settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_CLASS)
-        self.__ocr = None
-        if ocr_class == 'easyocr':
-            from foxhole_stockpiles.models.ocr.easyocr_ocr import EasyocrOCR
-            self.__ocr = EasyocrOCR(path=path)
-        else:
-            raise ValueError("ocr class should be set to 'easyocr': '{}'".format(ocr_class))
-        #elif ocr_class == 'tensorflow':
+
+        # Models and catalogs path
+        icons_path = settings.get(section=Settings.SECTION_GENERAL, option=Settings.OPTION_ICONS_PATH)
+        quantity_path = settings.get(section=Settings.SECTION_GENERAL, option=Settings.OPTION_QUANTITIES_PATH)
+        catalog_items_path = settings.get(section=Settings.SECTION_GENERAL, option=Settings.OPTION_CATALOG_ITEMS_PATH)
+
+        # Load models and item catalog
+        self.__icons_model, self.__icons_classes = self.__load_model(path=icons_path)
+        self.__quantity_model, self.__quantity_classes = self.__load_model(path=quantity_path)
+        self.__catalog_items = self.__load_catalog(path=catalog_items_path)
+
+        # Initalize ocr
+        # TODO: Extend to other languages
+        self.__ocrreader = easyocr.Reader(lang_list=['en'])
 
     def get_debug(self) -> bool:
         return self.__debug == 1
+
+    def __load_catalog(self, path: str) -> dict:
+        """
+        Loads the item catalog
+        :param path: str = Path of the file to read the catalog from
+        """
+        catalog = None
+        try:
+            with open(path) as file:
+                catalog = json.load(file)
+
+            catalog = TypeAdapter(list[CatalogItem]).validate_python(catalog)
+        except Exception as ex:
+            raise Exception("Couldn't load the items catalog. Error: {}".format(str(ex)))
+
+        return catalog
+
+    def __load_model(self, path: str) -> tuple:
+        model = None
+        classes = None
+        try:
+            model = load_model("{}.keras".format(path))
+            with open("{}.json".format(path)) as file:
+                classes = json.load(file)
+        except Exception as ex:
+            raise Exception("Couldn't load the models. Error: {}".format(str(ex))) from None
+
+        return model, classes
+
+    def get_catalog(self) -> list[CatalogItem]:
+        """
+        Returns the items catalog
+        """
+
+        return self.__catalog_items
+
+    def __extract_item_from_image(self, image: cv2.typing.MatLike) -> str:
+        """
+        Given an image extracts the id of the identified item
+
+        :param image: cv2.typing.MatLike = Image to detect the item from
+        :returns str: code of the item detected
+        """
+
+        if image is None:
+            return None
+
+        resized_image = cv2.resize(image, (32, 32))
+        expanded_imagen = numpy.expand_dims(resized_image, axis=0)
+
+        prediction = self.__icons_model.predict(expanded_imagen, verbose=0)
+        item = self.__icons_classes[numpy.argmax(prediction)]
+        return item
+
+    def __extract_quantity_from_image(self, image: cv2.typing.MatLike) -> int:
+        """
+        Extract the quantity from an image
+        Image: [ "Number" ]
+        The number could contain k+ to indicate thousands of the number
+
+        :param image: Image to detect the type and name from
+        :returns int: Quantity detected
+        """
+
+        if image is None:
+            return None
+
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        # Identify the individual characters
+        thresh1 = cv2.threshold(gray, 0, 255,cv2.THRESH_OTSU|cv2.THRESH_BINARY)[1]
+        rect_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 1))
+        dilation = cv2.dilate(thresh1, rect_kernel, iterations = 1)
+        contours, _ = cv2.findContours(dilation, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
+        characters = []
+        for cnt in contours:
+            x, y, w, h = cv2.boundingRect(cnt)
+            image = gray[y:y+h, x:x+w]
+            resized_image = cv2.resize(image, (32, 32), interpolation=cv2.INTER_AREA)
+            resized_image = cv2.threshold(resized_image, 100, 255, cv2.THRESH_BINARY_INV)[1]
+            expanded_imagen = numpy.expand_dims(resized_image, axis=0)
+            prediction = self.__quantity_model.predict(expanded_imagen, verbose=0)
+            characters.append(self.__quantity_classes[numpy.argmax(prediction)])
+
+        item = "".join(characters[::-1])
+        item.replace('k+', '000')
+        #cv2.imshow("Imagen: {}".format(ret_val), gray)
+
+        try:
+            ret_val = int(item)
+        except:
+            ret_val = -1
+
+        return ret_val
+
+    def __extract_text_from_image(self, image: cv2.typing.MatLike) -> str:
+        """
+        Extracts text from an image
+        :param image: Image to extract text from
+        :returns str: Text found
+        """
+        if image is None:
+            return None
+
+        text = ""
+
+        # FIXME - Find a better way to find the text. In many cases it didn't detected "-"
+        # Depending on the resolution the scale 11 or 18 is needed
+        for scale in [4, 11, 18]:
+            resized_image = cv2.resize(image, None, fx=scale, fy=scale)
+            text_found = ""
+            try:
+                ocr_text = self.__ocrreader.readtext(image=resized_image, detail=0)
+                text_found = '|'.join(ocr_text)
+            except:
+                continue
+
+            if len(text) < len(text_found):
+                text = text_found
+
+        return text
+
+    def __extract_stockpile_type_from_image(self, image: cv2.typing.MatLike) -> stockpile_type:
+        """
+        Extracts the stockpile type from an image
+        :param image: Image to extract text from
+        :returns str: Text found
+        """
+
+        if image is None:
+            return stockpile_type.UNDEFINED
+
+        type_text = self.__extract_text_from_image(image=image)
+
+        try:
+            type_ = stockpile_type(type_text)
+        except Exception as ex:
+            type_ = stockpile_type.UNDEFINED
+
+        return type_
 
     def extract_stockpile_from_file(self, file_name: str, flags: int = cv2.IMREAD_COLOR) -> Stockpile | None:
         """
@@ -78,7 +226,7 @@ class Stockpiles(metaclass=SingletonMeta):
             return None
 
         # Values have been configured for a resolution of 1440. Reshape the min-max width accordingly
-        # Detection tested with vertical resolutions: 2156, 1440, 1200, 1080, 1050, 1024, 992, 664
+        # Detection tested with vertical resolutions: 2160, 1440, 1200, 1080, 1050, 1024, 992, 664
         width = image.shape[1]
         height = image.shape[0]
         image_ratio = height / 1440
@@ -87,26 +235,26 @@ class Stockpiles(metaclass=SingletonMeta):
         item_min_width = int(self.__item_min_width * image_ratio)
         item_max_width = int(self.__item_max_width * image_ratio)
 
+        item_spacing_width = int(image_ratio * self.__item_spacing_width)
+        item_spacing_height = int(image_ratio * self.__item_spacing_height)
+
         if self.__debug:
             self.__logger.info("Parsing image {}. width: {}, height: {}, ratio: {}. Item min-max width: [{}-{}]".format(
                 file_name, width, height, image_ratio, item_min_width, item_max_width))
 
-        # TODO: Find a better way to know if the image is color or gray
-        original_image = image
-        if len(image.shape) > 2:
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-        thresh = cv2.threshold(image,50,255,0)[1]
+        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        thresh = cv2.threshold(gray_image,50,255,0)[1]
         # FIXME - Replace ints with proper cv2 variables
         contours, _ = cv2.findContours(image=thresh, mode=1, method=2)
 
         # Find the rectangles with the correct width, height size and aspect ratio
-        mx1 = 10000
-        my1 = 10000
-        mx2 = 0
-        my2 = 0
+        min_x = 10000
+        min_y = 10000
+        max_x = 0
+        max_y = 0
         detected_item_height = 0
         detected_item_width = 0
+
         for cnt in contours:
             approx = cv2.approxPolyDP(cnt, 0.01*cv2.arcLength(cnt, True), True)
             if len(approx) != 4:
@@ -126,105 +274,108 @@ class Stockpiles(metaclass=SingletonMeta):
             if w > detected_item_width:
                 detected_item_width = w
 
-            item_spacing_width = int(image_ratio * self.__item_spacing_width)
-            item_spacing_height = int(image_ratio * self.__item_spacing_height)
-
             # [Icon][Spacing][Quantity]. Icon should be square and we know the height
-            # x contains the quantity, rest the icon width (w == h) + the spacing adapted to the image resolution
-            x1 = x - h - item_spacing_width
-            y1 = y
-            x2 = x + w
-            y2 = y + h
+            # x contains the quantity, substract the icon width (w == h) and the spacing adapted to the image resolution
+            icon_x2 = x - item_spacing_width
+            icon_x1 = icon_x2 - h
+            icon_y1 = y
+            icon_y2 = y + h
+
+            quantity_x1 = x
+            quantity_y1 = y
+            quantity_x2 = x + w
+            quantity_y2 = y + h
+
+            # # Quantity comes in rectangle form. It needs to be converted to square
+            # newx = x + int((w - h)/2)
+            # newx2 = newx + h
 
             # Detect quantity
-            quantity_image = image[y:y2, x:x2]
-            quantity = self.__ocr.extract_quantity_from_image(image=quantity_image)
+            quantity_image = image[quantity_y1:quantity_y2, quantity_x1:quantity_x2]
+            quantity = self.__extract_quantity_from_image(image=quantity_image)
 
             # Detect icon
-            icon_image = image[y:y2, x1:x1+h]
-            item_id, threshold = self.__ocr.extract_item_from_image(image=icon_image)
+            icon_image = image[icon_y1:icon_y2, icon_x1:icon_x2]
+            item_id = self.__extract_item_from_image(image=icon_image)
 
             # Add item to the list
+            crated = False
+            if "crated" in item_id:
+                crated = True
+                item_id = item_id.replace('-crated', '')
+
             item = StockpileItem(
-                id=item_id,
-                image=icon_image,
+                code=item_id,
                 quantity=quantity,
-                threshold=threshold
+                crated=crated,
+                icon_image=icon_image,
+                quantity_image=quantity_image
             )
             items.append(item)
 
             # Build a rectangle that contains all other rectangles (Stockpile contents)
             # It will be used to detect the position of the title
-            if x1 < mx1:
-                mx1 = x1
+            if icon_x1 < min_x:
+                min_x = icon_x1
 
-            if y1 < my1:
-                my1 = y1
+            if icon_y1 < min_y:
+                min_y = icon_y1
 
-            if x2 > mx2:
-                mx2 = x2
+            if quantity_x2 > max_x:
+                max_x = quantity_x2
 
-            if y2 > my2:
-                my2 = y2
+            if quantity_y2 > max_y:
+                max_y = quantity_y2
 
             if self.__debug:
                 # draw a rectangle for quantity. In different colour if it wasn't detected
-                if quantity == -1:
-                    color = (0, 0, 255)
-                else:
-                    color = (0, 255, 0)
-                cv2.rectangle(original_image, (x, y), (x + w, y + h), color, 2)
+                cv2.rectangle(image, (quantity_x1, quantity_y1), (quantity_x2, quantity_y2), (0, 0, 255), 2)
                 # draw the quantity detected
-                cv2.putText(original_image, str(quantity), (int(x + w/2), y), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2, cv2.LINE_AA)
-
+                cv2.putText(image, str(quantity), (int(x + w/2), y), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
                 # draw a rectangle where the icon was found
-                color = (255, 0, 255)
-                cv2.rectangle(original_image, (x1, y), (x1 + h, y2), color, 2)
+                cv2.rectangle(image, (icon_x1, icon_y1), (icon_x2, icon_y2), (255, 0, 255), 2)
 
         # Include the title in the cropped image
         # [title] <-- same height that the items (detected_item_height)
         # [spacing] <--- config h spacing adapted to the image resolution (item_spacing_height)
-        # [first item of the stockpile = shirts] <-- my1
-        my1 -= detected_item_height + item_spacing_height
-        mx1 -= item_spacing_width
+        # [first item of the stockpile = shirts] <-- min_y
+        min_y -= detected_item_height + item_spacing_height
+        min_x -= item_spacing_width
 
+        # FIXME: For empty stockpiles it does not follow the rule, hence the Stockpile name is out of bounds
         # Min width = 6 * [icon][spacing][item] + 5*[spacing]
         min_width = (detected_item_height + item_spacing_width + detected_item_width) * 6 + item_spacing_width * 5
-        if mx2 < mx1 + min_width:
-            mx2 = mx1 + min_width
+        if max_x < min_x + min_width:
+            max_x = min_x + min_width
         else:
-            mx2 += item_spacing_width
+            max_x += item_spacing_width
 
         # Title: [type]              [name][tab]
         # Using 3*item width for rectangle crop
         # name is shifted to the left one item width
-        tx1 = mx1
-        tx2 = mx1 + 3 * detected_item_width
-        nx1 = mx2 - 4 * detected_item_width
-        nx2 = mx2 - 1 * detected_item_width
-        ty1 = my1
-        ty2 = my1 + detected_item_height
-        ny1 = my1
-        ny2 = ty2
+        type_x1 = min_x
+        type_x2 = min_x + 3 * detected_item_width
+        name_x1 = max_x - 4 * detected_item_width
+        name_x2 = max_x - 1 * detected_item_width
+        type_y1 = min_y
+        type_y2 = min_y + detected_item_height
+        name_y1 = min_y
+        name_y2 = type_y2
 
-        stockpile_type_image = image[ty1:ty2, tx1:tx2]
-        stockpile_name_image = image[ny1:ny2, nx1:nx2]
+        stockpile_type_image = image[type_y1:type_y2, type_x1:type_x2]
+        stockpile_name_image = image[name_y1:name_y2, name_x1:name_x2]
+
         if self.__debug:
-            # Add rectangles over the title and name
-            cv2.rectangle(original_image, (tx1, ty1), (tx2, ty2), (255, 0, 255), 2)
-            cv2.rectangle(original_image, (nx1, ny1), (nx2, ny2), (255, 0, 255), 2)
+            # Add rectangles over the stockpile type and name
+            cv2.rectangle(image, (type_x1, type_y1), (type_x2, type_y2), (255, 0, 255), 2)
+            cv2.rectangle(image, (name_x1, name_y1), (name_x2, name_y2), (255, 0, 255), 2)
 
-        type_text = self.__ocr.extract_text_from_image(image=stockpile_type_image)
-        try:
-            type_ = stockpile_type(type_text)
-        except:
-            type_ = stockpile_type.UNDEFINED
-
+        type_ = self.__extract_stockpile_type_from_image(image=stockpile_type_image)
         name = ""
         if type_ in [stockpile_type.SEAPORT, stockpile_type.STORAGE_DEPOT]:
-            name = self.__ocr.extract_text_from_image(image=stockpile_name_image)
+            name = self.__extract_text_from_image(image=stockpile_name_image)
 
-        # Crop the image to store only the stockpile with the title and the items
-        cropped_image = original_image[my1:my2, mx1:mx2]
+        # Crop the image to store only the stockpile with the type, name and the items
+        cropped_image = image[min_y:max_y, min_x:max_x]
 
-        return Stockpile(name=name, type=type_, image=Image(name=file_name, image=cropped_image), items=items)
+        return Stockpile(name=name, type=type_, image=cropped_image, items=items)
