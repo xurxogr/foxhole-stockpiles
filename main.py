@@ -10,7 +10,7 @@ def main():
     stockpiles = Stockpiles()
     catalog = stockpiles.get_catalog()
 
-    for file_name in glob.glob("images/3440x1440*.*"):
+    for file_name in glob.glob("images/all/Stora*.jpg"):
         stockpile = stockpiles.extract_stockpile_from_file(file_name=file_name)
         if stockpile is None:
             logger.warning("No stockpile found in file '{}'".format(file_name))
@@ -21,7 +21,7 @@ def main():
             if catalog_item:
                 item.code = catalog_item.display
 
-        print("file_name: {}, Name: {}, type: {}".format(file_name, stockpile.name, stockpile.type))
+        print("file_name: {:35}, Name: {:15}, type: {}".format(file_name, stockpile.name, stockpile.type))
         #print(json.dumps(stockpile.model_dump(), indent=2))
         #cv2.imshow(file_name, stockpile.image)
 

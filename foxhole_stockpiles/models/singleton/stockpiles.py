@@ -47,7 +47,7 @@ class Stockpiles(metaclass=SingletonMeta):
 
         # Initalize ocr
         # TODO: Extend to other languages
-        self.__ocrreader = easyocr.Reader(lang_list=['en'])
+        self.__ocrreader = easyocr.Reader(lang_list=['en', 'es'])
 
     def __load_catalog(self, path: str) -> dict:
         """
@@ -151,25 +151,25 @@ class Stockpiles(metaclass=SingletonMeta):
         :returns str: Text found
         """
         if image is None:
-            return None
+            return ""
 
-        text = ""
+        try:
+            # FIXME: Find a better way. In some cases it doesn't detect - or mistakes 1 and 7
+            th = image.copy()
+            th[th<200] = 0
+            scale=4
+            th = cv2.resize(th, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
 
-        # FIXME - Find a better way to find the text. In many cases it didn't detected "-"
-        # Depending on the resolution the scale 11 or 18 is needed
-        for scale in [4, 11, 18]:
-            resized_image = cv2.resize(image, None, fx=scale, fy=scale)
-            text_found = ""
-            try:
-                ocr_text = self.__ocrreader.readtext(image=resized_image, detail=0)
-                text_found = '|'.join(ocr_text)
-            except:
-                continue
+            # crop the region of interest (ROI)
+            bbox = numpy.where(th>0)
+            roi = th[bbox[0].min():bbox[0].max(), bbox[1].min():bbox[1].max()]
 
-            if len(text) < len(text_found):
-                text = text_found
+            ocr_text = self.__ocrreader.readtext(image=roi, detail=0)
+            text_found = ' '.join(ocr_text)
+        except:
+            return ""
 
-        return text
+        return text_found
 
     def __extract_stockpile_type_from_image(self, image: cv2.typing.MatLike) -> stockpile_type:
         """
@@ -378,9 +378,7 @@ class Stockpiles(metaclass=SingletonMeta):
             cv2.rectangle(image, (name_x1, name_y1), (name_x2, name_y2), (255, 0, 255), 2)
 
         type_ = self.__extract_stockpile_type_from_image(image=stockpile_type_image)
-        name = ""
-        if type_ in [stockpile_type.SEAPORT, stockpile_type.STORAGE_DEPOT]:
-            name = self.__extract_stockpile_name_from_image(image=stockpile_name_image)
+        name = self.__extract_stockpile_name_from_image(image=stockpile_name_image)
 
         # Crop the image to store only the stockpile with the type, name and the items
         cropped_image = image[min_y:max_y, min_x:max_x]
