@@ -14,6 +14,7 @@ class Settings(metaclass=SingletonMeta):
     SECTION_LOGGING = 'LOGGING'
     SECTION_DISCORD_BOT = 'DISCORD_BOT'
     SECTION_GENERAL = 'GENERAL'
+    SECTION_DEVELOPER = 'DEVELOPER'
 
     # OCR Options
     OPTION_OCR_ITEM_MIN_WIDTH = 'item_min_w'
@@ -34,10 +35,16 @@ class Settings(metaclass=SingletonMeta):
     OPTION_DISCORD_BOT_GUILDID = 'guildid'
 
     # General options
-    OPTION_DEBUG = 'debug'
     OPTION_ICONS_PATH = 'icons_path'
     OPTION_QUANTITIES_PATH = 'quantities_path'
     OPTION_CATALOG_ITEMS_PATH = 'catalog_items_path'
+
+    # Developer options
+    OPTION_DEV_DETECT_QUANTITIES = 'detect_quantities'
+    OPTION_DEV_DETECT_ICONS = 'detect_icons'
+    OPTION_DEV_DETECT_STOCKPILE_NAME = 'detect_stockpile_name'
+    OPTION_DEV_DETECT_STOCKPILE_TYPE = 'detect_stockpile_type'
+    OPTION_DEV_DRAW_RECTANGLES = 'draw_rectangles'
 
     def __init__(self) -> None:
         self.__logger = logging.getLogger(__name__)
@@ -51,11 +58,23 @@ class Settings(metaclass=SingletonMeta):
         self.__check_section_ocr()
         self.__check_section_discord_bot()
         self.__check_section_general()
+        self.__check_section_developer()
 
     def get_section(self, section: str) -> dict:
+        """
+        gets a section from the config
+        :param section: str = Name of the section
+        :returns dict: Section as dictionary
+        """
+
         return self.get_sections([ section ])
 
     def get_sections(self, sections: list) -> dict:
+        """
+        gets multiple sections from the config. If the same option exists in multiple sections it will be overwritten
+        :param sections: list = List of sections to read
+        :returns dict: Sections as dictionary
+        """
         options = {}
         for section in sections:
             if self.__config_parser.has_section(section):
@@ -63,10 +82,20 @@ class Settings(metaclass=SingletonMeta):
 
         return options
 
-    def get(self, section: str, option: str) -> any:
+    def get(self, section: str, option: str) -> str:
+        """
+        gets an option from a section
+        :param section: str = Section to read from
+        :param option: str = Option to read from
+        :returns str: Returns the value read
+        """
         return self.__config_parser.get(section, option)
 
     def get_config(self) -> dict:
+        """
+        gets the whole config as a dict
+        :returns dict: ConfigParser as dict
+        """
         return self.get_sections(self.__config_parser.sections())
 
     def __check_section_ocr(self):
@@ -118,10 +147,26 @@ class Settings(metaclass=SingletonMeta):
                 self.__config_parser.set(section, option, None)
 
     def __check_section_general(self):
+        """Checks for needed options in GENERAL section"""
         section = self.SECTION_GENERAL
         if not self.__config_parser.has_section(section):
             raise NoSectionError(section)
 
-        for option in [self.OPTION_DEBUG, self.OPTION_ICONS_PATH, self.OPTION_QUANTITIES_PATH, self.OPTION_CATALOG_ITEMS_PATH]:
+        for option in [self.OPTION_ICONS_PATH, self.OPTION_QUANTITIES_PATH, self.OPTION_CATALOG_ITEMS_PATH]:
             if not self.__config_parser.has_option(section, option):
-                 raise NoOptionError(option, section)
+                raise NoOptionError(option, section)
+
+    def __check_section_developer(self):
+        """Checks for needed options in DEVELOPER section"""
+        section = self.SECTION_DEVELOPER
+        if not self.__config_parser.has_section(section):
+            raise NoSectionError(section)
+
+        for option in [self.OPTION_DEV_DETECT_ICONS, self.OPTION_DEV_DETECT_QUANTITIES, self.OPTION_DEV_DETECT_STOCKPILE_NAME,
+                       self.OPTION_DEV_DETECT_STOCKPILE_TYPE, self.OPTION_DEV_DRAW_RECTANGLES]:
+            if not self.__config_parser.has_option(section, option):
+                raise NoOptionError(option, section)
+
+            value = self.__config_parser.get(section=section, option=option)
+            if value not in ["0", "1"]:
+                raise ValueError("Section: {}, option: {}: {} found but only 0 or 1 are valid values".format(section, option, value))

@@ -27,7 +27,13 @@ class Stockpiles(metaclass=SingletonMeta):
         self.__item_spacing_height = int(settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_ITEM_SPACING_HEIGHT))
         self.__item_spacing_width = int(settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_ITEM_SPACING_WIDTH))
         self.__stockpile_min_width = int(settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_STOCKPILE_MIN_WIDTH))
-        self.__debug = int(settings.get(section=Settings.SECTION_GENERAL, option=Settings.OPTION_DEBUG))
+
+        # Developer options
+        self.__dev_dectect_stockpile_name = int(settings.get(section=Settings.SECTION_DEVELOPER, option=Settings.OPTION_DEV_DETECT_STOCKPILE_NAME))
+        self.__dev_dectect_stockpile_type = int(settings.get(section=Settings.SECTION_DEVELOPER, option=Settings.OPTION_DEV_DETECT_STOCKPILE_TYPE))
+        self.__dev_dectect_quantities = int(settings.get(section=Settings.SECTION_DEVELOPER, option=Settings.OPTION_DEV_DETECT_QUANTITIES))
+        self.__dev_dectect_icons = int(settings.get(section=Settings.SECTION_DEVELOPER, option=Settings.OPTION_DEV_DETECT_ICONS))
+        self.__dev_draw_rectangles = int(settings.get(section=Settings.SECTION_DEVELOPER, option=Settings.OPTION_DEV_DRAW_RECTANGLES))
 
         # Models and catalogs path
         icons_path = settings.get(section=Settings.SECTION_GENERAL, option=Settings.OPTION_ICONS_PATH)
@@ -42,9 +48,6 @@ class Stockpiles(metaclass=SingletonMeta):
         # Initalize ocr
         # TODO: Extend to other languages
         self.__ocrreader = easyocr.Reader(lang_list=['en'])
-
-    def get_debug(self) -> bool:
-        return self.__debug == 1
 
     def __load_catalog(self, path: str) -> dict:
         """
@@ -89,8 +92,8 @@ class Stockpiles(metaclass=SingletonMeta):
         :returns str: code of the item detected
         """
 
-        if image is None:
-            return None
+        if image is None or not self.__dev_dectect_icons:
+            return ""
 
         resized_image = cv2.resize(image, (32, 32))
         expanded_imagen = numpy.expand_dims(resized_image, axis=0)
@@ -109,8 +112,8 @@ class Stockpiles(metaclass=SingletonMeta):
         :returns int: Quantity detected
         """
 
-        if image is None:
-            return None
+        if image is None or not self.__dev_dectect_quantities:
+            return -1
 
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
@@ -172,10 +175,10 @@ class Stockpiles(metaclass=SingletonMeta):
         """
         Extracts the stockpile type from an image
         :param image: Image to extract text from
-        :returns str: Text found
+        :returns stockpile_type: type found
         """
 
-        if image is None:
+        if image is None or not self.__dev_dectect_stockpile_type:
             return stockpile_type.UNDEFINED
 
         type_text = self.__extract_text_from_image(image=image)
@@ -186,6 +189,18 @@ class Stockpiles(metaclass=SingletonMeta):
             type_ = stockpile_type.UNDEFINED
 
         return type_
+
+    def __extract_stockpile_name_from_image(self, image: cv2.typing.MatLike) -> str:
+        """
+        Extracts the stockpile name from an image
+        :param image: Image to extract text from
+        :returns str: Text found
+        """
+
+        if image is None or not self.__dev_dectect_stockpile_name:
+            return ""
+
+        return self.__extract_text_from_image(image=image)
 
     def extract_stockpile_from_file(self, file_name: str, flags: int = cv2.IMREAD_COLOR) -> Stockpile | None:
         """
@@ -239,9 +254,8 @@ class Stockpiles(metaclass=SingletonMeta):
         item_spacing_width = int(image_ratio * self.__item_spacing_width)
         item_spacing_height = int(image_ratio * self.__item_spacing_height)
 
-        if self.__debug:
-            self.__logger.info("Parsing image {}. width: {}, height: {}, ratio: {}. Item min-max width: [{}-{}]".format(
-                file_name, width, height, image_ratio, item_min_width, item_max_width))
+        self.__logger.debug("Parsing image {}. width: {}, height: {}, ratio: {}. Item min-max width: [{}-{}]".format(
+            file_name, width, height, image_ratio, item_min_width, item_max_width))
 
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         thresh = cv2.threshold(gray_image, 50, 255, cv2.THRESH_BINARY)[1]
@@ -323,7 +337,7 @@ class Stockpiles(metaclass=SingletonMeta):
             if quantity_y2 > max_y:
                 max_y = quantity_y2
 
-            if self.__debug:
+            if self.__dev_draw_rectangles:
                 # draw a rectangle for quantity. In different colour if it wasn't detected
                 cv2.rectangle(image, (quantity_x1, quantity_y1), (quantity_x2, quantity_y2), (0, 0, 255), 2)
                 # draw the quantity detected
@@ -358,7 +372,7 @@ class Stockpiles(metaclass=SingletonMeta):
         stockpile_type_image = image[type_y1:type_y2, type_x1:type_x2]
         stockpile_name_image = image[name_y1:name_y2, name_x1:name_x2]
 
-        if self.__debug:
+        if self.__dev_draw_rectangles:
             # Add rectangles over the stockpile type and name
             cv2.rectangle(image, (type_x1, type_y1), (type_x2, type_y2), (255, 0, 255), 2)
             cv2.rectangle(image, (name_x1, name_y1), (name_x2, name_y2), (255, 0, 255), 2)
@@ -366,7 +380,7 @@ class Stockpiles(metaclass=SingletonMeta):
         type_ = self.__extract_stockpile_type_from_image(image=stockpile_type_image)
         name = ""
         if type_ in [stockpile_type.SEAPORT, stockpile_type.STORAGE_DEPOT]:
-            name = self.__extract_text_from_image(image=stockpile_name_image)
+            name = self.__extract_stockpile_name_from_image(image=stockpile_name_image)
 
         # Crop the image to store only the stockpile with the type, name and the items
         cropped_image = image[min_y:max_y, min_x:max_x]
