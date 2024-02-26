@@ -18,8 +18,8 @@ class Stockpile(BaseModel):
     image: ndarray | None = Field(description="Image data", default=None, exclude=True)
     items: conlist(item_type=StockpileItem) | None = Field(description="List of items", default=[])
     timestamp: datetime | None = Field(description="last update datetime", default=None)
-    region: str = Field(description="Name of the region the stockpile belongs to")
-    code: str = Field(description="Stockpile access code")
+    region: str = Field(description="Name of the region the stockpile belongs to", default=None)
+    code: str = Field(description="Stockpile access code", default=None)
 
     class Config:
         arbitrary_types_allowed=True
