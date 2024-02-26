@@ -1,4 +1,3 @@
-from asyncio import create_task
 import json
 import logging
 import os.path
@@ -16,7 +15,7 @@ from foxhole_stockpiles.models.singleton.singletonmeta import SingletonMeta
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
 
-class Stockpiles(metaclass=SingletonMeta):
+class OCR(metaclass=SingletonMeta):
     def __init__(self):
         settings = Settings()
         self.__logger = logging.getLogger(__name__)

@@ -3,11 +3,11 @@ import cv2
 import glob
 import logging
 
-from foxhole_stockpiles.models.singleton.stockpiles import Stockpiles
+from foxhole_stockpiles.models.singleton.ocr import OCR
 
 async def test():
     logger = logging.getLogger(__name__)
-    stockpiles = Stockpiles()
+    stockpiles = OCR()
     catalog = await stockpiles.get_catalog()
 
     for file_name in glob.glob("images/all/*m3.jpg"):
