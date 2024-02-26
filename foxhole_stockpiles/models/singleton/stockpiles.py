@@ -164,8 +164,12 @@ class Stockpiles(metaclass=SingletonMeta):
             bbox = numpy.where(th>0)
             roi = th[bbox[0].min():bbox[0].max(), bbox[1].min():bbox[1].max()]
 
-            ocr_text = self.__ocrreader.readtext(image=roi, detail=0)
-            text_found = ' '.join(ocr_text)
+            # Returns [coords(A, B, C, D), text, threshold]
+            # A---B  | If Y coord of any point is < 0, it will return wrong order
+            # D---C  | As we know the text is in the same line reorder texts using x coord of point A
+            ocr_text = self.__ocrreader.readtext(image=roi)
+            result = sorted(ocr_text, key=lambda x: x[0][0][0])
+            text_found = " ".join([x[1] for x in result])
         except:
             return ""
 
