@@ -12,6 +12,6 @@ ocr_router = APIRouter()
 
 @ocr_router.post("/scan_image", response_model=Stockpile, response_model_exclude_none=True)
 async def __scan_image(image: UploadFile, name: str, username: Annotated[str, Depends(get_current_username)]):
-    stockpiles = OCR()
-    stockpile = await stockpiles.extract_stockpile_from_buffer(image)
+    ocr = OCR()
+    stockpile = await ocr.extract_stockpile_from_buffer(image)
     return stockpile

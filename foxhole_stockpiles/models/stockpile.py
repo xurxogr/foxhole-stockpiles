@@ -13,7 +13,7 @@ from foxhole_stockpiles.models.stockpile_item import StockpileItem
 
 class Stockpile(BaseModel):
     uid: str | None = Field(description="Internal id", default=None)
-    name: str = Field(description="Name of the stockpile", default="")
+    name: str = Field(description="Name of the stockpile")
     type: stockpile_type = Field(description="Type of stockpile", default=stockpile_type.UNDEFINED)
     image: ndarray | None = Field(description="Image data", default=None, exclude=True)
     items: conlist(item_type=StockpileItem) | None = Field(description="List of items", default=[])
@@ -23,7 +23,6 @@ class Stockpile(BaseModel):
 
     class Config:
         arbitrary_types_allowed=True
-        use_enum_values = True
         extra = "forbid"
         json_schema_extra = {
             "example": {
