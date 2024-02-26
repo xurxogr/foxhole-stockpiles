@@ -8,6 +8,7 @@ class CatalogItem(BaseModel):
     display: str
     description: str
     category: catalog_item_category | None
+    # TODO: Load the rest of the properties
 
     class Config:
         extra = "forbid"

@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Final
+import uuid
 
 from numpy import ndarray
 from pydantic import BaseModel
@@ -11,13 +12,14 @@ from foxhole_stockpiles.models.stockpile_item import StockpileItem
 
 
 class Stockpile(BaseModel):
-    UNNAMED: Final = 'Unnamed'
-
-    name: str = Field(description="Name of the stockpile", default="Unnamed")
+    uid: str | None = Field(description="Internal id", default=None)
+    name: str = Field(description="Name of the stockpile", default="")
     type: stockpile_type = Field(description="Type of stockpile", default=stockpile_type.UNDEFINED)
     image: ndarray | None = Field(description="Image data", default=None, exclude=True)
     items: conlist(item_type=StockpileItem) | None = Field(description="List of items", default=[])
     timestamp: datetime | None = Field(description="last update datetime", default=None)
+    region: str = Field(description="Name of the region the stockpile belongs to")
+    code: str = Field(description="Stockpile access code")
 
     class Config:
         arbitrary_types_allowed=True
