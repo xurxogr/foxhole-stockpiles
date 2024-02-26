@@ -26,6 +26,7 @@ class Stockpiles(metaclass=SingletonMeta):
         self.__item_max_ratio = float(settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_ITEM_MAX_WH_RATIO))
         self.__item_spacing_height = int(settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_ITEM_SPACING_HEIGHT))
         self.__item_spacing_width = int(settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_ITEM_SPACING_WIDTH))
+        self.__stockpile_min_width = int(settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_STOCKPILE_MIN_WIDTH))
         self.__debug = int(settings.get(section=Settings.SECTION_GENERAL, option=Settings.OPTION_DEBUG))
 
         # Models and catalogs path
@@ -243,9 +244,8 @@ class Stockpiles(metaclass=SingletonMeta):
                 file_name, width, height, image_ratio, item_min_width, item_max_width))
 
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        thresh = cv2.threshold(gray_image,50,255,0)[1]
-        # FIXME - Replace ints with proper cv2 variables
-        contours, _ = cv2.findContours(image=thresh, mode=1, method=2)
+        thresh = cv2.threshold(gray_image, 50, 255, cv2.THRESH_BINARY)[1]
+        contours, _ = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
         # Find the rectangles with the correct width, height size and aspect ratio
         min_x = 10000
@@ -285,10 +285,6 @@ class Stockpiles(metaclass=SingletonMeta):
             quantity_y1 = y
             quantity_x2 = x + w
             quantity_y2 = y + h
-
-            # # Quantity comes in rectangle form. It needs to be converted to square
-            # newx = x + int((w - h)/2)
-            # newx2 = newx + h
 
             # Detect quantity
             quantity_image = image[quantity_y1:quantity_y2, quantity_x1:quantity_x2]
@@ -342,11 +338,8 @@ class Stockpiles(metaclass=SingletonMeta):
         min_y -= detected_item_height + item_spacing_height
         min_x -= item_spacing_width
 
-        # FIXME: For empty stockpiles it does not follow the rule, hence the Stockpile name is out of bounds
-        # Min width = 6 * [icon][spacing][item] + 5*[spacing]
-        min_width = (detected_item_height + item_spacing_width + detected_item_width) * 6 + item_spacing_width * 5
-        if max_x < min_x + min_width:
-            max_x = min_x + min_width
+        if max_x < min_x + self.__stockpile_min_width:
+            max_x = min_x + self.__stockpile_min_width
         else:
             max_x += item_spacing_width
 
