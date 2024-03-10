@@ -233,12 +233,12 @@ class OCR(metaclass=SingletonMeta):
         image = cv2.imread(filename=file_name, flags=flags)
         return await self.__extract_stockpile_from_image(image=image, file_name=file_name)
 
-    async def extract_stockpile_from_buffer(self, buffer, flags: int = cv2.IMREAD_COLOR) -> cv2.typing.MatLike:
+    async def extract_stockpile_from_buffer(self, buffer, flags: int = cv2.IMREAD_COLOR) -> Stockpile | None:
         """
         Reads an image from an existing buffer
         :param buffer: Buffer to read the image from
         :param flags: cv2 read flags. Defaults to cv2.IMREAD_COLOR
-        :returns cv2.typing.MatLike: decoded image
+        :returns Stockpile: Returns the information of the Stockpile or None if nothing is detected
         """
         bytes_as_np_array = numpy.frombuffer(await buffer.read(), dtype=numpy.uint8)
         image = cv2.imdecode(bytes_as_np_array, flags)
