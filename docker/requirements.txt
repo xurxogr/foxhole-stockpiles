@@ -1,4 +1,4 @@
-pip install pydantic easyocr fastapi uvicorn tensorflow-cpu python-multipart opencv-python uuid-shortener-py
+#pip install pydantic easyocr fastapi uvicorn tensorflow-cpu python-multipart opencv-python uuid-shortener-py
 absl-py==2.1.0
 annotated-types==0.6.0
 anyio==4.2.0

@@ -1,13 +1,14 @@
 from pydantic import BaseModel
+from pydantic import Field
 
 from foxhole_stockpiles.models.enums.catalog_item_category import catalog_item_category
 
 
 class CatalogItem(BaseModel):
-    code: str
-    display: str
-    description: str
-    category: catalog_item_category | None
+    code: str = Field(description="Code of the item")
+    display: str = Field(description="Display name for the item")
+    description: str = Field(description="Item in game description")
+    category: catalog_item_category | None = Field(description="Item category for displaying ingame", default=None)
     # TODO: Load the rest of the properties
 
     class Config:

@@ -139,8 +139,9 @@ class OCR(metaclass=SingletonMeta):
             image = gray[y:y+h, x:x+w]
             resized_image = cv2.resize(image, (32, 32), interpolation=cv2.INTER_AREA)
             resized_image = cv2.threshold(resized_image, 100, 255, cv2.THRESH_BINARY_INV)[1]
-            expanded_imagen = numpy.expand_dims(resized_image, axis=0)
-            prediction = self.__quantity_model.predict(expanded_imagen, verbose=0)
+            gray_image = cv2.cvtColor(resized_image, cv2.COLOR_GRAY2RGB)
+            expanded_image = numpy.expand_dims(gray_image, axis=0)
+            prediction = self.__quantity_model.predict(expanded_image, verbose=0)
             characters.append(self.__quantity_classes[numpy.argmax(prediction)])
 
         item = "".join(characters[::-1])
