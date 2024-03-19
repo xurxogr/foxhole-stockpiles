@@ -1,9 +1,6 @@
 from configparser import ConfigParser
-from configparser import NoSectionError
-from configparser import NoOptionError
 import json
 import logging
-import os
 from typing import Final
 
 from foxhole_stockpiles.config.env_interpolation import EnvInterpolation
@@ -11,11 +8,13 @@ from foxhole_stockpiles.models.singleton.singletonmeta import SingletonMeta
 
 
 class Settings(metaclass=SingletonMeta):
+    __FILE_NAME: Final = 'options.ini'
+    __USER_FILE_NAME: Final = 'user.ini'
+
     SECTION_OCR: Final = 'OCR'
     SECTION_LOGGING: Final = 'LOGGING'
     SECTION_MODELS: Final = 'MODELS'
     SECTION_DEVELOPER: Final = 'DEVELOPER'
-    SECTION_HERMES: Final = 'HERMES'
 
     # OCR Options
     OPTION_OCR_ITEM_MIN_WIDTH: Final = 'item_min_w'
@@ -42,20 +41,24 @@ class Settings(metaclass=SingletonMeta):
     OPTION_DEV_DETECT_STOCKPILE_TYPE: Final = 'detect_stockpile_type'
     OPTION_DEV_DRAW_RECTANGLES: Final = 'draw_rectangles'
 
-    # Hermes Options
-    OPTION_URL: Final = 'url'
+    # User options
+    SECTION_KEYBIND: Final = 'KEYBIND'
+    SECTION_SERVER: Final = 'SERVER'
+    # Keybind options
+    OPTION_KEY = 'KEY'
+    # Server options
+    OPTION_URL = 'URL'
+    OPTION_TOKEN = 'TOKEN'
 
     def __init__(self) -> None:
-        self.__config_parser = None
-
-        filepath = os.path.dirname(os.path.realpath(__file__))
         self.__config_parser = ConfigParser(interpolation=EnvInterpolation())
-        self.__config_parser.read(["{}/config.ini".format(filepath)])
+        self.__user_config_parser = ConfigParser(interpolation=EnvInterpolation())
+        self.__config_parser.read(self.__FILE_NAME)
+        self.__user_config_parser.read(self.__USER_FILE_NAME)
 
         self.__check_section(section=self.SECTION_DEVELOPER, options=[
             self.OPTION_DEV_DETECT_ICONS, self.OPTION_DEV_DETECT_QUANTITIES, self.OPTION_DEV_DETECT_STOCKPILE_NAME,
             self.OPTION_DEV_DETECT_STOCKPILE_TYPE, self.OPTION_DEV_DRAW_RECTANGLES])
-        self.__check_section(section=self.SECTION_HERMES, options=[self.OPTION_URL])
         self.__check_section(section=self.SECTION_LOGGING, options=[self.OPTION_LOG_LEVEL, self.OPTION_LOGGERS])
         self.__check_section(section=self.SECTION_MODELS, options=[self.OPTION_ICONS_PATH, self.OPTION_QUANTITIES_PATH, self.OPTION_CATALOG_ITEMS_PATH])
         self.__check_section(section=self.SECTION_OCR, options=[
@@ -63,18 +66,20 @@ class Settings(metaclass=SingletonMeta):
             self.OPTION_OCR_ITEM_MAX_WH_RATIO, self.OPTION_OCR_ITEM_SPACING_HEIGHT, self.OPTION_OCR_ITEM_SPACING_WIDTH,
             self.OPTION_OCR_STOCKPILE_MIN_WIDTH])
 
+        self.__check_section(section=self.SECTION_KEYBIND, options=[self.OPTION_KEY], user=True)
+        self.__check_section(section=self.SECTION_SERVER, options=[self.OPTION_URL, self.OPTION_TOKEN], user=True)
+
         self.__init_logging()
 
-    def __check_section(self, section: str, options: list[str]):
+    def __check_section(self, section: str, options: list[str], user: bool = False):
         """Checks for needed options in a section"""
-        if not self.__config_parser.has_section(section):
-            self.__config_parser.add_section(section)
-            #raise NoSectionError(section)
+        config_parser = self.__user_config_parser if user else self.__config_parser
+        if not config_parser.has_section(section):
+            config_parser.add_section(section)
 
         for option in options:
-            if not self.__config_parser.has_option(section, option):
-                self.__config_parser.set(section=section, option=option, value='')
-                #raise NoOptionError(option, section)
+            if not config_parser.has_option(section, option):
+                config_parser.set(section=section, option=option, value='')
 
     def __init_logging(self):
         """Checks for needed options in logging section (optional)"""
@@ -92,27 +97,16 @@ class Settings(metaclass=SingletonMeta):
             except:
                 pass
 
-    def get_section(self, section: str) -> dict:
+    def __select_config_parser(self, section: str):
         """
-        gets a section from the config
-        :param section: str = Name of the section
-        :returns dict: Section as dictionary
+        select the config parser depending on the section
+        :param section: str = Section
+        :returns config_parser:
         """
+        if section in [self.SECTION_SERVER, self.SECTION_KEYBIND]:
+            return self.__user_config_parser
 
-        return self.get_sections([ section ])
-
-    def get_sections(self, sections: list) -> dict:
-        """
-        gets multiple sections from the config. If the same option exists in multiple sections it will be overwritten
-        :param sections: list = List of sections to read
-        :returns dict: Sections as dictionary
-        """
-        options = {}
-        for section in sections:
-            if self.__config_parser.has_section(section):
-                options.update(dict(self.__config_parser[section]))
-
-        return options
+        return self.__config_parser
 
     def get(self, section: str, option: str) -> str:
         """
@@ -121,11 +115,22 @@ class Settings(metaclass=SingletonMeta):
         :param option: str = Option to read from
         :returns str: Returns the value read
         """
-        return self.__config_parser.get(section, option)
+        config_parser = self.__select_config_parser(section=section)
+        return config_parser.get(section, option)
 
-    def get_config(self) -> dict:
+    def set(self, section: str, option: str, value: any):
         """
-        gets the whole config as a dict
-        :returns dict: ConfigParser as dict
+        sets option for a section
+        :param section: str = Section
+        :param option: str = Option
+        :param value: any = Value to set
         """
-        return self.get_sections(self.__config_parser.sections())
+        config_parser = self.__select_config_parser(section=section)
+        return config_parser.set(section=section, option=option, value=value)
+
+    def save(self):
+        """
+        Saves the config to file
+        """
+        with open(self.__USER_FILE_NAME, 'w') as file:
+            self.__user_config_parser.write(file)
