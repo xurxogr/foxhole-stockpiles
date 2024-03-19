@@ -20,7 +20,7 @@ class HermesConnector():
             return { "message": "Stockpile is Empty" }
 
         if not api_key:
-            return { "API key not set" }
+            return { "message": "API key not set" }
 
         items = []
         item: StockpileItem
@@ -33,8 +33,12 @@ class HermesConnector():
         }
 
         headers = { "X-API-TOKEN": api_key }
+        return_data = {}
         async with AsyncClient(verify=False, headers=headers) as client:
             response = await client.post(url=self.__url, json=hermes_dict)
+            if response.status_code == 200:
+                return_data = response.json()
+            else:
+                return_data = { "message": response.text }
 
-            print(response.status_code)
-            print(response.text)
+        return return_data
