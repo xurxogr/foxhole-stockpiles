@@ -1,10 +1,11 @@
-FROM python:3.11-slim
+FROM python:3.11
 
 # Install dependencies
 WORKDIR /code
 COPY ./docker/requirements.txt /code/requirements.txt
-RUN python -m pip install --upgrade pip && pip3 install --no-cache-dir --upgrade -r ./requirements.txt
-
+RUN apt update && apt install -y musl-dev g++ libgl1
+RUN python -m pip install --upgrade pip
+RUN --mount=type=cache,target=/root.cache pip3 install -r ./requirements.txt
 
 # Install python files
 COPY ./foxhole_stockpiles /code/foxhole_stockpiles
