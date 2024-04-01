@@ -34,6 +34,7 @@ class OCR(metaclass=SingletonMeta):
         self.__dev_dectect_quantities = int(settings.get(section=Settings.SECTION_DEVELOPER, option=Settings.OPTION_DEV_DETECT_QUANTITIES))
         self.__dev_dectect_icons = int(settings.get(section=Settings.SECTION_DEVELOPER, option=Settings.OPTION_DEV_DETECT_ICONS))
         self.__dev_draw_rectangles = int(settings.get(section=Settings.SECTION_DEVELOPER, option=Settings.OPTION_DEV_DRAW_RECTANGLES))
+        self.__dev_save_images = int(settings.get(section=Settings.SECTION_DEVELOPER, option=Settings.OPTION_DEV_SAVE_IMAGES))
 
         # Models and catalogs path
         self.__icons_path = settings.get(section=Settings.SECTION_MODELS, option=Settings.OPTION_ICONS_PATH)
@@ -398,8 +399,11 @@ class OCR(metaclass=SingletonMeta):
 
         type_ = await self.__extract_stockpile_type_from_image(image=stockpile_type_image)
         name = await self.__extract_stockpile_name_from_image(image=stockpile_name_image)
-
         # Crop the image to store only the stockpile with the type, name and the items
         cropped_image = image[min_y:max_y, min_x:max_x]
+        if self.__dev_save_images:
+            cv2.imwrite("stockpile_name.png", stockpile_name_image)
+            cv2.imwrite("stockpile_type.png", stockpile_type_image)
+            cv2.imwrite("stockpile.png", cropped_image)
 
         return Stockpile(name=name, type=type_, image=cropped_image, items=items)

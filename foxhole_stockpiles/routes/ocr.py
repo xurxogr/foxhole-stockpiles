@@ -20,7 +20,6 @@ async def __scan_image(image: UploadFile, request: Request):
     stockpile = await ocr.extract_stockpile_from_buffer(image)
     end = time.time()
     print("Scanned image in {}".format(end - start))
-    start = end
     if not stockpile:
         return { "message": "No stockpile found in the image" }
 

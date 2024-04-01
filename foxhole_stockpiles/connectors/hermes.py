@@ -21,6 +21,9 @@ class HermesConnector():
 
         if not api_key:
             return { "message": "API key not set" }
+        
+        if not self.__url:
+            return { "message": "URL is not set" }
 
         items = []
         item: StockpileItem

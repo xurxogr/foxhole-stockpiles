@@ -41,6 +41,7 @@ class Settings(metaclass=SingletonMeta):
     OPTION_DEV_DETECT_STOCKPILE_NAME: Final = 'detect_stockpile_name'
     OPTION_DEV_DETECT_STOCKPILE_TYPE: Final = 'detect_stockpile_type'
     OPTION_DEV_DRAW_RECTANGLES: Final = 'draw_rectangles'
+    OPTION_DEV_SAVE_IMAGES: Final = 'save_images'
 
     # Hermes Options
     OPTION_URL: Final = 'url'
@@ -54,7 +55,7 @@ class Settings(metaclass=SingletonMeta):
 
         self.__check_section(section=self.SECTION_DEVELOPER, options=[
             self.OPTION_DEV_DETECT_ICONS, self.OPTION_DEV_DETECT_QUANTITIES, self.OPTION_DEV_DETECT_STOCKPILE_NAME,
-            self.OPTION_DEV_DETECT_STOCKPILE_TYPE, self.OPTION_DEV_DRAW_RECTANGLES])
+            self.OPTION_DEV_DETECT_STOCKPILE_TYPE, self.OPTION_DEV_DRAW_RECTANGLES, self.OPTION_DEV_SAVE_IMAGES])
         self.__check_section(section=self.SECTION_HERMES, options=[self.OPTION_URL])
         self.__check_section(section=self.SECTION_LOGGING, options=[self.OPTION_LOG_LEVEL, self.OPTION_LOGGERS])
         self.__check_section(section=self.SECTION_MODELS, options=[self.OPTION_ICONS_PATH, self.OPTION_QUANTITIES_PATH, self.OPTION_CATALOG_ITEMS_PATH])
