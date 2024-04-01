@@ -14,6 +14,9 @@ async def __scan_image(image: UploadFile, request: Request):
     if not api_key:
         return { "message": "No api key" }
 
+    if image is None:
+        return { "message": "No imput image" }
+
     import time
     start = time.time()
     ocr = OCR()
