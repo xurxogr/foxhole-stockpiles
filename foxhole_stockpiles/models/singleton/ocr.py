@@ -402,8 +402,11 @@ class OCR(metaclass=SingletonMeta):
         # Crop the image to store only the stockpile with the type, name and the items
         cropped_image = image[min_y:max_y, min_x:max_x]
         if self.__dev_save_images:
-            cv2.imwrite("stockpile_name.png", stockpile_name_image)
-            cv2.imwrite("stockpile_type.png", stockpile_type_image)
-            cv2.imwrite("stockpile.png", cropped_image)
+            if stockpile_name_image is not None:
+                cv2.imwrite("stockpile_name.png", stockpile_name_image)
+            if stockpile_type_image is not None:
+                cv2.imwrite("stockpile_type.png", stockpile_type_image)
+            if cropped_image is not None:
+                cv2.imwrite("stockpile.png", cropped_image)
 
         return Stockpile(name=name, type=type_, image=cropped_image, items=items)
