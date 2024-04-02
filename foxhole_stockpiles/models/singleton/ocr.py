@@ -15,6 +15,7 @@ from foxhole_stockpiles.models.singleton.singletonmeta import SingletonMeta
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
 
+
 class OCR(metaclass=SingletonMeta):
     def __init__(self):
         settings = Settings()
@@ -168,7 +169,7 @@ class OCR(metaclass=SingletonMeta):
         try:
             # FIXME: Find a better way. In some cases it doesn't detect - or mistakes 1 and 7
             th = image.copy()
-            th[th<200] = 0
+            th[th<180] = 0
             scale=4
             th = cv2.resize(th, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
 
@@ -202,6 +203,7 @@ class OCR(metaclass=SingletonMeta):
         try:
             type_ = stockpile_type(type_text)
         except Exception as ex:
+            self.__logger.info("Undetected stockpile type '{}'".format(type_text))
             type_ = stockpile_type.UNDEFINED
 
         return type_
@@ -365,6 +367,10 @@ class OCR(metaclass=SingletonMeta):
                 # draw a rectangle where the icon was found
                 cv2.rectangle(image, (icon_x1, icon_y1), (icon_x2, icon_y2), (255, 0, 255), 2)
 
+        # If not items have been detected return None
+        if not items:
+            return None
+
         # Include the title in the cropped image
         # [title] <-- same height that the items (detected_item_height)
         # [spacing] <--- config h spacing adapted to the image resolution (item_spacing_height)
@@ -402,11 +408,8 @@ class OCR(metaclass=SingletonMeta):
         # Crop the image to store only the stockpile with the type, name and the items
         cropped_image = image[min_y:max_y, min_x:max_x]
         if self.__dev_save_images:
-            if stockpile_name_image is not None:
-                cv2.imwrite("stockpile_name.png", stockpile_name_image)
-            if stockpile_type_image is not None:
-                cv2.imwrite("stockpile_type.png", stockpile_type_image)
-            if cropped_image is not None:
-                cv2.imwrite("stockpile.png", cropped_image)
+            cv2.imwrite("stockpile_name.png", stockpile_name_image)
+            cv2.imwrite("stockpile_type.png", stockpile_type_image)
+            cv2.imwrite("stockpile.png", cropped_image)
 
         return Stockpile(name=name, type=type_, image=cropped_image, items=items)
