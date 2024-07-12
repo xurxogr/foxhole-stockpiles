@@ -29,24 +29,21 @@ async def __scan_image(image: UploadFile, request: Request):
     start = time.time()
     ocr = OCR()
     stockpile: Stockpile = await ocr.extract_stockpile_from_buffer(image)
-    text = stockpile.name.replace('_', '').replace('-', '')
-
-
     end = time.time()
+
     if not stockpile:
         message = "No stockpile found in the image"
         logger.info(message)
         return { "message": message }
 
+    text = stockpile.name.replace('_', '').replace('-', '')
 
-    if 'ELI' not in text:
-        logger.info("{}:{}. Scanned image in {} but not sent to Hermes as it doesn't contain VELI in the name".format(stockpile.type, stockpile.name, end - start))
-        return { "message": "Stockpile doesn't contain VELI in the name. {}".format(text) }
+    if 'ELI' in text:
+        data = text.split('ELI')[1]
+        town = data[:3]
+        number = data[-1:]
+        text = "VELI-{}-{}".format(town, number)
 
-    data = text.split('ELI')[1]
-    town = data[:3]
-    number = data[-1:]
-    text = "VELI-{}-{}".format(town, number)
     if text != stockpile.name:
         logger.info("{}:{}. Scanned image in {}, sent {} to Hermes".format(stockpile.type, stockpile.name, end - start, text))
         stockpile.name == text
