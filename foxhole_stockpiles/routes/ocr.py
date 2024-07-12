@@ -28,7 +28,7 @@ async def __scan_image(image: UploadFile, request: Request):
     import time
     start = time.time()
     ocr = OCR()
-    stockpile: Stockpile = await ocr.extract_stockpile_from_buffer(image)
+    stockpile: Stockpile = await ocr.extract_stockpile_from_buffer(buffer=image, image_prefix=api_key[:10])
     end = time.time()
 
     if not stockpile:

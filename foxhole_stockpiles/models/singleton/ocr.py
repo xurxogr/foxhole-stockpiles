@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import logging
 import os.path
@@ -36,6 +37,7 @@ class OCR(metaclass=SingletonMeta):
         self.__dev_dectect_icons = int(settings.get(section=Settings.SECTION_DEVELOPER, option=Settings.OPTION_DEV_DETECT_ICONS))
         self.__dev_draw_rectangles = int(settings.get(section=Settings.SECTION_DEVELOPER, option=Settings.OPTION_DEV_DRAW_RECTANGLES))
         self.__dev_save_images = int(settings.get(section=Settings.SECTION_DEVELOPER, option=Settings.OPTION_DEV_SAVE_IMAGES))
+        self.__dev_save_path = settings.get(section=Settings.SECTION_DEVELOPER, option=Settings.OPTION_BACKUP_PATH)
 
         # Models and catalogs path
         self.__icons_path = settings.get(section=Settings.SECTION_MODELS, option=Settings.OPTION_ICONS_PATH)
@@ -220,11 +222,10 @@ class OCR(metaclass=SingletonMeta):
 
         return await self.__extract_text_from_image(image=image)
 
-    async def extract_stockpile_from_file(self, file_name: str, flags: int = cv2.IMREAD_COLOR) -> Stockpile | None:
+    async def extract_stockpile_from_file(self, file_name: str) -> Stockpile | None:
         """
         Extract the stockfile information from a file.
         :param file_name: str = File name to extract the information from
-        :param flags: cv2 read flags. Defaults to cv2.IMREAD_COLOR (Default value for imread)
         :returns Stockpile: Returns the information of the Stockpile or None if nothing is detected
         """
 
@@ -233,19 +234,19 @@ class OCR(metaclass=SingletonMeta):
             self.__logger.warning("Can't open/read file: {}".format(file_name))
             return None
 
-        image = cv2.imread(filename=file_name, flags=flags)
+        image = cv2.imread(filename=file_name, flags=cv2.IMREAD_COLOR)
         return await self.__extract_stockpile_from_image(image=image, file_name=file_name)
 
-    async def extract_stockpile_from_buffer(self, buffer, flags: int = cv2.IMREAD_COLOR) -> Stockpile | None:
+    async def extract_stockpile_from_buffer(self, buffer, image_prefix: str) -> Stockpile | None:
         """
         Reads an image from an existing buffer
         :param buffer: Buffer to read the image from
-        :param flags: cv2 read flags. Defaults to cv2.IMREAD_COLOR
+        :param image_prefix: str = Prefix to use to save the images if the option is enabled
         :returns Stockpile: Returns the information of the Stockpile or None if nothing is detected
         """
         bytes_as_np_array = numpy.frombuffer(await buffer.read(), dtype=numpy.uint8)
-        image = cv2.imdecode(bytes_as_np_array, flags)
-        return await self.__extract_stockpile_from_image(image=image)
+        image = cv2.imdecode(buf=bytes_as_np_array, flags=cv2.IMREAD_COLOR)
+        return await self.__extract_stockpile_from_image(image=image, file_name=image_prefix)
 
     async def __extract_stockpile_from_image(self, image: cv2.typing.MatLike, file_name: str = "Buffer") -> Stockpile:
         """
@@ -408,8 +409,18 @@ class OCR(metaclass=SingletonMeta):
         # Crop the image to store only the stockpile with the type, name and the items
         cropped_image = image[min_y:max_y, min_x:max_x]
         if self.__dev_save_images:
-            cv2.imwrite("stockpile_name.png", stockpile_name_image)
-            cv2.imwrite("stockpile_type.png", stockpile_type_image)
-            cv2.imwrite("stockpile.png", cropped_image)
+            date_now = datetime.now()
+            date_str = date_now.strftime("%Y-%m-%d")
+            time_str = date_now.strftime("%H-%M-%S")
+            directory = "{}/{}/".format(self.__dev_save_path or ".", date_str)
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+
+            prefix = "{}{}-{}_".format(directory, file_name, time_str)
+
+            cv2.imwrite("{}name.png".format(prefix), stockpile_name_image)
+            cv2.imwrite("{}type.png".format(prefix), stockpile_type_image)
+            cv2.imwrite("{}stockpile.png".format(prefix), cropped_image)
+            cv2.imwrite("{}full.png".format(prefix), image)
 
         return Stockpile(name=name, type=type_, image=cropped_image, items=items)

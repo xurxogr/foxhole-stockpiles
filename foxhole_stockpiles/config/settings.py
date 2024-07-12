@@ -1,6 +1,4 @@
 from configparser import ConfigParser
-from configparser import NoSectionError
-from configparser import NoOptionError
 import json
 import logging
 import os
@@ -34,6 +32,7 @@ class Settings(metaclass=SingletonMeta):
     OPTION_ICONS_PATH: Final = 'icons_path'
     OPTION_QUANTITIES_PATH: Final = 'quantities_path'
     OPTION_CATALOG_ITEMS_PATH: Final = 'catalog_items_path'
+    OPTION_BACKUP_PATH: Final = 'backup_path'
 
     # Developer options
     OPTION_DEV_DETECT_QUANTITIES: Final = 'detect_quantities'
@@ -46,6 +45,7 @@ class Settings(metaclass=SingletonMeta):
     # Hermes Options
     OPTION_URL: Final = 'url'
 
+
     def __init__(self) -> None:
         self.__config_parser = None
 
@@ -55,7 +55,7 @@ class Settings(metaclass=SingletonMeta):
 
         self.__check_section(section=self.SECTION_DEVELOPER, options=[
             self.OPTION_DEV_DETECT_ICONS, self.OPTION_DEV_DETECT_QUANTITIES, self.OPTION_DEV_DETECT_STOCKPILE_NAME,
-            self.OPTION_DEV_DETECT_STOCKPILE_TYPE, self.OPTION_DEV_DRAW_RECTANGLES, self.OPTION_DEV_SAVE_IMAGES])
+            self.OPTION_DEV_DETECT_STOCKPILE_TYPE, self.OPTION_DEV_DRAW_RECTANGLES, self.OPTION_DEV_SAVE_IMAGES, self.OPTION_BACKUP_PATH])
         self.__check_section(section=self.SECTION_HERMES, options=[self.OPTION_URL])
         self.__check_section(section=self.SECTION_LOGGING, options=[self.OPTION_LOG_LEVEL, self.OPTION_LOGGERS])
         self.__check_section(section=self.SECTION_MODELS, options=[self.OPTION_ICONS_PATH, self.OPTION_QUANTITIES_PATH, self.OPTION_CATALOG_ITEMS_PATH])
@@ -70,12 +70,10 @@ class Settings(metaclass=SingletonMeta):
         """Checks for needed options in a section"""
         if not self.__config_parser.has_section(section):
             self.__config_parser.add_section(section)
-            #raise NoSectionError(section)
 
         for option in options:
             if not self.__config_parser.has_option(section, option):
                 self.__config_parser.set(section=section, option=option, value='')
-                #raise NoOptionError(option, section)
 
     def __init_logging(self):
         """Checks for needed options in logging section (optional)"""
