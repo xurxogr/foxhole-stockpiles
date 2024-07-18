@@ -66,6 +66,6 @@ async def __scan_image(image: UploadFile, request: Request):
     url = settings.get(section=Settings.SECTION_HERMES, option=Settings.OPTION_URL)
     if url:
         hermes = HermesConnector(url=url)
-        return await hermes.send_stockpile_to_hermes(stockpile=stockpile, api_key=api_key)
+        return await hermes.send_stockpile_to_hermes(stockpile=stockpile_dict, api_key=api_key)
 
     return stockpile_dict

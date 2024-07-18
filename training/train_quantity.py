@@ -24,7 +24,7 @@ import os
 import sys
 
 
-EPOCHS = 100
+EPOCHS = 10
 COLOR_MODE = "rgb"
 DROPOUT=0.5
 VALIDATION_SPLIT=0.8
