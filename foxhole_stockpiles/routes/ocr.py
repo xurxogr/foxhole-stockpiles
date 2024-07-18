@@ -55,7 +55,7 @@ async def __scan_image(image: UploadFile, request: Request):
     items = []
     item: StockpileItem
     for item in stockpile.items:
-        items.append({ "code": item.code, "quantity": item.quantity})
+        items.append({ "code": item.code, "quantity": item.quantity, "crated": item.crated})
     stockpile_dict = {
         "stockpile_name": stockpile.name,
         "stockpile_type": stockpile.type,
