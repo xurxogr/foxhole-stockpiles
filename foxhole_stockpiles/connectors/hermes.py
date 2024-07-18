@@ -40,7 +40,10 @@ class HermesConnector():
         async with AsyncClient(verify=False, headers=headers) as client:
             response = await client.post(url=self.__url, json=hermes_dict)
             if response.status_code == 200:
-                return_data = response.json()
+                try:
+                    return_data = response.json()
+                except:
+                    return_data = { "message": response.text }
             else:
                 return_data = { "message": response.text }
 
