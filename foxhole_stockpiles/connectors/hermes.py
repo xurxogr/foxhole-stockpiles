@@ -1,16 +1,17 @@
 from httpx import AsyncClient
 
 from foxhole_stockpiles.config.settings import Settings
-from foxhole_stockpiles.models.stockpile_item import StockpileItem
-from foxhole_stockpiles.models.stockpile import Stockpile
+
 
 class HermesConnector():
-    def __init__(self):
+    def __init__(self, url: None):
         settings = Settings()
+        if url is None:
+            self.__url = settings.get(section=Settings.SECTION_HERMES, option=Settings.OPTION_URL)
+        else:
+            self.__url = url
 
-        self.__url = settings.get(section=Settings.SECTION_HERMES, option=Settings.OPTION_URL)
-
-    async def send_stockpile_to_hermes(self, stockpile: Stockpile, api_key: str):
+    async def send_stockpile_to_hermes(self, stockpile: dict, api_key: str):
         """
         Sends an stockpile to hermes
         :param stockpile: Stockpile = Stockpile to send (Generated from an image)
@@ -25,20 +26,10 @@ class HermesConnector():
         if not self.__url:
             return { "message": "URL is not set" }
 
-        items = []
-        item: StockpileItem
-        for item in stockpile.items:
-            items.append({ "code": item.code, "quantity": item.quantity})
-        hermes_dict = {
-            "stockpile_name": stockpile.name,
-            "stockpile_type": stockpile.type,
-            "items": items
-        }
-
         headers = { "X-API-TOKEN": api_key }
         return_data = {}
         async with AsyncClient(verify=False, headers=headers) as client:
-            response = await client.post(url=self.__url, json=hermes_dict)
+            response = await client.post(url=self.__url, json=stockpile)
             if response.status_code == 200:
                 try:
                     return_data = response.json()
