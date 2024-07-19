@@ -413,7 +413,7 @@ class OCR(metaclass=SingletonMeta):
         # Crop the image to store only the stockpile with the type, name and the items
         cropped_image = image[min_y:max_y, min_x:max_x]
         stockpile = Stockpile(name=name, type=type_, image=cropped_image, items=items)
-        await self.save_image(stockpile=stockpile, file_name=file_name, image=image, name_image=stockpile_name_image, type_image=stockpile_type_image, stockpile_image=cropped_image)
+        await self.save_image(stockpile=stockpile, file_name=file_name, image=image) #, name_image=stockpile_name_image, type_image=stockpile_type_image, stockpile_image=cropped_image)
         return stockpile
 
     async def save_image(self, stockpile: Stockpile, file_name: str, image: any, name_image: any = None, type_image: any = None, stockpile_image: any = None):
