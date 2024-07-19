@@ -22,7 +22,6 @@ class Settings(metaclass=SingletonMeta):
     OPTION_OCR_ITEM_MAX_WH_RATIO: Final = 'item_max_ratio'
     OPTION_OCR_ITEM_SPACING_HEIGHT: Final = 'item_spacing_height'
     OPTION_OCR_ITEM_SPACING_WIDTH: Final = 'item_spacing_width'
-    OPTION_OCR_STOCKPILE_MIN_WIDTH: Final = 'stockpile_min_width'
 
     # Logging options
     OPTION_LOG_LEVEL: Final = 'log_level'

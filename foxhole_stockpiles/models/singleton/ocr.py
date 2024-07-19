@@ -28,7 +28,6 @@ class OCR(metaclass=SingletonMeta):
         self.__item_max_ratio = float(settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_ITEM_MAX_WH_RATIO))
         self.__item_spacing_height = int(settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_ITEM_SPACING_HEIGHT))
         self.__item_spacing_width = int(settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_ITEM_SPACING_WIDTH))
-        self.__stockpile_min_width = int(settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_STOCKPILE_MIN_WIDTH))
 
         # Developer options
         self.__dev_dectect_stockpile_name = int(settings.get(section=Settings.SECTION_DEVELOPER, option=Settings.OPTION_DEV_DETECT_STOCKPILE_NAME))
@@ -288,6 +287,7 @@ class OCR(metaclass=SingletonMeta):
         min_y = 10000
         max_x = 0
         max_y = 0
+        min_quantity_x = 10000
         detected_item_height = 0
         detected_item_width = 0
 
@@ -359,6 +359,9 @@ class OCR(metaclass=SingletonMeta):
             if quantity_y2 > max_y:
                 max_y = quantity_y2
 
+            if quantity_x2 < min_quantity_x:
+                min_quantity_x = quantity_x2
+
             if self.__dev_draw_rectangles:
                 # draw a rectangle for quantity. In different colour if it wasn't detected
                 cv2.rectangle(image, (quantity_x1, quantity_y1), (quantity_x2, quantity_y2), (0, 0, 255), 2)
@@ -379,10 +382,9 @@ class OCR(metaclass=SingletonMeta):
         min_y -= detected_item_height + item_spacing_height
         min_x -= item_spacing_width
 
-        if max_x < min_x + self.__stockpile_min_width:
-            max_x = min_x + self.__stockpile_min_width
-        else:
-            max_x += item_spacing_width
+        # Empty stockpiles have at least 2 items and the 3rd column is empty.
+        min_width = 3 * (min_quantity_x - min_x) + min_x + item_spacing_height
+        max_x = max(max_x, min_width)
 
         # Title: [type]              [name][tab]
         # Using 3*item width for rectangle crop
@@ -410,10 +412,10 @@ class OCR(metaclass=SingletonMeta):
         # Crop the image to store only the stockpile with the type, name and the items
         cropped_image = image[min_y:max_y, min_x:max_x]
         stockpile = Stockpile(name=name, type=type_, image=cropped_image, items=items)
-        await self.save_image(stockpile=stockpile, file_name=file_name, image=image)
+        await self.save_image(stockpile=stockpile, file_name=file_name, image=image, name_image=stockpile_name_image, type_image=stockpile_type_image, stockpile_image=cropped_image)
         return stockpile
 
-    async def save_image(self, stockpile: Stockpile, file_name: str, image: any):
+    async def save_image(self, stockpile: Stockpile, file_name: str, image: any, name_image: any = None, type_image: any = None, stockpile_image: any = None):
         if not self.__dev_save_images:
             return
 
@@ -431,5 +433,11 @@ class OCR(metaclass=SingletonMeta):
         if not os.path.exists(directory):
             os.makedirs(directory)
         
-        file_name = "{}{}-{}-{}-{}.png".format(directory, time_str, s_type, s_name, file_name)
-        cv2.imwrite(file_name, image)
+        file_name = "{}{}-{}-{}-{}".format(directory, time_str, s_type, s_name, file_name)
+        cv2.imwrite("{}.png".format(file_name), image)
+        if name_image is not None:
+            cv2.imwrite("{}_name.png".format(file_name), name_image)
+        if type_image is not None:
+            cv2.imwrite("{}_type.png".format(file_name), type_image)
+        if stockpile_image is not None:
+            cv2.imwrite("{}_stockpile.png".format(file_name), stockpile_image)
