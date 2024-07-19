@@ -129,28 +129,27 @@ class OCR(metaclass=SingletonMeta):
         if image is None or not self.__dev_dectect_quantities:
             return -1
 
+        # Threshold the image to create a binary image
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        thresh1 = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
 
-        # Identify the individual characters
-        thresh1 = cv2.threshold(gray, 0, 255,cv2.THRESH_OTSU|cv2.THRESH_BINARY)[1]
-        rect_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 1))
-        dilation = cv2.dilate(thresh1, rect_kernel, iterations = 1)
-        contours, _ = cv2.findContours(dilation, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        # Find non-zero pixels
+        non_zero = cv2.findNonZero(thresh1)
 
-        characters = []
-        for cnt in contours:
-            x, y, w, h = cv2.boundingRect(cnt)
-            image = gray[y:y+h, x:x+w]
-            resized_image = cv2.resize(image, (32, 32), interpolation=cv2.INTER_AREA)
-            resized_image = cv2.threshold(resized_image, 100, 255, cv2.THRESH_BINARY_INV)[1]
-            gray_image = cv2.cvtColor(resized_image, cv2.COLOR_GRAY2RGB)
-            expanded_image = numpy.expand_dims(gray_image, axis=0)
-            prediction = self.__quantity_model.predict(expanded_image, verbose=0)
-            characters.append(self.__quantity_classes[numpy.argmax(prediction)])
+        if non_zero is None:
+            self.__logger.info("Error: No white pixels found in the image")
+            return -1
 
-        item = "".join(characters[::-1])
-        item.replace('k+', '000')
-        #cv2.imshow("Imagen: {}".format(ret_val), gray)
+        # Get the bounding rectangle of all non-zero pixels
+        x, y, w, h = cv2.boundingRect(non_zero)
+
+        # Convert to black numbers with white background and resize to 32x32 to match the model
+        cropped_image = cv2.threshold(image[y:y+h, x:x+w], 127, 255, cv2.THRESH_BINARY_INV)[1]
+        resized_image = cv2.resize(cropped_image, (32, 32))
+        expanded_imagen = numpy.expand_dims(resized_image, axis=0)
+
+        prediction = self.__quantity_model.predict(expanded_imagen, verbose=0)
+        item = self.__quantity_classes[numpy.argmax(prediction)]
 
         try:
             ret_val = int(item)
