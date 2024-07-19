@@ -369,6 +369,7 @@ class OCR(metaclass=SingletonMeta):
 
         # If not items have been detected return None
         if not items:
+            self.save_image(stockpile=None, file_name=file_name, image=image)
             return None
 
         # Include the title in the cropped image
@@ -405,21 +406,29 @@ class OCR(metaclass=SingletonMeta):
 
         type_ = await self.__extract_stockpile_type_from_image(image=stockpile_type_image)
         name = await self.__extract_stockpile_name_from_image(image=stockpile_name_image)
+
         # Crop the image to store only the stockpile with the type, name and the items
         cropped_image = image[min_y:max_y, min_x:max_x]
-        if self.__dev_save_images:
-            date_now = datetime.now()
-            date_str = date_now.strftime("%Y-%m-%d")
-            time_str = date_now.strftime("%H-%M-%S")
-            directory = "{}/{}/".format(self.__dev_save_path or ".", date_str)
-            if not os.path.exists(directory):
-                os.makedirs(directory)
+        stockpile = Stockpile(name=name, type=type_, image=cropped_image, items=items)
+        self.save_image(stockpile=stockpile, file_name=file_name, image=image)
+        return stockpile
 
-            prefix = "{}{}-{}_".format(directory, file_name, time_str)
+    async def save_image(self, stockpile: Stockpile, file_name: str, image: any):
+        if not self.__dev_save_images:
+            return
 
-            cv2.imwrite("{}name.png".format(prefix), stockpile_name_image)
-            cv2.imwrite("{}type.png".format(prefix), stockpile_type_image)
-            cv2.imwrite("{}stockpile.png".format(prefix), cropped_image)
-            cv2.imwrite("{}full.png".format(prefix), image)
+        if stockpile:
+            s_name = stockpile.name
+            s_type = stockpile.type
+        else:
+            s_name = "undefined"
+            s_type = "undefined"
 
-        return Stockpile(name=name, type=type_, image=cropped_image, items=items)
+        date_now = datetime.now()
+        date_str = date_now.strftime("%Y-%m-%d")
+        time_str = date_now.strftime("%H-%M-%S")
+        directory = "{}/{}/".format(self.__dev_save_path or ".", date_str)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        cv2.imwrite("{}{}-{}_{}_{}.png".format(directory, file_name, time_str, s_name, s_type), image)
