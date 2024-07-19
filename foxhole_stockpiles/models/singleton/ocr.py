@@ -369,7 +369,7 @@ class OCR(metaclass=SingletonMeta):
 
         # If not items have been detected return None
         if not items:
-            self.save_image(stockpile=None, file_name=file_name, image=image)
+            await self.save_image(stockpile=None, file_name=file_name, image=image)
             return None
 
         # Include the title in the cropped image
@@ -410,7 +410,7 @@ class OCR(metaclass=SingletonMeta):
         # Crop the image to store only the stockpile with the type, name and the items
         cropped_image = image[min_y:max_y, min_x:max_x]
         stockpile = Stockpile(name=name, type=type_, image=cropped_image, items=items)
-        self.save_image(stockpile=stockpile, file_name=file_name, image=image)
+        await self.save_image(stockpile=stockpile, file_name=file_name, image=image)
         return stockpile
 
     async def save_image(self, stockpile: Stockpile, file_name: str, image: any):
@@ -430,5 +430,6 @@ class OCR(metaclass=SingletonMeta):
         directory = "{}/{}/".format(self.__dev_save_path or ".", date_str)
         if not os.path.exists(directory):
             os.makedirs(directory)
-
-        cv2.imwrite("{}{}-{}_{}_{}.png".format(directory, file_name, time_str, s_name, s_type), image)
+        
+        file_name = "{}{}-{}-{}-{}.png".format(directory, time_str, s_type, s_name, file_name)
+        cv2.imwrite(file_name, image)
