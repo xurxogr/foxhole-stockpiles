@@ -40,12 +40,6 @@ async def __scan_image(image: UploadFile, request: Request):
 
     text = stockpile.name.replace('_', '').replace('-', '')
 
-    if 'ELI' in text:
-        data = text.split('ELI')[1]
-        town = data[:3]
-        number = data[-1:]
-        text = "VELI-{}-{}".format(town, number)
-
     if text != stockpile.name:
         logger.info("{}:{}. Scanned image in {}, sent {} to Hermes".format(stockpile.type, stockpile.name, end - start, text))
         stockpile.name == text
@@ -56,6 +50,7 @@ async def __scan_image(image: UploadFile, request: Request):
     item: StockpileItem
     for item in stockpile.items:
         items.append({ "code": item.code, "quantity": item.quantity, "crated": item.crated})
+
     stockpile_dict = {
         "stockpile_name": stockpile.name,
         "stockpile_type": stockpile.type,

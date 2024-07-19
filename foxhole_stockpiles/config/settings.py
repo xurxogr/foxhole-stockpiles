@@ -60,8 +60,7 @@ class Settings(metaclass=SingletonMeta):
         self.__check_section(section=self.SECTION_MODELS, options=[self.OPTION_ICONS_PATH, self.OPTION_QUANTITIES_PATH, self.OPTION_CATALOG_ITEMS_PATH])
         self.__check_section(section=self.SECTION_OCR, options=[
             self.OPTION_OCR_ITEM_MIN_WIDTH, self.OPTION_OCR_ITEM_MAX_WIDTH, self.OPTION_OCR_ITEM_MIN_WH_RATIO,
-            self.OPTION_OCR_ITEM_MAX_WH_RATIO, self.OPTION_OCR_ITEM_SPACING_HEIGHT, self.OPTION_OCR_ITEM_SPACING_WIDTH,
-            self.OPTION_OCR_STOCKPILE_MIN_WIDTH])
+            self.OPTION_OCR_ITEM_MAX_WH_RATIO, self.OPTION_OCR_ITEM_SPACING_HEIGHT, self.OPTION_OCR_ITEM_SPACING_WIDTH])
 
         self.__init_logging()
 
