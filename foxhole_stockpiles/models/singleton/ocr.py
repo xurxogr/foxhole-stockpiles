@@ -382,6 +382,7 @@ class OCR(metaclass=SingletonMeta):
         min_y -= detected_item_height + item_spacing_height
         min_x -= item_spacing_width
 
+        max_x += item_spacing_width
         # Empty stockpiles have at least 2 items and the 3rd column is empty.
         min_width = 3 * (min_quantity_x - min_x) + min_x + item_spacing_height
         max_x = max(max_x, min_width)
