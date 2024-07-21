@@ -1,6 +1,33 @@
+from asyncio import sleep
+import functools
+import logging
+
 from httpx import AsyncClient
 
+
 from foxhole_stockpiles.config.settings import Settings
+
+from httpx import ConnectTimeout
+
+def async_retry_on_connect_timeout(max_retries=3, delay=1):
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            retries = 0
+            while retries < max_retries:
+                try:
+                    return await func(*args, **kwargs)
+                except ConnectTimeout as e:
+                    retries += 1
+                    if retries == max_retries:
+                        raise e
+
+                    logger = logging.getLogger(__name__)
+                    logger.info("ConnectTimeout occurred. Retrying ({}/{})...".format(retries, max_retries))
+                    await sleep(delay)
+            return await func(*args, **kwargs)
+        return wrapper
+    return decorator
 
 
 class HermesConnector():
@@ -11,6 +38,7 @@ class HermesConnector():
         else:
             self.__url = url
 
+    @async_retry_on_connect_timeout(max_retries=3, delay=2)
     async def send_stockpile_to_hermes(self, stockpile: dict, api_key: str):
         """
         Sends an stockpile to hermes
@@ -22,7 +50,7 @@ class HermesConnector():
 
         if not api_key:
             return { "message": "FS: API key not set" }
-        
+
         if not self.__url:
             return { "message": "FS: URL is not set" }
 
@@ -40,7 +68,11 @@ class HermesConnector():
                         return_data = { "message": response.text }
                 else:
                     return_data = { "message": response.text }
+        except ConnectTimeout:
+            raise
         except Exception as e:
-            return_data = { "message": "FS: Error sending stockpile to the backend server: {}".format(str(e)) }
+            logger = logging.getLogger(__name__)
+            logger.error("FS: Error sending stockpile to the backend server: ({}: {})".format(type(e).__name__, str(e)))
+            return_data = { "message": "FS: Error sending stockpile to the backend server: ({}: {})".format(type(e).__name__, str(e)) }
 
         return return_data
