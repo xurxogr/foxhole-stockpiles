@@ -51,7 +51,7 @@ class OCR(metaclass=SingletonMeta):
 
         # Initalize ocr
         # TODO: Extend to other languages
-        self.__ocrreader = easyocr.Reader(lang_list=['en', 'es'])
+        self.__ocrreader = easyocr.Reader(lang_list=['en', 'ch_sim'])
 
     async def __init_models(self):
         # Load models and item catalog
