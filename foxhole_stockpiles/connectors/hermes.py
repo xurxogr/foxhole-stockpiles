@@ -54,6 +54,7 @@ class HermesConnector():
         if not self.__url:
             return { "message": "FS: URL is not set" }
 
+        logger = logging.getLogger(__name__)
         headers = { "X-API-TOKEN": api_key }
         return_data = {}
         try:
@@ -65,14 +66,15 @@ class HermesConnector():
                         # If the response is an error, return the error message, else return the response in message or the json response
                         return_data = return_data.get('error', return_data.get('message', return_data))
                     except:
-                        return_data = { "message": response.text }
+                        logger.error("FS: Error parsing response from the backend server: {}".format(response.text))
+                        return_data = { "message": "Error reading the response from the backend server" }
                 else:
-                    return_data = { "message": response.text }
+                    logger.warning("FS: Error sending stockpile to the backend server: {}: {}".format(response.status_code, response.text))
+                    return_data = { "message": "HTTP code {} sending the information to the backend server".format(response.status_code) }
         except ConnectTimeout:
             raise
         except Exception as e:
-            logger = logging.getLogger(__name__)
             logger.error("FS: Error sending stockpile to the backend server: ({}: {})".format(type(e).__name__, str(e)))
-            return_data = { "message": "FS: Error sending stockpile to the backend server: ({}: {})".format(type(e).__name__, str(e)) }
+            return_data = { "message": "FS: Error sending stockpile to the backend server: ({})".format(type(e).__name__) }
 
         return return_data
