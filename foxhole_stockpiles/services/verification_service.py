@@ -1,11 +1,15 @@
 import cv2
 from easyocr import Reader
-import numpy
+import numpy as np
+import os
 
 class VerificationService():
 
     def __init__(self):
         self.reader = Reader(lang_list=['en'])
+        file_dir = os.path.dirname(os.path.abspath(__file__))
+        icon_path = os.path.join(file_dir, 'colonial_icon.png')
+        self.colonial_icon = cv2.imread(icon_path, cv2.IMREAD_COLOR)
 
     async def verify_pictures(self, pictures: list[bytes]) -> dict:
         """
@@ -19,7 +23,7 @@ class VerificationService():
         
         images = []
         for picture in pictures:
-            bytes_as_np_array = numpy.frombuffer(picture, dtype=numpy.uint8)
+            bytes_as_np_array = np.frombuffer(picture, dtype=np.uint8)
             image = cv2.imdecode(buf=bytes_as_np_array, flags=cv2.IMREAD_COLOR)
             images.append(image)
         
@@ -52,8 +56,8 @@ class VerificationService():
         }
 
         # Extract username and level
-        username = image[int(0.63*py):int(0.77*py), int(1.6*px):int(3*px)]
-        ocr_text = self.reader.readtext(username)
+        username_image = image[int(0.63*py):int(0.77*py), int(1.6*px):int(3*px)]
+        ocr_text = self.reader.readtext(username_image)
 
         try:
             data['name'] = ocr_text[0][1].replace('Name: ', '')
@@ -69,9 +73,11 @@ class VerificationService():
         except:
             pass
 
+        data['colonial'] = await self.find_colonial_icon(image = username_image)
+
         # Extract Regiment
-        regiment = image[int(1.4*py):int(1.5*py), :]
-        ocr_text = self.reader.readtext(regiment)
+        regiment_image = image[int(1.4*py):int(1.5*py), :]
+        ocr_text = self.reader.readtext(regiment_image)
         count = sum(1 for i in ocr_text if i[1] == 'Name')
         if count == 0:
             data.update({ "regiment": None })
@@ -79,6 +85,24 @@ class VerificationService():
             data.update({ "regiment": count == 2})
 
         return data
+
+    async def find_colonial_icon(self, image: cv2.typing.MatLike):
+        """
+        Finds the colonial icon in the image
+        :param image: Picture to find the colonial icon from
+        :returns: bool = True if the colonial icon is found
+        """
+
+        # Calculate the scale to match the height of the image
+        scale = image.shape[0] / self.colonial_icon.shape[0]
+
+        # Resize the template according to the scale
+        resized_template = cv2.resize(self.colonial_icon, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+
+        # Perform template matching
+        res = cv2.matchTemplate(image, resized_template, cv2.TM_CCOEFF_NORMED)
+
+        return cv2.minMaxLoc(res)[1] > 0.7
 
     async def get_shard(self, image: cv2.typing.MatLike) -> str:
         """
