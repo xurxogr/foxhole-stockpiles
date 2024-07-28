@@ -60,17 +60,13 @@ class HermesConnector():
         try:
             async with AsyncClient(verify=False, headers=headers) as client:
                 response = await client.post(url=self.__url, json=stockpile)
-                if response.status_code == 200:
-                    try:
-                        return_data = response.json()
-                        # If the response is an error, return the error message, else return the response in message or the json response
-                        return_data = return_data.get('error', return_data.get('message', return_data))
-                    except:
-                        logger.error("FS: Error parsing response from the backend server: {}".format(response.text))
-                        return_data = { "message": "Error reading the response from the backend server" }
-                else:
+                try:
+                    return_data = response.json()
+                    # If the response is an error, return the error message, else return the response in message or the json response
+                    return_data = return_data.get('error', return_data.get('message', return_data))
+                except:
                     logger.warning("FS: Error sending stockpile to the backend server: {}: {}".format(response.status_code, response.text))
-                    return_data = { "message": "HTTP code {} sending the information to the backend server".format(response.status_code) }
+                    return_data = { "message": "HTTP code {} sending the information to the backend server. {}".format(response.status_code, response.text) }
         except ConnectTimeout:
             raise
         except Exception as e:
