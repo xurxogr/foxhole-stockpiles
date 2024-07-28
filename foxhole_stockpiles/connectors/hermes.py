@@ -3,11 +3,10 @@ import functools
 import logging
 
 from httpx import AsyncClient
-
+from httpx import ConnectTimeout
 
 from foxhole_stockpiles.config.settings import Settings
 
-from httpx import ConnectTimeout
 
 def async_retry_on_connect_timeout(max_retries=3, delay=1):
     def decorator(func):
@@ -29,15 +28,34 @@ def async_retry_on_connect_timeout(max_retries=3, delay=1):
         return wrapper
     return decorator
 
+def async_retry_on_302(max_retries=3, delay=1):
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            retries = 0
+            while retries < max_retries:
+                response = await func(*args, **kwargs)
+                if response.status_code != 302:
+                    return response
+
+                logger = logging.getLogger(__name__)
+                logger.info("302 occurred. Retrying ({}/{})...".format(retries, max_retries))
+                await sleep(delay)
+                retries += 1
+
+            return await func(*args, **kwargs)
+        return wrapper
+    return decorator
 
 class HermesConnector():
-    def __init__(self, url: None):
+    def __init__(self, url: str = None):
         settings = Settings()
         if url is None:
             self.__url = settings.get(section=Settings.SECTION_HERMES, option=Settings.OPTION_URL)
         else:
             self.__url = url
 
+    @async_retry_on_302(max_retries=3, delay=2)
     @async_retry_on_connect_timeout(max_retries=3, delay=2)
     async def send_stockpile_to_hermes(self, stockpile: dict, api_key: str):
         """
