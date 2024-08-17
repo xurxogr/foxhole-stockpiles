@@ -15,21 +15,14 @@ class Logging():
 
         logging.basicConfig(level=settings.logging.level, format=settings.logging.format, datefmt=settings.logging.date_format)
 
-        loggers = {}
-        try:
-            loggers_options = settings.logging.loggers
-            if loggers_options:
-                loggers = json.loads(loggers_options)
-        except:
-            pass
-
-        for logger, name_level in loggers.items():
-            try:
-                mappings = logging.getLevelNamesMapping()
-                log_level = mappings.get(name_level.upper(), logging.WARNING)
-                logging.getLogger(logger).setLevel(level=log_level)
-            except:
-                pass
+        if settings.logging.loggers:
+            for logger, name_level in settings.logging.loggers.items():
+                try:
+                    mappings = logging.getLevelNamesMapping()
+                    log_level = mappings.get(name_level.upper(), logging.WARNING)
+                    logging.getLogger(logger).setLevel(level=log_level)
+                except:
+                    pass
 
         if settings.logging.file:
             log_folder = 'logs'
