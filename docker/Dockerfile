@@ -2,11 +2,11 @@ FROM python:3.11
 
 # Install dependencies
 WORKDIR /code
-COPY ./docker/requirements.txt /code/requirements.txt
 RUN apt update && apt install -y musl-dev g++ libgl1 \
     tesseract-ocr libtesseract-dev \
     tesseract-ocr-eng tesseract-ocr-fra tesseract-ocr-deu tesseract-ocr-rus tesseract-ocr-chi-sim tesseract-ocr-por
 
+COPY ./docker/requirements.txt /code/requirements.txt
 RUN python -m pip install --upgrade pip
 RUN --mount=type=cache,target=/root.cache pip3 install -r ./requirements.txt
 

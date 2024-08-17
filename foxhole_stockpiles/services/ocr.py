@@ -58,7 +58,7 @@ class OCR(metaclass=SingletonMeta):
             with open("{}.json".format(path)) as file:
                 classes = json.load(file)
         except Exception as ex:
-            raise Exception("Couldn't load the models. Error: {}".format(str(ex))) from None
+            raise Exception(f"Couldn't load the models. Error: ({type(ex).__name__}: {str(ex)})") from None
 
         return model, classes
 
