@@ -4,9 +4,9 @@ from fastapi import APIRouter
 from fastapi import Request
 from fastapi import UploadFile
 
-from foxhole_stockpiles.config.settings import Settings
+from foxhole_stockpiles.core.config import settings
 from foxhole_stockpiles.connectors.hermes import HermesConnector
-from foxhole_stockpiles.models.singleton.ocr import OCR
+from foxhole_stockpiles.services.ocr import OCR
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
 
@@ -39,12 +39,12 @@ async def __scan_image(image: UploadFile, request: Request):
         return { "message": message }
 
     text = stockpile.name.replace('_', '').replace('-', '')
-
+    message = f"{stockpile.type}:{stockpile.name}. Scanned image in {end - start}"
     if text != stockpile.name:
-        logger.info("{}:{}. Scanned image in {}, sent {} to Hermes".format(stockpile.type, stockpile.name, end - start, text))
+        message += f", sent {text} to backend"
         stockpile.name == text
-    else:
-        logger.info("{}:{}. Scanned image in {}".format(stockpile.type, stockpile.name, end - start))
+
+    logger.info(message)
 
     items = []
     item: StockpileItem
@@ -57,8 +57,7 @@ async def __scan_image(image: UploadFile, request: Request):
         "items": items
     }
 
-    settings = Settings()
-    url = settings.get(section=Settings.SECTION_HERMES, option=Settings.OPTION_URL)
+    url = settings.backend.url
     if url:
         hermes = HermesConnector(url=url)
         return await hermes.send_stockpile_to_hermes(stockpile=stockpile_dict, api_key=api_key)

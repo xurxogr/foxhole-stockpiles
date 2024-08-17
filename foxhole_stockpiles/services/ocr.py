@@ -9,7 +9,7 @@ import numpy
 from pydantic import TypeAdapter
 from keras.models import load_model
 
-from foxhole_stockpiles.config.settings import Settings
+from foxhole_stockpiles.core.config import settings
 from foxhole_stockpiles.models.catalog_item import CatalogItem
 from foxhole_stockpiles.models.enums.stockpile_type import stockpile_type
 from foxhole_stockpiles.models.singleton.singletonmeta import SingletonMeta
@@ -19,29 +19,28 @@ from foxhole_stockpiles.models.stockpile_item import StockpileItem
 
 class OCR(metaclass=SingletonMeta):
     def __init__(self):
-        settings = Settings()
         self.__logger = logging.getLogger(__name__)
 
-        self.__item_min_width = int(settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_ITEM_MIN_WIDTH))
-        self.__item_max_width = int(settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_ITEM_MAX_WIDTH))
-        self.__item_min_ratio = float(settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_ITEM_MIN_WH_RATIO))
-        self.__item_max_ratio = float(settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_ITEM_MAX_WH_RATIO))
-        self.__item_spacing_height = int(settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_ITEM_SPACING_HEIGHT))
-        self.__item_spacing_width = int(settings.get(section=Settings.SECTION_OCR, option=Settings.OPTION_OCR_ITEM_SPACING_WIDTH))
+        self.__item_min_width = settings.ocr.item_min_w
+        self.__item_max_width = settings.ocr.item_max_w
+        self.__item_min_ratio = settings.ocr.item_min_ratio
+        self.__item_max_ratio = settings.ocr.item_max_ratio
+        self.__item_spacing_height = settings.ocr.item_spacing_height
+        self.__item_spacing_width = settings.ocr.item_spacing_width
 
         # Developer options
-        self.__dev_dectect_stockpile_name = int(settings.get(section=Settings.SECTION_DEVELOPER, option=Settings.OPTION_DEV_DETECT_STOCKPILE_NAME))
-        self.__dev_dectect_stockpile_type = int(settings.get(section=Settings.SECTION_DEVELOPER, option=Settings.OPTION_DEV_DETECT_STOCKPILE_TYPE))
-        self.__dev_dectect_quantities = int(settings.get(section=Settings.SECTION_DEVELOPER, option=Settings.OPTION_DEV_DETECT_QUANTITIES))
-        self.__dev_dectect_icons = int(settings.get(section=Settings.SECTION_DEVELOPER, option=Settings.OPTION_DEV_DETECT_ICONS))
-        self.__dev_draw_rectangles = int(settings.get(section=Settings.SECTION_DEVELOPER, option=Settings.OPTION_DEV_DRAW_RECTANGLES))
-        self.__dev_save_images = int(settings.get(section=Settings.SECTION_DEVELOPER, option=Settings.OPTION_DEV_SAVE_IMAGES))
-        self.__dev_save_path = settings.get(section=Settings.SECTION_DEVELOPER, option=Settings.OPTION_BACKUP_PATH)
+        self.__dev_dectect_stockpile_name = settings.developer.detect_stockpile_name
+        self.__dev_dectect_stockpile_type = settings.developer.detect_stockpile_type
+        self.__dev_dectect_quantities = settings.developer.detect_quantities
+        self.__dev_dectect_icons = settings.developer.detect_icons
+        self.__dev_draw_rectangles = settings.developer.draw_rectangles
+        self.__dev_save_images = settings.developer.save_images
+        self.__dev_save_path = settings.developer.backup_path
 
         # Models and catalogs path
-        self.__icons_path = settings.get(section=Settings.SECTION_MODELS, option=Settings.OPTION_ICONS_PATH)
-        self.__quantity_path = settings.get(section=Settings.SECTION_MODELS, option=Settings.OPTION_QUANTITIES_PATH)
-        self.__catalog_items_path = settings.get(section=Settings.SECTION_MODELS, option=Settings.OPTION_CATALOG_ITEMS_PATH)
+        self.__icons_path = settings.models.icons_path
+        self.__quantity_path = settings.models.quantities_path
+        self.__catalog_items_path = settings.models.catalog_items_path
 
         self.__icons_model = None
         self.__icons_classes = None

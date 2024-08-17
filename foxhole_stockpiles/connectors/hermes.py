@@ -5,7 +5,7 @@ import logging
 from httpx import AsyncClient
 from httpx import ConnectTimeout
 
-from foxhole_stockpiles.config.settings import Settings
+from foxhole_stockpiles.core.config import settings
 
 
 def async_retry_on_connect_timeout(max_retries=3, delay=1):
@@ -49,11 +49,7 @@ def async_retry_on_302(max_retries=3, delay=1):
 
 class HermesConnector():
     def __init__(self, url: str = None):
-        settings = Settings()
-        if url is None:
-            self.__url = settings.get(section=Settings.SECTION_HERMES, option=Settings.OPTION_URL)
-        else:
-            self.__url = url
+        self.__url = url or settings.backend.url
 
     #@async_retry_on_302(max_retries=3, delay=2)
     @async_retry_on_connect_timeout(max_retries=3, delay=2)
@@ -63,6 +59,8 @@ class HermesConnector():
         :param stockpile: Stockpile = Stockpile to send (Generated from an image)
         :param api_key: str = API_KEY header to use for authentication
         """
+        logger = logging.getLogger(__name__)
+
         if not stockpile:
             return { "message": "FS: Stockpile is Empty" }
 
@@ -70,9 +68,9 @@ class HermesConnector():
             return { "message": "FS: API key not set" }
 
         if not self.__url:
+            logger.info("Backend URL is not set")
             return { "message": "FS: URL is not set" }
 
-        logger = logging.getLogger(__name__)
         headers = { "X-API-TOKEN": api_key }
         return_data = {}
         try:

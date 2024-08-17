@@ -1,4 +1,4 @@
-#pip install pydantic easyocr fastapi uvicorn tensorflow-cpu python-multipart opencv-python uuid-shortener-py httpx[async]
+#pip install pydantic pydantic_settings easyocr fastapi uvicorn tensorflow-cpu python-multipart opencv-python uuid-shortener-py httpx[async]
 absl-py==2.1.0
 annotated-types==0.6.0
 anyio==4.2.0
@@ -57,9 +57,12 @@ pyasn1==0.5.1
 pyasn1-modules==0.3.0
 pybaseconv==0.0.1
 pyclipper==1.3.0.post5
-pydantic==2.6.1
-pydantic_core==2.16.2
+pydantic==2.8.2
+pydantic-settings==2.4.0
+pydantic_core==2.20.1
+pytesseract==0.3.10
 python-bidi==0.4.2
+python-dotenv==1.0.1
 python-multipart==0.0.9
 PyYAML==6.0.1
 requests==2.31.0

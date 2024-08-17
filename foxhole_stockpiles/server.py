@@ -2,13 +2,15 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 import uvicorn
 
-from foxhole_stockpiles.models.singleton.ocr import OCR
+from foxhole_stockpiles.core.logging import Logging
+from foxhole_stockpiles.services.ocr import OCR
 from foxhole_stockpiles.routes.ocr import ocr_router
 from foxhole_stockpiles.routes.verification_router import verification_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize all the singletons before being used by the API
+    Logging.configure_logging()
     OCR()
     yield
 
