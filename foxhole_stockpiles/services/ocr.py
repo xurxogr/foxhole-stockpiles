@@ -3,11 +3,11 @@ import json
 import logging
 import os.path
 
-import easyocr
 import cv2
 from keras.models import load_model
 import numpy
 from pydantic import TypeAdapter
+from pytesseract import pytesseract
 
 from foxhole_stockpiles.core.config import settings
 from foxhole_stockpiles.enums.stockpile_type import stockpile_type
@@ -27,9 +27,6 @@ class OCR(metaclass=SingletonMeta):
         self.__quantity_model = None
         self.__quantity_classes = None
         self.__catalog_items = None
-
-        # Initalize ocr. To support chinese it can only work with english
-        self.__ocrreader = easyocr.Reader(lang_list=['en', 'ch_sim'])
 
     async def __init_models(self):
         # Load models and item catalog
@@ -137,14 +134,17 @@ class OCR(metaclass=SingletonMeta):
     async def __extract_text_from_image(self, image: cv2.typing.MatLike) -> str:
         """
         Extracts text from an image
-        :param image: Image to extract text from
-        :returns str: Text found
+
+        Args:
+            image (cv2.typing.MatLike): Image to extract text from
+        
+        Returns:
+            str: Extracted text
         """
         if image is None:
             return ""
 
         try:
-            th = image.copy()
             scale=4
             image = cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
             image[image<170] = 0
@@ -156,18 +156,10 @@ class OCR(metaclass=SingletonMeta):
             clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
             inverted = cv2.bitwise_not(clahe.apply(gray))
 
-            # crop the region of interest (ROI)
-            bbox = numpy.where(inverted>0)
-            roi = th[bbox[0].min():bbox[0].max(), bbox[1].min():bbox[1].max()]
-
-            # Returns [coords(A, B, C, D), text, threshold]
-            # A---B  | If Y coord of any point is < 0, it will return wrong order
-            # D---C  | As we know the text is in the same line reorder texts using x coord of point A
-            ocr_text = self.__ocrreader.readtext(image=roi)
-            result = sorted(ocr_text, key=lambda x: x[0][0][0])
-            text_found = " ".join([x[1] for x in result])
+            pytesseract_text = pytesseract.image_to_string(inverted, lang='eng+fra+deu+por+rus+chi_sim')
+            text_found = pytesseract_text.replace('\n', '').replace('\r', '').strip()
         except:
-            return ""
+            text_found = ""
 
         return text_found
 
