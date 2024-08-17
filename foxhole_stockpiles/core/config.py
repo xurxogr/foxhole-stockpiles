@@ -2,7 +2,8 @@ import configparser
 from functools import lru_cache
 import json
 import os
-from typing import Optional
+import types
+from typing import get_args, get_origin
 
 from pydantic import Field, ConfigDict, model_validator
 from pydantic_settings import BaseSettings
@@ -37,20 +38,29 @@ class SectionSettings(BaseSettings):
         """
         converted_data = {}
         for attr_name, attr_type in cls.__annotations__.items():
-            if attr_name in data:
-                if hasattr(attr_type, "__args__") and len(attr_type.__args__) > 0:
-                    attr_type = attr_type.__args__[0]
+            if attr_name not in data:
+                continue
 
-                try:
-                    if (attr_type == dict):
-                        if data[attr_name]:
-                            converted_data[attr_name] = json.loads(data[attr_name])
-                        else:
-                            converted_data[attr_name] = {}
-                    else:
-                        converted_data[attr_name] = attr_type(data[attr_name])
-                except ValueError:
+            origin = get_origin(attr_type)
+            if isinstance(attr_type, types.UnionType):
+                args = get_args(attr_type)
+                attr_type = next((arg for arg in args if arg is not type(None)), args[0])
+            elif origin:
+                attr_type = origin
+
+            try:
+                # list or dict
+                if attr_type in [dict, list]:
+                    converted_data[attr_name] = json.loads(data[attr_name]) if data[attr_name] else None
+                # primitive types
+                elif attr_type in [str, int, float, bool]:
+                    converted_data[attr_name] = attr_type(data[attr_name])
+                # anything else
+                else:
                     converted_data[attr_name] = data[attr_name]
+            except ValueError:
+                converted_data[attr_name] = data[attr_name]
+
         return cls(**converted_data)
 
 ###### Sections of the INI
@@ -60,16 +70,6 @@ class LoggingSettings(SectionSettings):
     format: str | None = Field(description="Logging format", default="[%(asctime)s] %(levelname)s [%(name)s] %(message)s")
     date_format: str | None = Field(description="Logging date format", default="%Y-%m-%d %H:%M:%S")
     file: bool | None = Field(description="Log to file", default=False)
-
-    @model_validator(mode="after")
-    def validate(self):
-        if not self.loggers:
-            self.loggers = {}
-
-        if isinstance(self.loggers, str):
-            self.loggers = json.loads(self.loggers)
-
-        return self
 
 class OCRSettings(SectionSettings):
     item_min_w: int = Field(description="Minimum width of an OCR item", gt=0)
@@ -105,14 +105,28 @@ class DeveloperSettings(SectionSettings):
     save_images: bool = Field(description="Save images", default=False)
     backup_path: str = Field(description="Backup path", default="screenshots")
 
+class StockpileTypesSettings(SectionSettings):
+    encampment: list[str] = Field(description="Encampment values", min_items=1)
+    keep: list[str] = Field(description="Keep values", min_items=1)
+    safe_house: list[str] = Field(description="Safe House values", min_items=1)
+    relic_base: list[str] = Field(description="Relic Base values", min_items=1)
+    bunker_base: list[str] = Field(description="Bunker Base values", min_items=1)
+    border_base: list[str] = Field(description="Border Base values", min_items=1)
+    town_base: list[str] = Field(description="Town Base values", min_items=1)
+    bms_longhook: list[str] = Field(description="BMS - Longhook values", min_items=1)
+    storage_depot: list[str] = Field(description="Storage Depot values", min_items=1)
+    seaport: list[str] = Field(description="Seaport values", min_items=1)
+    undefined: list[str] = Field(description="Undefined values", min_items=1)
+
 # Sections. End
 
 class AppSettings(BaseSettings):
-    logging: Optional[LoggingSettings] = None
-    ocr: Optional[OCRSettings] = None
-    models: Optional[ModelsSettings] = None
-    backend: Optional[BackendSettings] = None
-    developer: Optional[DeveloperSettings] = None
+    logging: LoggingSettings | None = None
+    ocr: OCRSettings | None = None
+    models: ModelsSettings | None = None
+    backend: BackendSettings | None = None
+    developer: DeveloperSettings | None = None
+    stockpile_types: StockpileTypesSettings | None = None
 
     @classmethod
     def from_ini(cls, file_name: str):

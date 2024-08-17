@@ -2,11 +2,18 @@ from enum import StrEnum
 
 
 class stockpile_type(StrEnum):
-    SEAPORT = 'Seaport'
-    STORAGE_DEPOT = 'Storage Depot'
-    TOWN_BASE = 'Town Base'
+    # Bases (order from the game). Bunker and town bases can have different level but the name is the same
+    ENCAMPMENT = 'Encampment'
+    KEEP = 'Keep'
+    SAFE_HOUSE = 'Safe House'
     RELIC_BASE = 'Relic Base'
     BUNKER_BASE = 'Bunker Base'
-    ENCAMPMENT = 'Encampment'
-    SAFE_HOUSE = 'Safe House'
+    BORDER_BASE = 'Border Base'
+    TOWN_BASE = 'Town Base'
+    BMS_LONGHOOK = 'BMS - Longhook'
+
+    # Structures (order from the game)
+    STORAGE_DEPOT = 'Storage Depot'
+    SEAPORT = 'Seaport'
+
     UNDEFINED = 'Undefined'

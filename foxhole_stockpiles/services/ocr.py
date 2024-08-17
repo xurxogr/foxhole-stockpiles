@@ -168,22 +168,56 @@ class OCR(metaclass=SingletonMeta):
     async def __extract_stockpile_type_from_image(self, image: cv2.typing.MatLike) -> stockpile_type:
         """
         Extracts the stockpile type from an image
-        :param image: Image to extract text from
-        :returns stockpile_type: type found
+
+        Args:
+            image (cv2.typing.MatLike): Image to extract the type from
+
+        Returns:
+            stockpile_type: Type of the stockpile
         """
 
         if image is None or not settings.developer.detect_stockpile_type:
             return stockpile_type.UNDEFINED
 
-        type_text = await self.__extract_text_from_image(image=image)
+        name = await self.__extract_text_from_image(image=image)
+        return await self.__extract_stockpile_type_from_name(name=name)
 
-        try:
-            type_ = stockpile_type(type_text)
-        except Exception as ex:
-            self.__logger.info("Undetected stockpile type '{}'".format(type_text))
-            type_ = stockpile_type.UNDEFINED
+    async def __extract_stockpile_type_from_name(self, name: str) -> stockpile_type:
+        """
+        Extracts the stockpile type from the name
 
-        return type_
+        Args:
+            name (str): Name of the stockpile
+
+        Returns:
+            stockpile_type: Type of the stockpile
+        """
+            # TODO - Get this out of the enum and move it to the service. Translations should be read from the ini file
+
+        _translations = {
+            # English, Chinese, French, German, Portuguese, Russian
+            'Encampment': settings.stockpile_types.encampment,
+            'Keep': settings.stockpile_types.keep,
+            'Safe House': settings.stockpile_types.safe_house,
+            'Relic Base': settings.stockpile_types.relic_base,
+            'Bunker Base': settings.stockpile_types.bunker_base,
+            'Border Base': settings.stockpile_types.border_base,
+            'Town Base': settings.stockpile_types.town_base,
+            'BMS - Longhook': settings.stockpile_types.bms_longhook,
+            'Storage Depot': settings.stockpile_types.storage_depot,
+            'Seaport': settings.stockpile_types.seaport,
+            'Undefined': settings.stockpile_types.undefined
+        }
+
+        for item_type, translations in _translations.items():
+            if name in translations:
+                try:
+                    return stockpile_type(item_type)
+                except ValueError:
+                    break
+
+        self.__logger.info(f"Undetected stockpile type '{name}'")
+        return stockpile_type.UNDEFINED
 
     async def __extract_stockpile_name_from_image(self, image: cv2.typing.MatLike) -> str:
         """
