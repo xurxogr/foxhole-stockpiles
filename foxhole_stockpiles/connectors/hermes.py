@@ -83,13 +83,8 @@ class HermesConnector():
                     # If the response is an error, return the error message, else return the response in message or the json response
                     return_data = return_data.get('error', return_data.get('message', return_data))
                 except:
-                    if response.status_code == 500:
-                        text = "Internal error in backend server"
-                    else:
-                        text = response.text
-
-                    logger.warning(f"FS: Error sending stockpile to the backend server. Status code: {response.status_code}, error: {text}")
-                    return_data = { "message": f"HTTP code {response.status_code} sending the information to the backend server. {text}" }
+                    logger.warning(f"FS: Error sending stockpile to the backend server. Status code: {response.status_code}")
+                    return_data = { "message": f"HTTP code {response.status_code} sending the information to the backend server" }
         except ConnectTimeout:
             raise
         except Exception as e:
