@@ -1,0 +1,24 @@
+services:
+  foxhole_stockpiles:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: foxhole_stockpiles:latest
+    container_name: foxhole_stockpiles
+    restart: unless-stopped
+    ports:
+    - 8010:8010
+    env_file:
+    - .env
+    volumes:
+    - ./config:/code/config
+    - ./logs:/code/logs
+    - ./models:/code/models
+    - ./easyocr:/root/.EasyOCR
+    - ./screenshots:/code/screenshots
+#     networks:
+#       - foxhole-stockpiles
+
+# networks:
+#   foxhole-stockpiles:
+#     external: true
