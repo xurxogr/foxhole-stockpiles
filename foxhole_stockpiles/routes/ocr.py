@@ -38,13 +38,7 @@ async def __scan_image(image: UploadFile, request: Request):
         logger.info(message)
         return { "message": message }
 
-    text = stockpile.name.replace('_', '').replace('-', '')
-    message = f"{stockpile.type}:{stockpile.name}. Scanned image in {end - start}"
-    if text != stockpile.name:
-        message += f", sent {text} to backend"
-        stockpile.name == text
-
-    logger.info(message)
+    logger.info(f"{stockpile.type}:{stockpile.name}. Scanned image in {end - start}")
 
     items = []
     items_no_quantity = []
@@ -63,7 +57,7 @@ async def __scan_image(image: UploadFile, request: Request):
 
     if items_no_quantity:
         items_text = ", ".join(items_no_quantity)
-        logger.error(f"{text}: Items without quantity: {items_text}")
+        logger.error(f"{stockpile.name}: Items without quantity: {items_text}")
 
     url = settings.backend.url
     if url:
