@@ -5,9 +5,9 @@ import os.path
 
 import easyocr
 import cv2
+from keras.models import load_model
 import numpy
 from pydantic import TypeAdapter
-from keras.models import load_model
 
 from foxhole_stockpiles.core.config import settings
 from foxhole_stockpiles.enums.stockpile_type import stockpile_type
@@ -144,14 +144,20 @@ class OCR(metaclass=SingletonMeta):
             return ""
 
         try:
-            # FIXME: Find a better way. In some cases it doesn't detect - or mistakes 1 and 7
             th = image.copy()
-            th[th<180] = 0
             scale=4
-            th = cv2.resize(th, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+            image = cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+            image[image<170] = 0
+
+            # Convert to grayscale
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+            # Enhance contrast using CLAHE
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+            inverted = cv2.bitwise_not(clahe.apply(gray))
 
             # crop the region of interest (ROI)
-            bbox = numpy.where(th>0)
+            bbox = numpy.where(inverted>0)
             roi = th[bbox[0].min():bbox[0].max(), bbox[1].min():bbox[1].max()]
 
             # Returns [coords(A, B, C, D), text, threshold]
@@ -401,13 +407,13 @@ class OCR(metaclass=SingletonMeta):
         # Title: [type]              [name][tab]
         # Using 3*item width for rectangle crop
         # name is shifted to the left one item width
-        type_x1 = min_x
+        type_x1 = min_x + item_spacing_width - 2
         type_x2 = min_x + 3 * detected_item_width
         name_x1 = max_x - 4 * detected_item_width
         name_x2 = max_x - 1 * detected_item_width + int(item_spacing_height/2)
-        type_y1 = min_y
-        type_y2 = min_y + detected_item_height
-        name_y1 = min_y
+        type_y1 = min_y + item_spacing_height
+        type_y2 = min_y + detected_item_height - item_spacing_height
+        name_y1 = type_y1
         name_y2 = type_y2
 
         stockpile_type_image = image[type_y1:type_y2, type_x1:type_x2]
