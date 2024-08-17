@@ -104,7 +104,10 @@ class DeveloperSettings(SectionSettings):
     detect_stockpile_type: bool = Field(description="Detect stockpile type", default=True)
     detect_stockpile_name: bool = Field(description="Detect stockpile name", default=True)
     draw_rectangles: bool = Field(description="Draw rectangles", default=False)
-    save_images: bool = Field(description="Save images", default=False)
+    save_image: bool = Field(description="Save image", default=False)
+    save_stockpile: bool = Field(description="Save detected stockpile", default=False)
+    save_name: bool = Field(description="Save detected stockpile name", default=False)
+    save_type: bool = Field(description="Save detected stockpile type", default=False)
     backup_path: str = Field(description="Backup path", default="screenshots")
 
 class StockpileTypesSettings(SectionSettings):

@@ -424,11 +424,22 @@ class OCR(metaclass=SingletonMeta):
         # Crop the image to store only the stockpile with the type, name and the items
         cropped_image = image[min_y:max_y, min_x:max_x]
         stockpile = Stockpile(name=name, type=type_, image=cropped_image, items=items)
-        await self.save_image(stockpile=stockpile, file_name=file_name, image=image) #, name_image=stockpile_name_image, type_image=stockpile_type_image, stockpile_image=cropped_image)
+        await self.save_image(stockpile=stockpile, file_name=file_name, image=image, name_image=stockpile_name_image, type_image=stockpile_type_image, stockpile_image=cropped_image)
         return stockpile
 
     async def save_image(self, stockpile: Stockpile, file_name: str, image: any, name_image: any = None, type_image: any = None, stockpile_image: any = None):
-        if not settings.developer.save_images:
+        """
+        Saves the image to the configured path
+
+        Args:
+            stockpile (Stockpile): Stockpile detected
+            file_name (str): Name of the file
+            image (any): Image to save
+            name_image (any): Image with the name detected
+            type_image (any): Image with the type detected
+            stockpile_image (any): Image with the stockpile detected
+        """
+        if not any([settings.developer.save_image, settings.developer.save_stockpile, settings.developer.save_name, settings.developer.save_type]):
             return
 
         if stockpile:
@@ -446,10 +457,11 @@ class OCR(metaclass=SingletonMeta):
             os.makedirs(directory)
         
         file_name = "{}{}-{}-{}-{}".format(directory, time_str, s_type, s_name, file_name)
-        cv2.imwrite("{}.png".format(file_name), image)
-        if name_image is not None:
+        if image is not None and settings.developer.save_image:
+            cv2.imwrite("{}.png".format(file_name), image)
+        if name_image is not None and settings.developer.save_name:
             cv2.imwrite("{}_name.png".format(file_name), name_image)
-        if type_image is not None:
+        if type_image is not None and settings.developer.save_type:
             cv2.imwrite("{}_type.png".format(file_name), type_image)
-        if stockpile_image is not None:
+        if stockpile_image is not None and settings.developer.save_stockpile:
             cv2.imwrite("{}_stockpile.png".format(file_name), stockpile_image)
