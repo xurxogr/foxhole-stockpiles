@@ -1,11 +1,11 @@
-from enum import Enum
-from typing import Final
+from enum import StrEnum
 
-class catalog_item_category(str, Enum):
-    HEAVY_AMMO: Final = 'HeavyAmmo'
-    HEAVY_ARMS: Final = 'HeavyArms'
-    MEDICAL: Final = 'Medical'
-    SMALL_ARMS: Final = 'SmallArms'
-    SUPPLIES: Final = 'Supplies'
-    UNIFORMS: Final = 'Uniforms'
-    UTILITY: Final = 'Utility'
+
+class catalog_item_category(StrEnum):
+    HEAVY_AMMO = 'HeavyAmmo'
+    HEAVY_ARMS = 'HeavyArms'
+    MEDICAL = 'Medical'
+    SMALL_ARMS = 'SmallArms'
+    SUPPLIES = 'Supplies'
+    UNIFORMS = 'Uniforms'
+    UTILITY = 'Utility'

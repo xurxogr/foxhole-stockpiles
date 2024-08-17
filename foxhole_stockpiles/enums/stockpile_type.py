@@ -1,12 +1,12 @@
-from enum import Enum
-from typing import Final
+from enum import StrEnum
 
-class stockpile_type(str, Enum):
-    SEAPORT: Final = 'Seaport'
-    STORAGE_DEPOT: Final = 'Storage Depot'
-    TOWN_BASE: Final = 'Town Base'
-    RELIC_BASE: Final = 'Relic Base'
-    BUNKER_BASE: Final = 'Bunker Base'
-    ENCAMPMENT: Final = 'Encampment'
-    SAFE_HOUSE: Final = 'Safe House'
-    UNDEFINED: Final = 'Undefined'
+
+class stockpile_type(StrEnum):
+    SEAPORT = 'Seaport'
+    STORAGE_DEPOT = 'Storage Depot'
+    TOWN_BASE = 'Town Base'
+    RELIC_BASE = 'Relic Base'
+    BUNKER_BASE = 'Bunker Base'
+    ENCAMPMENT = 'Encampment'
+    SAFE_HOUSE = 'Safe House'
+    UNDEFINED = 'Undefined'
