@@ -55,7 +55,7 @@ class HermesConnector():
         else:
             self.__url = url
 
-    @async_retry_on_302(max_retries=3, delay=2)
+    #@async_retry_on_302(max_retries=3, delay=2)
     @async_retry_on_connect_timeout(max_retries=3, delay=2)
     async def send_stockpile_to_hermes(self, stockpile: dict, api_key: str):
         """
