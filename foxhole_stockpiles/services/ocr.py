@@ -10,54 +10,32 @@ from pydantic import TypeAdapter
 from keras.models import load_model
 
 from foxhole_stockpiles.core.config import settings
+from foxhole_stockpiles.enums.stockpile_type import stockpile_type
 from foxhole_stockpiles.models.catalog_item import CatalogItem
-from foxhole_stockpiles.models.enums.stockpile_type import stockpile_type
-from foxhole_stockpiles.models.singleton.singletonmeta import SingletonMeta
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
+from foxhole_stockpiles.services.singletonmeta import SingletonMeta
 
 
 class OCR(metaclass=SingletonMeta):
     def __init__(self):
         self.__logger = logging.getLogger(__name__)
 
-        self.__item_min_width = settings.ocr.item_min_w
-        self.__item_max_width = settings.ocr.item_max_w
-        self.__item_min_ratio = settings.ocr.item_min_ratio
-        self.__item_max_ratio = settings.ocr.item_max_ratio
-        self.__item_spacing_height = settings.ocr.item_spacing_height
-        self.__item_spacing_width = settings.ocr.item_spacing_width
-
-        # Developer options
-        self.__dev_dectect_stockpile_name = settings.developer.detect_stockpile_name
-        self.__dev_dectect_stockpile_type = settings.developer.detect_stockpile_type
-        self.__dev_dectect_quantities = settings.developer.detect_quantities
-        self.__dev_dectect_icons = settings.developer.detect_icons
-        self.__dev_draw_rectangles = settings.developer.draw_rectangles
-        self.__dev_save_images = settings.developer.save_images
-        self.__dev_save_path = settings.developer.backup_path
-
-        # Models and catalogs path
-        self.__icons_path = settings.models.icons_path
-        self.__quantity_path = settings.models.quantities_path
-        self.__catalog_items_path = settings.models.catalog_items_path
-
+        # Models and classes. Initialized on first use
         self.__icons_model = None
         self.__icons_classes = None
         self.__quantity_model = None
         self.__quantity_classes = None
         self.__catalog_items = None
 
-        # Initalize ocr
-        # TODO: Extend to other languages
+        # Initalize ocr. To support chinese it can only work with english
         self.__ocrreader = easyocr.Reader(lang_list=['en', 'ch_sim'])
 
     async def __init_models(self):
         # Load models and item catalog
-        self.__icons_model, self.__icons_classes = await self.__load_model(path=self.__icons_path)
-        self.__quantity_model, self.__quantity_classes = await self.__load_model(path=self.__quantity_path)
-        self.__catalog_items = await self.__load_catalog(path=self.__catalog_items_path)
-
+        self.__icons_model, self.__icons_classes = await self.__load_model(path=settings.models.icons_path)
+        self.__quantity_model, self.__quantity_classes = await self.__load_model(path=settings.models.quantities_path)
+        self.__catalog_items = await self.__load_catalog(path=settings.models.catalog_items_path)
 
     async def __load_catalog(self, path: str) -> dict:
         """
@@ -104,7 +82,7 @@ class OCR(metaclass=SingletonMeta):
         :returns str: code of the item detected
         """
 
-        if image is None or not self.__dev_dectect_icons:
+        if image is None or not settings.developer.detect_icons:
             return ""
 
         resized_image = cv2.resize(image, (32, 32))
@@ -124,7 +102,7 @@ class OCR(metaclass=SingletonMeta):
         :returns int: Quantity detected
         """
 
-        if image is None or not self.__dev_dectect_quantities:
+        if image is None or not settings.developer.detect_quantities:
             return -1
 
         # Threshold the image to create a binary image
@@ -194,7 +172,7 @@ class OCR(metaclass=SingletonMeta):
         :returns stockpile_type: type found
         """
 
-        if image is None or not self.__dev_dectect_stockpile_type:
+        if image is None or not settings.developer.detect_stockpile_type:
             return stockpile_type.UNDEFINED
 
         type_text = await self.__extract_text_from_image(image=image)
@@ -214,7 +192,7 @@ class OCR(metaclass=SingletonMeta):
         :returns str: Text found
         """
 
-        if image is None or not self.__dev_dectect_stockpile_name:
+        if image is None or not settings.developer.detect_stockpile_name:
             return ""
 
         return await self.__extract_text_from_image(image=image)
@@ -268,11 +246,11 @@ class OCR(metaclass=SingletonMeta):
         image_ratio = height / 1440
 
         items = []
-        item_min_width = int(self.__item_min_width * image_ratio)
-        item_max_width = int(self.__item_max_width * image_ratio)
+        item_min_width = int(settings.ocr.item_min_w * image_ratio)
+        item_max_width = int(settings.ocr.item_max_w * image_ratio)
 
-        item_spacing_width = int(image_ratio * self.__item_spacing_width)
-        item_spacing_height = int(image_ratio * self.__item_spacing_height)
+        item_spacing_width = int(image_ratio * settings.ocr.item_spacing_width)
+        item_spacing_height = int(image_ratio * settings.ocr.item_spacing_height)
 
         self.__logger.debug("Parsing image {}. width: {}, height: {}, ratio: {}. Item min-max width: [{}-{}]".format(
             file_name, width, height, image_ratio, item_min_width, item_max_width))
@@ -298,7 +276,7 @@ class OCR(metaclass=SingletonMeta):
             x, y, w, h = cv2.boundingRect(cnt)
             # Find rectangles with the correct aspect ratio
             ratio = round(w / h, 2)
-            if ratio < self.__item_min_ratio or self.__item_max_ratio < ratio or w < item_min_width or item_max_width < w:
+            if ratio < settings.ocr.item_min_ratio or settings.ocr.item_max_ratio < ratio or w < item_min_width or item_max_width < w:
                 #self.__logger.debug("x: {}, y: {}, w: {}, h: {}, ratio: {}".format(x, y, w, h, ratio))
                 continue
 
@@ -361,7 +339,7 @@ class OCR(metaclass=SingletonMeta):
             if quantity_x2 < min_quantity_x:
                 min_quantity_x = quantity_x2
 
-            if self.__dev_draw_rectangles:
+            if settings.developer.draw_rectangles:
                 # draw a rectangle for quantity. In different colour if it wasn't detected
                 cv2.rectangle(image, (quantity_x1, quantity_y1), (quantity_x2, quantity_y2), (0, 0, 255), 2)
                 # draw the quantity detected
@@ -401,7 +379,7 @@ class OCR(metaclass=SingletonMeta):
         stockpile_type_image = image[type_y1:type_y2, type_x1:type_x2]
         stockpile_name_image = image[name_y1:name_y2, name_x1:name_x2]
 
-        if self.__dev_draw_rectangles:
+        if settings.developer.draw_rectangles:
             # Add rectangles over the stockpile type and name
             cv2.rectangle(image, (type_x1, type_y1), (type_x2, type_y2), (255, 0, 255), 2)
             cv2.rectangle(image, (name_x1, name_y1), (name_x2, name_y2), (255, 0, 255), 2)
@@ -416,7 +394,7 @@ class OCR(metaclass=SingletonMeta):
         return stockpile
 
     async def save_image(self, stockpile: Stockpile, file_name: str, image: any, name_image: any = None, type_image: any = None, stockpile_image: any = None):
-        if not self.__dev_save_images:
+        if not settings.developer.save_images:
             return
 
         if stockpile:
@@ -429,7 +407,7 @@ class OCR(metaclass=SingletonMeta):
         date_now = datetime.now()
         date_str = date_now.strftime("%Y-%m-%d")
         time_str = date_now.strftime("%H-%M-%S")
-        directory = "{}/{}/".format(self.__dev_save_path or ".", date_str)
+        directory = "{}/{}/".format(settings.developer.backup_path or ".", date_str)
         if not os.path.exists(directory):
             os.makedirs(directory)
         

@@ -1,6 +1,5 @@
 from numpy import ndarray
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class StockpileItem(BaseModel):
@@ -10,13 +9,14 @@ class StockpileItem(BaseModel):
     quantity_image: ndarray | None = Field(description="Quantity image", default=None, exclude=True)
     crated: bool = Field(description="Is the item crated?", default=False)
 
-    class Config:
-        arbitrary_types_allowed=True
-        extra = "forbid"
-        json_schema_extra = {
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        extra="forbid",
+        json_schema_extra={
             "example": {
                 "code": "GrenadeLauncherC",
-                "quantity": "3",
+                "quantity": 3,
                 "crated": False
             }
         }
+    )
