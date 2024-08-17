@@ -53,7 +53,7 @@ class HermesConnector():
 
     #@async_retry_on_302(max_retries=3, delay=2)
     @async_retry_on_connect_timeout(max_retries=3, delay=2)
-    async def send_stockpile_to_hermes(self, stockpile: dict, api_key: str):
+    async def send_stockpile(self, stockpile: dict, api_key: str):
         """
         Sends an stockpile to hermes
         :param stockpile: Stockpile = Stockpile to send (Generated from an image)

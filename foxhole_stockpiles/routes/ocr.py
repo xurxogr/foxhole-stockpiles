@@ -52,7 +52,6 @@ async def __scan_image(image: UploadFile, request: Request):
     for item in stockpile.items:
         if item.quantity == -1:
             items_no_quantity.append(item.code)
-            continue
 
         items.append({ "code": item.code, "quantity": item.quantity, "crated": item.crated})
 
@@ -68,7 +67,7 @@ async def __scan_image(image: UploadFile, request: Request):
 
     url = settings.backend.url
     if url:
-        hermes = HermesConnector(url=url)
-        return await hermes.send_stockpile_to_hermes(stockpile=stockpile_dict, api_key=api_key)
+        connector = HermesConnector(url=url)
+        return await connector.send_stockpile(stockpile=stockpile_dict, api_key=api_key)
 
     return stockpile_dict
