@@ -53,8 +53,10 @@ class SectionSettings(BaseSettings):
                 if attr_type in [dict, list]:
                     converted_data[attr_name] = json.loads(data[attr_name]) if data[attr_name] else None
                 # primitive types
-                elif attr_type in [str, int, float, bool]:
+                elif attr_type in [str, int, float]:
                     converted_data[attr_name] = attr_type(data[attr_name])
+                elif attr_type == bool:
+                    converted_data[attr_name] = data[attr_name].lower() in ['true', 'yes', '1']
                 # anything else
                 else:
                     converted_data[attr_name] = data[attr_name]
