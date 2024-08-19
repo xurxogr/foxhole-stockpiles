@@ -38,7 +38,7 @@ async def __scan_image(image: UploadFile, request: Request):
         logger.info(message)
         return { "message": message }
 
-    logger.info(f"{stockpile.type}:{stockpile.name}. Scanned image in {end - start}")
+    logger.info(f"{stockpile.type}:{stockpile.name}. Scanned image in {end - start:.2f}")
 
     items = []
     items_no_quantity = []
