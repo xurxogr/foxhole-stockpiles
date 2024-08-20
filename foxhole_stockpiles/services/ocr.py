@@ -162,7 +162,9 @@ class OCR(metaclass=SingletonMeta):
             clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
             inverted = cv2.bitwise_not(clahe.apply(gray))
 
-            pytesseract_text = pytesseract.image_to_string(inverted, lang='eng+fra+deu+por+rus+chi_sim')
+            config = '--psm 7'
+            lang = 'eng+fra+deu+por+rus+chi_sim'
+            pytesseract_text = pytesseract.image_to_string(inverted, config=config, lang=lang)
             text_found = pytesseract_text.replace('\n', '').replace('\r', '').strip()
         except:
             text_found = ""
