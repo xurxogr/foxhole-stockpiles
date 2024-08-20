@@ -26,9 +26,9 @@ EPOCHS = 10
 COLOR_MODE = "rgb"
 DROPOUT=0.5
 VALIDATION_SPLIT=0.8
-DATA_DIR = "./quantity_training/"
+DATA_DIR = "stockpile_type_training/"
 
-IMG_SIZE = (32, 32)
+IMG_SIZE = (50, 500)
 
 PREFETCH_SIZE = tf.data.AUTOTUNE
 RANDOM_SEED = 4687951
@@ -57,7 +57,7 @@ val_ds = keras.utils.image_dataset_from_directory(
 class_names = train_ds.class_names
 output_dim = len(class_names)
 
-with open('quantities_model.json', 'w', encoding='utf-8') as f:
+with open('stockpile_types.json', 'w', encoding='utf-8') as f:
   f.write(json.dumps(class_names, indent=2));
   f.write('\n');
 
@@ -112,4 +112,4 @@ model.fit(
   epochs=EPOCHS,
 )
 
-model.save("quantities_model.keras")
+model.save("stockpile_types.keras")

@@ -27,11 +27,14 @@ class OCR(metaclass=SingletonMeta):
         self.__quantity_model = None
         self.__quantity_classes = None
         self.__catalog_items = None
+        self.__stockpile_types_model = None
+        self.__stockpile_types_classes = None
 
     async def __init_models(self):
         # Load models and item catalog
         self.__icons_model, self.__icons_classes = await self.__load_model(path=settings.models.icons_path)
         self.__quantity_model, self.__quantity_classes = await self.__load_model(path=settings.models.quantities_path)
+        self.__stockpile_types_model, self.__stockpile_types_classes = await self.__load_model(path=settings.models.stockpile_types_path)
         self.__catalog_items = await self.__load_catalog(path=settings.models.catalog_items_path)
 
     async def __load_catalog(self, path: str) -> dict:
@@ -164,7 +167,7 @@ class OCR(metaclass=SingletonMeta):
 
             config = '--psm 7'
             lang = 'eng+fra+deu+por+rus+chi_sim'
-            text_found = pytesseract.image_to_string(inverted, config=config, lang=lang).split('\n')[0]
+            text_found = pytesseract.image_to_string(inverted, config=config, lang=lang).split('\n')[0].strip()
         except:
             text_found = ""
 
@@ -184,45 +187,25 @@ class OCR(metaclass=SingletonMeta):
         if image is None or not settings.developer.detect_stockpile_type:
             return stockpile_type.UNDEFINED
 
-        name = await self.__extract_text_from_image(image=image)
-        return await self.__extract_stockpile_type_from_name(name=name)
+        image = cv2.resize(image, None, fx=8, fy=8, interpolation=cv2.INTER_CUBIC)
+        image[image<170] = 0
 
-    async def __extract_stockpile_type_from_name(self, name: str) -> stockpile_type:
-        """
-        Extracts the stockpile type from the name
+        # Convert to grayscale
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        # Get the bounding rectangle of all non-zero pixels
+        x, y, w, h = cv2.boundingRect(gray)
 
-        Args:
-            name (str): Name of the stockpile
+        # Convert to black numbers with white background and resize to 500, 50 to match the model
+        cropped_image = cv2.threshold(image[y:y+h, x:x+w], 127, 255, cv2.THRESH_BINARY_INV)[1]
+        resized_image = cv2.resize(cropped_image, (500, 50))
+        expanded_imagen = numpy.expand_dims(resized_image, axis=0)
 
-        Returns:
-            stockpile_type: Type of the stockpile
-        """
-            # TODO - Get this out of the enum and move it to the service. Translations should be read from the ini file
-
-        _translations = {
-            # English, Chinese, French, German, Portuguese, Russian
-            'Encampment': settings.stockpile_types.encampment,
-            'Keep': settings.stockpile_types.keep,
-            'Safe House': settings.stockpile_types.safe_house,
-            'Relic Base': settings.stockpile_types.relic_base,
-            'Bunker Base': settings.stockpile_types.bunker_base,
-            'Border Base': settings.stockpile_types.border_base,
-            'Town Base': settings.stockpile_types.town_base,
-            'BMS - Longhook': settings.stockpile_types.bms_longhook,
-            'Storage Depot': settings.stockpile_types.storage_depot,
-            'Seaport': settings.stockpile_types.seaport,
-            'Undefined': settings.stockpile_types.undefined
-        }
-
-        for item_type, translations in _translations.items():
-            if name in translations:
-                try:
-                    return stockpile_type(item_type)
-                except ValueError:
-                    break
-
-        self.__logger.info(f"Undetected stockpile type '{name}'")
-        return stockpile_type.UNDEFINED
+        prediction = self.__stockpile_types_model.predict(expanded_imagen, verbose=0)
+        name = self.__stockpile_types_classes[numpy.argmax(prediction)]
+        try:
+            return stockpile_type(name)
+        except ValueError:
+            return stockpile_type.UNDEFINED
 
     async def __extract_stockpile_name_from_image(self, image: cv2.typing.MatLike) -> str:
         """
@@ -407,7 +390,7 @@ class OCR(metaclass=SingletonMeta):
         # Using 3*item width for rectangle crop
         # name is shifted to the left one item width
         type_x1 = min_x + item_spacing_width - 2
-        type_x2 = min_x + 3 * detected_item_width
+        type_x2 = min_x + 4 * detected_item_width
         name_x1 = max_x - 4 * detected_item_width
         name_x2 = max_x - 1 * detected_item_width + int(item_spacing_height/2)
         type_y1 = min_y + item_spacing_height
@@ -424,7 +407,11 @@ class OCR(metaclass=SingletonMeta):
             cv2.rectangle(image, (name_x1, name_y1), (name_x2, name_y2), (255, 0, 255), 2)
 
         type_ = await self.__extract_stockpile_type_from_image(image=stockpile_type_image)
-        name = await self.__extract_stockpile_name_from_image(image=stockpile_name_image)
+
+        if type_ in [stockpile_type.SEAPORT, stockpile_type.STORAGE_DEPOT]:
+            name = await self.__extract_stockpile_name_from_image(image=stockpile_name_image)
+        else:
+            name = ""
 
         # Crop the image to store only the stockpile with the type, name and the items
         cropped_image = image[min_y:max_y, min_x:max_x]
