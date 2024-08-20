@@ -27,7 +27,7 @@ EPOCHS = 1000
 COLOR_MODE = "rgb"
 DROPOUT=0.5
 VALIDATION_SPLIT=0
-DATA_DIR = "icons/"
+DATA_DIR = "icons-naval57/"
 
 IMG_SIZE = (32, 32)
 
@@ -72,7 +72,7 @@ train_ds = train_ds.cache().prefetch(buffer_size=PREFETCH_SIZE)
 model = Sequential([
 #  layers.RandomBrightness(0.05),
 #  layers.RandomContrast(0.05),
-  layers.experimental.preprocessing.Rescaling(1./255, input_shape=IMG_SIZE + (3,)),
+  layers.Rescaling(1./255, input_shape=IMG_SIZE + (3,)),
   layers.Conv2D(16, 3, padding='same', use_bias=False),
   layers.BatchNormalization(),
   layers.Activation('relu'),
