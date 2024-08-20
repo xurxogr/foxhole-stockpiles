@@ -37,8 +37,9 @@ class VerificationService():
             clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
             inverted = cv2.bitwise_not(clahe.apply(gray))
 
-            pytesseract_text = pytesseract.image_to_string(inverted, lang='eng+fra+deu+por+rus+chi_sim')
-            text_found = pytesseract_text.replace('\n', '').replace('\r', '').strip()
+            config = '--psm 7'
+            lang = 'eng+fra+deu+por+rus+chi_sim'
+            text_found = pytesseract.image_to_string(inverted, config=config, lang=lang).split('\n')[0]
         except:
             text_found = ""
 
@@ -53,13 +54,13 @@ class VerificationService():
 
         if len(pictures) != 2:
             return {"error": "Invalid number of pictures {}".format(len(pictures))}
-        
+
         images = []
         for picture in pictures:
             bytes_as_np_array = np.frombuffer(picture, dtype=np.uint8)
             image = cv2.imdecode(buf=bytes_as_np_array, flags=cv2.IMREAD_COLOR)
             images.append(image)
-        
+
         regiment_info = await self.find_user_info(image=images[0])
         if regiment_info.get('name') is None:
             regiment_info = await self.find_user_info(image=images[1])
@@ -82,7 +83,7 @@ class VerificationService():
         py = height/5
         px = width/5
 
-        data = { 
+        data = {
             "name": None,
             "level": None,
             "regiment": None
@@ -91,8 +92,15 @@ class VerificationService():
         # Extract username and level
         username_image = image[int(0.63*py):int(0.77*py), int(1.6*px):int(3*px)]
         ocr_text = await self.__extract_text_from_image(image=username_image)
+
+        # Remove the Icon from the text. It's detected as a word. Remove the last word
+        # [name] [icon text as random word] Level: [level]
         try:
-            data['name'] = ocr_text.split('Level')[0].strip()
+            parts = ocr_text.split(' Level: ')
+
+            words = parts[0].split(' ')[:-1]
+            data['name'] = ' '.join(words)
+            data['level'] = parts[1]
         except:
             pass
 
@@ -100,19 +108,14 @@ class VerificationService():
         if data.get('name') is None:
             return data
 
-        try:    
-            data['level'] = ocr_text.split('Level: ')[1]
-        except:
-            pass
-
         data['colonial'] = await self.find_colonial_icon(image = username_image)
 
         # Extract Regiment
         regiment_image = image[int(1.4*py):int(1.5*py), :]
         ocr_text = await self.__extract_text_from_image(image=regiment_image)
-        count = sum(1 for i in ocr_text.split(' ') if 'Name' in i)
+        count = len(ocr_text.split('Name'))
         # 0 = None, 2 = True, 1 = False
-        data.update({ "regiment": None if count == 0 else count == 2})
+        data['regiment'] = None if count == 1 else count == 3
 
         return data
 

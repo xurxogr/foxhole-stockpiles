@@ -164,8 +164,7 @@ class OCR(metaclass=SingletonMeta):
 
             config = '--psm 7'
             lang = 'eng+fra+deu+por+rus+chi_sim'
-            pytesseract_text = pytesseract.image_to_string(inverted, config=config, lang=lang)
-            text_found = pytesseract_text.replace('\n', '').replace('\r', '').strip()
+            text_found = pytesseract.image_to_string(inverted, config=config, lang=lang).split('\n')[0]
         except:
             text_found = ""
 
