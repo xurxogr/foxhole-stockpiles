@@ -124,9 +124,15 @@ class OCR(metaclass=SingletonMeta):
         prediction = self.__quantity_model.predict(expanded_imagen, verbose=0)
         item = self.__quantity_classes[numpy.argmax(prediction)]
 
+        multiplier = 1
+        if 'k+' in item:
+            multiplier = 1000
+            item = item.replace('k+', '')
+
         try:
-            ret_val = int(item)
+            ret_val = int(item) * multiplier
         except:
+            print(f"Error converting quantity '{item}' to int")
             ret_val = -1
 
         return ret_val
@@ -137,7 +143,7 @@ class OCR(metaclass=SingletonMeta):
 
         Args:
             image (cv2.typing.MatLike): Image to extract text from
-        
+
         Returns:
             str: Extracted text
         """
@@ -453,7 +459,7 @@ class OCR(metaclass=SingletonMeta):
         directory = "{}/{}/".format(settings.developer.backup_path or ".", date_str)
         if not os.path.exists(directory):
             os.makedirs(directory)
-        
+
         file_name = "{}{}-{}-{}-{}".format(directory, time_str, s_type, s_name, file_name)
         if image is not None and settings.developer.save_image:
             cv2.imwrite("{}.png".format(file_name), image)
