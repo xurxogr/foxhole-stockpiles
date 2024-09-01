@@ -105,21 +105,15 @@ class OCR(metaclass=SingletonMeta):
         if image is None or not settings.developer.detect_quantities:
             return -1
 
-        # Threshold the image to create a binary image
+        image[image<170] = 0
+
+        # Convert to grayscale
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        thresh1 = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
-
-        # Find non-zero pixels
-        non_zero = cv2.findNonZero(thresh1)
-
-        if non_zero is None:
-            self.__logger.info("Error: No white pixels found in the image")
-            return -1
 
         # Get the bounding rectangle of all non-zero pixels
-        x, y, w, h = cv2.boundingRect(non_zero)
+        x, y, w, h = cv2.boundingRect(gray)
 
-        # Convert to black numbers with white background and resize to 32x32 to match the model
+        # Convert to black numbers with white background and resize to 500, 50 to match the model
         cropped_image = cv2.threshold(image[y:y+h, x:x+w], 127, 255, cv2.THRESH_BINARY_INV)[1]
         resized_image = cv2.resize(cropped_image, (32, 32))
         expanded_imagen = numpy.expand_dims(resized_image, axis=0)
@@ -154,20 +148,15 @@ class OCR(metaclass=SingletonMeta):
             return ""
 
         try:
-            scale=4
+            scale=2
             image = cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
             image[image<170] = 0
-
-            # Convert to grayscale
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-            # Enhance contrast using CLAHE
-            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-            inverted = cv2.bitwise_not(clahe.apply(gray))
-
+            # Convert to black numbers with white background
+            cropped_image = cv2.threshold(image, 127, 255, cv2.THRESH_BINARY_INV)[1]
             config = '--psm 7'
-            lang = 'eng+fra+deu+por+rus+chi_sim'
-            text_found = pytesseract.image_to_string(inverted, config=config, lang=lang).split('\n')[0].strip()
+            lang='custom+eng+fra+deu+por+rus+chi_sim'
+            pytesseract_text = pytesseract.image_to_string(cropped_image, lang=lang, config=config)
+            text_found = pytesseract_text.split('\n')[0]
         except:
             text_found = ""
 
