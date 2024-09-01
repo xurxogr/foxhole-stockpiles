@@ -378,10 +378,10 @@ class OCR(metaclass=SingletonMeta):
         # Title: [type]              [name][tab]
         # Using 3*item width for rectangle crop
         # name is shifted to the left one item width
-        type_x1 = min_x + item_spacing_width - 2
+        type_x1 = min_x + item_spacing_width
         type_x2 = min_x + 4 * detected_item_width
-        name_x1 = max_x - 4 * detected_item_width
-        name_x2 = max_x - 1 * detected_item_width + int(item_spacing_height/2)
+        name_x1 = max_x - 3 * detected_item_width
+        name_x2 = max_x - detected_item_width
         type_y1 = min_y + item_spacing_height
         type_y2 = min_y + detected_item_height - item_spacing_height
         name_y1 = type_y1
