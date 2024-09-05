@@ -94,7 +94,6 @@ class ModelsSettings(SectionSettings):
     icons_path: str = Field(description="Path to the icons model")
     quantities_path: str = Field(description="Path to the quantities model")
     catalog_items_path: str = Field(description="Path to the catalog items")
-    stockpile_types_path: str = Field(description="Path to the stockpile types")
 
 class BackendSettings(SectionSettings):
     url: str = Field(description="Backend API URL")
@@ -111,6 +110,18 @@ class DeveloperSettings(SectionSettings):
     save_type: bool = Field(description="Save detected stockpile type", default=False)
     backup_path: str = Field(description="Backup path", default="screenshots")
 
+class StockpileTypesSettings(SectionSettings):
+    encampment: list[str] = Field(description="Encampment values", min_items=1)
+    keep: list[str] = Field(description="Keep values", min_items=1)
+    safe_house: list[str] = Field(description="Safe House values", min_items=1)
+    relic_base: list[str] = Field(description="Relic Base values", min_items=1)
+    bunker_base: list[str] = Field(description="Bunker Base values", min_items=1)
+    border_base: list[str] = Field(description="Border Base values", min_items=1)
+    town_base: list[str] = Field(description="Town Base values", min_items=1)
+    bms_longhook: list[str] = Field(description="BMS - Longhook values", min_items=1)
+    storage_depot: list[str] = Field(description="Storage Depot values", min_items=1)
+    seaport: list[str] = Field(description="Seaport values", min_items=1)
+    undefined: list[str] = Field(description="Undefined values", min_items=1)
 # Sections. End
 
 class AppSettings(BaseSettings):
@@ -119,6 +130,7 @@ class AppSettings(BaseSettings):
     models: ModelsSettings | None = None
     backend: BackendSettings | None = None
     developer: DeveloperSettings | None = None
+    stockpile_types: StockpileTypesSettings | None = None
 
     @classmethod
     def from_ini(cls, file_name: str):

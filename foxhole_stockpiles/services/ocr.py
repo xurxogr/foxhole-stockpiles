@@ -27,14 +27,11 @@ class OCR(metaclass=SingletonMeta):
         self.__quantity_model = None
         self.__quantity_classes = None
         self.__catalog_items = None
-        self.__stockpile_types_model = None
-        self.__stockpile_types_classes = None
 
     async def __init_models(self):
         # Load models and item catalog
         self.__icons_model, self.__icons_classes = await self.__load_model(path=settings.models.icons_path)
         self.__quantity_model, self.__quantity_classes = await self.__load_model(path=settings.models.quantities_path)
-        self.__stockpile_types_model, self.__stockpile_types_classes = await self.__load_model(path=settings.models.stockpile_types_path)
         self.__catalog_items = await self.__load_catalog(path=settings.models.catalog_items_path)
 
     async def __load_catalog(self, path: str) -> dict:
@@ -113,7 +110,7 @@ class OCR(metaclass=SingletonMeta):
         # Get the bounding rectangle of all non-zero pixels
         x, y, w, h = cv2.boundingRect(gray)
 
-        # Convert to black numbers with white background and resize to 500, 50 to match the model
+        # Convert to black numbers with white background and resize to 32, 32 to match the model
         cropped_image = cv2.threshold(image[y:y+h, x:x+w], 127, 255, cv2.THRESH_BINARY_INV)[1]
         resized_image = cv2.resize(cropped_image, (32, 32))
         expanded_imagen = numpy.expand_dims(resized_image, axis=0)
@@ -129,7 +126,6 @@ class OCR(metaclass=SingletonMeta):
         try:
             ret_val = int(item) * multiplier
         except:
-            print(f"Error converting quantity '{item}' to int")
             ret_val = -1
 
         return ret_val
@@ -184,15 +180,22 @@ class OCR(metaclass=SingletonMeta):
         # Get the bounding rectangle of all non-zero pixels
         x, y, w, h = cv2.boundingRect(gray)
 
-        # Convert to black numbers with white background and resize to 500, 50 to match the model
+        # Convert to black numbers with white background
         cropped_image = cv2.threshold(image[y:y+h, x:x+w], 127, 255, cv2.THRESH_BINARY_INV)[1]
-        resized_image = cv2.resize(cropped_image, (500, 50))
-        expanded_imagen = numpy.expand_dims(resized_image, axis=0)
+        config = '--psm 7'
+        lang='custom+eng+fra+deu+por+rus+chi_sim'
+        pytesseract_text = pytesseract.image_to_string(cropped_image, lang=lang, config=config)
+        name = pytesseract_text.split('\n')[0]
 
-        prediction = self.__stockpile_types_model.predict(expanded_imagen, verbose=0)
-        name = self.__stockpile_types_classes[numpy.argmax(prediction)]
+        type_found = "Undefined"
+        translations = settings.stockpile_types.model_dump()
+        for valid_names in translations.values():
+           if name in valid_names:
+               type_found = valid_names[0]
+               break
+
         try:
-            return stockpile_type(name)
+            return stockpile_type(type_found)
         except ValueError:
             return stockpile_type.UNDEFINED
 
