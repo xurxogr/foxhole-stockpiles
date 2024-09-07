@@ -29,6 +29,9 @@ class OCR(metaclass=SingletonMeta):
         self.__catalog_items = None
 
     async def __init_models(self):
+        """
+        Initializes the models and the item catalog
+        """
         # Load models and item catalog
         self.__icons_model, self.__icons_classes = await self.__load_model(path=settings.models.icons_path)
         self.__quantity_model, self.__quantity_classes = await self.__load_model(path=settings.models.quantities_path)
@@ -37,8 +40,14 @@ class OCR(metaclass=SingletonMeta):
     async def __load_catalog(self, path: str) -> dict:
         """
         Loads the item catalog
-        :param path: str = Path of the file to read the catalog from
+
+        Args:
+            path (str): Path of the file to read the catalog from
+
+        Returns:
+            dict: Catalog loaded
         """
+
         catalog = None
         try:
             with open(path) as file:
@@ -51,6 +60,16 @@ class OCR(metaclass=SingletonMeta):
         return catalog
 
     async def __load_model(self, path: str) -> tuple:
+        """
+        Loads a model and its classes
+
+        Args:
+            path (str): Path of the model to load
+
+        Returns:
+            tuple: Model and classes loaded
+        """
+
         model = None
         classes = None
         try:
@@ -65,7 +84,11 @@ class OCR(metaclass=SingletonMeta):
     async def get_catalog(self) -> list[CatalogItem]:
         """
         Returns the items catalog
+
+        Returns:
+            list[CatalogItem]: Catalog of items
         """
+
         if not self.__catalog_items:
             await self.__init_models()
 
@@ -75,13 +98,17 @@ class OCR(metaclass=SingletonMeta):
         """
         Given an image extracts the id of the identified item
 
-        :param image: cv2.typing.MatLike = Image to detect the item from
-        :returns str: code of the item detected
+        Args:
+            image (cv2.typing.MatLike): Image to detect the type and name from
+
+        Returns:
+            str: Item detected. Empty string if not detected
         """
 
         if image is None or not settings.developer.detect_icons:
             return ""
 
+        # Resize the image to 32x32 to match the model
         resized_image = cv2.resize(image, (32, 32))
         expanded_imagen = numpy.expand_dims(resized_image, axis=0)
 
@@ -91,17 +118,19 @@ class OCR(metaclass=SingletonMeta):
 
     async def __extract_quantity_from_image(self, image: cv2.typing.MatLike) -> int:
         """
-        Extract the quantity from an image
-        Image: [ "Number" ]
-        The number could contain k+ to indicate thousands of the number
+        Extracts the quantity from an image
 
-        :param image: Image to detect the type and name from
-        :returns int: Quantity detected
+        Args:
+            image (cv2.typing.MatLike): Image to extract the quantity from
+
+        Returns:
+            int: Quantity detected. -1 if not detected
         """
 
         if image is None or not settings.developer.detect_quantities:
             return -1
 
+        # Copy the image to avoid modifying the original
         image = image.copy()
 
         image[image<170] = 0
@@ -120,6 +149,7 @@ class OCR(metaclass=SingletonMeta):
         prediction = self.__quantity_model.predict(expanded_imagen, verbose=0)
         item = self.__quantity_classes[numpy.argmax(prediction)]
 
+        # Check if the quantity is a number or a Thousand (k+)
         multiplier = 1
         if 'k+' in item:
             multiplier = 1000
@@ -140,17 +170,21 @@ class OCR(metaclass=SingletonMeta):
             image (cv2.typing.MatLike): Image to extract text from
 
         Returns:
-            str: Extracted text
+            str: Extracted text. Empty string if not detected
         """
         if image is None:
             return ""
 
         try:
-            scale=2
+            # Upscale the image to improve the OCR detection. Tesseract works better with larger images
+            scale=8
             image = cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+
             image[image<170] = 0
+
             # Convert to black numbers with white background
             cropped_image = cv2.threshold(image, 127, 255, cv2.THRESH_BINARY_INV)[1]
+
             config = '--psm 7'
             lang='custom+eng+fra+deu+por+rus+chi_sim'
             pytesseract_text = pytesseract.image_to_string(cropped_image, lang=lang, config=config)
@@ -168,26 +202,15 @@ class OCR(metaclass=SingletonMeta):
             image (cv2.typing.MatLike): Image to extract the type from
 
         Returns:
-            stockpile_type: Type of the stockpile
+            stockpile_type: Type detected. UNDEFINED if not detected
         """
 
         if image is None or not settings.developer.detect_stockpile_type:
             return stockpile_type.UNDEFINED
 
-        image = cv2.resize(image, None, fx=8, fy=8, interpolation=cv2.INTER_CUBIC)
-        image[image<170] = 0
-
-        # Convert to grayscale
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        # Get the bounding rectangle of all non-zero pixels
-        x, y, w, h = cv2.boundingRect(gray)
-
-        # Convert to black numbers with white background
-        cropped_image = cv2.threshold(image[y:y+h, x:x+w], 127, 255, cv2.THRESH_BINARY_INV)[1]
-        config = '--psm 7'
-        lang='custom+eng+fra+deu+por+rus+chi_sim'
-        pytesseract_text = pytesseract.image_to_string(cropped_image, lang=lang, config=config)
-        name = pytesseract_text.split('\n')[0]
+        name = await self.__extract_text_from_image(image=image)
+        if not name:
+            return stockpile_type.UNDEFINED
 
         type_found = "Undefined"
         translations = settings.stockpile_types.model_dump()
@@ -204,8 +227,12 @@ class OCR(metaclass=SingletonMeta):
     async def __extract_stockpile_name_from_image(self, image: cv2.typing.MatLike) -> str:
         """
         Extracts the stockpile name from an image
-        :param image: Image to extract text from
-        :returns str: Text found
+
+        Args:
+            image (cv2.typing.MatLike): Image to extract the name from
+
+        Returns:
+            str: Name detected. Empty string if not detected
         """
 
         if image is None or not settings.developer.detect_stockpile_name:
@@ -215,8 +242,7 @@ class OCR(metaclass=SingletonMeta):
 
     async def extract_stockpile_from_image(self, image: cv2.typing.MatLike, file_name: str = "Buffer") -> Stockpile:
         """
-        Given an image extracts the portion that contains the stockpile and information about the location of the items.
-        This method does not returns the items themselves but the location in the image
+        Extracts the stockpile from an image
 
         Args:
             image: cv2.typing.MatLike = Image to read the stockpile from
@@ -224,6 +250,12 @@ class OCR(metaclass=SingletonMeta):
 
         Returns:
             Stockpile: Stockpile detected
+        Args:
+            image (cv2.typing.MatLike): Image to extract the stockpile from
+            file_name (str): Name of the file
+
+        Returns:
+            Stockpile: Stockpile detected. None if not detected
         """
 
         if image is None:
