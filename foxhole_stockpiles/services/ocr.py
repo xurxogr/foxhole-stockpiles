@@ -6,12 +6,10 @@ import os.path
 import cv2
 from keras.models import load_model
 import numpy
-from pydantic import TypeAdapter
 from pytesseract import pytesseract
 
 from foxhole_stockpiles.core.config import settings
 from foxhole_stockpiles.enums.stockpile_type import stockpile_type
-from foxhole_stockpiles.models.catalog_item import CatalogItem
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
 from foxhole_stockpiles.services.singletonmeta import SingletonMeta
@@ -21,45 +19,11 @@ class OCR(metaclass=SingletonMeta):
     def __init__(self):
         self.__logger = logging.getLogger(__name__)
 
-        # Models and classes. Initialized on first use
-        self.__icons_model = None
-        self.__icons_classes = None
-        self.__quantity_model = None
-        self.__quantity_classes = None
-        self.__catalog_items = None
+        # Models and classes.
+        self.__icons_model, self.__icons_classes = self.__load_model(path=settings.models.icons_path)
+        self.__quantity_model, self.__quantity_classes = self.__load_model(path=settings.models.quantities_path)
 
-    async def __init_models(self):
-        """
-        Initializes the models and the item catalog
-        """
-        # Load models and item catalog
-        self.__icons_model, self.__icons_classes = await self.__load_model(path=settings.models.icons_path)
-        self.__quantity_model, self.__quantity_classes = await self.__load_model(path=settings.models.quantities_path)
-        self.__catalog_items = await self.__load_catalog(path=settings.models.catalog_items_path)
-
-    async def __load_catalog(self, path: str) -> dict:
-        """
-        Loads the item catalog
-
-        Args:
-            path (str): Path of the file to read the catalog from
-
-        Returns:
-            dict: Catalog loaded
-        """
-
-        catalog = None
-        try:
-            with open(path) as file:
-                catalog = json.load(file)
-
-            catalog = TypeAdapter(list[CatalogItem]).validate_python(catalog)
-        except Exception as ex:
-            raise Exception("Couldn't load the items catalog. Error: {}".format(str(ex)))
-
-        return catalog
-
-    async def __load_model(self, path: str) -> tuple:
+    def __load_model(self, path: str) -> tuple:
         """
         Loads a model and its classes
 
@@ -80,19 +44,6 @@ class OCR(metaclass=SingletonMeta):
             raise Exception(f"Couldn't load the models. Error: ({type(ex).__name__}: {str(ex)})") from None
 
         return model, classes
-
-    async def get_catalog(self) -> list[CatalogItem]:
-        """
-        Returns the items catalog
-
-        Returns:
-            list[CatalogItem]: Catalog of items
-        """
-
-        if not self.__catalog_items:
-            await self.__init_models()
-
-        return self.__catalog_items
 
     async def __extract_item_from_image(self, image: cv2.typing.MatLike) -> str:
         """
@@ -261,10 +212,6 @@ class OCR(metaclass=SingletonMeta):
         if image is None:
             return None
 
-        # Lazy initialization.
-        if not self.__icons_model:
-            await self.__init_models()
-
         # Values have been configured for a resolution of 1440. Reshape the min-max width accordingly
         # Detection tested with vertical resolutions: 2160, 1440, 1200, 1080, 1050, 1024, 992, 664
         width = image.shape[1]
@@ -342,9 +289,7 @@ class OCR(metaclass=SingletonMeta):
             item = StockpileItem(
                 code=item_id,
                 quantity=quantity,
-                crated=crated,
-                icon_image=icon_image,
-                quantity_image=quantity_image
+                crated=crated
             )
             items.append(item)
 

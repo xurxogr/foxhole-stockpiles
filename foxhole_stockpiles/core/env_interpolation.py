@@ -1,21 +1,13 @@
-import base64
 from configparser import ExtendedInterpolation
 import os
 import re
 
 
 class EnvInterpolation(ExtendedInterpolation):
-    ENVIRONMENT = 'environment'
-    B64DECODE = 'b64decode'
-
-    def _expandvars(self, path: str, pattern: str, operation: str) -> str:
+    def _expandvars(self, path: str, pattern: str) -> str:
         """
-        Expands variables depending on the operation:
-        'environment':
-                Expand shell variables of form ${var}. Unknown variables are left unchanged
-                unless they came in the form ${var@defaultvalue} then defaultvalue is used.
-        'b64decode':
-                Replace b64{XXX} with the b64 decoded value of XXX
+        Expand shell variables of form ${var}. Unknown variables are left unchanged
+        unless they came in the form ${var@defaultvalue} then defaultvalue is used.
 
         Args:
             path (str): The path to expand
@@ -34,14 +26,9 @@ class EnvInterpolation(ExtendedInterpolation):
                 break
             i, j = m.span(0)
 
-            if operation == EnvInterpolation.ENVIRONMENT:
-                name = m.group(1)
-                default = m.group(2)
-                value = os.environ.get(name) or default
-            elif operation == EnvInterpolation.B64DECODE:
-                value = base64.b64decode(m.group(1) + '======').decode('utf-8')
-            else:
-                value = None
+            name = m.group(1)
+            default = m.group(2)
+            value = os.environ.get(name) or default
 
             if value is None:
                 i = j
@@ -58,6 +45,4 @@ class EnvInterpolation(ExtendedInterpolation):
         Override the before_read method to expand environment variables and b64 decode values
         """
         value = super().before_read(parser, section, option, value)
-        envvars = self._expandvars(value, r'\$\{([^@\}]*)[@]?([^}]*)\}', self.ENVIRONMENT)
-        b64vars = self._expandvars(envvars, r'b64\{([^\}]*)\}', self.B64DECODE)
-        return b64vars
+        return self._expandvars(value, r'\$\{([^@\}]*)[@]?([^}]*)\}')
