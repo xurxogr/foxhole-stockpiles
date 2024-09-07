@@ -129,12 +129,11 @@ class OCR(metaclass=SingletonMeta):
         try:
             # Upscale the image to improve the OCR detection. Tesseract works better with larger images
             scale=8
-            image = cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
-
-            image[image<170] = 0
+            resized_image = cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+            resized_image[resized_image<170] = 0
 
             # Convert to black numbers with white background
-            cropped_image = cv2.threshold(image, 127, 255, cv2.THRESH_BINARY_INV)[1]
+            cropped_image = cv2.threshold(resized_image, 127, 255, cv2.THRESH_BINARY_INV)[1]
 
             config = '--psm 7'
             lang='custom+eng+fra+deu+por+rus+chi_sim'
