@@ -1,8 +1,8 @@
 import logging
 
-from fastapi import APIRouter
-from fastapi import Request
-from fastapi import UploadFile
+import cv2
+from fastapi import APIRouter, Request, UploadFile
+import numpy
 
 from foxhole_stockpiles.core.config import settings
 from foxhole_stockpiles.connectors.hermes import HermesConnector
@@ -30,7 +30,11 @@ async def __scan_image(image: UploadFile, request: Request):
     import time
     start = time.time()
     ocr = OCR()
-    stockpile: Stockpile = await ocr.extract_stockpile_from_buffer(buffer=image, image_prefix=api_key[:10])
+
+
+    bytes_as_np_array = numpy.frombuffer(await image.read(), dtype=numpy.uint8)
+    image = cv2.imdecode(buf=bytes_as_np_array, flags=cv2.IMREAD_COLOR)
+    stockpile: Stockpile = await ocr.extract_stockpile_from_image(image=image, file_name=api_key[:10])
     end = time.time()
 
     if not stockpile:

@@ -102,6 +102,8 @@ class OCR(metaclass=SingletonMeta):
         if image is None or not settings.developer.detect_quantities:
             return -1
 
+        image = image.copy()
+
         image[image<170] = 0
 
         # Convert to grayscale
@@ -211,39 +213,17 @@ class OCR(metaclass=SingletonMeta):
 
         return await self.__extract_text_from_image(image=image)
 
-    async def extract_stockpile_from_file(self, file_name: str) -> Stockpile | None:
-        """
-        Extract the stockfile information from a file.
-        :param file_name: str = File name to extract the information from
-        :returns Stockpile: Returns the information of the Stockpile or None if nothing is detected
-        """
-
-        # Checking if the file exists before trying to read it to avoid warning log message from cv2
-        if not file_name or not os.path.isfile(file_name):
-            self.__logger.warning("Can't open/read file: {}".format(file_name))
-            return None
-
-        image = cv2.imread(filename=file_name, flags=cv2.IMREAD_COLOR)
-        return await self.__extract_stockpile_from_image(image=image, file_name=file_name)
-
-    async def extract_stockpile_from_buffer(self, buffer, image_prefix: str) -> Stockpile | None:
-        """
-        Reads an image from an existing buffer
-        :param buffer: Buffer to read the image from
-        :param image_prefix: str = Prefix to use to save the images if the option is enabled
-        :returns Stockpile: Returns the information of the Stockpile or None if nothing is detected
-        """
-        bytes_as_np_array = numpy.frombuffer(await buffer.read(), dtype=numpy.uint8)
-        image = cv2.imdecode(buf=bytes_as_np_array, flags=cv2.IMREAD_COLOR)
-        return await self.__extract_stockpile_from_image(image=image, file_name=image_prefix)
-
-    async def __extract_stockpile_from_image(self, image: cv2.typing.MatLike, file_name: str = "Buffer") -> Stockpile:
+    async def extract_stockpile_from_image(self, image: cv2.typing.MatLike, file_name: str = "Buffer") -> Stockpile:
         """
         Given an image extracts the portion that contains the stockpile and information about the location of the items.
         This method does not returns the items themselves but the location in the image
 
-        :param image: cv2.typing.MatLike = Image to read the stockpile from
-        :returns Stockpile: Stockpile information
+        Args:
+            image: cv2.typing.MatLike = Image to read the stockpile from
+            file_name (str): Name of the file
+
+        Returns:
+            Stockpile: Stockpile detected
         """
 
         if image is None:
@@ -363,7 +343,7 @@ class OCR(metaclass=SingletonMeta):
 
         # If not items have been detected return None
         if not items:
-            await self.save_image(stockpile=None, file_name=file_name, image=image)
+            await self.save_image(file_name=file_name, image=image)
             return None
 
         # Include the title in the cropped image
@@ -407,7 +387,7 @@ class OCR(metaclass=SingletonMeta):
 
         # Crop the image to store only the stockpile with the type, name and the items
         cropped_image = image[min_y:max_y, min_x:max_x]
-        stockpile = Stockpile(name=name, type=type_, image=cropped_image, items=items)
+        stockpile = Stockpile(name=name, type=type_, items=items)
         await self.save_image(stockpile=stockpile, file_name=file_name, image=image, name_image=stockpile_name_image, type_image=stockpile_type_image, stockpile_image=cropped_image)
         return stockpile
 
@@ -429,23 +409,29 @@ class OCR(metaclass=SingletonMeta):
         if stockpile:
             s_name = stockpile.name
             s_type = stockpile.type
+            date_now = stockpile.timestamp
         else:
             s_name = "undefined"
             s_type = "undefined"
+            date_now = datetime.now()
 
-        date_now = datetime.now()
         date_str = date_now.strftime("%Y-%m-%d")
         time_str = date_now.strftime("%H-%M-%S")
-        directory = "{}/{}/".format(settings.developer.backup_path or ".", date_str)
+
+        directory = f"{settings.developer.backup_path}/{date_str}/"
         if not os.path.exists(directory):
             os.makedirs(directory)
 
-        file_name = "{}{}-{}-{}-{}".format(directory, time_str, s_type, s_name, file_name)
+        file_name = f"{directory}{time_str}-{s_type}-{s_name}-{file_name}"
+
         if image is not None and settings.developer.save_image:
             cv2.imwrite("{}.png".format(file_name), image)
+
         if name_image is not None and settings.developer.save_name:
             cv2.imwrite("{}_name.png".format(file_name), name_image)
+
         if type_image is not None and settings.developer.save_type:
             cv2.imwrite("{}_type.png".format(file_name), type_image)
+
         if stockpile_image is not None and settings.developer.save_stockpile:
             cv2.imwrite("{}_stockpile.png".format(file_name), stockpile_image)

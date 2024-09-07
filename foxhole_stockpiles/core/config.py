@@ -110,6 +110,13 @@ class DeveloperSettings(SectionSettings):
     save_type: bool = Field(description="Save detected stockpile type", default=False)
     backup_path: str = Field(description="Backup path", default="screenshots")
 
+    @model_validator(mode="after")
+    def validate(self):
+        if not self.backup_path:
+            self.backup_path = '.'
+
+        return self
+
 class StockpileTypesSettings(SectionSettings):
     encampment: list[str] = Field(description="Encampment values", min_items=1)
     keep: list[str] = Field(description="Keep values", min_items=1)
