@@ -1,4 +1,5 @@
 import logging
+import time
 
 import cv2
 from fastapi import APIRouter, Request, UploadFile
@@ -27,13 +28,11 @@ async def __scan_image(image: UploadFile, request: Request):
         logger.info(message)
         return { "message": message }
 
-    import time
-    start = time.time()
-    ocr = OCR()
-
-
     bytes_as_np_array = numpy.frombuffer(await image.read(), dtype=numpy.uint8)
     image = cv2.imdecode(buf=bytes_as_np_array, flags=cv2.IMREAD_COLOR)
+
+    ocr = OCR()
+    start = time.time()
     stockpile: Stockpile = await ocr.extract_stockpile_from_image(image=image, file_name=api_key[:10])
     end = time.time()
 
@@ -64,7 +63,7 @@ async def __scan_image(image: UploadFile, request: Request):
         logger.error(f"{stockpile.name}: Items without quantity: {items_text}")
 
     url = settings.backend.url
-    if url:
+    if url and api_key.lower() != "debug":
         connector = HermesConnector(url=url)
         return await connector.send_stockpile(stockpile=stockpile_dict, api_key=api_key)
 
