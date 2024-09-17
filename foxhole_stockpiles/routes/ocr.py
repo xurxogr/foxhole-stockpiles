@@ -6,7 +6,7 @@ from fastapi import APIRouter, Request, UploadFile
 import numpy
 
 from foxhole_stockpiles.core.config import settings
-from foxhole_stockpiles.connectors.hermes import HermesConnector
+from foxhole_stockpiles.connectors.backend import BackendConnector
 from foxhole_stockpiles.services.ocr import OCR
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
@@ -66,7 +66,7 @@ async def __scan_image(image: UploadFile, request: Request):
 
     url = settings.backend.url
     if url and api_key.lower() != "debug":
-        connector = HermesConnector(url=url)
+        connector = BackendConnector(url=url)
         return await connector.send_stockpile(stockpile=stockpile_dict, api_key=api_key)
 
     return stockpile_dict

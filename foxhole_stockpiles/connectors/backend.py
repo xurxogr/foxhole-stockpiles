@@ -2,8 +2,7 @@ from asyncio import sleep
 import functools
 import logging
 
-from httpx import AsyncClient
-from httpx import ConnectTimeout
+from httpx import AsyncClient, ConnectTimeout
 
 from foxhole_stockpiles.core.config import settings
 
@@ -47,21 +46,24 @@ def async_retry_on_302(max_retries=3, delay=1):
         return wrapper
     return decorator
 
-class HermesConnector():
+class BackendConnector():
     def __init__(self, url: str = None):
         self.__url = url or settings.backend.url
 
     #@async_retry_on_302(max_retries=3, delay=2)
     @async_retry_on_connect_timeout(max_retries=3, delay=2)
-    async def send_stockpile(self, stockpile: dict, api_key: str):
+    async def send_stockpile(self, payload: dict, api_key: str):
         """
-        Sends an stockpile to hermes
-        :param stockpile: Stockpile = Stockpile to send (Generated from an image)
-        :param api_key: str = API_KEY header to use for authentication
+        Sends an stockpile to the backend server
+
+        Args:
+            payload (dict): Payload to send to the backend server
+            api_key (str): API key to use for authentication
+
         """
         logger = logging.getLogger(__name__)
 
-        if not stockpile:
+        if not payload:
             return { "message": "FS: Stockpile is Empty" }
 
         if not api_key:
@@ -75,9 +77,9 @@ class HermesConnector():
         return_data = {}
         try:
             async with AsyncClient(verify=False, headers=headers) as client:
-                response = await client.post(url=self.__url, json=stockpile)
+                response = await client.post(url=self.__url, json=payload)
                 try:
-                    return_data = response.json()
+                    return_data: dict = response.json()
                     # If the response is an error, return the error message, else return the response in message or the json response
                     return_data = return_data.get('error', return_data.get('message', return_data))
                 except:
