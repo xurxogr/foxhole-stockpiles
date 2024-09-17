@@ -215,17 +215,15 @@ class OCR(metaclass=SingletonMeta):
         # Detection tested with vertical resolutions: 2160, 1440, 1200, 1080, 1050, 1024, 992, 664
         width = image.shape[1]
         height = image.shape[0]
-        image_ratio = height / 1440
+        image_ratio = height / settings.ocr.base_height
 
         items = []
-        item_min_width = int(settings.ocr.item_min_w * image_ratio)
-        item_max_width = int(settings.ocr.item_max_w * image_ratio)
-
+        item_width = int(settings.ocr.item_width * image_ratio)
+        item_height = int(settings.ocr.item_height * image_ratio)
         item_spacing_width = int(image_ratio * settings.ocr.item_spacing_width)
         item_spacing_height = int(image_ratio * settings.ocr.item_spacing_height)
 
-        self.__logger.debug("Parsing image {}. width: {}, height: {}, ratio: {}. Item min-max width: [{}-{}]".format(
-            file_name, width, height, image_ratio, item_min_width, item_max_width))
+        self.__logger.debug(f"Parsing image {file_name}. width: {width}, height: {height}, ratio: {image_ratio}. Item size: {item_width}x{item_height}, spacing: {item_spacing_width}x{item_spacing_height}")
 
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         thresh = cv2.threshold(gray_image, 50, 255, cv2.THRESH_BINARY)[1]
@@ -246,10 +244,10 @@ class OCR(metaclass=SingletonMeta):
                 continue
 
             x, y, w, h = cv2.boundingRect(cnt)
+
             # Find rectangles with the correct aspect ratio
-            ratio = round(w / h, 2)
-            if ratio < settings.ocr.item_min_ratio or settings.ocr.item_max_ratio < ratio or w < item_min_width or item_max_width < w:
-                #self.__logger.debug("x: {}, y: {}, w: {}, h: {}, ratio: {}".format(x, y, w, h, ratio))
+            pixel_error = 2
+            if abs(w - item_width) > pixel_error or abs(h - item_height) > pixel_error:
                 continue
 
             # Save the detected item height and width.

@@ -92,22 +92,12 @@ class LoggingSettings(SectionSettings):
     )
 
 class OCRSettings(SectionSettings):
-    item_min_w: int = Field(description="Minimum width of an OCR item", gt=0)
-    item_max_w: int = Field(description="Maximum width of an OCR item", gt=0)
-    item_min_ratio: float = Field(description="Minimum width-height ratio of an OCR item", gt=1)
-    item_max_ratio: float = Field(description="Maximum width-height ratio of an OCR item", gt=1)
-    item_spacing_height: int = Field(description="Spacing between OCR items in height", gt=0)
-    item_spacing_width: int = Field(description="Spacing between OCR items in width", gt=0)
-    text_recognition_scale: float = Field(description="Scale for text recognition", gt=0)
-
-    @model_validator(mode="after")
-    def validate(self):
-        if self.item_min_w >= self.item_max_w:
-            raise ValueError("item_min_w must be less than item_max_w")
-        if self.item_min_ratio >= self.item_max_ratio:
-            raise ValueError("item_min_ratio must be less than item_max_ratio")
-
-        return self
+    base_height: int = Field(description="Base Height for the scaling", gt=0, default=1440)
+    item_width: int = Field(description="Width of the quantity square", gt=0, default=56)
+    item_height: int = Field(description="Height of the quantity square", gt=0, default=43)
+    item_spacing_height: int = Field(description="Spacing between quantity squares", gt=0, default=9)
+    item_spacing_width: int = Field(description="Spacing between icon and quantity square", gt=0, default=16)
+    text_recognition_scale: float = Field(description="Scale for text recognition", gt=0, default=16)
 
     model_config = ConfigDict(
         extra='ignore',
@@ -115,10 +105,9 @@ class OCRSettings(SectionSettings):
         description="Options for item detection",
         json_schema_extra={
             "example": {
-                "item_min_w": 54,
-                "item_max_w": 58,
-                "item_min_ratio": 1.2,
-                "item_max_ratio": 1.4,
+                "base_resolution": 1440,
+                "item_width": 56,
+                "item_height": 43,
                 "item_spacing_height": 9,
                 "item_spacing_width": 16,
                 "text_recognition_scale": 16
