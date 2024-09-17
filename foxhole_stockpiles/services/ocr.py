@@ -162,7 +162,7 @@ class OCR(metaclass=SingletonMeta):
         if not name:
             return stockpile_type.UNDEFINED
 
-        type_found = "Undefined"
+        type_found = None
         translations = settings.stockpile_types.model_dump()
         for valid_names in translations.values():
            if name in valid_names:
@@ -172,6 +172,7 @@ class OCR(metaclass=SingletonMeta):
         try:
             return stockpile_type(type_found)
         except ValueError:
+            self.__logger.error(f"Stockpile type not found: '{name}'")
             return stockpile_type.UNDEFINED
 
     async def __extract_stockpile_name_from_image(self, image: cv2.typing.MatLike) -> str:
