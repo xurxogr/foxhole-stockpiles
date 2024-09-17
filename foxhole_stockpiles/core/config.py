@@ -121,9 +121,9 @@ class OCRSettings(SectionSettings):
     )
 
 class ModelsSettings(SectionSettings):
-    icons_path: str = Field(description="Path to the icons model")
-    quantities_path: str = Field(description="Path to the quantities model")
-    catalog_items_path: str = Field(description="Path to the catalog items")
+    icons_path: str = Field(description="Path to the icons model", default="models/icons")
+    quantities_path: str = Field(description="Path to the quantities model", default="models/quantities")
+    catalog_items_path: str = Field(description="Path to the catalog items", default="models/catalog_items.json")
 
     model_config = ConfigDict(
         extra='ignore',
@@ -139,7 +139,7 @@ class ModelsSettings(SectionSettings):
     )
 
 class BackendSettings(SectionSettings):
-    url: str = Field(description="Backend API URL")
+    url: str | None = Field(description="Backend API URL", default=None)
 
     model_config = ConfigDict(
         extra='ignore',
