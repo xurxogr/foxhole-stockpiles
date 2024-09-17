@@ -98,6 +98,7 @@ class OCRSettings(SectionSettings):
     item_max_ratio: float = Field(description="Maximum width-height ratio of an OCR item", gt=1)
     item_spacing_height: int = Field(description="Spacing between OCR items in height", gt=0)
     item_spacing_width: int = Field(description="Spacing between OCR items in width", gt=0)
+    text_recognition_scale: float = Field(description="Scale for text recognition", gt=0)
 
     @model_validator(mode="after")
     def validate(self):
@@ -119,7 +120,8 @@ class OCRSettings(SectionSettings):
                 "item_min_ratio": 1.2,
                 "item_max_ratio": 1.4,
                 "item_spacing_height": 9,
-                "item_spacing_width": 16
+                "item_spacing_width": 16,
+                "text_recognition_scale": 16
             }
         }
     )
