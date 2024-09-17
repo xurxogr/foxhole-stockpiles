@@ -24,7 +24,7 @@ async def __scan_image(image: UploadFile, request: Request):
         return { "message": message }
 
     if image is None:
-        message = "No imput image"
+        message = "No input image"
         logger.info(message)
         return { "message": message }
 
