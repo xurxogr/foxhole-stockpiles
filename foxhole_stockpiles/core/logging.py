@@ -1,4 +1,3 @@
-import json
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
@@ -28,7 +27,7 @@ class Logging():
             log_folder = 'logs'
             if not os.path.exists(log_folder):
                 os.makedirs(log_folder)
-            
+
             file_handler = TimedRotatingFileHandler(filename=os.path.join(log_folder, 'foxhole_stockpiles.log'), when='midnight')
             file_handler.setFormatter(logging.Formatter(fmt=settings.logging.format, datefmt=settings.logging.date_format))
             logging.getLogger().addHandler(file_handler)

@@ -73,6 +73,24 @@ class LoggingSettings(SectionSettings):
     date_format: str | None = Field(description="Logging date format", default="%Y-%m-%d %H:%M:%S")
     file: bool | None = Field(description="Log to file", default=False)
 
+    model_config = ConfigDict(
+        extra='ignore',
+        title="Logging settings",
+        description="Settings for logging",
+        json_schema_extra={
+            "example": {
+                "loggers": {
+                    "foxhole_stockpiles": "DEBUG",
+                    "uvicorn": "INFO"
+                },
+                "level": "INFO",
+                "format": "[%(asctime)s] %(levelname)s [%(name)s] %(message)s",
+                "date_format": "%Y-%m-%d %H:%M:%S",
+                "file": False
+            }
+        }
+    )
+
 class OCRSettings(SectionSettings):
     item_min_w: int = Field(description="Minimum width of an OCR item", gt=0)
     item_max_w: int = Field(description="Maximum width of an OCR item", gt=0)
@@ -90,13 +108,54 @@ class OCRSettings(SectionSettings):
 
         return self
 
+    model_config = ConfigDict(
+        extra='ignore',
+        title="OCR settings",
+        description="Options for item detection",
+        json_schema_extra={
+            "example": {
+                "item_min_w": 54,
+                "item_max_w": 58,
+                "item_min_ratio": 1.2,
+                "item_max_ratio": 1.4,
+                "item_spacing_height": 9,
+                "item_spacing_width": 16
+            }
+        }
+    )
+
 class ModelsSettings(SectionSettings):
     icons_path: str = Field(description="Path to the icons model")
     quantities_path: str = Field(description="Path to the quantities model")
     catalog_items_path: str = Field(description="Path to the catalog items")
 
+    model_config = ConfigDict(
+        extra='ignore',
+        title="Models settings",
+        description="Paths for the keras models",
+        json_schema_extra={
+            "example": {
+                "icons_path": "models/icons",
+                "quantities_path": "models/quantities",
+                "catalog_items_path": "models/catalog_items.json"
+            }
+        }
+    )
+
 class BackendSettings(SectionSettings):
     url: str = Field(description="Backend API URL")
+
+    model_config = ConfigDict(
+        extra='ignore',
+        title="Backend settings",
+        description="Settings for the backend API",
+        json_schema_extra={
+            "example": {
+                "url": "http://localhost:8000"
+            }
+        }
+    )
+
 
 class DeveloperSettings(SectionSettings):
     detect_quantities: bool = Field(description="Detect quantities", default=True)
@@ -117,6 +176,26 @@ class DeveloperSettings(SectionSettings):
 
         return self
 
+    model_config = ConfigDict(
+        extra='ignore',
+        title="Developer settings",
+        description="Settings for development. Should only be modified by developers.",
+        json_schema_extra={
+            "example": {
+                "detect_quantities": True,
+                "detect_icons": True,
+                "detect_stockpile_type": True,
+                "detect_stockpile_name": True,
+                "draw_rectangles": False,
+                "save_image": False,
+                "save_stockpile": False,
+                "save_name": False,
+                "save_type": False,
+                "backup_path": "screenshots"
+            }
+        }
+    )
+
 class StockpileTypesSettings(SectionSettings):
     encampment: list[str] = Field(description="Encampment values", min_items=1)
     keep: list[str] = Field(description="Keep values", min_items=1)
@@ -129,6 +208,27 @@ class StockpileTypesSettings(SectionSettings):
     storage_depot: list[str] = Field(description="Storage Depot values", min_items=1)
     seaport: list[str] = Field(description="Seaport values", min_items=1)
     undefined: list[str] = Field(description="Undefined values", min_items=1)
+
+    model_config = ConfigDict(
+        extra='ignore',
+        title="Stockpile types settings",
+        description="Valid values for stockpile types",
+        json_schema_extra={
+            "example": {
+                "encampment": ["Encampment", "Campement", "Feldlager", "Acampamento", "Лагерь", "营地"],
+                "keep": ["Keep", "Place Forte", "Wehrturm", "Torreão", "Крепость", "要塞"],
+                "safe_house": ["Safe House", "Planque", "Unterschlupf", "Casa Fortificada", "Yбeжищe", "安全屋"],
+                "relic_base": ["Relic Base", "Base Relique", "Reliktbasis", "Base Relíquia", "Peликтoвая база", "遗迹基地"],
+                "bunker_base": ["Bunker Base", "Base Bunker", "Bunkerbasis", "Centro do Bunker", "Base de Bunker", "Base de Casamata", "Бункерная база", "Бункерная База", "地堡基地"],
+                "border_base": ["Border Base", "Base Frontalière", "Grenzbasis", "Base Fronteiriça", "Пограничная База", "边境基地"],
+                "town_base": ["Town Base", "Quartier Général", "Stadtkernbasis", "Base de Cidade", "Ратуша", "城镇基地"],
+                "bms_longhook": ["BMS - Longhook"],
+                "storage_depot": ["Storage Depot", "Dépôt", "Lagerdepot", "Depósito", "Складское Помещение", "仓库"],
+                "seaport": ["Seaport", "Port", "Seehafen", "Porto", "Морской порт", "海港"],
+                "undefined": ["Undefined"]
+            }
+        }
+    )
 # Sections. End
 
 class AppSettings(BaseSettings):

@@ -9,7 +9,7 @@ verification_router = APIRouter()
 async def upload_pictures(pictures: list[UploadFile]):
     if len(pictures) != 2:
         return {"error": "Please upload exactly two pictures."}
-    
+
     result = [
         await pictures[0].read(),
         await pictures[1].read()
