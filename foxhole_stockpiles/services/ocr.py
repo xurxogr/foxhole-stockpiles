@@ -399,7 +399,9 @@ class OCR(metaclass=SingletonMeta):
         if not os.path.exists(directory):
             os.makedirs(directory)
 
-        file_name = f"{directory}{time_str}-{s_type}-{s_name}-{file_name}"
+        width = image.shape[1]
+        height = image.shape[0]
+        file_name = f"{directory}{time_str}-{s_type}-{s_name}-{width}x{height}-{file_name}"
 
         if image is not None and settings.developer.save_image:
             cv2.imwrite("{}.png".format(file_name), image)
