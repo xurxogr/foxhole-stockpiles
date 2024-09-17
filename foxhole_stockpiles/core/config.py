@@ -48,20 +48,25 @@ class SectionSettings(BaseSettings):
             elif origin:
                 attr_type = origin
 
+            value = data[attr_name]
             try:
                 # list or dict
                 if attr_type in [dict, list]:
-                    converted_data[attr_name] = json.loads(data[attr_name]) if data[attr_name] else None
+                    if value:
+                        converted_data[attr_name] = json.loads(value)
                 # primitive types
-                elif attr_type in [str, int, float]:
-                    converted_data[attr_name] = attr_type(data[attr_name])
+                elif attr_type == str:
+                    converted_data[attr_name] = value
+                elif attr_type in [int, float]:
+                    if value:
+                        converted_data[attr_name] = attr_type(value)
                 elif attr_type == bool:
-                    converted_data[attr_name] = data[attr_name].lower() in ['true', 'yes', '1']
+                    converted_data[attr_name] = value.lower() in ['true', 'yes', '1']
                 # anything else
                 else:
-                    converted_data[attr_name] = data[attr_name]
+                    converted_data[attr_name] = value
             except ValueError:
-                converted_data[attr_name] = data[attr_name]
+                converted_data[attr_name] = value
 
         return cls(**converted_data)
 
