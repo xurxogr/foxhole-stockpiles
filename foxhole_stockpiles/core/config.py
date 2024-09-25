@@ -19,7 +19,7 @@ def read_ini_file(file_path: str) -> dict[str, dict[str, str]]:
         file_path (str): The path to the INI file
 
     Returns:
-        dict[str, dict[str, str]]: The INI file as a dictionary
+        dict (str, dict[str, str]): The INI file as a dictionary
     """
     config = configparser.ConfigParser(interpolation=EnvInterpolation())
     config.read(file_path)
@@ -123,7 +123,6 @@ class OCRSettings(SectionSettings):
 class ModelsSettings(SectionSettings):
     icons_path: str = Field(description="Path to the icons model", default="models/icons")
     quantities_path: str = Field(description="Path to the quantities model", default="models/quantities")
-    catalog_items_path: str = Field(description="Path to the catalog items", default="models/catalog_items.json")
 
     model_config = ConfigDict(
         extra='ignore',
@@ -132,8 +131,7 @@ class ModelsSettings(SectionSettings):
         json_schema_extra={
             "example": {
                 "icons_path": "models/icons",
-                "quantities_path": "models/quantities",
-                "catalog_items_path": "models/catalog_items.json"
+                "quantities_path": "models/quantities"
             }
         }
     )
