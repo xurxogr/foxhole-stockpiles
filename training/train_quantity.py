@@ -22,10 +22,10 @@ from keras.models import Sequential
 import tensorflow as tf
 
 
-EPOCHS = 10
+EPOCHS = 100
 COLOR_MODE = "rgb"
 DROPOUT=0.5
-VALIDATION_SPLIT=0.8
+VALIDATION_SPLIT=0.1
 DATA_DIR = "./quantity_training/"
 
 IMG_SIZE = (32, 32)
