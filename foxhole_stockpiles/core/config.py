@@ -28,6 +28,19 @@ def read_ini_file(file_path: str) -> dict[str, dict[str, str]]:
 class SectionSettings(BaseSettings):
     model_config = ConfigDict(extra='ignore')
 
+    @model_validator(mode='before')
+    @classmethod
+    def set_defaults_for_empty_strings(cls, data):
+        """
+        Set the default values for empty strings, if the field is not required.
+        """
+        if isinstance(data, dict):
+            for field_name, field_info in cls.model_fields.items():
+                if data.get(field_name) == "" and not field_info.is_required():
+                    data[field_name] = field_info.default
+
+        return data
+
     @classmethod
     def from_dict(cls, data: dict):
         """
@@ -52,14 +65,12 @@ class SectionSettings(BaseSettings):
             try:
                 # list or dict
                 if attr_type in [dict, list]:
-                    if value:
-                        converted_data[attr_name] = json.loads(value)
+                    converted_data[attr_name] = json.loads(value)
                 # primitive types
                 elif attr_type == str:
                     converted_data[attr_name] = value
                 elif attr_type in [int, float]:
-                    if value:
-                        converted_data[attr_name] = attr_type(value)
+                    converted_data[attr_name] = attr_type(value)
                 elif attr_type == bool:
                     converted_data[attr_name] = value.lower() in ['true', 'yes', '1']
                 # anything else
