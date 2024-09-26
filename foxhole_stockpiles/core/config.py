@@ -132,8 +132,8 @@ class OCRSettings(SectionSettings):
     )
 
 class ModelsSettings(SectionSettings):
-    icons_path: str = Field(description="Path to the icons model", default="models/icons")
-    quantities_path: str = Field(description="Path to the quantities model", default="models/quantities")
+    icons_path: str = Field(description="Path to the icons model", default="models/icons_model")
+    quantities_path: str = Field(description="Path to the quantities model", default="models/quantities_model")
 
     model_config = ConfigDict(
         extra='ignore',
@@ -141,8 +141,8 @@ class ModelsSettings(SectionSettings):
         description="Paths for the keras models",
         json_schema_extra={
             "example": {
-                "icons_path": "models/icons",
-                "quantities_path": "models/quantities"
+                "icons_path": "models/icons_model",
+                "quantities_path": "models/quantities_model"
             }
         }
     )
