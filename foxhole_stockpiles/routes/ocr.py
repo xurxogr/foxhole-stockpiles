@@ -67,6 +67,6 @@ async def __scan_image(image: UploadFile, request: Request):
     url = settings.backend.url
     if url and api_key.lower() != "debug":
         connector = BackendConnector(url=url)
-        return await connector.send_stockpile(stockpile=stockpile_dict, api_key=api_key)
+        return await connector.send_stockpile(payload=stockpile_dict, api_key=api_key)
 
     return stockpile_dict
