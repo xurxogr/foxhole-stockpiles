@@ -5,7 +5,7 @@ import os
 import types
 from typing import get_args, get_origin
 
-from pydantic import Field, ConfigDict, model_validator
+from pydantic import Field, ConfigDict, field_validator
 from pydantic_settings import BaseSettings
 
 from foxhole_stockpiles.core.env_interpolation import EnvInterpolation
@@ -28,18 +28,15 @@ def read_ini_file(file_path: str) -> dict[str, dict[str, str]]:
 class SectionSettings(BaseSettings):
     model_config = ConfigDict(extra='ignore')
 
-    @model_validator(mode='before')
+    @field_validator('*', mode='before')
     @classmethod
-    def set_defaults_for_empty_strings(cls, data):
-        """
-        Set the default values for empty strings, if the field is not required.
-        """
-        if isinstance(data, dict):
-            for field_name, field_info in cls.model_fields.items():
-                if data.get(field_name) == "" and not field_info.is_required():
-                    data[field_name] = field_info.default
+    def use_default_for_empty_string_on_optional(cls, value, info):
+        if value == '':
+            field = cls.model_fields.get(info.field_name)
+            if field and not field.is_required():
+                return field.default
 
-        return data
+        return value
 
     @classmethod
     def from_dict(cls, data: dict):
@@ -72,7 +69,7 @@ class SectionSettings(BaseSettings):
                 elif attr_type in [int, float]:
                     converted_data[attr_name] = attr_type(value)
                 elif attr_type == bool:
-                    converted_data[attr_name] = value.lower() in ['true', 'yes', '1']
+                    converted_data[attr_name] = value.lower() in ['true', 'yes', '1'] if value != '' else value
                 # anything else
                 else:
                     converted_data[attr_name] = value
@@ -81,7 +78,53 @@ class SectionSettings(BaseSettings):
 
         return cls(**converted_data)
 
-###### Sections of the INI
+###### Sections of the INI (alphabetical order) - Start
+class BackendSettings(SectionSettings):
+    url: str | None = Field(description="Backend API URL", default=None)
+
+    model_config = ConfigDict(
+        extra='ignore',
+        title="Backend settings",
+        description="Settings for the backend API",
+        json_schema_extra={
+            "example": {
+                "url": "http://localhost:8000"
+            }
+        }
+    )
+
+class DeveloperSettings(SectionSettings):
+    detect_quantities: bool = Field(description="Detect quantities", default=True)
+    detect_icons: bool = Field(description="Detect icons", default=True)
+    detect_stockpile_type: bool = Field(description="Detect stockpile type", default=True)
+    detect_stockpile_name: bool = Field(description="Detect stockpile name", default=True)
+    draw_rectangles: bool = Field(description="Draw rectangles", default=False)
+    save_image: bool = Field(description="Save image", default=False)
+    save_stockpile: bool = Field(description="Save detected stockpile", default=False)
+    save_name: bool = Field(description="Save detected stockpile name", default=False)
+    save_type: bool = Field(description="Save detected stockpile type", default=False)
+    backup_path: str = Field(description="Backup path", default="screenshots")
+
+    model_config = ConfigDict(
+        extra='ignore',
+        title="Developer settings",
+        description="Settings for development. Should only be modified by developers.",
+        json_schema_extra={
+            "example": {
+                "detect_quantities": True,
+                "detect_icons": True,
+                "detect_stockpile_type": True,
+                "detect_stockpile_name": True,
+                "draw_rectangles": False,
+                "save_image": False,
+                "save_stockpile": False,
+                "save_name": False,
+                "save_type": False,
+                "backup_path": "screenshots"
+            }
+        }
+    )
+
 class LoggingSettings(SectionSettings):
     loggers: dict | None = Field(description="Loggers and their levels", default=None)
     level: str | None = Field(description="Logging level", default="INFO")
@@ -107,6 +150,22 @@ class LoggingSettings(SectionSettings):
         }
     )
 
+class ModelsSettings(SectionSettings):
+    icons_path: str = Field(description="Path to the icons model", default="models/icons_model")
+    quantities_path: str = Field(description="Path to the quantities model", default="models/quantities_model")
+
+    model_config = ConfigDict(
+        extra='ignore',
+        title="Models settings",
+        description="Paths for the keras models",
+        json_schema_extra={
+            "example": {
+                "icons_path": "models/icons_model",
+                "quantities_path": "models/quantities_model"
+            }
+        }
+    )
+
 class OCRSettings(SectionSettings):
     base_height: int = Field(description="Base Height for the scaling", gt=0, default=1440)
     item_width: int = Field(description="Width of the quantity square", gt=0, default=56)
@@ -127,76 +186,6 @@ class OCRSettings(SectionSettings):
                 "item_spacing_height": 9,
                 "item_spacing_width": 16,
                 "text_recognition_scale": 16
-            }
-        }
-    )
-
-class ModelsSettings(SectionSettings):
-    icons_path: str = Field(description="Path to the icons model", default="models/icons_model")
-    quantities_path: str = Field(description="Path to the quantities model", default="models/quantities_model")
-
-    model_config = ConfigDict(
-        extra='ignore',
-        title="Models settings",
-        description="Paths for the keras models",
-        json_schema_extra={
-            "example": {
-                "icons_path": "models/icons_model",
-                "quantities_path": "models/quantities_model"
-            }
-        }
-    )
-
-class BackendSettings(SectionSettings):
-    url: str | None = Field(description="Backend API URL", default=None)
-
-    model_config = ConfigDict(
-        extra='ignore',
-        title="Backend settings",
-        description="Settings for the backend API",
-        json_schema_extra={
-            "example": {
-                "url": "http://localhost:8000"
-            }
-        }
-    )
-
-
-class DeveloperSettings(SectionSettings):
-    detect_quantities: bool = Field(description="Detect quantities", default=True)
-    detect_icons: bool = Field(description="Detect icons", default=True)
-    detect_stockpile_type: bool = Field(description="Detect stockpile type", default=True)
-    detect_stockpile_name: bool = Field(description="Detect stockpile name", default=True)
-    draw_rectangles: bool = Field(description="Draw rectangles", default=False)
-    save_image: bool = Field(description="Save image", default=False)
-    save_stockpile: bool = Field(description="Save detected stockpile", default=False)
-    save_name: bool = Field(description="Save detected stockpile name", default=False)
-    save_type: bool = Field(description="Save detected stockpile type", default=False)
-    backup_path: str = Field(description="Backup path", default="screenshots")
-
-    @model_validator(mode="after")
-    def validate(self):
-        if not self.backup_path:
-            self.backup_path = '.'
-
-        return self
-
-    model_config = ConfigDict(
-        extra='ignore',
-        title="Developer settings",
-        description="Settings for development. Should only be modified by developers.",
-        json_schema_extra={
-            "example": {
-                "detect_quantities": True,
-                "detect_icons": True,
-                "detect_stockpile_type": True,
-                "detect_stockpile_name": True,
-                "draw_rectangles": False,
-                "save_image": False,
-                "save_stockpile": False,
-                "save_name": False,
-                "save_type": False,
-                "backup_path": "screenshots"
             }
         }
     )
