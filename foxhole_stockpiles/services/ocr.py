@@ -315,6 +315,7 @@ class OCR(metaclass=SingletonMeta):
         for i, item in enumerate(stockpile.items):
             item.quantity = detected_quantities[i]
 
+        #print(" ".join([str(item.quantity) for item in stockpile.items]))
         return stockpile
 
     async def save_image(self, stockpile: Stockpile, file_name: str, image: any, name_image: any = None, type_image: any = None, stockpile_image: any = None):
@@ -402,6 +403,7 @@ class OCR(metaclass=SingletonMeta):
 
         """
         gray_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY)
+        gray_image[gray_image<170] = 0
         # Extract and normalize quantity images
 
         quantity_images = []
