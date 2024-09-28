@@ -263,7 +263,7 @@ class OCR(metaclass=SingletonMeta):
 
         # If not items have been detected return None
         if not items:
-            await self.save_image(file_name=file_name, image=image)
+            await self.save_image(stockpile=None, file_name=file_name, image=image)
             return None
 
         # Include the title in the cropped image
