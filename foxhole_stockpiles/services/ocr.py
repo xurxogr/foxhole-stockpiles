@@ -431,7 +431,14 @@ class OCR(metaclass=SingletonMeta):
         x_offset = 0
         for img in quantity_images:
             h, w = img.shape[:2]
-            composite[0:h, x_offset:x_offset+w] = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY_INV)[1]
+
+            # Step 1: Apply binary inverse threshold to make the numbers white on black background
+            thresh_img = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY_INV)[1]
+            # Step 2: Dilate the image to thicken the numbers
+            kernel = numpy.ones((2, 2), numpy.uint8)
+            dilated_img = cv2.dilate(thresh_img, kernel, iterations=1)
+
+            composite[0:h, x_offset:x_offset+w] = dilated_img
             x_offset += w + padding
 
         return composite
