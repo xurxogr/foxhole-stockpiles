@@ -15,7 +15,8 @@ services:
     - ./logs:/code/logs
     - ./models:/code/models
     - ./screenshots:/code/screenshots
-    - ./tesserdata/custom.traineddata:/usr/share/tesseract-ocr/5/tessdata/custom.traineddata
+    - ./tessdata/custom.traineddata:/usr/share/tesseract-ocr/5/tessdata/custom.traineddata
+    - ./tessdata/rennernumbers.traineddata:/usr/share/tesseract-ocr/5/tessdata/rennernumbers.traineddata
 #     networks:
 #       - foxhole-stockpiles
 

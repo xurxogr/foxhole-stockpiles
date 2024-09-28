@@ -2,6 +2,7 @@ from datetime import datetime
 import json
 import logging
 import os.path
+import re
 
 import cv2
 from keras.models import load_model
@@ -21,7 +22,6 @@ class OCR(metaclass=SingletonMeta):
 
         # Models and classes.
         self.__icons_model, self.__icons_classes = self.__load_model(path=settings.models.icons_path)
-        self.__quantity_model, self.__quantity_classes = self.__load_model(path=settings.models.quantities_path)
 
     def __load_model(self, path: str) -> tuple:
         """
@@ -66,52 +66,6 @@ class OCR(metaclass=SingletonMeta):
         prediction = self.__icons_model.predict(expanded_imagen, verbose=0)
         item = self.__icons_classes[numpy.argmax(prediction)]
         return item
-
-    async def __extract_quantity_from_image(self, image: cv2.typing.MatLike) -> int:
-        """
-        Extracts the quantity from an image
-
-        Args:
-            image (cv2.typing.MatLike): Image to extract the quantity from
-
-        Returns:
-            int: Quantity detected. -1 if not detected
-        """
-
-        if image is None or not settings.developer.detect_quantities:
-            return -1
-
-        # Copy the image to avoid modifying the original
-        image = image.copy()
-
-        image[image<170] = 0
-
-        # Convert to grayscale
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-        # Get the bounding rectangle of all non-zero pixels
-        x, y, w, h = cv2.boundingRect(gray)
-
-        # Convert to black numbers with white background and resize to 32, 32 to match the model
-        cropped_image = cv2.threshold(image[y:y+h, x:x+w], 127, 255, cv2.THRESH_BINARY_INV)[1]
-        resized_image = cv2.resize(cropped_image, (32, 32))
-        expanded_imagen = numpy.expand_dims(resized_image, axis=0)
-
-        prediction = self.__quantity_model.predict(expanded_imagen, verbose=0)
-        item = self.__quantity_classes[numpy.argmax(prediction)]
-
-        # Check if the quantity is a number or a Thousand (k+)
-        multiplier = 1
-        if 'k+' in item:
-            multiplier = 1000
-            item = item.replace('k+', '')
-
-        try:
-            ret_val = int(item) * multiplier
-        except:
-            ret_val = -1
-
-        return ret_val
 
     async def __extract_text_from_image(self, image: cv2.typing.MatLike) -> str:
         """
@@ -238,6 +192,7 @@ class OCR(metaclass=SingletonMeta):
         detected_item_height = 0
         detected_item_width = 0
 
+        quantities = []
         for cnt in contours:
             approx = cv2.approxPolyDP(cnt, 0.01*cv2.arcLength(cnt, True), True)
             if len(approx) != 4:
@@ -249,6 +204,8 @@ class OCR(metaclass=SingletonMeta):
             pixel_error = 2
             if abs(w - item_width) > pixel_error or abs(h - item_height) > pixel_error:
                 continue
+
+            quantities.append((x, y, w, h))
 
             # Save the detected item height and width.
             if h > detected_item_height:
@@ -269,10 +226,6 @@ class OCR(metaclass=SingletonMeta):
             quantity_x2 = x + w
             quantity_y2 = y + h
 
-            # Detect quantity
-            quantity_image = image[quantity_y1:quantity_y2, quantity_x1:quantity_x2]
-            quantity = await self.__extract_quantity_from_image(image=quantity_image)
-
             # Detect icon
             icon_image = image[icon_y1:icon_y2, icon_x1:icon_x2]
             item_id = await self.__extract_item_from_image(image=icon_image)
@@ -283,12 +236,7 @@ class OCR(metaclass=SingletonMeta):
                 crated = True
                 item_id = item_id.replace('-crated', '')
 
-            item = StockpileItem(
-                code=item_id,
-                quantity=quantity,
-                crated=crated
-            )
-            items.append(item)
+            items.append(StockpileItem(code=item_id, crated=crated))
 
             # Build a rectangle that contains all other rectangles (Stockpile contents)
             # It will be used to detect the position of the title
@@ -310,8 +258,6 @@ class OCR(metaclass=SingletonMeta):
             if settings.developer.draw_rectangles:
                 # draw a rectangle for quantity. In different colour if it wasn't detected
                 cv2.rectangle(image, (quantity_x1, quantity_y1), (quantity_x2, quantity_y2), (0, 0, 255), 2)
-                # draw the quantity detected
-                cv2.putText(image, str(quantity), (int(x + w/2), y), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
                 # draw a rectangle where the icon was found
                 cv2.rectangle(image, (icon_x1, icon_y1), (icon_x2, icon_y2), (255, 0, 255), 2)
 
@@ -363,6 +309,12 @@ class OCR(metaclass=SingletonMeta):
         cropped_image = image[min_y:max_y, min_x:max_x]
         stockpile = Stockpile(name=name, type=type_, items=items)
         await self.save_image(stockpile=stockpile, file_name=file_name, image=image, name_image=stockpile_name_image, type_image=stockpile_type_image, stockpile_image=cropped_image)
+
+        # Detect all the quantitites
+        detected_quantities = await self.process_quantities(original_image=image, quantity_coords=quantities)
+        for i, item in enumerate(stockpile.items):
+            item.quantity = detected_quantities[i]
+
         return stockpile
 
     async def save_image(self, stockpile: Stockpile, file_name: str, image: any, name_image: any = None, type_image: any = None, stockpile_image: any = None):
@@ -411,3 +363,78 @@ class OCR(metaclass=SingletonMeta):
 
         if stockpile_image is not None and settings.developer.save_stockpile:
             cv2.imwrite("{}_stockpile.png".format(file_name), stockpile_image)
+
+    async def create_composite_image(self, quantity_images: list[cv2.typing.MatLike], padding: int=0) -> numpy.ndarray:
+        """
+        Create a composite image from a list of quantity images.
+
+        Args:
+            quantity_images (list): List of quantity images
+            padding (int): Padding between images
+
+        Returns:
+            numpy.ndarray: Composite image
+        """
+
+        # Calculate dimensions for the composite image
+        total_width = sum(img.shape[1] for img in quantity_images) + padding * (len(quantity_images) - 1)
+        max_height = max(img.shape[0] for img in quantity_images)
+
+        # Create a blank canvas
+        composite = numpy.ones((max_height, total_width), dtype=numpy.uint8) * 255
+
+        # Place normalized images on canvas
+        x_offset = 0
+        for img in quantity_images:
+            h, w = img.shape[:2]
+            composite[0:h, x_offset:x_offset+w] = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY_INV)[1]
+            x_offset += w + padding
+
+        return composite
+
+    async def process_quantities(self, original_image: cv2.typing.MatLike, quantity_coords: list[tuple[int, int, int, int]]) -> list[int]:
+        """
+        Process the quantities detected in the image.
+
+        Args:
+            original_image: Original image
+            quantity_coords: Coordinates of the quantities
+
+        """
+        gray_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY)
+        # Extract and normalize quantity images
+
+        quantity_images = []
+
+        # Normalize all images to a standard height
+        target_height = 100
+        for x, y, w, h in quantity_coords:
+            aspect_ratio = w / h
+            target_width = int(target_height * aspect_ratio)
+            quantity_image = cv2.resize(gray_image[y:y+h, x:x+w], (target_width, target_height), interpolation=cv2.INTER_AREA)
+            quantity_images.append(quantity_image)
+
+        # Create composite image
+        quantities_image = await self.create_composite_image(quantity_images, padding=10)
+
+        # Use Tesseract with custom configuration
+        custom_config = r'--psm 7 -c tessedit_char_whitelist="0123456789k+ "'
+        image = cv2.cvtColor(quantities_image, cv2.COLOR_BGR2RGB)
+        text = pytesseract.image_to_string(image, config=custom_config, lang='rennernumbers')
+
+        numbers = []
+        # Check if the quantity is a number or a Thousand (k+)
+        for item in text.split():
+            multiplier = 1
+            if 'k+' in item:
+                multiplier = 1000
+                item = item.replace('k+', '')
+
+            try:
+                ret_val = int(item) * multiplier
+            except:
+                ret_val = -1
+
+            numbers.append(ret_val)
+
+        return numbers
