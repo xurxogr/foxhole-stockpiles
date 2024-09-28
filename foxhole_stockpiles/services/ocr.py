@@ -312,8 +312,17 @@ class OCR(metaclass=SingletonMeta):
 
         # Detect all the quantitites
         detected_quantities = await self.process_quantities(original_image=image, quantity_coords=quantities)
+        if len(detected_quantities) != len(stockpile.items):
+            self.__logger.error(f"{stockpile.name}: Detected {len(detected_quantities)} quantities but {len(stockpile.items)} items")
+            quantities_str = " ".join(detected_quantities)
+            self.__logger.error(f"Quantities: {quantities_str}")
+            return None
+
         for i, item in enumerate(stockpile.items):
-            item.quantity = detected_quantities[i]
+            try:
+                item.quantity = detected_quantities[i]
+            except IndexError:
+                item.quantity = -1
 
         #print(" ".join([str(item.quantity) for item in stockpile.items]))
         return stockpile
