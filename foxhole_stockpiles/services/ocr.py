@@ -308,13 +308,23 @@ class OCR(metaclass=SingletonMeta):
         # Crop the image to store only the stockpile with the type, name and the items
         cropped_image = image[min_y:max_y, min_x:max_x]
         stockpile = Stockpile(name=name, type=type_, items=items)
-        await self.save_image(stockpile=stockpile, file_name=file_name, image=image, name_image=stockpile_name_image, type_image=stockpile_type_image, stockpile_image=cropped_image)
+        quantities_image = await self.create_quantitites_image(original_image=image, quantity_coords=quantities)
+
+        await self.save_image(
+            stockpile=stockpile,
+            file_name=file_name,
+            image=image,
+            name_image=stockpile_name_image,
+            type_image=stockpile_type_image,
+            stockpile_image=cropped_image,
+            quantitites_image=quantities_image
+        )
 
         # Detect all the quantitites
-        detected_quantities = await self.process_quantities(original_image=image, quantity_coords=quantities)
+        detected_quantities = await self.process_quantities(image=quantities_image)
         if len(detected_quantities) != len(stockpile.items):
             self.__logger.error(f"{stockpile.name}: Detected {len(detected_quantities)} quantities but {len(stockpile.items)} items")
-            quantities_str = " ".join(detected_quantities)
+            quantities_str = " ".join([str(item) for item in detected_quantities])
             self.__logger.error(f"Quantities: {quantities_str}")
             return None
 
@@ -324,10 +334,14 @@ class OCR(metaclass=SingletonMeta):
             except IndexError:
                 item.quantity = -1
 
-        #print(" ".join([str(item.quantity) for item in stockpile.items]))
+        # Print the detected quantitites
+        if settings.developer.save_quantities_image:
+            quantities_str = " ".join([str(item.quantity) for item in stockpile.items])
+            self.__logger.info(f"{stockpile.name}: {quantities_str}")
+
         return stockpile
 
-    async def save_image(self, stockpile: Stockpile, file_name: str, image: any, name_image: any = None, type_image: any = None, stockpile_image: any = None):
+    async def save_image(self, stockpile: Stockpile, file_name: str, image: any, name_image: any = None, type_image: any = None, stockpile_image: any = None, quantitites_image: any = None):
         """
         Saves the image to the configured path
 
@@ -338,8 +352,10 @@ class OCR(metaclass=SingletonMeta):
             name_image (any): Image with the name detected
             type_image (any): Image with the type detected
             stockpile_image (any): Image with the stockpile detected
+            quantitites_image (any): Image with the quantities detected
         """
-        if not any([settings.developer.save_image, settings.developer.save_stockpile, settings.developer.save_name, settings.developer.save_type]):
+
+        if not any([settings.developer.save_image, settings.developer.save_stockpile_image, settings.developer.save_name_image, settings.developer.save_type_image, settings.developer.save_quantities_image]):
             return
 
         if stockpile:
@@ -365,26 +381,44 @@ class OCR(metaclass=SingletonMeta):
         if image is not None and settings.developer.save_image:
             cv2.imwrite("{}.png".format(file_name), image)
 
-        if name_image is not None and settings.developer.save_name:
+        if name_image is not None and settings.developer.save_name_image:
             cv2.imwrite("{}_name.png".format(file_name), name_image)
 
-        if type_image is not None and settings.developer.save_type:
+        if type_image is not None and settings.developer.save_type_image:
             cv2.imwrite("{}_type.png".format(file_name), type_image)
 
-        if stockpile_image is not None and settings.developer.save_stockpile:
+        if stockpile_image is not None and settings.developer.save_stockpile_image:
             cv2.imwrite("{}_stockpile.png".format(file_name), stockpile_image)
 
-    async def create_composite_image(self, quantity_images: list[cv2.typing.MatLike], padding: int=0) -> numpy.ndarray:
+        if quantitites_image is not None and settings.developer.save_quantities_image:
+            cv2.imwrite("{}_quantities.png".format(file_name), quantitites_image)
+
+    async def create_quantitites_image(self, original_image: cv2.typing.MatLike, quantity_coords: list[tuple[int, int, int, int]], padding: int=0) -> numpy.ndarray:
         """
         Create a composite image from a list of quantity images.
 
         Args:
-            quantity_images (list): List of quantity images
+            original_image (cv2.typing.MatLike): Original image
+            quantity_coords (list[tuple[int, int, int, int]]): Coordinates of the quantities
             padding (int): Padding between images
 
         Returns:
             numpy.ndarray: Composite image
         """
+
+        gray_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY)
+
+        # Extract and normalize quantity images
+
+        quantity_images = []
+
+        # Normalize all images to a standard height
+        target_height = 100
+        for x, y, w, h in quantity_coords:
+            aspect_ratio = w / h
+            target_width = int(target_height * aspect_ratio)
+            quantity_image = cv2.resize(gray_image[y:y+h, x:x+w], (target_width, target_height), interpolation=cv2.INTER_AREA)
+            quantity_images.append(quantity_image)
 
         # Calculate dimensions for the composite image
         total_width = sum(img.shape[1] for img in quantity_images) + padding * (len(quantity_images) - 1)
@@ -402,35 +436,17 @@ class OCR(metaclass=SingletonMeta):
 
         return composite
 
-    async def process_quantities(self, original_image: cv2.typing.MatLike, quantity_coords: list[tuple[int, int, int, int]]) -> list[int]:
+    async def process_quantities(self, image: numpy.ndarray) -> list[int]:
         """
         Process the quantities detected in the image.
 
         Args:
-            original_image: Original image
-            quantity_coords: Coordinates of the quantities
-
+            image (numpy.ndarray): Image to process
         """
-        gray_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY)
-        gray_image[gray_image<170] = 0
-        # Extract and normalize quantity images
-
-        quantity_images = []
-
-        # Normalize all images to a standard height
-        target_height = 100
-        for x, y, w, h in quantity_coords:
-            aspect_ratio = w / h
-            target_width = int(target_height * aspect_ratio)
-            quantity_image = cv2.resize(gray_image[y:y+h, x:x+w], (target_width, target_height), interpolation=cv2.INTER_AREA)
-            quantity_images.append(quantity_image)
-
-        # Create composite image
-        quantities_image = await self.create_composite_image(quantity_images, padding=10)
 
         # Use Tesseract with custom configuration
         custom_config = r'--psm 7 -c tessedit_char_whitelist="0123456789k+ "'
-        image = cv2.cvtColor(quantities_image, cv2.COLOR_BGR2RGB)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         text = pytesseract.image_to_string(image, config=custom_config, lang='rennernumbers')
 
         numbers = []

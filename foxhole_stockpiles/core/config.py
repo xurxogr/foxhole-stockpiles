@@ -100,9 +100,10 @@ class DeveloperSettings(SectionSettings):
     detect_stockpile_name: bool = Field(description="Detect stockpile name", default=True)
     draw_rectangles: bool = Field(description="Draw rectangles", default=False)
     save_image: bool = Field(description="Save image", default=False)
-    save_stockpile: bool = Field(description="Save detected stockpile", default=False)
-    save_name: bool = Field(description="Save detected stockpile name", default=False)
-    save_type: bool = Field(description="Save detected stockpile type", default=False)
+    save_stockpile_image: bool = Field(description="Save detected stockpile", default=False)
+    save_name_image: bool = Field(description="Save detected stockpile name", default=False)
+    save_type_image: bool = Field(description="Save detected stockpile type", default=False)
+    save_quantities_image: bool = Field(description="Save detected quantities", default=False)
     backup_path: str = Field(description="Backup path", default="screenshots")
 
     model_config = ConfigDict(
@@ -117,9 +118,10 @@ class DeveloperSettings(SectionSettings):
                 "detect_stockpile_name": True,
                 "draw_rectangles": False,
                 "save_image": False,
-                "save_stockpile": False,
-                "save_name": False,
-                "save_type": False,
+                "save_stockpile_image": False,
+                "save_name_image": False,
+                "save_type_image": False,
+                "save_quantities_image": False,
                 "backup_path": "screenshots"
             }
         }
