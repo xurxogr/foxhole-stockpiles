@@ -329,10 +329,7 @@ class OCR(metaclass=SingletonMeta):
             return None
 
         for i, item in enumerate(stockpile.items):
-            try:
-                item.quantity = detected_quantities[i]
-            except IndexError:
-                item.quantity = -1
+            item.quantity = detected_quantities[i]
 
         # Print the detected quantitites
         if settings.developer.save_quantities_image:
@@ -417,7 +414,7 @@ class OCR(metaclass=SingletonMeta):
         for x, y, w, h in quantity_coords:
             aspect_ratio = w / h
             target_width = int(target_height * aspect_ratio)
-            quantity_image = cv2.resize(gray_image[y:y+h, x:x+w], (target_width, target_height), interpolation=cv2.INTER_AREA)
+            quantity_image = cv2.resize(gray_image[y:y+h, x:x+w], (target_width, target_height), interpolation=cv2.INTER_LANCZOS4)
             quantity_images.append(quantity_image)
 
         # Calculate dimensions for the composite image
@@ -435,9 +432,8 @@ class OCR(metaclass=SingletonMeta):
             # Step 1: Apply binary inverse threshold to make the numbers white on black background
             thresh_img = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY_INV)[1]
             # Step 2: Dilate the image to thicken the numbers
-            kernel = numpy.ones((2, 2), numpy.uint8)
-            dilated_img = cv2.dilate(thresh_img, kernel, iterations=1)
-
+            kernel = numpy.ones((1, 1), numpy.uint8)
+            dilated_img = cv2.dilate(thresh_img, kernel, iterations=2)
             composite[0:h, x_offset:x_offset+w] = dilated_img
             x_offset += w + padding
 
