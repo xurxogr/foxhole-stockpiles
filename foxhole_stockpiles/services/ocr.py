@@ -2,7 +2,6 @@ from datetime import datetime
 import json
 import logging
 import os.path
-import re
 
 import cv2
 from keras.models import load_model
@@ -56,9 +55,6 @@ class OCR(metaclass=SingletonMeta):
             str: Item detected. Empty string if not detected
         """
 
-        if image is None or not settings.developer.detect_icons:
-            return ""
-
         # Resize the image to 32x32 to match the model
         resized_image = cv2.resize(image, (32, 32))
         expanded_imagen = numpy.expand_dims(resized_image, axis=0)
@@ -77,6 +73,7 @@ class OCR(metaclass=SingletonMeta):
         Returns:
             str: Extracted text. Empty string if not detected
         """
+
         if image is None:
             return ""
 
@@ -108,9 +105,6 @@ class OCR(metaclass=SingletonMeta):
             stockpile_type: Type detected. UNDEFINED if not detected
         """
 
-        if image is None or not settings.developer.detect_stockpile_type:
-            return stockpile_type.UNDEFINED
-
         name = await self.__extract_text_from_image(image=image)
         if not name:
             return stockpile_type.UNDEFINED
@@ -127,22 +121,6 @@ class OCR(metaclass=SingletonMeta):
         except ValueError:
             self.__logger.error(f"Stockpile type not found: '{name}'")
             return stockpile_type.UNDEFINED
-
-    async def __extract_stockpile_name_from_image(self, image: cv2.typing.MatLike) -> str:
-        """
-        Extracts the stockpile name from an image
-
-        Args:
-            image (cv2.typing.MatLike): Image to extract the name from
-
-        Returns:
-            str: Name detected. Empty string if not detected
-        """
-
-        if image is None or not settings.developer.detect_stockpile_name:
-            return ""
-
-        return await self.__extract_text_from_image(image=image)
 
     async def extract_stockpile_from_image(self, image: cv2.typing.MatLike, file_name: str = "Buffer") -> Stockpile:
         """
@@ -255,12 +233,6 @@ class OCR(metaclass=SingletonMeta):
             if quantity_x2 < min_quantity_x:
                 min_quantity_x = quantity_x2
 
-            if settings.developer.draw_rectangles:
-                # draw a rectangle for quantity. In different colour if it wasn't detected
-                cv2.rectangle(image, (quantity_x1, quantity_y1), (quantity_x2, quantity_y2), (0, 0, 255), 2)
-                # draw a rectangle where the icon was found
-                cv2.rectangle(image, (icon_x1, icon_y1), (icon_x2, icon_y2), (255, 0, 255), 2)
-
         # If not items have been detected return None
         if not items:
             await self.save_image(stockpile=None, file_name=file_name, image=image)
@@ -293,15 +265,10 @@ class OCR(metaclass=SingletonMeta):
         stockpile_type_image = image[type_y1:type_y2, type_x1:type_x2]
         stockpile_name_image = image[name_y1:name_y2, name_x1:name_x2]
 
-        if settings.developer.draw_rectangles:
-            # Add rectangles over the stockpile type and name
-            cv2.rectangle(image, (type_x1, type_y1), (type_x2, type_y2), (255, 0, 255), 2)
-            cv2.rectangle(image, (name_x1, name_y1), (name_x2, name_y2), (255, 0, 255), 2)
-
         type_ = await self.__extract_stockpile_type_from_image(image=stockpile_type_image)
 
         if type_ in [stockpile_type.SEAPORT, stockpile_type.STORAGE_DEPOT]:
-            name = await self.__extract_stockpile_name_from_image(image=stockpile_name_image)
+            name = await self.__extract_text_from_image(image=stockpile_name_image)
         else:
             name = ""
 
@@ -316,8 +283,7 @@ class OCR(metaclass=SingletonMeta):
             image=image,
             name_image=stockpile_name_image,
             type_image=stockpile_type_image,
-            stockpile_image=cropped_image,
-            quantitites_image=quantities_image
+            stockpile_image=cropped_image
         )
 
         # Detect all the quantitites
@@ -331,14 +297,9 @@ class OCR(metaclass=SingletonMeta):
         for i, item in enumerate(stockpile.items):
             item.quantity = detected_quantities[i]
 
-        # Print the detected quantitites
-        if settings.developer.save_quantities_image:
-            quantities_str = " ".join([str(item.quantity) for item in stockpile.items])
-            self.__logger.info(f"{stockpile.name}: {quantities_str}")
-
         return stockpile
 
-    async def save_image(self, stockpile: Stockpile, file_name: str, image: any, name_image: any = None, type_image: any = None, stockpile_image: any = None, quantitites_image: any = None):
+    async def save_image(self, stockpile: Stockpile, file_name: str, image: any, name_image: any = None, type_image: any = None, stockpile_image: any = None):
         """
         Saves the image to the configured path
 
@@ -349,10 +310,9 @@ class OCR(metaclass=SingletonMeta):
             name_image (any): Image with the name detected
             type_image (any): Image with the type detected
             stockpile_image (any): Image with the stockpile detected
-            quantitites_image (any): Image with the quantities detected
         """
 
-        if not any([settings.developer.save_image, settings.developer.save_stockpile_image, settings.developer.save_name_image, settings.developer.save_type_image, settings.developer.save_quantities_image]):
+        if not any([settings.developer.save_image, settings.developer.save_name_image, settings.developer.save_type_image]):
             return
 
         if stockpile:
@@ -383,12 +343,6 @@ class OCR(metaclass=SingletonMeta):
 
         if type_image is not None and settings.developer.save_type_image:
             cv2.imwrite("{}_type.png".format(file_name), type_image)
-
-        if stockpile_image is not None and settings.developer.save_stockpile_image:
-            cv2.imwrite("{}_stockpile.png".format(file_name), stockpile_image)
-
-        if quantitites_image is not None and settings.developer.save_quantities_image:
-            cv2.imwrite("{}_quantities.png".format(file_name), quantitites_image)
 
     async def create_quantitites_image(self, original_image: cv2.typing.MatLike, quantity_coords: list[tuple[int, int, int, int]], padding: int=0) -> numpy.ndarray:
         """

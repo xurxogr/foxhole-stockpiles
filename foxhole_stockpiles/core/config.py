@@ -94,16 +94,9 @@ class BackendSettings(SectionSettings):
     )
 
 class DeveloperSettings(SectionSettings):
-    detect_quantities: bool = Field(description="Detect quantities", default=True)
-    detect_icons: bool = Field(description="Detect icons", default=True)
-    detect_stockpile_type: bool = Field(description="Detect stockpile type", default=True)
-    detect_stockpile_name: bool = Field(description="Detect stockpile name", default=True)
-    draw_rectangles: bool = Field(description="Draw rectangles", default=False)
     save_image: bool = Field(description="Save image", default=False)
-    save_stockpile_image: bool = Field(description="Save detected stockpile", default=False)
     save_name_image: bool = Field(description="Save detected stockpile name", default=False)
     save_type_image: bool = Field(description="Save detected stockpile type", default=False)
-    save_quantities_image: bool = Field(description="Save detected quantities", default=False)
     backup_path: str = Field(description="Backup path", default="screenshots")
 
     model_config = ConfigDict(
@@ -112,16 +105,9 @@ class DeveloperSettings(SectionSettings):
         description="Settings for development. Should only be modified by developers.",
         json_schema_extra={
             "example": {
-                "detect_quantities": True,
-                "detect_icons": True,
-                "detect_stockpile_type": True,
-                "detect_stockpile_name": True,
-                "draw_rectangles": False,
                 "save_image": False,
-                "save_stockpile_image": False,
                 "save_name_image": False,
                 "save_type_image": False,
-                "save_quantities_image": False,
                 "backup_path": "screenshots"
             }
         }
