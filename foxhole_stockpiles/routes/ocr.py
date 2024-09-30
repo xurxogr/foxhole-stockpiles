@@ -68,6 +68,11 @@ async def __scan_image(image: UploadFile, request: Request):
     url = settings.backend.url
     if url and api_key.lower() != "debug":
         connector = BackendConnector(url=url)
-        return await connector.send_stockpile(payload=stockpile_dict, api_key=api_key)
+        try:
+            return await connector.send_stockpile(payload=stockpile_dict, api_key=api_key)
+        except Exception as e:
+            message = f"Error sending stockpile {stockpile.name} ({stockpile.type}) to the backend server: {e.__class__.__name__}"
+            logger.error(message)
+            return { "message": message }
 
     return stockpile_dict
