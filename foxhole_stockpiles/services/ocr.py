@@ -307,7 +307,7 @@ class OCR(metaclass=SingletonMeta):
 
         # Crop the image to store only the stockpile with the type, name and the items
         cropped_image = image[min_y:max_y, min_x:max_x]
-        stockpile = Stockpile(name=name, type=type_, items=items)
+        stockpile = Stockpile(name=name, type=type_, items=items, resolution=f"{width}x{height}")
         quantities_image = await self.create_quantitites_image(original_image=image, quantity_coords=quantities)
 
         await self.save_image(
@@ -362,10 +362,12 @@ class OCR(metaclass=SingletonMeta):
             s_name = stockpile.name
             s_type = stockpile.type
             date_now = stockpile.timestamp
+            resolution = stockpile.resolution
         else:
             s_name = "undefined"
             s_type = "undefined"
             date_now = datetime.now()
+            resolution = f"{image.shape[1]}x{image.shape[0]}"
 
         date_str = date_now.strftime("%Y-%m-%d")
         time_str = date_now.strftime("%H-%M-%S")
@@ -374,9 +376,7 @@ class OCR(metaclass=SingletonMeta):
         if not os.path.exists(directory):
             os.makedirs(directory)
 
-        width = image.shape[1]
-        height = image.shape[0]
-        file_name = f"{directory}{time_str}-{s_type}-{s_name}-{width}x{height}-{file_name}"
+        file_name = f"{directory}{time_str}-{s_type}-{s_name}-{resolution}-{file_name}"
 
         if image is not None and settings.developer.save_image:
             cv2.imwrite("{}.png".format(file_name), image)

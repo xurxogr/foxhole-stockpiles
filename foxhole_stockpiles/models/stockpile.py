@@ -11,6 +11,7 @@ class Stockpile(BaseModel):
     type: stockpile_type = Field(description="Type of stockpile", default=stockpile_type.UNDEFINED)
     items: list[StockpileItem] | None = Field(description="List of items", default=[])
     timestamp: datetime | None = Field(description="last update datetime", default=None)
+    resolution: str | None = Field(description="Resolution of the screenshot", default=None)
 
     @model_validator(mode="after")
     def validate(self):
@@ -26,7 +27,8 @@ class Stockpile(BaseModel):
                 "name": "Logi",
                 "type": stockpile_type.SEAPORT,
                 "items": [StockpileItem.model_config["json_schema_extra"]["example"]],
-                "timestamp": "2024-01-04T09:00:00Z"
+                "timestamp": "2024-01-04T09:00:00Z",
+                "resolution": "1920x1080"
             }
         }
     )

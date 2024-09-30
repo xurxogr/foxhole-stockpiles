@@ -57,6 +57,7 @@ async def __scan_image(image: UploadFile, request: Request):
     stockpile_dict = {
         "stockpile_name": stockpile.name,
         "stockpile_type": stockpile.type,
+        "resolution": stockpile.resolution,
         "items": items
     }
 
