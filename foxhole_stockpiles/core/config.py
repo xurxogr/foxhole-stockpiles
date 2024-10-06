@@ -159,6 +159,7 @@ class OCRSettings(SectionSettings):
     item_spacing_height: int = Field(description="Spacing between quantity squares", gt=0, default=9)
     item_spacing_width: int = Field(description="Spacing between icon and quantity square", gt=0, default=16)
     text_recognition_scale: float = Field(description="Scale for text recognition", gt=0, default=16)
+    quantities_padding: int = Field(description="Padding for the quantities image creation", gt=0, default=15)
 
     model_config = ConfigDict(
         extra='ignore',
@@ -171,7 +172,8 @@ class OCRSettings(SectionSettings):
                 "item_height": 43,
                 "item_spacing_height": 9,
                 "item_spacing_width": 16,
-                "text_recognition_scale": 16
+                "text_recognition_scale": 16,
+                "quantities_padding": 15
             }
         }
     )

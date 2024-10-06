@@ -275,7 +275,7 @@ class OCR(metaclass=SingletonMeta):
         # Crop the image to store only the stockpile with the type, name and the items
         cropped_image = image[min_y:max_y, min_x:max_x]
         stockpile = Stockpile(name=name, type=type_, items=items, resolution=f"{width}x{height}")
-        quantities_image = await self.create_quantitites_image(original_image=image, quantity_coords=quantities, padding=10)
+        quantities_image = await self.create_quantitites_image(original_image=image, quantity_coords=quantities, padding=settings.ocr.quantities_padding)
 
         await self.save_image(
             stockpile=stockpile,
