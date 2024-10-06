@@ -43,7 +43,12 @@ async def __scan_image(image: UploadFile, request: Request):
 
     width  = image.shape[1]
     height = image.shape[0]
-    logger.info(f"{stockpile.type}:{stockpile.name} ({width}x{height}). Scanned image in {end - start:.2f}")
+
+    if not stockpile.items:
+        logger.info(f"{stockpile.type}:{stockpile.name} ({width}x{height}). Scanned image in {end - start:.2f}. No items found in the image.")
+        return { "message": f"{stockpile.name}: No items found in the image" }
+
+    logger.info(f"{stockpile.type}:{stockpile.name} ({width}x{height}). Scanned image in {end - start:.2f}.")
 
     items = []
     items_no_quantity = []

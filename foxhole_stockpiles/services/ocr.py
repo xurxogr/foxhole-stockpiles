@@ -292,7 +292,8 @@ class OCR(metaclass=SingletonMeta):
             self.__logger.error(f"{stockpile.name}: Detected {len(detected_quantities)} quantities but {len(stockpile.items)} items")
             quantities_str = " ".join([str(item) for item in detected_quantities])
             self.__logger.error(f"Quantities: {quantities_str}")
-            return None
+            stockpile.items = []
+            return stockpile
 
         for i, item in enumerate(stockpile.items):
             item.quantity = detected_quantities[i]
