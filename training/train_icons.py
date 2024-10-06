@@ -13,6 +13,8 @@
 # Based on this tutorial:
 # https://www.tensorflow.org/tutorials/images/classification
 
+# This code is based on https://github.com/GICodeWarrior/fir/blob/main/trainer/train.py
+
 import tensorflow as tf
 
 import keras
@@ -20,14 +22,12 @@ from keras import layers
 from keras.models import Sequential
 
 import json
-import os
-
 
 EPOCHS = 1000
 COLOR_MODE = "rgb"
 DROPOUT=0.5
-VALIDATION_SPLIT=0
 DATA_DIR = "icons-naval57/"
+PATIENTE = 50
 
 IMG_SIZE = (32, 32)
 
@@ -58,21 +58,11 @@ with open('icons_model.json', 'w', encoding='utf-8') as f:
   f.write(json.dumps(class_names, indent=2));
   f.write('\n');
 
-raw_counts = dict()
-total_files = 0
-for root, dirs, files in os.walk(DATA_DIR):
-  if root == DATA_DIR:
-    continue
-  raw_counts[root[len(DATA_DIR):]] = len(files)
-  total_files += len(files)
-
 train_ds = train_ds.cache().prefetch(buffer_size=PREFETCH_SIZE)
 
-
 model = Sequential([
-#  layers.RandomBrightness(0.05),
-#  layers.RandomContrast(0.05),
-  layers.Rescaling(1./255, input_shape=IMG_SIZE + (3,)),
+  layers.Input(shape=IMG_SIZE + (3,)),
+  layers.Rescaling(1./255),
   layers.Conv2D(16, 3, padding='same', use_bias=False),
   layers.BatchNormalization(),
   layers.Activation('relu'),
@@ -89,14 +79,23 @@ model = Sequential([
 model.compile(
   optimizer='adam',
   loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-  metrics=['accuracy'],
-  #steps_per_execution='auto',
+  metrics=['accuracy']
+)
+
+# Add early stopping callback
+early_stopping = keras.callbacks.EarlyStopping(
+    monitor='accuracy',
+    patience=PATIENTE,
+    restore_best_weights=True
 )
 
 model.fit(
   train_ds,
   epochs=EPOCHS,
-  callbacks=[tf.keras.callbacks.LearningRateScheduler(scheduler)],
+  callbacks=[
+    tf.keras.callbacks.LearningRateScheduler(scheduler),
+    early_stopping
+  ],
 )
 
 model.save("icons_model.keras")
