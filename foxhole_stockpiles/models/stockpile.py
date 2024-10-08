@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 
 from foxhole_stockpiles.enums.stockpile_type import stockpile_type
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
@@ -19,6 +19,14 @@ class Stockpile(BaseModel):
             self.timestamp = datetime.now()
 
         return self
+
+    @field_serializer("type")
+    def serialize_type(self, value):
+        return value.value
+
+    @field_serializer("timestamp")
+    def serialize_timestamp(self, value):
+        return value.isoformat()
 
     model_config = ConfigDict(
         extra="forbid",
