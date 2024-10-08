@@ -199,8 +199,6 @@ class OCR(metaclass=SingletonMeta):
             icon_y1 = y
             icon_y2 = y + h
 
-            quantity_x1 = x
-            quantity_y1 = y
             quantity_x2 = x + w
             quantity_y2 = y + h
 
@@ -379,8 +377,6 @@ class OCR(metaclass=SingletonMeta):
         # Create a blank canvas
         composite = numpy.ones((max_height, total_width), dtype=numpy.uint8) * 255
 
-        hyphen_height = target_height // 2
-        hyphen_width = 24
         # Place normalized images on canvas
         x_offset = 0
         for img in quantity_images:
@@ -392,12 +388,6 @@ class OCR(metaclass=SingletonMeta):
             kernel = numpy.ones((1, 1), numpy.uint8)
             dilated_img = cv2.dilate(thresh_img, kernel, iterations=2)
             composite[0:h, x_offset:x_offset+w] = dilated_img
-
-            # Add a hyphen to separate the numbers. This is useful for tesseract to recognize numbers better
-            # In some edge cases 56 was being recognized really badly
-            hyphen_pos = x_offset + w + padding - hyphen_width // 2
-            if hyphen_pos + hyphen_width < total_width:
-                composite[hyphen_height-2:hyphen_height+2, hyphen_pos:hyphen_pos+hyphen_width] = 0
 
             x_offset += w + padding
 
