@@ -98,6 +98,7 @@ class DeveloperSettings(SectionSettings):
     save_name_image: bool = Field(description="Save detected stockpile name", default=False)
     save_type_image: bool = Field(description="Save detected stockpile type", default=False)
     backup_path: str = Field(description="Backup path", default="screenshots")
+    icons_model_threshold_score: float = Field(description="Threshold score for the icons model", ge=0, default=0)
 
     model_config = ConfigDict(
         extra='ignore',
@@ -108,7 +109,8 @@ class DeveloperSettings(SectionSettings):
                 "save_image": False,
                 "save_name_image": False,
                 "save_type_image": False,
-                "backup_path": "screenshots"
+                "backup_path": "screenshots",
+                "icons_model_threshold_score": 0
             }
         }
     )

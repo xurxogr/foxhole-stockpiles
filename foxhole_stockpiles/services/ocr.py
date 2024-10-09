@@ -60,8 +60,20 @@ class OCR(metaclass=SingletonMeta):
         expanded_imagen = numpy.expand_dims(resized_image, axis=0)
 
         prediction = self.__icons_model.predict(expanded_imagen, verbose=0)
-        item = self.__icons_classes[numpy.argmax(prediction)]
-        return item
+
+        top_2 = numpy.argsort(prediction[0])[-2:][::-1]
+        top_score = prediction[0][top_2[0]]
+        second_score = prediction[0][top_2[1]]
+        top = self.__icons_classes[top_2[0]]
+        second = self.__icons_classes[top_2[1]]
+
+        # Check if the difference with the next item is below a threshold.
+        threshold_score = settings.developer.icons_model_threshold_score
+        score_diff = top_score - second_score
+        if score_diff < threshold_score:
+            self.__logger.info(f"Score diff < {threshold_score}: {score_diff:.3f}. {top}, {second}")
+
+        return top
 
     async def __extract_text_from_image(self, image: cv2.typing.MatLike) -> str:
         """
