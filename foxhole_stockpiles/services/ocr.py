@@ -73,6 +73,16 @@ class OCR(metaclass=SingletonMeta):
         if score_diff < threshold_score:
             self.__logger.info(f"Score diff < {threshold_score}: {score_diff:.3f}. {top}, {second}")
 
+        if settings.developer.save_icons_image:
+            # Create a directory with the name of the predicted item, if it doesn't exist
+            directory = f"{settings.developer.icons_save_path}/{top}/"
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+
+            date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            file_name = f"{directory}{top}{date_str}"
+            cv2.imwrite("{}.png".format(file_name), image)
+
         return top
 
     async def __extract_text_from_image(self, image: cv2.typing.MatLike) -> str:
