@@ -73,16 +73,6 @@ class OCR(metaclass=SingletonMeta):
         if score_diff < threshold_score:
             self.__logger.info(f"Score diff < {threshold_score}: {score_diff:.3f}. {top}, {second}")
 
-        if settings.developer.save_icons_image:
-            # Create a directory with the name of the predicted item, if it doesn't exist
-            directory = f"{settings.developer.icons_save_path}/{top}/"
-            if not os.path.exists(directory):
-                os.makedirs(directory)
-
-            date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            file_name = f"{directory}{top}{date_str}"
-            cv2.imwrite("{}.png".format(file_name), image)
-
         return top
 
     async def __extract_text_from_image(self, image: cv2.typing.MatLike) -> str:
@@ -227,6 +217,15 @@ class OCR(metaclass=SingletonMeta):
             # Detect icon
             icon_image = image[icon_y1:icon_y2, icon_x1:icon_x2]
             item_id = await self.__extract_item_from_image(image=icon_image)
+
+            if settings.developer.save_icons_image:
+                # Create a directory with the name of the predicted item, if it doesn't exist
+                directory = f"{settings.developer.icons_save_path}/{item_id}/"
+                if not os.path.exists(directory):
+                    os.makedirs(directory)
+
+                date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                cv2.imwrite(f"{directory}{item_id}{width}x{height}{date_str}.png", icon_image)
 
             # Add item to the list
             crated = False
