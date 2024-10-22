@@ -183,6 +183,7 @@ class OCR(metaclass=SingletonMeta):
         detected_item_width = 0
 
         quantities = []
+        item_number = 0
         for cnt in contours:
             approx = cv2.approxPolyDP(cnt, 0.01*cv2.arcLength(cnt, True), True)
             if len(approx) != 4:
@@ -219,13 +220,14 @@ class OCR(metaclass=SingletonMeta):
             item_id = await self.__extract_item_from_image(image=icon_image)
 
             if settings.developer.save_icons_image:
+                item_number += 1
                 # Create a directory with the name of the predicted item, if it doesn't exist
                 directory = f"{settings.developer.icons_save_path}/{item_id}/"
                 if not os.path.exists(directory):
                     os.makedirs(directory)
 
                 date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-                cv2.imwrite(f"{directory}{item_id}{width}x{height}{date_str}.png", icon_image)
+                cv2.imwrite(f"{directory}{item_number}_{item_id}_{width}x{height}_{date_str}.png", icon_image)
 
             # Add item to the list
             crated = False
