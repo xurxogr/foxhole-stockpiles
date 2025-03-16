@@ -11,7 +11,7 @@ from keras.models import load_model
 from pytesseract import pytesseract
 
 from foxhole_stockpiles.core.config import settings
-from foxhole_stockpiles.enums.stockpile_type import stockpile_type
+from foxhole_stockpiles.enums.stockpile_type import StockpileType
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
 from foxhole_stockpiles.services.singletonmeta import SingletonMeta
@@ -119,9 +119,7 @@ class OCR(metaclass=SingletonMeta):
 
         return text_found
 
-    async def __extract_stockpile_type_from_image(
-        self, image: cv2.typing.MatLike
-    ) -> stockpile_type:
+    async def __extract_stockpile_type_from_image(self, image: cv2.typing.MatLike) -> StockpileType:
         """
         Extract the stockpile type from an image.
 
@@ -133,7 +131,7 @@ class OCR(metaclass=SingletonMeta):
         """
         name = await self.__extract_text_from_image(image=image)
         if not name:
-            return stockpile_type.UNDEFINED
+            return StockpileType.UNDEFINED
 
         type_found = None
         translations = settings.stockpile_types.model_dump()
@@ -143,10 +141,10 @@ class OCR(metaclass=SingletonMeta):
                 break
 
         try:
-            return stockpile_type(type_found)
+            return StockpileType(type_found)
         except ValueError:
             self.__logger.error(f"Stockpile type not found: '{name}'")
-            return stockpile_type.UNDEFINED
+            return StockpileType.UNDEFINED
 
     async def extract_stockpile_from_image(
         self, image: cv2.typing.MatLike, file_name: str = "Buffer"
@@ -312,7 +310,7 @@ class OCR(metaclass=SingletonMeta):
 
         type_ = await self.__extract_stockpile_type_from_image(image=stockpile_type_image)
 
-        if type_ in [stockpile_type.SEAPORT, stockpile_type.STORAGE_DEPOT]:
+        if type_ in [StockpileType.SEAPORT, StockpileType.STORAGE_DEPOT]:
             name = await self.__extract_text_from_image(image=stockpile_name_image)
         else:
             name = ""

@@ -3,7 +3,7 @@
 from enum import StrEnum
 
 
-class stockpile_type(StrEnum):
+class StockpileType(StrEnum):
     """Stockpile type enum."""
 
     # Bases (order from the game).
