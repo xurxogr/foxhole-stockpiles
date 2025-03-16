@@ -2,7 +2,7 @@
 
 import os
 import re
-from configparser import ExtendedInterpolation, _Parser
+from configparser import ExtendedInterpolation
 
 
 class EnvInterpolation(ExtendedInterpolation):
@@ -44,7 +44,7 @@ class EnvInterpolation(ExtendedInterpolation):
 
         return path
 
-    def before_read(self, parser: _Parser, section: str, option: str, value: str):
+    def before_read(self, parser, section: str, option: str, value: str):
         """Override the before_read method.
 
         Expand environment variables and b64 decode values.
