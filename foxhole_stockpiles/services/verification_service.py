@@ -31,28 +31,21 @@ class VerificationService:
         if image is None:
             return ""
 
-        try:
-            if scale:
-                resized = cv2.resize(image, None, fx=4, fy=4, interpolation=cv2.INTER_CUBIC)
-            else:
-                resized = image
+        if scale:
+            resized = cv2.resize(image, None, fx=4, fy=4, interpolation=cv2.INTER_CUBIC)
+        else:
+            resized = image
 
-            # Convert to grayscale
-            gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
+        # Convert to grayscale
+        gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
 
-            # Enhance contrast using CLAHE
-            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-            inverted = cv2.bitwise_not(clahe.apply(gray))
+        # Enhance contrast using CLAHE
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        inverted = cv2.bitwise_not(clahe.apply(gray))
 
-            config = "--psm 7"
-            lang = "custom+eng+fra+deu+por+rus+chi_sim"
-            text_found = pytesseract.image_to_string(inverted, config=config, lang=lang).split(
-                "\n"
-            )[0]
-        except Exception:
-            text_found = ""
-
-        return text_found
+        config = "--psm 7"
+        lang = "custom+eng+fra+deu+por+rus+chi_sim"
+        return pytesseract.image_to_string(inverted, config=config, lang=lang).split("\n")[0]
 
     async def verify_pictures(self, pictures: list[bytes]) -> dict:
         """Extract user information from the pictures.
@@ -116,7 +109,7 @@ class VerificationService:
             words = parts[0].split(" ")[:-1]
             data["name"] = " ".join(words)
             data["level"] = parts[1]
-        except Exception:
+        except IndexError:
             pass
 
         # No name found. Either the image is too small of this is a map image
