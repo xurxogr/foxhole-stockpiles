@@ -49,7 +49,9 @@ def async_retry_on_connect_timeout(max_retries=3, delay=1):
                         raise e
 
                     logger = logging.getLogger(__name__)
-                    logger.info(f"ConnectTimeout occurred. Retrying ({retries}/{max_retries})...")
+                    logger.info(
+                        "ConnectTimeout occurred. Retrying (%d/%d)...", retries, max_retries
+                    )
                     await sleep(delay)
             return await func(*args, **kwargs)
 
@@ -92,7 +94,7 @@ def async_retry_on_302(max_retries=3, delay=1):
                     return response
 
                 logger = logging.getLogger(__name__)
-                logger.info(f"302 occurred. Retrying ({retries}/{max_retries})...")
+                logger.info("302 occurred. Retrying (%d/%d)...", retries, max_retries)
                 await sleep(delay)
                 retries += 1
 
