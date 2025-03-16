@@ -1,0 +1,7 @@
+[flake8]
+# Enable docstring checks and specific rules
+enable-extensions = D
+docstring-convention = google
+max-line-length = 100
+exclude = .git,__pycache__,build,dist,tools,screenshots,models,training
+extend-ignore=E203
