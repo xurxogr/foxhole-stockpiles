@@ -1,3 +1,5 @@
+"""Logging Module."""
+
 import logging
 import os
 from logging.handlers import TimedRotatingFileHandler
@@ -6,12 +8,11 @@ from foxhole_stockpiles.core.config import settings
 
 
 class Logging:
+    """Logging class."""
+
     @staticmethod
     def configure_logging():
-        """
-        Initialize logging
-        """
-
+        """Initialize logging."""
         logging.basicConfig(
             level=settings.logging.level,
             format=settings.logging.format,
@@ -24,7 +25,7 @@ class Logging:
                     mappings = logging.getLevelNamesMapping()
                     log_level = mappings.get(name_level.upper(), logging.WARNING)
                     logging.getLogger(logger).setLevel(level=log_level)
-                except:
+                except Exception:
                     pass
 
         if settings.logging.file:
@@ -33,7 +34,8 @@ class Logging:
                 os.makedirs(log_folder)
 
             file_handler = TimedRotatingFileHandler(
-                filename=os.path.join(log_folder, "foxhole_stockpiles.log"), when="midnight"
+                filename=os.path.join(log_folder, "foxhole_stockpiles.log"),
+                when="midnight",
             )
             file_handler.setFormatter(
                 logging.Formatter(fmt=settings.logging.format, datefmt=settings.logging.date_format)

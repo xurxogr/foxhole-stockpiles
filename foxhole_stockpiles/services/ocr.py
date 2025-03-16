@@ -1,3 +1,5 @@
+"""OCR Service."""
+
 import json
 import logging
 import os.path
@@ -16,7 +18,10 @@ from foxhole_stockpiles.services.singletonmeta import SingletonMeta
 
 
 class OCR(metaclass=SingletonMeta):
+    """OCR Service class."""
+
     def __init__(self):
+        """Initialize the OCR service."""
         self.__logger = logging.getLogger(__name__)
 
         # Models and classes.
@@ -26,7 +31,7 @@ class OCR(metaclass=SingletonMeta):
 
     def __load_model(self, path: str) -> tuple:
         """
-        Loads a model and its classes
+        Load a model and its classes.
 
         Args:
             path (str): Path of the model to load
@@ -34,7 +39,6 @@ class OCR(metaclass=SingletonMeta):
         Returns:
             tuple: Model and classes loaded
         """
-
         model = None
         classes = None
         try:
@@ -50,7 +54,7 @@ class OCR(metaclass=SingletonMeta):
 
     async def __extract_item_from_image(self, image: cv2.typing.MatLike) -> str:
         """
-        Given an image extracts the id of the identified item
+        Extract the id of the identified item in an image.
 
         Args:
             image (cv2.typing.MatLike): Image to detect the type and name from
@@ -58,7 +62,6 @@ class OCR(metaclass=SingletonMeta):
         Returns:
             str: Item detected. Empty string if not detected
         """
-
         # Resize the image to 32x32 to match the model
         resized_image = cv2.resize(image, (32, 32))
         expanded_imagen = numpy.expand_dims(resized_image, axis=0)
@@ -81,7 +84,7 @@ class OCR(metaclass=SingletonMeta):
 
     async def __extract_text_from_image(self, image: cv2.typing.MatLike) -> str:
         """
-        Extracts text from an image
+        Extract text from an image.
 
         Args:
             image (cv2.typing.MatLike): Image to extract text from
@@ -89,12 +92,12 @@ class OCR(metaclass=SingletonMeta):
         Returns:
             str: Extracted text. Empty string if not detected
         """
-
         if image is None:
             return ""
 
         try:
-            # Upscale the image to improve the OCR detection. Tesseract works better with larger images
+            # Upscale the image to improve the OCR detection.
+            # Tesseract works better with larger images
             resized_image = cv2.resize(
                 image,
                 None,
@@ -111,7 +114,7 @@ class OCR(metaclass=SingletonMeta):
             lang = "custom+eng+fra+deu+por+rus+chi_sim"
             pytesseract_text = pytesseract.image_to_string(cropped_image, lang=lang, config=config)
             text_found = pytesseract_text.split("\n")[0]
-        except:
+        except Exception:
             text_found = ""
 
         return text_found
@@ -120,7 +123,7 @@ class OCR(metaclass=SingletonMeta):
         self, image: cv2.typing.MatLike
     ) -> stockpile_type:
         """
-        Extracts the stockpile type from an image
+        Extract the stockpile type from an image.
 
         Args:
             image (cv2.typing.MatLike): Image to extract the type from
@@ -128,7 +131,6 @@ class OCR(metaclass=SingletonMeta):
         Returns:
             stockpile_type: Type detected. UNDEFINED if not detected
         """
-
         name = await self.__extract_text_from_image(image=image)
         if not name:
             return stockpile_type.UNDEFINED
@@ -150,7 +152,7 @@ class OCR(metaclass=SingletonMeta):
         self, image: cv2.typing.MatLike, file_name: str = "Buffer"
     ) -> Stockpile:
         """
-        Extracts the stockpile from an image
+        Extract the stockpile from an image.
 
         Args:
             image: cv2.typing.MatLike = Image to read the stockpile from
@@ -165,11 +167,11 @@ class OCR(metaclass=SingletonMeta):
         Returns:
             Stockpile: Stockpile detected. None if not detected
         """
-
         if image is None:
             return None
 
-        # Values have been configured for a resolution of 1440. Reshape the min-max width accordingly
+        # Values have been configured for a resolution of 1440.
+        # Reshape the min-max width accordingly
         # Detection tested with vertical resolutions: 2160, 1440, 1200, 1080, 1050, 1024, 992, 664
         width = image.shape[1]
         height = image.shape[0]
@@ -182,7 +184,9 @@ class OCR(metaclass=SingletonMeta):
         item_spacing_height = int(image_ratio * settings.ocr.item_spacing_height)
 
         self.__logger.debug(
-            f"Parsing image {file_name}. width: {width}, height: {height}, ratio: {image_ratio}. Item size: {item_width}x{item_height}, spacing: {item_spacing_width}x{item_spacing_height}"
+            f"Parsing image {file_name}. width: {width}, height: {height}, ratio: {image_ratio}. "
+            f"Item size: {item_width}x{item_height}, "
+            f"spacing: {item_spacing_width}x{item_spacing_height}"
         )
 
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -222,7 +226,8 @@ class OCR(metaclass=SingletonMeta):
                 detected_item_width = w
 
             # [Icon][Spacing][Quantity]. Icon should be square and we know the height
-            # x contains the quantity, substract the icon width (w == h) and the spacing adapted to the image resolution
+            # x contains the quantity, substract the icon width (w == h)
+            # and the spacing adapted to the image resolution
             icon_x2 = x - item_spacing_width
             icon_x1 = icon_x2 - h
             icon_y1 = y
@@ -334,7 +339,8 @@ class OCR(metaclass=SingletonMeta):
         detected_quantities = await self.process_quantities(image=quantities_image)
         if len(detected_quantities) != len(stockpile.items):
             self.__logger.error(
-                f"{stockpile.name}: Detected {len(detected_quantities)} quantities but {len(stockpile.items)} items"
+                f"{stockpile.name}: Detected {len(detected_quantities)} "
+                f"quantities but {len(stockpile.items)} items"
             )
             quantities_str = " ".join([str(item) for item in detected_quantities])
             self.__logger.error(f"Quantities: {quantities_str}")
@@ -356,7 +362,7 @@ class OCR(metaclass=SingletonMeta):
         stockpile_image: any = None,
     ):
         """
-        Saves the image to the configured path
+        Save the image to the configured path.
 
         Args:
             stockpile (Stockpile): Stockpile detected
@@ -366,7 +372,6 @@ class OCR(metaclass=SingletonMeta):
             type_image (any): Image with the type detected
             stockpile_image (any): Image with the stockpile detected
         """
-
         if not any(
             [
                 settings.developer.save_image,
@@ -422,7 +427,6 @@ class OCR(metaclass=SingletonMeta):
         Returns:
             numpy.ndarray: Composite image
         """
-
         gray_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY)
 
         # Extract and normalize quantity images
@@ -473,7 +477,6 @@ class OCR(metaclass=SingletonMeta):
         Args:
             image (numpy.ndarray): Image to process
         """
-
         # Use Tesseract with custom configuration
         custom_config = r'--psm 7 -c tessedit_char_whitelist="0123456789k+ "'
         text = pytesseract.image_to_string(image, config=custom_config, lang="rennernumbers")
@@ -488,7 +491,7 @@ class OCR(metaclass=SingletonMeta):
 
             try:
                 ret_val = int(item) * multiplier
-            except:
+            except ValueError:
                 ret_val = -1
 
             numbers.append(ret_val)

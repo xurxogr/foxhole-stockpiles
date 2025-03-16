@@ -1,3 +1,5 @@
+"""Configuration module for the app."""
+
 import configparser
 import json
 import os
@@ -12,8 +14,10 @@ from foxhole_stockpiles.core.env_interpolation import EnvInterpolation
 
 
 def read_ini_file(file_path: str) -> dict[str, dict[str, str]]:
-    """
-    Read an INI file and return it as dictionary where the keys are sections and the values are dictionaries of key-value pairs.
+    """Read an .ini file as dicttionary.
+
+    Read an INI file and return it as dictionary where the keys are sections and the values
+    are dictionaries of key-value pairs.
 
     Args:
         file_path (str): The path to the INI file
@@ -27,11 +31,14 @@ def read_ini_file(file_path: str) -> dict[str, dict[str, str]]:
 
 
 class SectionSettings(BaseSettings):
+    """Base class for the settings sections."""
+
     model_config = ConfigDict(extra="ignore")
 
     @field_validator("*", mode="before")
     @classmethod
     def use_default_for_empty_string_on_optional(cls, value, info):
+        """Use the default value for empty strings on optional fields."""
         if value == "":
             field = cls.model_fields.get(info.field_name)
             if field and not field.is_required():
@@ -82,8 +89,10 @@ class SectionSettings(BaseSettings):
         return cls(**converted_data)
 
 
-###### Sections of the INI (alphabetical order) - Start
+# Sections of the INI (alphabetical order) - Start
 class BackendSettings(SectionSettings):
+    """Settings for the backend API."""
+
     url: str | None = Field(description="Backend API URL", default=None)
 
     model_config = ConfigDict(
@@ -95,6 +104,8 @@ class BackendSettings(SectionSettings):
 
 
 class DeveloperSettings(SectionSettings):
+    """Settings for development."""
+
     save_image: bool = Field(description="Save image", default=False)
     save_name_image: bool = Field(description="Save detected stockpile name", default=False)
     save_type_image: bool = Field(description="Save detected stockpile type", default=False)
@@ -127,10 +138,13 @@ class DeveloperSettings(SectionSettings):
 
 
 class LoggingSettings(SectionSettings):
+    """Settings for logging."""
+
     loggers: dict | None = Field(description="Loggers and their levels", default=None)
     level: str | None = Field(description="Logging level", default="INFO")
     format: str | None = Field(
-        description="Logging format", default="[%(asctime)s] %(levelname)s [%(name)s] %(message)s"
+        description="Logging format",
+        default="[%(asctime)s] %(levelname)s [%(name)s] %(message)s",
     )
     date_format: str | None = Field(description="Logging date format", default="%Y-%m-%d %H:%M:%S")
     file: bool | None = Field(description="Log to file", default=False)
@@ -152,6 +166,8 @@ class LoggingSettings(SectionSettings):
 
 
 class ModelsSettings(SectionSettings):
+    """Settings for the keras models."""
+
     icons_path: str = Field(description="Path to the icons model", default="models/icons_model")
 
     model_config = ConfigDict(
@@ -167,6 +183,8 @@ class ModelsSettings(SectionSettings):
 
 
 class OCRSettings(SectionSettings):
+    """Settings for the OCR."""
+
     base_height: int = Field(description="Base Height for the scaling", gt=0, default=1440)
     item_width: int = Field(description="Width of the quantity square", gt=0, default=56)
     item_height: int = Field(description="Height of the quantity square", gt=0, default=43)
@@ -202,6 +220,8 @@ class OCRSettings(SectionSettings):
 
 
 class StockpileTypesSettings(SectionSettings):
+    """Settings for the stockpile types."""
+
     encampment: list[str] = Field(description="Encampment values", min_items=1)
     keep: list[str] = Field(description="Keep values", min_items=1)
     safe_house: list[str] = Field(description="Safe House values", min_items=1)
@@ -228,7 +248,14 @@ class StockpileTypesSettings(SectionSettings):
                     "Лагерь",
                     "营地",
                 ],
-                "keep": ["Keep", "Place Forte", "Wehrturm", "Torreão", "Крепость", "要塞"],
+                "keep": [
+                    "Keep",
+                    "Place Forte",
+                    "Wehrturm",
+                    "Torreão",
+                    "Крепость",
+                    "要塞",
+                ],
                 "safe_house": [
                     "Safe House",
                     "Planque",
@@ -281,7 +308,14 @@ class StockpileTypesSettings(SectionSettings):
                     "Складское Помещение",
                     "仓库",
                 ],
-                "seaport": ["Seaport", "Port", "Seehafen", "Porto", "Морской порт", "海港"],
+                "seaport": [
+                    "Seaport",
+                    "Port",
+                    "Seehafen",
+                    "Porto",
+                    "Морской порт",
+                    "海港",
+                ],
                 "undefined": ["Undefined"],
             }
         },
@@ -292,6 +326,8 @@ class StockpileTypesSettings(SectionSettings):
 
 
 class AppSettings(BaseSettings):
+    """Application Settings."""
+
     logging: LoggingSettings | None = None
     ocr: OCRSettings | None = None
     models: ModelsSettings | None = None
@@ -301,6 +337,7 @@ class AppSettings(BaseSettings):
 
     @classmethod
     def from_ini(cls, file_name: str):
+        """Create an instance of the class from an .ini file."""
         script_dir = os.path.dirname(os.path.abspath(__file__))
         file_path = os.path.join(script_dir, file_name)
 
@@ -319,6 +356,7 @@ class AppSettings(BaseSettings):
 
 @lru_cache()
 def get_settings():
+    """Get the settings from app.ini."""
     return AppSettings().from_ini("app.ini")
 
 

@@ -1,8 +1,13 @@
+"""Stockpile type enum."""
+
 from enum import StrEnum
 
 
 class stockpile_type(StrEnum):
-    # Bases (order from the game). Bunker and town bases can have different level but the name is the same
+    """Stockpile type enum."""
+
+    # Bases (order from the game).
+    # Bunker and town bases can have different level but the name is the same
     ENCAMPMENT = "Encampment"
     KEEP = "Keep"
     SAFE_HOUSE = "Safe House"

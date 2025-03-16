@@ -1,3 +1,5 @@
+"""OCR routes."""
+
 import logging
 import time
 
@@ -16,6 +18,7 @@ ocr_router = APIRouter()
 
 @ocr_router.post("/scan_image")
 async def __scan_image(image: UploadFile, request: Request):
+    """Scan an image and extract stockpile information."""
     logger = logging.getLogger(__name__)
     api_key = request.headers.get("API_KEY")
     if not api_key:
@@ -48,7 +51,8 @@ async def __scan_image(image: UploadFile, request: Request):
 
     if not stockpile.items:
         logger.info(
-            f"{stockpile.type}:{stockpile.name} ({width}x{height}). Scanned image in {end - start:.2f}. No items found in the image."
+            f"{stockpile.type}:{stockpile.name} ({width}x{height}). "
+            f"Scanned image in {end - start:.2f}. No items found in the image."
         )
         return {"message": f"{stockpile.name}: No items found in the image"}
 
@@ -82,7 +86,10 @@ async def __scan_image(image: UploadFile, request: Request):
         try:
             return await connector.send_stockpile(payload=stockpile_dict, api_key=api_key)
         except Exception as e:
-            message = f"Error sending stockpile {stockpile.name} ({stockpile.type}) to the backend server: {e.__class__.__name__}"
+            message = (
+                f"Error sending stockpile {stockpile.name} ({stockpile.type}) "
+                f"to the backend server: {e.__class__.__name__}"
+            )
             logger.error(message)
             return {"message": message}
 

@@ -1,3 +1,5 @@
+"""Verification module."""
+
 import os
 
 import cv2
@@ -6,7 +8,10 @@ from pytesseract import pytesseract
 
 
 class VerificationService:
+    """Verification Service."""
+
     def __init__(self):
+        """Initialize the Verification Service."""
         file_dir = os.path.dirname(os.path.abspath(__file__))
         icon_path = os.path.join(file_dir, "colonial_icon.png")
         self.colonial_icon = cv2.imread(icon_path, cv2.IMREAD_COLOR)
@@ -15,7 +20,7 @@ class VerificationService:
         self, image: cv2.typing.MatLike, scale: bool = False
     ) -> str:
         """
-        Extracts text from an image
+        Extract text from an image.
 
         Args:
             image (cv2.typing.MatLike): Image to extract text from
@@ -45,14 +50,17 @@ class VerificationService:
             text_found = pytesseract.image_to_string(inverted, config=config, lang=lang).split(
                 "\n"
             )[0]
-        except:
+        except Exception:
             text_found = ""
 
         return text_found
 
     async def verify_pictures(self, pictures: list[bytes]) -> dict:
         """
-        Extracts user information from the pictures. This includes the name, level, if the user is in a regiment, if the user is colonial and the shard
+        Extract user information from the pictures.
+
+        This includes the name, level, if the user is in a regiment,
+        if the user is colonial and the shard
 
         Args:
             pictures (list[bytes]): List of pictures to verify
@@ -60,7 +68,6 @@ class VerificationService:
         Returns:
             dict: Result of the verification
         """
-
         if len(pictures) != 2:
             return {"error": f"Invalid number of pictures {len(pictures)}"}
 
@@ -84,7 +91,9 @@ class VerificationService:
 
     async def find_user_info(self, image: cv2.typing.MatLike) -> dict:
         """
-        Extracts user information from the image. This includes the name, level, if the user is in a regiment and if the user is colonial
+        Extract user information from the image.
+
+        This includes the name, level, if the user is in a regiment and if the user is colonial
 
         Args:
             image (cv2.typing.MatLike): Image to extract user information from
@@ -110,7 +119,7 @@ class VerificationService:
             words = parts[0].split(" ")[:-1]
             data["name"] = " ".join(words)
             data["level"] = parts[1]
-        except:
+        except Exception:
             pass
 
         # No name found. Either the image is too small of this is a map image
@@ -130,7 +139,7 @@ class VerificationService:
 
     async def find_colonial_icon(self, image: cv2.typing.MatLike):
         """
-        Finds the colonial icon in the image
+        Find the colonial icon in the image.
 
         Args:
             image (cv2.typing.MatLike): Image to find the colonial icon from
@@ -138,7 +147,6 @@ class VerificationService:
         Returns:
             bool: True if the colonial icon is found
         """
-
         # Calculate the scale to match the height of the image
         scale = image.shape[0] / self.colonial_icon.shape[0]
 
@@ -154,7 +162,7 @@ class VerificationService:
 
     async def get_shard(self, image: cv2.typing.MatLike) -> str:
         """
-        Finds the shard of the picture
+        Find the shard of the picture.
 
         Args:
             image (cv2.typing.MatLike): Picture to find the shard from
