@@ -1,3 +1,5 @@
+"""Verification router."""
+
 from fastapi import APIRouter, UploadFile
 
 from foxhole_stockpiles.services.verification_service import VerificationService
@@ -7,6 +9,16 @@ verification_router = APIRouter()
 
 @verification_router.post("/verify")
 async def upload_pictures(pictures: list[UploadFile]):
+    """Verify the pictures.
+
+    Verify the pictures uploaded by the user. It needs to be exactly two pictures.
+
+    Args:
+        pictures (list[UploadFile]): List of pictures to verify
+
+    Returns:
+        dict: Result of the verification
+    """
     if len(pictures) != 2:
         return {"error": "Please upload exactly two pictures."}
 

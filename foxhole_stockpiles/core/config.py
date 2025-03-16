@@ -48,8 +48,7 @@ class SectionSettings(BaseSettings):
 
     @classmethod
     def from_dict(cls, data: dict):
-        """
-        Convert a dictionary to a class instance.
+        """Convert a dictionary to a class instance.
 
         Args:
             data (dict): The dictionary to convert

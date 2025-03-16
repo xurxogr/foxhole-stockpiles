@@ -13,13 +13,28 @@ from foxhole_stockpiles.core.config import settings
 
 
 def async_retry_on_connect_timeout(max_retries=3, delay=1):
-    """
-    Retry a function if a ConnectTimeout exception is raised.
+    """Retry a function if a ConnectTimeout exception is raised.
+
+    This decorator will automatically retry the decorated function if it raises
+    a ConnectTimeout exception, with a maximum number of retries and a specified
+    delay between retries.
 
     Args:
         max_retries (int): Maximum number of retries
         delay (int): Delay between retries
+
+    Returns:
+        function: Decorated function
+
+
+    Raises:
+        ValueError: If max_retries is not a positive integer
+        TypeError: If delay is not an integer
     """
+    if not isinstance(max_retries, int) or max_retries <= 0:
+        raise ValueError("max_retries must be a positive integer.")
+    if not isinstance(delay, int):
+        raise TypeError("delay must be an integer.")
 
     def decorator(func):
         @functools.wraps(func)
@@ -44,13 +59,28 @@ def async_retry_on_connect_timeout(max_retries=3, delay=1):
 
 
 def async_retry_on_302(max_retries=3, delay=1):
-    """
-    Retry a function if a 302 status code is returned.
+    """Retry a function if a 302 status code is returned.
+
+    This decorator will automatically retry the decorated function if the response
+    status code is 302, with a maximum number of retries and a specified
+    delay between retries.
 
     Args:
         max_retries (int): Maximum number of retries
         delay (int): Delay between retries
+
+    Returns:
+        function: Decorated function
+
+
+    Raises:
+        ValueError: If max_retries is not a positive integer
+        TypeError: If delay is not an integer
     """
+    if not isinstance(max_retries, int) or max_retries <= 0:
+        raise ValueError("max_retries must be a positive integer.")
+    if not isinstance(delay, int):
+        raise TypeError("delay must be an integer.")
 
     def decorator(func):
         @functools.wraps(func)
@@ -77,8 +107,7 @@ class BackendConnector:
     """Connector to the backend server."""
 
     def __init__(self, url: str = None):
-        """
-        Initialize the BackendConnector.
+        """Initialize the BackendConnector.
 
         Args:
             url (str): URL of the backend server
@@ -88,8 +117,7 @@ class BackendConnector:
     # @async_retry_on_302(max_retries=3, delay=2)
     @async_retry_on_connect_timeout(max_retries=3, delay=2)
     async def send_stockpile(self, payload: dict, api_key: str):
-        """
-        Send an stockpile to the backend server.
+        """Send an stockpile to the backend server.
 
         Args:
             payload (dict): Payload to send to the backend server

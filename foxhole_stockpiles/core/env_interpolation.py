@@ -1,11 +1,16 @@
+"""Interpolation module for environment variables in config files."""
+
 import os
 import re
-from configparser import ExtendedInterpolation
+from configparser import ExtendedInterpolation, _Parser
 
 
 class EnvInterpolation(ExtendedInterpolation):
+    """Interpolation class for environment variables in config files."""
+
     def _expandvars(self, path: str, pattern: str) -> str:
-        """
+        """Exapand shell variables in the path.
+
         Expand shell variables of form ${var}. Unknown variables are left unchanged
         unless they came in the form ${var@defaultvalue} then defaultvalue is used.
 
@@ -17,7 +22,6 @@ class EnvInterpolation(ExtendedInterpolation):
         Returns:
             str: The expanded path
         """
-
         pattern = re.compile(pattern, re.ASCII)
         i = 0
         while True:
@@ -40,9 +44,16 @@ class EnvInterpolation(ExtendedInterpolation):
 
         return path
 
-    def before_read(self, parser, section, option, value):
+    def before_read(self, parser: _Parser, section: str, option: str, value: str):
+        """Override the before_read method.
+
+        Expand environment variables and b64 decode values.
+
+        Args:
+            parser (_Parser): The parser
+            section (str): The section
+            option (str): The option
+            value (str): The value
         """
-        Override the before_read method to expand environment variables and b64 decode values
-        """
-        value = super().before_read(parser, section, option, value)
+        value = super().before_read(parser=parser, section=section, option=option, value=value)
         return self._expandvars(value, r"\$\{([^@\}]*)[@]?([^}]*)\}")

@@ -1,3 +1,5 @@
+"""Main entry point for the FastAPI server."""
+
 import logging
 from contextlib import asynccontextmanager
 
@@ -5,14 +7,14 @@ import uvicorn
 from fastapi import FastAPI
 
 from foxhole_stockpiles.core.logging import Logging
-from foxhole_stockpiles.routes.ocr import ocr_router
-from foxhole_stockpiles.routes.verification_router import verification_router
+from foxhole_stockpiles.routers.ocr import ocr_router
+from foxhole_stockpiles.routers.verification_router import verification_router
 from foxhole_stockpiles.services.ocr import OCR
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize all the singletons before being used by the API
+    """Initialize all the singletons before being used by the API."""
     Logging.configure_logging()
     logger = logging.getLogger(__name__)
     logger.info("Initializing OCR")

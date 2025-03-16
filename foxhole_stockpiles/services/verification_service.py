@@ -19,8 +19,7 @@ class VerificationService:
     async def __extract_text_from_image(
         self, image: cv2.typing.MatLike, scale: bool = False
     ) -> str:
-        """
-        Extract text from an image.
+        """Extract text from an image.
 
         Args:
             image (cv2.typing.MatLike): Image to extract text from
@@ -56,8 +55,7 @@ class VerificationService:
         return text_found
 
     async def verify_pictures(self, pictures: list[bytes]) -> dict:
-        """
-        Extract user information from the pictures.
+        """Extract user information from the pictures.
 
         This includes the name, level, if the user is in a regiment,
         if the user is colonial and the shard
@@ -90,8 +88,7 @@ class VerificationService:
         return regiment_info
 
     async def find_user_info(self, image: cv2.typing.MatLike) -> dict:
-        """
-        Extract user information from the image.
+        """Extract user information from the image.
 
         This includes the name, level, if the user is in a regiment and if the user is colonial
 
@@ -138,8 +135,7 @@ class VerificationService:
         return data
 
     async def find_colonial_icon(self, image: cv2.typing.MatLike):
-        """
-        Find the colonial icon in the image.
+        """Find the colonial icon in the image.
 
         Args:
             image (cv2.typing.MatLike): Image to find the colonial icon from
@@ -161,8 +157,7 @@ class VerificationService:
         return cv2.minMaxLoc(res)[1] > 0.7
 
     async def get_shard(self, image: cv2.typing.MatLike) -> str:
-        """
-        Find the shard of the picture.
+        """Find the shard of the picture.
 
         Args:
             image (cv2.typing.MatLike): Picture to find the shard from

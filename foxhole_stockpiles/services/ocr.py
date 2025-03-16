@@ -30,8 +30,7 @@ class OCR(metaclass=SingletonMeta):
         )
 
     def __load_model(self, path: str) -> tuple:
-        """
-        Load a model and its classes.
+        """Load a model and its classes.
 
         Args:
             path (str): Path of the model to load
@@ -53,8 +52,7 @@ class OCR(metaclass=SingletonMeta):
         return model, classes
 
     async def __extract_item_from_image(self, image: cv2.typing.MatLike) -> str:
-        """
-        Extract the id of the identified item in an image.
+        """Extract the id of the identified item in an image.
 
         Args:
             image (cv2.typing.MatLike): Image to detect the type and name from
@@ -83,8 +81,7 @@ class OCR(metaclass=SingletonMeta):
         return top
 
     async def __extract_text_from_image(self, image: cv2.typing.MatLike) -> str:
-        """
-        Extract text from an image.
+        """Extract text from an image.
 
         Args:
             image (cv2.typing.MatLike): Image to extract text from
@@ -120,8 +117,7 @@ class OCR(metaclass=SingletonMeta):
         return text_found
 
     async def __extract_stockpile_type_from_image(self, image: cv2.typing.MatLike) -> StockpileType:
-        """
-        Extract the stockpile type from an image.
+        """Extract the stockpile type from an image.
 
         Args:
             image (cv2.typing.MatLike): Image to extract the type from
@@ -149,8 +145,7 @@ class OCR(metaclass=SingletonMeta):
     async def extract_stockpile_from_image(
         self, image: cv2.typing.MatLike, file_name: str = "Buffer"
     ) -> Stockpile:
-        """
-        Extract the stockpile from an image.
+        """Extract the stockpile from an image.
 
         Args:
             image: cv2.typing.MatLike = Image to read the stockpile from
@@ -359,8 +354,7 @@ class OCR(metaclass=SingletonMeta):
         type_image: any = None,
         stockpile_image: any = None,
     ):
-        """
-        Save the image to the configured path.
+        """Save the image to the configured path.
 
         Args:
             stockpile (Stockpile): Stockpile detected
@@ -414,8 +408,7 @@ class OCR(metaclass=SingletonMeta):
         quantity_coords: list[tuple[int, int, int, int]],
         padding: int = 0,
     ) -> numpy.ndarray:
-        """
-        Create a composite image from a list of quantity images.
+        """Create a composite image from a list of quantity images.
 
         Args:
             original_image (cv2.typing.MatLike): Original image
@@ -469,8 +462,7 @@ class OCR(metaclass=SingletonMeta):
         return composite
 
     async def process_quantities(self, image: numpy.ndarray) -> list[int]:
-        """
-        Process the quantities detected in the image.
+        """Process the quantities detected in the image.
 
         Args:
             image (numpy.ndarray): Image to process
