@@ -23,6 +23,7 @@ class OCR(metaclass=SingletonMeta):
     def __init__(self):
         """Initialize the OCR service."""
         self.__logger = logging.getLogger(__name__)
+        self.__logger.info("Initializing OCR service")
 
         # Models and classes.
         self.__icons_model, self.__icons_classes = self.__load_model(
@@ -41,11 +42,11 @@ class OCR(metaclass=SingletonMeta):
         model = None
         classes = None
         try:
-            model = load_model("{}.keras".format(path))
-            with open("{}.json".format(path)) as file:
+            model = load_model(f"{path}.keras")
+            with open(file=f"{path}.json", encoding="utf-8") as file:
                 classes = json.load(file)
-        except Exception as ex:
-            raise Exception(
+        except (ValueError, FileNotFoundError, json.JSONDecodeError) as ex:
+            raise RuntimeError(
                 f"Couldn't load the models. Error: ({type(ex).__name__}: {str(ex)})"
             ) from None
 
@@ -76,7 +77,9 @@ class OCR(metaclass=SingletonMeta):
         threshold_score = settings.developer.icons_model_threshold_score
         score_diff = top_score - second_score
         if score_diff < threshold_score:
-            self.__logger.info(f"Score diff < {threshold_score}: {score_diff:.3f}. {top}, {second}")
+            self.__logger.info(
+                "Score diff < %s: %.3f. %s, %s", threshold_score, score_diff, top, second
+            )
 
         return top
 
@@ -92,29 +95,24 @@ class OCR(metaclass=SingletonMeta):
         if image is None:
             return ""
 
-        try:
-            # Upscale the image to improve the OCR detection.
-            # Tesseract works better with larger images
-            resized_image = cv2.resize(
-                image,
-                None,
-                fx=settings.ocr.text_recognition_scale,
-                fy=settings.ocr.text_recognition_scale,
-                interpolation=cv2.INTER_CUBIC,
-            )
-            resized_image[resized_image < 170] = 0
+        # Upscale the image to improve the OCR detection.
+        # Tesseract works better with larger images
+        resized_image = cv2.resize(
+            image,
+            None,
+            fx=settings.ocr.text_recognition_scale,
+            fy=settings.ocr.text_recognition_scale,
+            interpolation=cv2.INTER_CUBIC,
+        )
+        resized_image[resized_image < 170] = 0
 
-            # Convert to black numbers with white background
-            cropped_image = cv2.threshold(resized_image, 127, 255, cv2.THRESH_BINARY_INV)[1]
+        # Convert to black numbers with white background
+        cropped_image = cv2.threshold(resized_image, 127, 255, cv2.THRESH_BINARY_INV)[1]
 
-            config = "--psm 7"
-            lang = "custom+eng+fra+deu+por+rus+chi_sim"
-            pytesseract_text = pytesseract.image_to_string(cropped_image, lang=lang, config=config)
-            text_found = pytesseract_text.split("\n")[0]
-        except Exception:
-            text_found = ""
-
-        return text_found
+        config = "--psm 7"
+        lang = "custom+eng+fra+deu+por+rus+chi_sim"
+        pytesseract_text = pytesseract.image_to_string(cropped_image, lang=lang, config=config)
+        return pytesseract_text.split("\n")[0]
 
     async def __extract_stockpile_type_from_image(self, image: cv2.typing.MatLike) -> StockpileType:
         """Extract the stockpile type from an image.
@@ -139,7 +137,7 @@ class OCR(metaclass=SingletonMeta):
         try:
             return StockpileType(type_found)
         except ValueError:
-            self.__logger.error(f"Stockpile type not found: '{name}'")
+            self.__logger.error("Stockpile type not found: '%s'", name)
             return StockpileType.UNDEFINED
 
     async def extract_stockpile_from_image(
@@ -177,9 +175,16 @@ class OCR(metaclass=SingletonMeta):
         item_spacing_height = int(image_ratio * settings.ocr.item_spacing_height)
 
         self.__logger.debug(
-            f"Parsing image {file_name}. width: {width}, height: {height}, ratio: {image_ratio}. "
-            f"Item size: {item_width}x{item_height}, "
-            f"spacing: {item_spacing_width}x{item_spacing_height}"
+            "Parsing image %s. width: %d, height: %d, ratio: %.2f. "
+            "Item size: %dx%d, spacing: %dx%d",
+            file_name,
+            width,
+            height,
+            image_ratio,
+            item_width,
+            item_height,
+            item_spacing_width,
+            item_spacing_height,
         )
 
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -212,11 +217,8 @@ class OCR(metaclass=SingletonMeta):
             quantities.append((x, y, w, h))
 
             # Save the detected item height and width.
-            if h > detected_item_height:
-                detected_item_height = h
-
-            if w > detected_item_width:
-                detected_item_width = w
+            detected_item_height = max(detected_item_height, h)
+            detected_item_width = max(detected_item_width, w)
 
             # [Icon][Spacing][Quantity]. Icon should be square and we know the height
             # x contains the quantity, substract the icon width (w == h)
@@ -256,24 +258,17 @@ class OCR(metaclass=SingletonMeta):
 
             # Build a rectangle that contains all other rectangles (Stockpile contents)
             # It will be used to detect the position of the title
-            if icon_x1 < min_x:
-                min_x = icon_x1
-
-            if icon_y1 < min_y:
-                min_y = icon_y1
-
-            if quantity_x2 > max_x:
-                max_x = quantity_x2
-
-            if quantity_y2 > max_y:
-                max_y = quantity_y2
-
-            if quantity_x2 < min_quantity_x:
-                min_quantity_x = quantity_x2
+            min_x = min(min_x, icon_x1)
+            min_y = min(min_y, icon_y1)
+            max_x = max(max_x, quantity_x2)
+            max_y = max(max_y, quantity_y2)
+            min_quantity_x = min(min_quantity_x, quantity_x2)
 
         # If not items have been detected return None
         if not items:
-            await self.save_image(stockpile=None, file_name=file_name, image=image)
+            file_name = await self.get_save_image_prefix(file_name=file_name, image=image)
+            if file_name:
+                await self.save_image(file_name=file_name, image=image)
             return None
 
         # Include the title in the cropped image
@@ -311,7 +306,6 @@ class OCR(metaclass=SingletonMeta):
             name = ""
 
         # Crop the image to store only the stockpile with the type, name and the items
-        cropped_image = image[min_y:max_y, min_x:max_x]
         stockpile = Stockpile(name=name, type=type_, items=items, resolution=f"{width}x{height}")
         quantities_image = await self.create_quantitites_image(
             original_image=image,
@@ -319,24 +313,28 @@ class OCR(metaclass=SingletonMeta):
             padding=settings.ocr.quantities_padding,
         )
 
-        await self.save_image(
-            stockpile=stockpile,
-            file_name=file_name,
-            image=image,
-            name_image=stockpile_name_image,
-            type_image=stockpile_type_image,
-            stockpile_image=cropped_image,
+        file_name_preffix = await self.get_save_image_prefix(
+            file_name=file_name, image=image, stockpile=stockpile
         )
+        if file_name_preffix:
+            await self.save_image(
+                file_name=file_name_preffix,
+                image=image,
+                name_image=stockpile_name_image,
+                type_image=stockpile_type_image,
+            )
 
         # Detect all the quantitites
         detected_quantities = await self.process_quantities(image=quantities_image)
         if len(detected_quantities) != len(stockpile.items):
             self.__logger.error(
-                f"{stockpile.name}: Detected {len(detected_quantities)} "
-                f"quantities but {len(stockpile.items)} items"
+                "%s: Detected %d quantities but %d items",
+                stockpile.name,
+                len(detected_quantities),
+                len(stockpile.items),
             )
             quantities_str = " ".join([str(item) for item in detected_quantities])
-            self.__logger.error(f"Quantities: {quantities_str}")
+            self.__logger.error("Quantities: %s", quantities_str)
             stockpile.items = []
             return stockpile
 
@@ -345,24 +343,18 @@ class OCR(metaclass=SingletonMeta):
 
         return stockpile
 
-    async def save_image(
-        self,
-        stockpile: Stockpile,
-        file_name: str,
-        image: any,
-        name_image: any = None,
-        type_image: any = None,
-        stockpile_image: any = None,
-    ):
-        """Save the image to the configured path.
+    async def get_save_image_prefix(
+        self, file_name: str, image: any, stockpile: Stockpile = None
+    ) -> str:
+        """Get the prefix for the image to save.
 
         Args:
-            stockpile (Stockpile): Stockpile detected
             file_name (str): Name of the file
             image (any): Image to save
-            name_image (any): Image with the name detected
-            type_image (any): Image with the type detected
-            stockpile_image (any): Image with the stockpile detected
+            stockpile (Stockpile): Stockpile detected
+
+        Returns:
+            str: Prefix for the image to save
         """
         if not any(
             [
@@ -371,7 +363,7 @@ class OCR(metaclass=SingletonMeta):
                 settings.developer.save_type_image,
             ]
         ):
-            return
+            return ""
 
         if stockpile:
             s_name = stockpile.name
@@ -391,16 +383,34 @@ class OCR(metaclass=SingletonMeta):
         if not os.path.exists(directory):
             os.makedirs(directory)
 
-        file_name = f"{directory}{time_str}-{s_type}-{s_name}-{resolution}-{file_name}"
+        return f"{directory}{time_str}-{s_type}-{s_name}-{resolution}-{file_name}"
+
+    async def save_image(
+        self,
+        file_name: str,
+        image: any,
+        name_image: any = None,
+        type_image: any = None,
+    ):
+        """Save the image to the configured path.
+
+        Args:
+            file_name (str): Name of the file
+            image (any): Image to save
+            name_image (any): Image with the name detected
+            type_image (any): Image with the type detected
+        """
+        if not file_name:
+            return
 
         if image is not None and settings.developer.save_image:
-            cv2.imwrite("{}.png".format(file_name), image)
+            cv2.imwrite(f"{file_name}.png", image)
 
         if name_image is not None and settings.developer.save_name_image:
-            cv2.imwrite("{}_name.png".format(file_name), name_image)
+            cv2.imwrite(f"{file_name}_name.png", name_image)
 
         if type_image is not None and settings.developer.save_type_image:
-            cv2.imwrite("{}_type.png".format(file_name), type_image)
+            cv2.imwrite(f"{file_name}_type.png", type_image)
 
     async def create_quantitites_image(
         self,
@@ -419,12 +429,23 @@ class OCR(metaclass=SingletonMeta):
             numpy.ndarray: Composite image
         """
         gray_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY)
+        quantity_images = self.__extract_and_normalize_quantity_images(gray_image, quantity_coords)
+        composite = self.__create_composite_image(quantity_images, padding)
+        return composite
 
-        # Extract and normalize quantity images
+    def __extract_and_normalize_quantity_images(
+        self, gray_image: numpy.ndarray, quantity_coords: list[tuple[int, int, int, int]]
+    ) -> list[numpy.ndarray]:
+        """Extract and normalize quantity images.
 
+        Args:
+            gray_image (numpy.ndarray): Grayscale image
+            quantity_coords (list[tuple[int, int, int, int]]): Coordinates of the quantities
+
+        Returns:
+            list[numpy.ndarray]: List of normalized quantity images
+        """
         quantity_images = []
-
-        # Normalize all images to a standard height
         target_height = 100
         for x, y, w, h in quantity_coords:
             aspect_ratio = w / h
@@ -435,8 +456,20 @@ class OCR(metaclass=SingletonMeta):
                 interpolation=cv2.INTER_LANCZOS4,
             )
             quantity_images.append(quantity_image)
+        return quantity_images
 
-        # Calculate dimensions for the composite image
+    def __create_composite_image(
+        self, quantity_images: list[numpy.ndarray], padding: int
+    ) -> numpy.ndarray:
+        """Create a composite image from a list of quantity images.
+
+        Args:
+            quantity_images (list[numpy.ndarray]): List of quantity images
+            padding (int): Padding between images
+
+        Returns:
+            numpy.ndarray: Composite image
+        """
         total_width = sum(img.shape[1] for img in quantity_images) + padding * (
             len(quantity_images) - 1
         )
@@ -449,14 +482,12 @@ class OCR(metaclass=SingletonMeta):
         x_offset = 0
         for img in quantity_images:
             h, w = img.shape[:2]
-
             # Step 1: Apply binary inverse threshold to make the numbers white on black background
             thresh_img = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY_INV)[1]
             # Step 2: Dilate the image to thicken the numbers
             kernel = numpy.ones((1, 1), numpy.uint8)
             dilated_img = cv2.dilate(thresh_img, kernel, iterations=2)
             composite[0:h, x_offset : x_offset + w] = dilated_img
-
             x_offset += w + padding
 
         return composite
