@@ -66,7 +66,7 @@ async def scan_image(image: UploadFile, request: Request) -> dict:
     )
 
     stockpile_dict = await create_stockpile_dict(stockpile=stockpile)
-    return send_stockpile(stockpile=stockpile_dict, api_key=api_key)
+    return await send_stockpile(stockpile=stockpile_dict, api_key=api_key)
 
 
 async def log_and_return(
