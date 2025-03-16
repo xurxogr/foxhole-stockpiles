@@ -1,15 +1,19 @@
-import cv2
-from pytesseract import pytesseract
-import numpy as np
 import os
 
-class VerificationService():
+import cv2
+import numpy as np
+from pytesseract import pytesseract
+
+
+class VerificationService:
     def __init__(self):
         file_dir = os.path.dirname(os.path.abspath(__file__))
-        icon_path = os.path.join(file_dir, 'colonial_icon.png')
+        icon_path = os.path.join(file_dir, "colonial_icon.png")
         self.colonial_icon = cv2.imread(icon_path, cv2.IMREAD_COLOR)
 
-    async def __extract_text_from_image(self, image: cv2.typing.MatLike, scale: bool = False) -> str:
+    async def __extract_text_from_image(
+        self, image: cv2.typing.MatLike, scale: bool = False
+    ) -> str:
         """
         Extracts text from an image
 
@@ -33,12 +37,14 @@ class VerificationService():
             gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
 
             # Enhance contrast using CLAHE
-            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
             inverted = cv2.bitwise_not(clahe.apply(gray))
 
-            config = '--psm 7'
-            lang = 'custom+eng+fra+deu+por+rus+chi_sim'
-            text_found = pytesseract.image_to_string(inverted, config=config, lang=lang).split('\n')[0]
+            config = "--psm 7"
+            lang = "custom+eng+fra+deu+por+rus+chi_sim"
+            text_found = pytesseract.image_to_string(inverted, config=config, lang=lang).split(
+                "\n"
+            )[0]
         except:
             text_found = ""
 
@@ -65,13 +71,13 @@ class VerificationService():
             images.append(image)
 
         regiment_info = await self.find_user_info(image=images[0])
-        if regiment_info.get('name') is None:
+        if regiment_info.get("name") is None:
             regiment_info = await self.find_user_info(image=images[1])
-            regiment_info['shard'] = await self.get_shard(image=images[0])
+            regiment_info["shard"] = await self.get_shard(image=images[0])
         else:
-            regiment_info['shard'] = await self.get_shard(image=images[1])
+            regiment_info["shard"] = await self.get_shard(image=images[1])
 
-        if regiment_info.get('name') is None:
+        if regiment_info.get("name") is None:
             return {"error": "No name found in any of the images"}
 
         return regiment_info
@@ -87,42 +93,38 @@ class VerificationService():
             dict: User information
         """
         height, width, _ = image.shape
-        py = height/5
-        px = width/5
+        py = height / 5
+        px = width / 5
 
-        data = {
-            "name": None,
-            "level": None,
-            "regiment": None
-        }
+        data = {"name": None, "level": None, "regiment": None}
 
         # Extract username and level
-        username_image = image[int(0.63*py):int(0.77*py), int(1.6*px):int(3*px)]
+        username_image = image[int(0.63 * py) : int(0.77 * py), int(1.6 * px) : int(3 * px)]
         ocr_text = await self.__extract_text_from_image(image=username_image)
 
         # Remove the Icon from the text. It's detected as a word. Remove the last word
         # [name] [icon text as random word] Level: [level]
         try:
-            parts = ocr_text.split(' Level: ')
+            parts = ocr_text.split(" Level: ")
 
-            words = parts[0].split(' ')[:-1]
-            data['name'] = ' '.join(words)
-            data['level'] = parts[1]
+            words = parts[0].split(" ")[:-1]
+            data["name"] = " ".join(words)
+            data["level"] = parts[1]
         except:
             pass
 
         # No name found. Either the image is too small of this is a map image
-        if data.get('name') is None:
+        if data.get("name") is None:
             return data
 
-        data['colonial'] = await self.find_colonial_icon(image = username_image)
+        data["colonial"] = await self.find_colonial_icon(image=username_image)
 
         # Extract Regiment
-        regiment_image = image[int(1.4*py):int(1.5*py), :]
+        regiment_image = image[int(1.4 * py) : int(1.5 * py), :]
         ocr_text = await self.__extract_text_from_image(image=regiment_image)
-        count = len(ocr_text.split('Name'))
+        count = len(ocr_text.split("Name"))
         # 0 = None, 2 = True, 1 = False
-        data['regiment'] = None if count == 1 else count == 3
+        data["regiment"] = None if count == 1 else count == 3
 
         return data
 
@@ -141,7 +143,9 @@ class VerificationService():
         scale = image.shape[0] / self.colonial_icon.shape[0]
 
         # Resize the template according to the scale
-        resized_template = cv2.resize(self.colonial_icon, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+        resized_template = cv2.resize(
+            self.colonial_icon, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC
+        )
 
         # Perform template matching
         res = cv2.matchTemplate(image, resized_template, cv2.TM_CCOEFF_NORMED)
@@ -160,9 +164,9 @@ class VerificationService():
         """
         # Read the image
         height, width, _ = image.shape
-        py = height/5
-        px = width/20
+        py = height / 5
+        px = width / 20
 
         # Extract shard
-        shard_image = image[int(4.63*py):int(4.7*py), int(px/3):int(px)]
+        shard_image = image[int(4.63 * py) : int(4.7 * py), int(px / 3) : int(px)]
         return await self.__extract_text_from_image(image=shard_image, scale=True)

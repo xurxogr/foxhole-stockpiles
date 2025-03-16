@@ -1,22 +1,25 @@
-from concurrent.futures import ThreadPoolExecutor
 import json
 import logging
 import multiprocessing
 import os
-from pathlib import Path
 import re
 import shutil
 import subprocess
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 
 class PakExtractor:
-    def __init__(self, pak_file: str = None,
-                 catalog_file: str = None,
-                 extractor_tool: str = None,
-                 converter_tool: str = None,
-                 output_dir: str = None,
-                 log_file: str = None):
+    def __init__(
+        self,
+        pak_file: str = None,
+        catalog_file: str = None,
+        extractor_tool: str = None,
+        converter_tool: str = None,
+        output_dir: str = None,
+        log_file: str = None,
+    ):
         """
         Initialize the PAK extractor with default paths
         """
@@ -30,8 +33,12 @@ class PakExtractor:
         # Use provided paths or defaults
         self.pak_file = os.path.abspath(pak_file if pak_file else default_pak)
         self.catalog_file = catalog_file if catalog_file else default_catalog
-        self.extractor_tool = os.path.abspath(extractor_tool if extractor_tool else default_extractor)
-        self.converter_tool = os.path.abspath(converter_tool if converter_tool else default_converter)
+        self.extractor_tool = os.path.abspath(
+            extractor_tool if extractor_tool else default_extractor
+        )
+        self.converter_tool = os.path.abspath(
+            converter_tool if converter_tool else default_converter
+        )
         self.output_dir = os.path.abspath(output_dir if output_dir else default_output)
 
         # Setup logging
@@ -43,26 +50,20 @@ class PakExtractor:
 
     def setup_logging(self, log_file: str = None):
         """Setup logging configuration"""
-        log_format = '%(asctime)s - %(levelname)s - %(message)s'
+        log_format = "%(asctime)s - %(levelname)s - %(message)s"
         if log_file:
             logging.basicConfig(
                 level=logging.INFO,
                 format=log_format,
-                handlers=[
-                    logging.FileHandler(log_file),
-                    logging.StreamHandler()
-                ]
+                handlers=[logging.FileHandler(log_file), logging.StreamHandler()],
             )
         else:
-            logging.basicConfig(
-                level=logging.INFO,
-                format=log_format
-            )
+            logging.basicConfig(level=logging.INFO, format=log_format)
 
     def load_catalog(self) -> list | None:
         """Load and parse the catalog.json file"""
         try:
-            with open(self.catalog_file, 'r', encoding='utf-8') as f:
+            with open(self.catalog_file, "r", encoding="utf-8") as f:
                 return json.load(f)
         except json.JSONDecodeError as e:
             self.logger.error(f"Error parsing catalog file: {e}")
@@ -73,25 +74,21 @@ class PakExtractor:
 
     def convert_path(self, icon_path: str) -> str:
         """Convert .[0-9] endings to .uasset"""
-        return re.sub(r'\.\d+$', '.uasset', icon_path)
+        return re.sub(r"\.\d+$", ".uasset", icon_path)
 
     def extract_single_file(self, file_path: str, temp_dir: str) -> bool:
         """Extract a single file from the PAK file to temporary directory"""
         command = [
             self.extractor_tool,
             self.pak_file,
-            '-Extract',
+            "-Extract",
             temp_dir,
-            f'-Filter={file_path}'
+            f"-Filter={file_path}",
         ]
 
         try:
             self.logger.info(f"Extracting: {file_path}")
-            process = subprocess.run(
-                command,
-                capture_output=True,
-                text=True
-            )
+            process = subprocess.run(command, capture_output=True, text=True)
 
             if process.returncode == 0:
                 self.logger.info(f"Successfully extracted: {file_path}")
@@ -119,25 +116,20 @@ class PakExtractor:
             # For .uasset files, convert using UModel
             command = [
                 self.converter_tool,
-                f'-path={temp_dir}',
-                '-game=ue4.27',
-                '-png',
-                '-export',
+                f"-path={temp_dir}",
+                "-game=ue4.27",
+                "-png",
+                "-export",
                 str(file_path_obj),
-                '-out=' + str(temp_path) + "\\War\\Content\\"
+                "-out=" + str(temp_path) + "\\War\\Content\\",
             ]
 
-
             self.logger.info(f"Converting to PNG: {file_path}")
-            process = subprocess.run(
-                command,
-                capture_output=True,
-                text=True
-            )
+            process = subprocess.run(command, capture_output=True, text=True)
 
             if process.returncode == 0:
                 # Handle the output path conversion
-                png_name = file_path_obj.with_suffix('.png')
+                png_name = file_path_obj.with_suffix(".png")
                 converted_path = temp_path / png_name
                 output_path = Path(self.output_dir) / png_name
 
@@ -150,7 +142,9 @@ class PakExtractor:
                     self.logger.info(f"Successfully converted and moved: {png_name}")
                     return True
                 else:
-                    self.logger.error(f"Converted file not found at expected path: {converted_path}")
+                    self.logger.error(
+                        f"Converted file not found at expected path: {converted_path}"
+                    )
                     return False
             else:
                 self.logger.error(f"Failed to convert {file_path}")
@@ -174,14 +168,14 @@ class PakExtractor:
 
         for item in catalog_data:
             # Add main Icon
-            if 'Icon' in item:
-                original_path = item['Icon']
+            if "Icon" in item:
+                original_path = item["Icon"]
                 converted_path = self.convert_path(original_path)
                 files_to_extract.add(converted_path)
 
             # Add SubTypeIcon
-            if 'SubTypeIcon' in item:
-                original_path = item['SubTypeIcon']
+            if "SubTypeIcon" in item:
+                original_path = item["SubTypeIcon"]
                 converted_path = self.convert_path(original_path)
                 files_to_extract.add(converted_path)
 
@@ -209,10 +203,12 @@ class PakExtractor:
             # Extract files
             self.logger.info(f"Starting extraction of {len(files_to_extract)} files...")
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                extract_results = list(executor.map(
-                    lambda f: self.extract_single_file(f, temp_dir),
-                    files_to_extract
-                ))
+                extract_results = list(
+                    executor.map(
+                        lambda f: self.extract_single_file(f, temp_dir),
+                        files_to_extract,
+                    )
+                )
 
             successful_extractions = sum(1 for result in extract_results if result)
             failed_extractions = sum(1 for result in extract_results if not result)
@@ -224,10 +220,9 @@ class PakExtractor:
             # Convert files
             self.logger.info("Starting conversion to PNG...")
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                convert_results = list(executor.map(
-                    lambda f: self.convert_to_png(f, temp_dir),
-                    files_to_extract
-                ))
+                convert_results = list(
+                    executor.map(lambda f: self.convert_to_png(f, temp_dir), files_to_extract)
+                )
 
             successful_conversions = sum(1 for result in convert_results if result)
             failed_conversions = sum(1 for result in convert_results if not result)
@@ -242,17 +237,32 @@ class PakExtractor:
 
             return failed_extractions == 0 and failed_conversions == 0
 
+
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description='Extract and convert files from a PAK file based on catalog.json')
-    parser.add_argument('--pak', help='Path to the PAK file (default: Foxhole War-WindowsNoEditor.pak)')
-    parser.add_argument('--catalog', help='Path to the catalog.json file (default: ./catalog.json)')
-    parser.add_argument('--extractor-tool', help='Path to UnrealPak.exe (default: C:\\UnrealPakTool\\Unrealpak.exe)')
-    parser.add_argument('--converter-tool', help='Path to umodel.exe (default: C:\\UModel\\umodel.exe)')
-    parser.add_argument('--output', help='Output directory for converted files (default: ./output)')
-    parser.add_argument('--workers', type=int, default=None, help='Number of parallel operations (default: cpu count)')
-    parser.add_argument('--logfile', help='Path to log file (default: console only)')
+    parser = argparse.ArgumentParser(
+        description="Extract and convert files from a PAK file based on catalog.json"
+    )
+    parser.add_argument(
+        "--pak", help="Path to the PAK file (default: Foxhole War-WindowsNoEditor.pak)"
+    )
+    parser.add_argument("--catalog", help="Path to the catalog.json file (default: ./catalog.json)")
+    parser.add_argument(
+        "--extractor-tool",
+        help="Path to UnrealPak.exe (default: C:\\UnrealPakTool\\Unrealpak.exe)",
+    )
+    parser.add_argument(
+        "--converter-tool", help="Path to umodel.exe (default: C:\\UModel\\umodel.exe)"
+    )
+    parser.add_argument("--output", help="Output directory for converted files (default: ./output)")
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=None,
+        help="Number of parallel operations (default: cpu count)",
+    )
+    parser.add_argument("--logfile", help="Path to log file (default: console only)")
 
     args = parser.parse_args()
 
@@ -262,7 +272,7 @@ def main():
         extractor_tool=args.extractor_tool,
         converter_tool=args.converter_tool,
         output_dir=args.output,
-        log_file=args.logfile
+        log_file=args.logfile,
     )
 
     success = extractor.process_files(max_workers=args.workers)
@@ -271,6 +281,7 @@ def main():
         exit(1)
     else:
         print("\nAll operations completed successfully!")
+
 
 if __name__ == "__main__":
     main()

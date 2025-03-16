@@ -1,6 +1,6 @@
-from configparser import ExtendedInterpolation
 import os
 import re
+from configparser import ExtendedInterpolation
 
 
 class EnvInterpolation(ExtendedInterpolation):
@@ -45,4 +45,4 @@ class EnvInterpolation(ExtendedInterpolation):
         Override the before_read method to expand environment variables and b64 decode values
         """
         value = super().before_read(parser, section, option, value)
-        return self._expandvars(value, r'\$\{([^@\}]*)[@]?([^}]*)\}')
+        return self._expandvars(value, r"\$\{([^@\}]*)[@]?([^}]*)\}")

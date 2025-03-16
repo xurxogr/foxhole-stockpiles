@@ -1,7 +1,8 @@
-from tensorflow import keras
-import numpy as np
-import os
 import json
+import os
+
+import numpy as np
+from tensorflow import keras
 
 # Load configuration
 DATA_DIR = "icons-naval57"
@@ -9,19 +10,15 @@ IMG_SIZE = (32, 32)
 COLOR_MODE = "rgb"
 
 # Load the saved model
-model = keras.models.load_model('icons_model.keras')
+model = keras.models.load_model("icons_model.keras")
 
 # Load class names
-with open('icons_model.json', 'r') as f:
+with open("icons_model.json", "r") as f:
     class_names = json.load(f)
 
 # Create a dataset from the directory
 test_ds = keras.utils.image_dataset_from_directory(
-    DATA_DIR,
-    shuffle=False,
-    image_size=IMG_SIZE,
-    batch_size=32,
-    color_mode=COLOR_MODE
+    DATA_DIR, shuffle=False, image_size=IMG_SIZE, batch_size=32, color_mode=COLOR_MODE
 )
 
 # Get file paths
@@ -57,4 +54,6 @@ for file_path, true_label, pred_label in zip(file_paths, true_labels, predicted_
 
 for file_path, (true_label, pred_label) in misclassified.items():
     file_name = os.path.basename(file_path)
-    print(f"File: {file_path:<40} | {class_names[pred_label]:<40} | {np.max(predictions[true_labels.index(true_label)]):.2%}")
+    print(
+        f"File: {file_path:<40} | {class_names[pred_label]:<40} | {np.max(predictions[true_labels.index(true_label)]):.2%}"
+    )

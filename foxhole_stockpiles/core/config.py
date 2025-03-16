@@ -1,11 +1,11 @@
 import configparser
-from functools import lru_cache
 import json
 import os
 import types
+from functools import lru_cache
 from typing import get_args, get_origin
 
-from pydantic import Field, ConfigDict, field_validator
+from pydantic import ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings
 
 from foxhole_stockpiles.core.env_interpolation import EnvInterpolation
@@ -25,13 +25,14 @@ def read_ini_file(file_path: str) -> dict[str, dict[str, str]]:
     config.read(file_path)
     return {section: dict(config[section]) for section in config.sections()}
 
-class SectionSettings(BaseSettings):
-    model_config = ConfigDict(extra='ignore')
 
-    @field_validator('*', mode='before')
+class SectionSettings(BaseSettings):
+    model_config = ConfigDict(extra="ignore")
+
+    @field_validator("*", mode="before")
     @classmethod
     def use_default_for_empty_string_on_optional(cls, value, info):
-        if value == '':
+        if value == "":
             field = cls.model_fields.get(info.field_name)
             if field and not field.is_required():
                 return field.default
@@ -69,7 +70,9 @@ class SectionSettings(BaseSettings):
                 elif attr_type in [int, float]:
                     converted_data[attr_name] = attr_type(value)
                 elif attr_type == bool:
-                    converted_data[attr_name] = value.lower() in ['true', 'yes', '1'] if value != '' else value
+                    converted_data[attr_name] = (
+                        value.lower() in ["true", "yes", "1"] if value != "" else value
+                    )
                 # anything else
                 else:
                     converted_data[attr_name] = value
@@ -78,20 +81,18 @@ class SectionSettings(BaseSettings):
 
         return cls(**converted_data)
 
+
 ###### Sections of the INI (alphabetical order) - Start
 class BackendSettings(SectionSettings):
     url: str | None = Field(description="Backend API URL", default=None)
 
     model_config = ConfigDict(
-        extra='ignore',
+        extra="ignore",
         title="Backend settings",
         description="Settings for the backend API",
-        json_schema_extra={
-            "example": {
-                "url": "http://localhost:8000"
-            }
-        }
+        json_schema_extra={"example": {"url": "http://localhost:8000"}},
     )
+
 
 class DeveloperSettings(SectionSettings):
     save_image: bool = Field(description="Save image", default=False)
@@ -99,12 +100,16 @@ class DeveloperSettings(SectionSettings):
     save_type_image: bool = Field(description="Save detected stockpile type", default=False)
     backup_path: str = Field(description="Backup path", default="screenshots")
 
-    icons_model_threshold_score: float = Field(description="Threshold score for the icons model", ge=0, default=0)
+    icons_model_threshold_score: float = Field(
+        description="Threshold score for the icons model", ge=0, default=0
+    )
     save_icons_image: bool = Field(description="Save detected icons", default=False)
-    icons_save_path: str = Field(description="Path to save the detected icons", default="screenshots/icons")
+    icons_save_path: str = Field(
+        description="Path to save the detected icons", default="screenshots/icons"
+    )
 
     model_config = ConfigDict(
-        extra='ignore',
+        extra="ignore",
         title="Developer settings",
         description="Settings for development. Should only be modified by developers.",
         json_schema_extra={
@@ -115,61 +120,71 @@ class DeveloperSettings(SectionSettings):
                 "backup_path": "screenshots",
                 "icons_model_threshold_score": 0,
                 "save_icons_image": False,
-                "icons_save_path": "screenshots/icons"
+                "icons_save_path": "screenshots/icons",
             }
-        }
+        },
     )
+
 
 class LoggingSettings(SectionSettings):
     loggers: dict | None = Field(description="Loggers and their levels", default=None)
     level: str | None = Field(description="Logging level", default="INFO")
-    format: str | None = Field(description="Logging format", default="[%(asctime)s] %(levelname)s [%(name)s] %(message)s")
+    format: str | None = Field(
+        description="Logging format", default="[%(asctime)s] %(levelname)s [%(name)s] %(message)s"
+    )
     date_format: str | None = Field(description="Logging date format", default="%Y-%m-%d %H:%M:%S")
     file: bool | None = Field(description="Log to file", default=False)
 
     model_config = ConfigDict(
-        extra='ignore',
+        extra="ignore",
         title="Logging settings",
         description="Settings for logging",
         json_schema_extra={
             "example": {
-                "loggers": {
-                    "foxhole_stockpiles": "DEBUG",
-                    "uvicorn": "INFO"
-                },
+                "loggers": {"foxhole_stockpiles": "DEBUG", "uvicorn": "INFO"},
                 "level": "INFO",
                 "format": "[%(asctime)s] %(levelname)s [%(name)s] %(message)s",
                 "date_format": "%Y-%m-%d %H:%M:%S",
-                "file": False
+                "file": False,
             }
-        }
+        },
     )
+
 
 class ModelsSettings(SectionSettings):
     icons_path: str = Field(description="Path to the icons model", default="models/icons_model")
 
     model_config = ConfigDict(
-        extra='ignore',
+        extra="ignore",
         title="Models settings",
         description="Paths for the keras models",
         json_schema_extra={
             "example": {
                 "icons_path": "models/icons_model",
             }
-        }
+        },
     )
+
 
 class OCRSettings(SectionSettings):
     base_height: int = Field(description="Base Height for the scaling", gt=0, default=1440)
     item_width: int = Field(description="Width of the quantity square", gt=0, default=56)
     item_height: int = Field(description="Height of the quantity square", gt=0, default=43)
-    item_spacing_height: int = Field(description="Spacing between quantity squares", gt=0, default=9)
-    item_spacing_width: int = Field(description="Spacing between icon and quantity square", gt=0, default=16)
-    text_recognition_scale: float = Field(description="Scale for text recognition", gt=0, default=16)
-    quantities_padding: int = Field(description="Padding for the quantities image creation", gt=0, default=15)
+    item_spacing_height: int = Field(
+        description="Spacing between quantity squares", gt=0, default=9
+    )
+    item_spacing_width: int = Field(
+        description="Spacing between icon and quantity square", gt=0, default=16
+    )
+    text_recognition_scale: float = Field(
+        description="Scale for text recognition", gt=0, default=16
+    )
+    quantities_padding: int = Field(
+        description="Padding for the quantities image creation", gt=0, default=15
+    )
 
     model_config = ConfigDict(
-        extra='ignore',
+        extra="ignore",
         title="OCR settings",
         description="Options for item detection",
         json_schema_extra={
@@ -180,10 +195,11 @@ class OCRSettings(SectionSettings):
                 "item_spacing_height": 9,
                 "item_spacing_width": 16,
                 "text_recognition_scale": 16,
-                "quantities_padding": 15
+                "quantities_padding": 15,
             }
-        }
+        },
     )
+
 
 class StockpileTypesSettings(SectionSettings):
     encampment: list[str] = Field(description="Encampment values", min_items=1)
@@ -199,26 +215,81 @@ class StockpileTypesSettings(SectionSettings):
     undefined: list[str] = Field(description="Undefined values", min_items=1)
 
     model_config = ConfigDict(
-        extra='ignore',
+        extra="ignore",
         title="Stockpile types settings",
         description="Valid values for stockpile types",
         json_schema_extra={
             "example": {
-                "encampment": ["Encampment", "Campement", "Feldlager", "Acampamento", "Лагерь", "营地"],
+                "encampment": [
+                    "Encampment",
+                    "Campement",
+                    "Feldlager",
+                    "Acampamento",
+                    "Лагерь",
+                    "营地",
+                ],
                 "keep": ["Keep", "Place Forte", "Wehrturm", "Torreão", "Крепость", "要塞"],
-                "safe_house": ["Safe House", "Planque", "Unterschlupf", "Casa Fortificada", "Yбeжищe", "安全屋"],
-                "relic_base": ["Relic Base", "Base Relique", "Reliktbasis", "Base Relíquia", "Peликтoвая база", "遗迹基地"],
-                "bunker_base": ["Bunker Base", "Base Bunker", "Bunkerbasis", "Centro do Bunker", "Base de Bunker", "Base de Casamata", "Бункерная база", "Бункерная База", "地堡基地"],
-                "border_base": ["Border Base", "Base Frontalière", "Grenzbasis", "Base Fronteiriça", "Пограничная База", "边境基地"],
-                "town_base": ["Town Base", "Quartier Général", "Stadtkernbasis", "Base de Cidade", "Ратуша", "城镇基地"],
+                "safe_house": [
+                    "Safe House",
+                    "Planque",
+                    "Unterschlupf",
+                    "Casa Fortificada",
+                    "Yбeжищe",
+                    "安全屋",
+                ],
+                "relic_base": [
+                    "Relic Base",
+                    "Base Relique",
+                    "Reliktbasis",
+                    "Base Relíquia",
+                    "Peликтoвая база",
+                    "遗迹基地",
+                ],
+                "bunker_base": [
+                    "Bunker Base",
+                    "Base Bunker",
+                    "Bunkerbasis",
+                    "Centro do Bunker",
+                    "Base de Bunker",
+                    "Base de Casamata",
+                    "Бункерная база",
+                    "Бункерная База",
+                    "地堡基地",
+                ],
+                "border_base": [
+                    "Border Base",
+                    "Base Frontalière",
+                    "Grenzbasis",
+                    "Base Fronteiriça",
+                    "Пограничная База",
+                    "边境基地",
+                ],
+                "town_base": [
+                    "Town Base",
+                    "Quartier Général",
+                    "Stadtkernbasis",
+                    "Base de Cidade",
+                    "Ратуша",
+                    "城镇基地",
+                ],
                 "bms_longhook": ["BMS - Longhook"],
-                "storage_depot": ["Storage Depot", "Dépôt", "Lagerdepot", "Depósito", "Складское Помещение", "仓库"],
+                "storage_depot": [
+                    "Storage Depot",
+                    "Dépôt",
+                    "Lagerdepot",
+                    "Depósito",
+                    "Складское Помещение",
+                    "仓库",
+                ],
                 "seaport": ["Seaport", "Port", "Seehafen", "Porto", "Морской порт", "海港"],
-                "undefined": ["Undefined"]
+                "undefined": ["Undefined"],
             }
-        }
+        },
     )
+
+
 # Sections. End
+
 
 class AppSettings(BaseSettings):
     logging: LoggingSettings | None = None
@@ -245,8 +316,10 @@ class AppSettings(BaseSettings):
 
         return cls(**settings_data)
 
+
 @lru_cache()
 def get_settings():
     return AppSettings().from_ini("app.ini")
+
 
 settings = get_settings()

@@ -8,11 +8,5 @@ class StockpileItem(BaseModel):
 
     model_config = ConfigDict(
         extra="forbid",
-        json_schema_extra={
-            "example": {
-                "code": "GrenadeLauncherC",
-                "quantity": 3,
-                "crated": False
-            }
-        }
+        json_schema_extra={"example": {"code": "GrenadeLauncherC", "quantity": 3, "crated": False}},
     )

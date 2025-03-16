@@ -36,7 +36,7 @@ class Stockpile(BaseModel):
                 "type": stockpile_type.SEAPORT,
                 "items": [StockpileItem.model_config["json_schema_extra"]["example"]],
                 "timestamp": "2024-01-04T09:00:00Z",
-                "resolution": "1920x1080"
+                "resolution": "1920x1080",
             }
-        }
+        },
     )
