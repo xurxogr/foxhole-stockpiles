@@ -18,7 +18,7 @@ class Stockpile(BaseModel):
     resolution: str | None = Field(description="Resolution of the screenshot", default=None)
 
     @model_validator(mode="after")
-    def validate(self):
+    def validate_model(self):
         """Validate the model."""
         if not self.timestamp:
             self.timestamp = datetime.now()
