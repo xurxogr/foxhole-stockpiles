@@ -148,7 +148,7 @@ class BackendConnector:
                     return_data = return_data.get("error", return_data.get("message", return_data))
                 except Exception:
                     logger.warning(
-                        "FS: Error sending stockpile to the backend server. " "Status code: %d",
+                        "FS: Error sending stockpile to the backend server. Status code: %d",
                         response.status_code,
                     )
                     return_data = {
