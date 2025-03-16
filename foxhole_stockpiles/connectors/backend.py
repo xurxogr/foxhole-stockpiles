@@ -9,8 +9,6 @@ from asyncio import sleep
 
 from httpx import AsyncClient, ConnectTimeout
 
-from foxhole_stockpiles.core.config import settings
-
 
 def async_retry_on_connect_timeout(max_retries=3, delay=1):
     """Retry a function if a ConnectTimeout exception is raised.
@@ -114,7 +112,7 @@ class BackendConnector:
         Args:
             url (str): URL of the backend server
         """
-        self.__url = url or settings.backend.url
+        self.__url = url
 
     # @async_retry_on_302(max_retries=3, delay=2)
     @async_retry_on_connect_timeout(max_retries=3, delay=2)
@@ -150,8 +148,8 @@ class BackendConnector:
                     return_data = return_data.get("error", return_data.get("message", return_data))
                 except Exception:
                     logger.warning(
-                        f"FS: Error sending stockpile to the backend server. "
-                        f"Status code: {response.status_code}"
+                        "FS: Error sending stockpile to the backend server. " "Status code: %d",
+                        response.status_code,
                     )
                     return_data = {
                         "message": (
