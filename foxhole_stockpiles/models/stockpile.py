@@ -1,6 +1,7 @@
 """Stockpile model."""
 
 from datetime import datetime
+from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 
@@ -18,7 +19,7 @@ class Stockpile(BaseModel):
     resolution: str | None = Field(description="Resolution of the screenshot", default=None)
 
     @model_validator(mode="after")
-    def validate_model(self):
+    def validate_model(self) -> "Stockpile":
         """Validate the model."""
         if not self.timestamp:
             self.timestamp = datetime.now()
@@ -26,12 +27,12 @@ class Stockpile(BaseModel):
         return self
 
     @field_serializer("type")
-    def serialize_type(self, value):
+    def serialize_type(self, value: StockpileType) -> str:
         """Serialize the type."""
         return value.value
 
     @field_serializer("timestamp")
-    def serialize_timestamp(self, value):
+    def serialize_timestamp(self, value: datetime) -> str:
         """Serialize the timestamp."""
         return value.isoformat()
 
@@ -41,7 +42,11 @@ class Stockpile(BaseModel):
             "example": {
                 "name": "Logi",
                 "type": StockpileType.SEAPORT,
-                "items": [StockpileItem.model_config["json_schema_extra"]["example"]],
+                "items": [
+                    cast(dict[str, Any], StockpileItem.model_config)
+                    .get("json_schema_extra", {})
+                    .get("example", {})
+                ],
                 "timestamp": "2024-01-04T09:00:00Z",
                 "resolution": "1920x1080",
             }

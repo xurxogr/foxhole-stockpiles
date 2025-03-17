@@ -3,6 +3,7 @@
 import os
 import re
 from configparser import ExtendedInterpolation
+from typing import Any
 
 
 class EnvInterpolation(ExtendedInterpolation):
@@ -22,10 +23,10 @@ class EnvInterpolation(ExtendedInterpolation):
         Returns:
             str: The expanded path
         """
-        pattern = re.compile(pattern, re.ASCII)
+        pattern_ = re.compile(pattern, re.ASCII)
         i = 0
         while True:
-            m = pattern.search(path, i)
+            m = pattern_.search(path, i)
             if not m:
                 break
             i, j = m.span(0)
@@ -44,7 +45,7 @@ class EnvInterpolation(ExtendedInterpolation):
 
         return path
 
-    def before_read(self, parser, section: str, option: str, value: str):
+    def before_read(self, parser: Any, section: str, option: str, value: str) -> str:
         """Override the before_read method.
 
         Expand environment variables and b64 decode values.
@@ -54,6 +55,9 @@ class EnvInterpolation(ExtendedInterpolation):
             section (str): The section
             option (str): The option
             value (str): The value
+
+        Returns:
+            str: The expanded value
         """
         value = super().before_read(parser=parser, section=section, option=option, value=value)
         return self._expandvars(value, r"\$\{([^@\}]*)[@]?([^}]*)\}")

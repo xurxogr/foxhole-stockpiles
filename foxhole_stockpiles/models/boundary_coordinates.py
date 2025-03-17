@@ -21,7 +21,7 @@ class BoundaryCoordinates:
         min_quantity_x: int,
         detected_item_height: int,
         detected_item_width: int,
-    ):
+    ) -> None:
         """Update the boundary coordinates.
 
         Args:
