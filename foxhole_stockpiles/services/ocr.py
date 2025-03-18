@@ -11,7 +11,7 @@ import numpy
 from keras.models import load_model
 from pytesseract import pytesseract
 
-from foxhole_stockpiles.core.config import settings
+from foxhole_stockpiles.core.config import AppSettings
 from foxhole_stockpiles.enums.stockpile_type import StockpileType
 from foxhole_stockpiles.models.boundary_coordinates import BoundaryCoordinates
 from foxhole_stockpiles.models.image_dimensions import ImageDimensions
@@ -23,13 +23,19 @@ from foxhole_stockpiles.services.singletonmeta import SingletonMeta
 class OCR(metaclass=SingletonMeta):
     """OCR Service class."""
 
-    def __init__(self) -> None:
-        """Initialize the OCR service."""
+    def __init__(self, settings: AppSettings) -> None:
+        """Initialize the OCR service.
+
+        Args:
+            settings (AppSettings): Application settings
+        """
         self._logger = logging.getLogger(__name__)
         self._logger.info("Initializing OCR service")
-
+        self._settings = settings
         # Models and classes.
-        self._icons_model, self._icons_classes = self._load_model(path=settings.models.icons_path)
+        self._icons_model, self._icons_classes = self._load_model(
+            path=self._settings.models.icons_path
+        )
 
     def _load_model(self, path: str) -> tuple:
         """Load a model and its classes.
@@ -75,7 +81,7 @@ class OCR(metaclass=SingletonMeta):
         second = self._icons_classes[top_2[1]]
 
         # Check if the difference with the next item is below a threshold.
-        threshold_score = settings.developer.icons_model_threshold_score
+        threshold_score = self._settings.developer.icons_model_threshold_score
         score_diff = top_score - second_score
         if score_diff < threshold_score:
             self._logger.info(
@@ -101,8 +107,8 @@ class OCR(metaclass=SingletonMeta):
         resized_image = cv2.resize(
             image,
             None,
-            fx=settings.ocr.text_recognition_scale,
-            fy=settings.ocr.text_recognition_scale,
+            fx=self._settings.ocr.text_recognition_scale,
+            fy=self._settings.ocr.text_recognition_scale,
             interpolation=cv2.INTER_CUBIC,
         )
         resized_image[resized_image < 170] = 0
@@ -129,7 +135,7 @@ class OCR(metaclass=SingletonMeta):
             return StockpileType.UNDEFINED
 
         type_found = None
-        translations = settings.stockpile_types.model_dump()
+        translations = self._settings.stockpile_types.model_dump()
         for valid_names in translations.values():
             if name in valid_names:
                 type_found = valid_names[0]
@@ -231,12 +237,12 @@ class OCR(metaclass=SingletonMeta):
         """
         width = image.shape[1]
         height = image.shape[0]
-        image_ratio = height / settings.ocr.base_height
+        image_ratio = height / self._settings.ocr.base_height
 
-        item_width = int(settings.ocr.item_width * image_ratio)
-        item_height = int(settings.ocr.item_height * image_ratio)
-        item_spacing_width = int(image_ratio * settings.ocr.item_spacing_width)
-        item_spacing_height = int(image_ratio * settings.ocr.item_spacing_height)
+        item_width = int(self._settings.ocr.item_width * image_ratio)
+        item_height = int(self._settings.ocr.item_height * image_ratio)
+        item_spacing_width = int(image_ratio * self._settings.ocr.item_spacing_width)
+        item_spacing_height = int(image_ratio * self._settings.ocr.item_spacing_height)
 
         self._logger.debug(
             "Parsing image %s. width: %d, height: %d, ratio: %.2f. "
@@ -416,9 +422,9 @@ class OCR(metaclass=SingletonMeta):
         icon_image = image[icon_y1:icon_y2, icon_x1:icon_x2]
         item_id = await self._extract_item_from_image(image=icon_image)
 
-        if settings.developer.save_icons_image:
+        if self._settings.developer.save_icons_image:
             # Create a directory with the name of the predicted item, if it doesn't exist
-            directory = f"{settings.developer.icons_save_path}/{item_id}/"
+            directory = f"{self._settings.developer.icons_save_path}/{item_id}/"
             if not os.path.exists(directory):
                 os.makedirs(directory)
 
@@ -544,7 +550,7 @@ class OCR(metaclass=SingletonMeta):
         quantities_image = await self.create_quantitites_image(
             original_image=image,
             quantity_coords=quantities,
-            padding=settings.ocr.quantities_padding,
+            padding=self._settings.ocr.quantities_padding,
         )
 
         # Detect quantities
@@ -598,9 +604,9 @@ class OCR(metaclass=SingletonMeta):
         """
         if not any(
             [
-                settings.developer.save_image,
-                settings.developer.save_name_image,
-                settings.developer.save_type_image,
+                self._settings.developer.save_image,
+                self._settings.developer.save_name_image,
+                self._settings.developer.save_type_image,
             ]
         ):
             return ""
@@ -619,7 +625,7 @@ class OCR(metaclass=SingletonMeta):
         date_str = date_now.strftime("%Y-%m-%d")
         time_str = date_now.strftime("%H-%M-%S")
 
-        directory = f"{settings.developer.backup_path}/{date_str}/"
+        directory = f"{self._settings.developer.backup_path}/{date_str}/"
         if not os.path.exists(directory):
             os.makedirs(directory)
 
@@ -643,13 +649,13 @@ class OCR(metaclass=SingletonMeta):
         if not file_name:
             return
 
-        if image is not None and settings.developer.save_image:
+        if image is not None and self._settings.developer.save_image:
             cv2.imwrite(f"{file_name}.png", image)
 
-        if name_image is not None and settings.developer.save_name_image:
+        if name_image is not None and self._settings.developer.save_name_image:
             cv2.imwrite(f"{file_name}_name.png", name_image)
 
-        if type_image is not None and settings.developer.save_type_image:
+        if type_image is not None and self._settings.developer.save_type_image:
             cv2.imwrite(f"{file_name}_type.png", type_image)
 
     async def create_quantitites_image(

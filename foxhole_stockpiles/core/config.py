@@ -421,6 +421,3 @@ def get_settings() -> AppSettings:
 
     # Return the settings as the AppSettings model where the sections are not None
     return AppSettings(**app_settings.model_dump())
-
-
-settings = get_settings()

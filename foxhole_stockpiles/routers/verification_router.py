@@ -9,7 +9,7 @@ verification_router = APIRouter()
 
 
 @verification_router.post("/verify")
-async def upload_pictures(pictures: list[UploadFile]):
+async def upload_pictures(pictures: list[UploadFile]) -> dict:
     """Verify the pictures.
 
     Verify the pictures uploaded by the user. It needs to be exactly two pictures.
@@ -18,7 +18,7 @@ async def upload_pictures(pictures: list[UploadFile]):
         pictures (list[UploadFile]): List of pictures to verify
 
     Returns:
-        Verification: Verification information
+        dict: Verification result
     """
     if len(pictures) != 2:
         return {"error": "Please upload exactly two pictures."}

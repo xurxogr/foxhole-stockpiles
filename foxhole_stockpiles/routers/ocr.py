@@ -8,7 +8,7 @@ import numpy
 from fastapi import APIRouter, Request, UploadFile
 
 from foxhole_stockpiles.connectors.backend import BackendConnector
-from foxhole_stockpiles.core.config import settings
+from foxhole_stockpiles.core.config import get_settings
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.services.ocr import OCR
 
@@ -36,7 +36,7 @@ async def scan_image(image: UploadFile, request: Request) -> dict:
 
     image_ = await read_image(image=image)
 
-    ocr = OCR()
+    ocr = OCR(settings=get_settings())
     start = time.time()
     stockpile = await ocr.extract_stockpile_from_image(image=image_, file_name=api_key[:10])
     end = time.time()
@@ -75,7 +75,7 @@ async def log_and_return(
     height: int | None = None,
     start: float | None = None,
     end: float | None = None,
-):
+) -> dict:
     """Log a message and return it.
 
     Args:
@@ -146,6 +146,7 @@ async def send_stockpile(stockpile: dict, api_key: str) -> dict:
         stockpile (dict): Stockpile to send
         api_key (str): API key to use for authentication
     """
+    settings = get_settings()
     url = settings.backend.url
     if not url or api_key.lower() == "debug":
         return stockpile
