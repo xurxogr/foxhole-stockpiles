@@ -260,14 +260,14 @@ class OCR(metaclass=SingletonMeta):
             item_spacing_height=item_spacing_height,
         )
 
-    async def _process_image_for_contours(self, image: cv2.typing.MatLike) -> list:
+    async def _process_image_for_contours(self, image: cv2.typing.MatLike) -> Any:
         """Process the image to extract contours.
 
         Args:
             image (cv2.typing.MatLike): The input image
 
         Returns:
-            list: List of contours found in the image
+            Any: List of contours found in the image
         """
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         thresh = cv2.threshold(gray_image, 50, 255, cv2.THRESH_BINARY)[1]

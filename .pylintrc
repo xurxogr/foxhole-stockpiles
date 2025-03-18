@@ -1,2 +1,2 @@
 [TYPECHECK]
-ignored-modules=cv2,numpy,keras,keras.models,pytesseract
+ignored-modules=cv2,numpy,httpx,keras,keras.models,pytesseract

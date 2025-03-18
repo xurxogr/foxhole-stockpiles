@@ -6,11 +6,12 @@ The BackendConnector class is used to send stockpile information to the backend 
 import functools
 import logging
 from asyncio import sleep
+from typing import Any, Callable
 
 from httpx import AsyncClient, ConnectTimeout
 
 
-def async_retry_on_connect_timeout(max_retries=3, delay=1):
+def async_retry_on_connect_timeout(max_retries: int = 3, delay: int = 1) -> Callable:
     """Retry a function if a ConnectTimeout exception is raised.
 
     This decorator will automatically retry the decorated function if it raises
@@ -18,12 +19,11 @@ def async_retry_on_connect_timeout(max_retries=3, delay=1):
     delay between retries.
 
     Args:
-        max_retries (int): Maximum number of retries
-        delay (int): Delay between retries
+        max_retries (int): Maximum number of retries. Default is 3
+        delay (int): Delay between retries. Default is 1
 
     Returns:
         function: Decorated function
-
 
     Raises:
         ValueError: If max_retries is not a positive integer
@@ -34,9 +34,27 @@ def async_retry_on_connect_timeout(max_retries=3, delay=1):
     if not isinstance(delay, int):
         raise TypeError("delay must be an integer.")
 
-    def decorator(func):
+    def decorator(func: Callable) -> Callable:
+        """Decorator function to retry the decorated function.
+
+        Args:
+            func (Callable): Function to decorate
+
+        Returns:
+            Callable: Decorated function
+        """
+
         @functools.wraps(func)
-        async def wrapper(*args, **kwargs):
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+            """Wrapper function to retry the decorated function.
+
+            Args:
+                *args: Positional arguments
+                **kwargs: Keyword arguments
+
+            Returns:
+                Any: Result of the decorated function
+            """
             retries = 0
             while retries < max_retries:
                 try:
@@ -58,7 +76,7 @@ def async_retry_on_connect_timeout(max_retries=3, delay=1):
     return decorator
 
 
-def async_retry_on_302(max_retries=3, delay=1):
+def async_retry_on_302(max_retries: int = 3, delay: int = 1) -> Callable:
     """Retry a function if a 302 status code is returned.
 
     This decorator will automatically retry the decorated function if the response
@@ -82,9 +100,27 @@ def async_retry_on_302(max_retries=3, delay=1):
     if not isinstance(delay, int):
         raise TypeError("delay must be an integer.")
 
-    def decorator(func):
+    def decorator(func: Callable) -> Callable:
+        """Decorator function to retry the decorated function.
+
+        Args:
+            func (Callable): Function to decorate
+
+        Returns:
+            Callable: Decorated function
+        """
+
         @functools.wraps(func)
-        async def wrapper(*args, **kwargs):
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+            """Wrapper function to retry the decorated function.
+
+            Args:
+                *args: Positional arguments
+                **kwargs: Keyword arguments
+
+            Returns:
+                Any: Result of the decorated function
+            """
             retries = 0
             while retries < max_retries:
                 response = await func(*args, **kwargs)
@@ -116,12 +152,19 @@ class BackendConnector:
 
     # @async_retry_on_302(max_retries=3, delay=2)
     @async_retry_on_connect_timeout(max_retries=3, delay=2)
-    async def send_stockpile(self, payload: dict, api_key: str):
+    async def send_stockpile(self, payload: dict, api_key: str) -> dict:
         """Send an stockpile to the backend server.
 
         Args:
             payload (dict): Payload to send to the backend server
             api_key (str): API key to use for authentication
+
+        Returns:
+            dict: Response from the backend server
+
+        Raises:
+            ConnectTimeout: If the connection times out while sending the stockpile
+                after the maximum number of retries of the decorator
 
         """
         logger = logging.getLogger(__name__)
@@ -139,7 +182,7 @@ class BackendConnector:
         headers = {"X-API-TOKEN": api_key}
         return_data: dict[str, str] = {}
         try:
-            async with AsyncClient(verify=False, headers=headers) as client:
+            async with AsyncClient(headers=headers) as client:
                 response = await client.post(url=self.__url, json=payload)
                 try:
                     res_data = response.json()
