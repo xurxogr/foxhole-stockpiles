@@ -1,95 +1,14 @@
 """Configuration module for the app."""
 
-import configparser
-import json
-import os
-import types
 from functools import lru_cache
-from typing import get_args, get_origin
+from typing import Any, Self, get_args
 
-from pydantic import ConfigDict, Field, field_validator
-from pydantic_settings import BaseSettings
-
-from foxhole_stockpiles.core.env_interpolation import EnvInterpolation
-
-
-def read_ini_file(file_path: str) -> dict[str, dict[str, str]]:
-    """Read an .ini file as dicttionary.
-
-    Read an INI file and return it as dictionary where the keys are sections and the values
-    are dictionaries of key-value pairs.
-
-    Args:
-        file_path (str): The path to the INI file
-
-    Returns:
-        dict (str, dict[str, str]): The INI file as a dictionary
-    """
-    config = configparser.ConfigParser(interpolation=EnvInterpolation())
-    config.read(file_path)
-    return {section: dict(config[section]) for section in config.sections()}
-
-
-class SectionSettings(BaseSettings):
-    """Base class for the settings sections."""
-
-    model_config = ConfigDict(extra="ignore")
-
-    @field_validator("*", mode="before")
-    @classmethod
-    def use_default_for_empty_string_on_optional(cls, value, info):
-        """Use the default value for empty strings on optional fields."""
-        if value == "":
-            field = cls.model_fields.get(info.field_name)
-            if field and not field.is_required():
-                return field.default
-
-        return value
-
-    @classmethod
-    def from_dict(cls, data: dict):
-        """Convert a dictionary to a class instance.
-
-        Args:
-            data (dict): The dictionary to convert
-        """
-        converted_data = {}
-        for attr_name, attr_type in cls.__annotations__.items():
-            if attr_name not in data:
-                continue
-
-            origin = get_origin(attr_type)
-            if isinstance(attr_type, types.UnionType):
-                args = get_args(attr_type)
-                attr_type = next((arg for arg in args if arg is not type(None)), args[0])
-            elif origin:
-                attr_type = origin
-
-            value = data[attr_name]
-            try:
-                # list or dict
-                if attr_type in [dict, list]:
-                    converted_data[attr_name] = json.loads(value)
-                # primitive types
-                elif attr_type == str:
-                    converted_data[attr_name] = value
-                elif attr_type in [int, float]:
-                    converted_data[attr_name] = attr_type(value)
-                elif attr_type == bool:
-                    converted_data[attr_name] = (
-                        value.lower() in ["true", "yes", "1"] if value != "" else value
-                    )
-                # anything else
-                else:
-                    converted_data[attr_name] = value
-            except ValueError:
-                converted_data[attr_name] = value
-
-        return cls(**converted_data)
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 # Sections of the INI (alphabetical order) - Start
-class BackendSettings(SectionSettings):
+class BackendSettings(BaseModel):
     """Settings for the backend API."""
 
     url: str | None = Field(description="Backend API URL", default=None)
@@ -97,12 +16,11 @@ class BackendSettings(SectionSettings):
     model_config = ConfigDict(
         extra="ignore",
         title="Backend settings",
-        description="Settings for the backend API",
         json_schema_extra={"example": {"url": "http://localhost:8000"}},
     )
 
 
-class DeveloperSettings(SectionSettings):
+class DeveloperSettings(BaseModel):
     """Settings for development."""
 
     save_image: bool = Field(description="Save image", default=False)
@@ -121,7 +39,6 @@ class DeveloperSettings(SectionSettings):
     model_config = ConfigDict(
         extra="ignore",
         title="Developer settings",
-        description="Settings for development. Should only be modified by developers.",
         json_schema_extra={
             "example": {
                 "save_image": False,
@@ -136,35 +53,32 @@ class DeveloperSettings(SectionSettings):
     )
 
 
-class LoggingSettings(SectionSettings):
+class LoggingSettings(BaseModel):
     """Settings for logging."""
 
-    loggers: dict | None = Field(description="Loggers and their levels", default=None)
-    level: str | None = Field(description="Logging level", default="INFO")
-    format: str | None = Field(
+    loggers: dict = Field(description="Loggers and their levels", default={})
+    log_level: str = Field(description="Logging level", default="INFO")
+    log_format: str = Field(
         description="Logging format",
         default="[%(asctime)s] %(levelname)s [%(name)s] %(message)s",
     )
-    date_format: str | None = Field(description="Logging date format", default="%Y-%m-%d %H:%M:%S")
-    file: bool | None = Field(description="Log to file", default=False)
+    date_format: str = Field(description="Logging date format", default="%Y-%m-%d %H:%M:%S")
 
     model_config = ConfigDict(
         extra="ignore",
         title="Logging settings",
-        description="Settings for logging",
         json_schema_extra={
             "example": {
                 "loggers": {"foxhole_stockpiles": "DEBUG", "uvicorn": "INFO"},
-                "level": "INFO",
-                "format": "[%(asctime)s] %(levelname)s [%(name)s] %(message)s",
+                "log_level": "INFO",
+                "log_format": "[%(asctime)s] %(levelname)s [%(name)s] %(message)s",
                 "date_format": "%Y-%m-%d %H:%M:%S",
-                "file": False,
             }
         },
     )
 
 
-class ModelsSettings(SectionSettings):
+class ModelsSettings(BaseModel):
     """Settings for the keras models."""
 
     icons_path: str = Field(description="Path to the icons model", default="models/icons_model")
@@ -172,7 +86,6 @@ class ModelsSettings(SectionSettings):
     model_config = ConfigDict(
         extra="ignore",
         title="Models settings",
-        description="Paths for the keras models",
         json_schema_extra={
             "example": {
                 "icons_path": "models/icons_model",
@@ -181,7 +94,7 @@ class ModelsSettings(SectionSettings):
     )
 
 
-class OCRSettings(SectionSettings):
+class OCRSettings(BaseModel):
     """Settings for the OCR."""
 
     base_height: int = Field(description="Base Height for the scaling", gt=0, default=1440)
@@ -203,7 +116,6 @@ class OCRSettings(SectionSettings):
     model_config = ConfigDict(
         extra="ignore",
         title="OCR settings",
-        description="Options for item detection",
         json_schema_extra={
             "example": {
                 "base_resolution": 1440,
@@ -218,25 +130,123 @@ class OCRSettings(SectionSettings):
     )
 
 
-class StockpileTypesSettings(SectionSettings):
+class StockpileTypesSettings(BaseModel):
     """Settings for the stockpile types."""
 
-    encampment: list[str] = Field(description="Encampment values", min_items=1)
-    keep: list[str] = Field(description="Keep values", min_items=1)
-    safe_house: list[str] = Field(description="Safe House values", min_items=1)
-    relic_base: list[str] = Field(description="Relic Base values", min_items=1)
-    bunker_base: list[str] = Field(description="Bunker Base values", min_items=1)
-    border_base: list[str] = Field(description="Border Base values", min_items=1)
-    town_base: list[str] = Field(description="Town Base values", min_items=1)
-    bms_longhook: list[str] = Field(description="BMS - Longhook values", min_items=1)
-    storage_depot: list[str] = Field(description="Storage Depot values", min_items=1)
-    seaport: list[str] = Field(description="Seaport values", min_items=1)
-    undefined: list[str] = Field(description="Undefined values", min_items=1)
+    encampment: list[str] = Field(
+        description="Encampment values",
+        default=[
+            "Encampment",
+            "Campement",
+            "Feldlager",
+            "Acampamento",
+            "Лагерь",
+            "营地",
+        ],
+    )
+    keep: list[str] = Field(
+        description="Keep values",
+        default=[
+            "Keep",
+            "Place Forte",
+            "Wehrturm",
+            "Torreão",
+            "Крепость",
+            "要塞",
+        ],
+    )
+    safe_house: list[str] = Field(
+        description="Safe House values",
+        default=[
+            "Safe House",
+            "Planque",
+            "Unterschlupf",
+            "Casa Fortificada",
+            "Yбeжищe",
+            "安全屋",
+        ],
+    )
+    relic_base: list[str] = Field(
+        description="Relic Base values",
+        default=[
+            "Relic Base",
+            "Base Relique",
+            "Reliktbasis",
+            "Base Relíquia",
+            "Peликтoвая база",
+            "遗迹基地",
+        ],
+    )
+    bunker_base: list[str] = Field(
+        description="Bunker Base values",
+        default=[
+            "Bunker Base",
+            "Base Bunker",
+            "Bunkerbasis",
+            "Centro do Bunker",
+            "Base de Bunker",
+            "Base de Casamata",
+            "Бункерная база",
+            "Бункерная База",
+            "地堡基地",
+        ],
+    )
+    border_base: list[str] = Field(
+        description="Border Base values",
+        default=[
+            "Border Base",
+            "Base Frontalière",
+            "Grenzbasis",
+            "Base Fronteiriça",
+            "Пограничная База",
+            "边境基地",
+        ],
+    )
+    town_base: list[str] = Field(
+        description="Town Base values",
+        default=[
+            "Town Base",
+            "Quartier Général",
+            "Stadtkernbasis",
+            "Base de Cidade",
+            "Ратуша",
+            "城镇基地",
+        ],
+    )
+    bms_longhook: list[str] = Field(
+        description="BMS - Longhook values",
+        default=["BMS - Longhook"],
+    )
+    storage_depot: list[str] = Field(
+        description="Storage Depot values",
+        default=[
+            "Storage Depot",
+            "Dépôt",
+            "Lagerdepot",
+            "Depósito",
+            "Складское Помещение",
+            "仓库",
+        ],
+    )
+    seaport: list[str] = Field(
+        description="Seaport values",
+        default=[
+            "Seaport",
+            "Port",
+            "Seehafen",
+            "Porto",
+            "Морской порт",
+            "海港",
+        ],
+    )
+    undefined: list[str] = Field(
+        description="Undefined values",
+        default=["Undefined"],
+    )
 
     model_config = ConfigDict(
         extra="ignore",
         title="Stockpile types settings",
-        description="Valid values for stockpile types",
         json_schema_extra={
             "example": {
                 "encampment": [
@@ -334,29 +344,56 @@ class AppSettings(BaseSettings):
     developer: DeveloperSettings | None = None
     stockpile_types: StockpileTypesSettings | None = None
 
-    @classmethod
-    def from_ini(cls, file_name: str):
-        """Create an instance of the class from an .ini file."""
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(script_dir, file_name)
+    model_config = SettingsConfigDict(env_nested_delimiter="__")
 
-        ini_data = read_ini_file(file_path)
+    @model_validator(mode="after")
+    def validate_model(self) -> Self:
+        """Validate model.
 
-        settings_data = {}
-        for attr_name, attr_type in cls.__annotations__.items():
-            attr_name_upper = attr_name.upper()
-            if attr_name_upper in ini_data:
-                section_class = attr_type.__args__[0]  # Get the type from Optional
-                section_data = ini_data[attr_name_upper]
-                settings_data[attr_name] = section_class.from_dict(section_data)
+        Returns:
+            Self, the validated model
+        """
+        # Dynamically initialize fields that are None
+        for field_name, field_value in self.model_dump().items():
+            if field_value is not None:
+                continue
 
-        return cls(**settings_data)
+            # Extract the non-None type from the Union
+            field_type = self.model_fields[field_name].annotation
+            non_none_type = self._extract_non_none_type(field_type)
+            setattr(self, field_name, non_none_type())
+
+        return self
+
+    @staticmethod
+    def _extract_non_none_type(field_type: type[Any] | None) -> type:
+        """Extract the non-None type from a Union type.
+
+        Args:
+            field_type (type[Any] | None): The field type
+
+        Returns:
+            type: The non-None type
+
+        Raises:
+            ValueError: If no non-None type is found in the Union
+        """
+        # Get all types in the Union
+        for t in get_args(field_type):
+            if t is not type(None):
+                return t
+
+        raise ValueError("No non-None type found in the Union")
 
 
 @lru_cache()
-def get_settings():
-    """Get the settings from app.ini."""
-    return AppSettings().from_ini("app.ini")
+def get_settings() -> AppSettings:
+    """Get the settings.
+
+    Returns:
+        AppSettings: The settings
+    """
+    return AppSettings()
 
 
 settings = get_settings()

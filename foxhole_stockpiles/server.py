@@ -16,8 +16,8 @@ from foxhole_stockpiles.services.ocr import OCR
 async def lifespan(_: FastAPI):
     """Initialize all the singletons before being used by the API."""
     logging = Logging(
-        level=settings.logging.level,
-        log_format=settings.logging.format,
+        level=settings.logging.log_level,
+        log_format=settings.logging.log_format,
         date_format=settings.logging.date_format,
         loggers=settings.logging.loggers,
     )
