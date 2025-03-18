@@ -334,8 +334,31 @@ class StockpileTypesSettings(BaseModel):
 # Sections. End
 
 
-class AppSettings(BaseSettings):
+class AppSettings(BaseModel):
     """Application Settings."""
+
+    logging: LoggingSettings
+    ocr: OCRSettings
+    models: ModelsSettings
+    backend: BackendSettings
+    developer: DeveloperSettings
+    stockpile_types: StockpileTypesSettings
+
+    model_config = SettingsConfigDict(env_nested_delimiter="__")
+
+
+class _AppSettings(BaseSettings):
+    """Application Settings.
+
+    This Model exists to allow to have sections without environment variables.
+    The model_validator will dynamically initialize any section that is None.
+
+    if a field was defined as `sample_field: ModelClass` and no environment variables were set with
+    prefix SAMPLE_FIELD__, the model would have failed with a pydantic.ValidationError.
+
+    To prevent the code hint types from having sections that could be None, a new model copy from
+    this one is created with the same fields but with a different base class.
+    """
 
     logging: LoggingSettings | None = None
     ocr: OCRSettings | None = None
@@ -393,7 +416,11 @@ def get_settings() -> AppSettings:
     Returns:
         AppSettings: The settings
     """
-    return AppSettings()
+    # Load the settings from the environment with the internal model
+    settings = _AppSettings()
+
+    # Return the settings as the AppSettings model where the sections are not None
+    return AppSettings(**settings.model_dump())
 
 
 settings = get_settings()
