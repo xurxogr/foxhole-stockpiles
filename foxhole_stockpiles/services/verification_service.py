@@ -161,8 +161,9 @@ class VerificationService:
         # Read the image
         height, width, _ = image.shape
         py = height / 5
-        px = width / 20
+        px = width / 25
 
         # Extract shard
         shard_image = image[int(4.63 * py) : int(4.7 * py), int(px / 3) : int(px)]
+
         return await self._extract_text_from_image(image=shard_image, scale=True)
