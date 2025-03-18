@@ -1,29 +1,46 @@
-# .pre-commit-config.yaml
 repos:
--   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
-    hooks:
-    -   id: trailing-whitespace
-    -   id: end-of-file-fixer
-    -   id: check-yaml
-    -   id: check-added-large-files
+- repo: git@github.com:pre-commit/pre-commit-hooks.git
+  rev: v5.0.0
+  hooks:
+  - id: trailing-whitespace
+  - id: end-of-file-fixer
+  - id: check-yaml
+  - id: check-added-large-files
 
--   repo: https://github.com/psf/black
-    rev: 25.1.0
-    hooks:
-    -   id: black
-        language_version: python3
-        args: ["--line-length=100"]
+- repo: git@github.com:psf/black.git
+  rev: 25.1.0
+  hooks:
+  - id: black
+    language_version: python3
+    args: ["--line-length=100"]
 
--   repo: https://github.com/pycqa/isort
-    rev: 6.0.1
-    hooks:
-    -   id: isort
-        args: ["--profile", "black", "--line-length=100"]
+- repo: git@github.com:pycqa/isort.git
+  rev: 6.0.1
+  hooks:
+  - id: isort
+    args: ["--profile", "black", "--line-length=100"]
 
--   repo: https://github.com/pycqa/flake8
-    rev: 7.1.2
-    hooks:
-    -   id: flake8
-        additional_dependencies: [flake8-docstrings]
-        args: ["--max-line-length=100", "--extend-ignore=E203"]
+- repo: git@github.com:pycqa/flake8.git
+  rev: 7.1.2
+  hooks:
+  - id: flake8
+    additional_dependencies: [flake8-docstrings]
+    args: ["--max-line-length=100", "--extend-ignore=E203"]
+
+- repo: git@github.com:pre-commit/mirrors-mypy.git
+  rev: v1.15.0
+  hooks:
+  - id: mypy
+    args: ['--disallow-untyped-calls', '--disallow-untyped-defs']
+
+- repo: git@github.com:pycqa/bandit.git
+  rev: 1.8.3
+  hooks:
+  - id: bandit
+    args: ['--exclude', 'tests/*']
+
+- repo: git@github.com:pycqa/pylint.git
+  rev: v3.3.5
+  hooks:
+  - id: pylint
+    args: ["--disable=W0718,R0903"]
