@@ -4,6 +4,7 @@ import json
 import logging
 import os.path
 from datetime import datetime
+from typing import Any
 
 import cv2
 import numpy
@@ -137,14 +138,14 @@ class OCR(metaclass=SingletonMeta):
                 break
 
         try:
-            return StockpileType(type_found)
+            return StockpileType(str(type_found))
         except ValueError:
             self.__logger.error("Stockpile type not found: '%s'", name)
             return StockpileType.UNDEFINED
 
     async def extract_stockpile_from_image(
         self, image: cv2.typing.MatLike, file_name: str = "Buffer"
-    ) -> Stockpile:
+    ) -> Stockpile | None:
         """Extract the stockpile from an image.
 
         Args:
@@ -152,7 +153,7 @@ class OCR(metaclass=SingletonMeta):
             file_name (str): Name of the file
 
         Returns:
-            Stockpile: Stockpile detected. None if not detected
+            Stockpile | None: Stockpile detected. None if not detected
         """
         if image is None:
             return None
@@ -220,7 +221,7 @@ class OCR(metaclass=SingletonMeta):
 
     async def __calculate_image_dimensions(
         self, image: cv2.typing.MatLike, file_name: str
-    ) -> tuple:
+    ) -> ImageDimensions:
         """Calculate the dimensions and scaling factors for the image.
 
         Args:
@@ -228,8 +229,7 @@ class OCR(metaclass=SingletonMeta):
             file_name (str): Name of the file for logging
 
         Returns:
-            tuple: A tuple containing (width, height, item_width, item_height,
-                item_spacing_width, item_spacing_height)
+            ImageDimensions: Image dimensions and scaling factors
         """
         width = image.shape[1]
         height = image.shape[0]
@@ -275,7 +275,9 @@ class OCR(metaclass=SingletonMeta):
         thresh = cv2.threshold(gray_image, 50, 255, cv2.THRESH_BINARY)[1]
         return cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[0]
 
-    async def __get_contour(self, cnt, dimensions: ImageDimensions) -> tuple[int, int, int, int]:
+    async def __get_contour(
+        self, cnt, dimensions: ImageDimensions
+    ) -> tuple[int, int, int, int] | None:
         """Check if the contour is valid based on the dimensions.
 
         Args:
@@ -283,7 +285,8 @@ class OCR(metaclass=SingletonMeta):
             dimensions: Image dimensions and scaling factors
 
         Returns:
-            tuple: Coordinates of the contour (x, y, w, h) or None if invalid
+            tuple[int, int, int, int] | None: Coordinates of the contour (x, y, w, h) or None
+                if invalid
         """
         approx = cv2.approxPolyDP(cnt, 0.01 * cv2.arcLength(cnt, True), True)
         if len(approx) != 4:
@@ -579,14 +582,14 @@ class OCR(metaclass=SingletonMeta):
         stockpile.items = []
 
     async def get_save_image_prefix(
-        self, file_name: str, image: any, stockpile: Stockpile = None
+        self, file_name: str, image: Any, stockpile: Stockpile | None = None
     ) -> str:
         """Get the prefix for the image to save.
 
         Args:
             file_name (str): Name of the file
-            image (any): Image to save
-            stockpile (Stockpile): Stockpile detected
+            image (Any): Image to save
+            stockpile (Stockpile | None): Stockpile detected
 
         Returns:
             str: Prefix for the image to save
@@ -602,7 +605,7 @@ class OCR(metaclass=SingletonMeta):
 
         if stockpile:
             s_name = stockpile.name
-            s_type = stockpile.type
+            s_type = stockpile.type.value
             date_now = stockpile.timestamp
             resolution = stockpile.resolution
         else:
@@ -623,17 +626,17 @@ class OCR(metaclass=SingletonMeta):
     async def save_image(
         self,
         file_name: str,
-        image: any,
-        name_image: any = None,
-        type_image: any = None,
+        image: Any,
+        name_image: Any = None,
+        type_image: Any = None,
     ):
         """Save the image to the configured path.
 
         Args:
             file_name (str): Name of the file
-            image (any): Image to save
-            name_image (any): Image with the name detected
-            type_image (any): Image with the type detected
+            image (Any): Image to save
+            name_image (Any): Image with the name detected
+            type_image (Any): Image with the type detected
         """
         if not file_name:
             return

@@ -106,7 +106,7 @@ def async_retry_on_302(max_retries=3, delay=1):
 class BackendConnector:
     """Connector to the backend server."""
 
-    def __init__(self, url: str = None):
+    def __init__(self, url: str):
         """Initialize the BackendConnector.
 
         Args:
@@ -137,15 +137,15 @@ class BackendConnector:
             return {"message": "FS: URL is not set"}
 
         headers = {"X-API-TOKEN": api_key}
-        return_data = {}
+        return_data: dict[str, str] = {}
         try:
             async with AsyncClient(verify=False, headers=headers) as client:
                 response = await client.post(url=self.__url, json=payload)
                 try:
-                    return_data: dict = response.json()
+                    res_data = response.json()
                     # If the response is an error, return the error message, else return the
                     # response in message or the json response
-                    return_data = return_data.get("error", return_data.get("message", return_data))
+                    return_data = res_data.get("error", res_data.get("message", res_data))
                 except Exception:
                     logger.warning(
                         "FS: Error sending stockpile to the backend server. Status code: %d",

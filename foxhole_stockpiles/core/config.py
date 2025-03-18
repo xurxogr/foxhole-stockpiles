@@ -417,10 +417,10 @@ def get_settings() -> AppSettings:
         AppSettings: The settings
     """
     # Load the settings from the environment with the internal model
-    settings = _AppSettings()
+    app_settings = _AppSettings()
 
     # Return the settings as the AppSettings model where the sections are not None
-    return AppSettings(**settings.model_dump())
+    return AppSettings(**app_settings.model_dump())
 
 
 settings = get_settings()

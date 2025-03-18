@@ -34,18 +34,18 @@ async def scan_image(image: UploadFile, request: Request) -> dict:
     if image is None:
         return await log_and_return(message="No input image")
 
-    image = await read_image(image=image)
+    image_ = await read_image(image=image)
 
     ocr = OCR()
     start = time.time()
-    stockpile = await ocr.extract_stockpile_from_image(image=image, file_name=api_key[:10])
+    stockpile = await ocr.extract_stockpile_from_image(image=image_, file_name=api_key[:10])
     end = time.time()
 
     if not stockpile:
         return await log_and_return(message="No stockpile found in the image")
 
-    width = image.shape[1]
-    height = image.shape[0]
+    width = image_.shape[1]
+    height = image_.shape[0]
 
     if not stockpile.items:
         return await log_and_return(
@@ -70,16 +70,20 @@ async def scan_image(image: UploadFile, request: Request) -> dict:
 
 
 async def log_and_return(
-    message: str, width: int = None, height: int = None, start: time = None, end: time = None
+    message: str,
+    width: int | None = None,
+    height: int | None = None,
+    start: float | None = None,
+    end: float | None = None,
 ):
     """Log a message and return it.
 
     Args:
         message (str): Message to log and return
-        width (int, optional): Width of the image. Defaults to None.
-        height (int, optional): Height of the image. Defaults to None.
-        start (time, optional): Start time. Defaults to None.
-        end (time, optional): End time. Defaults to None.
+        width (int | None): Width of the image. Defaults to None.
+        height (int | None): Height of the image. Defaults to None.
+        start (float | None): Start time. Defaults to None.
+        end (float | None): End time. Defaults to None.
 
     Returns:
         dict: Message

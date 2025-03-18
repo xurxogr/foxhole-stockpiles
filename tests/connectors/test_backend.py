@@ -14,12 +14,6 @@ def connector():
     return BackendConnector(url="http://example.com")
 
 
-@pytest.fixture()
-def empty_connector():
-    """Create an empty BackendConnector instance."""
-    return BackendConnector()
-
-
 @pytest.mark.asyncio
 async def test_send_stockpile_empty_payload(connector):
     """Test sending an empty payload to the backend server."""
@@ -32,15 +26,6 @@ async def test_send_stockpile_no_api_key(connector):
     """Test sending a stockpile without an API key."""
     response = await connector.send_stockpile(payload={"data": "test"}, api_key="")
     assert response == {"message": "FS: API key not set"}
-
-
-@pytest.mark.asyncio
-async def test_send_stockpile_no_url(empty_connector):
-    """Test sending a stockpile without a URL."""
-    response = await empty_connector.send_stockpile(
-        payload={"data": "test"}, api_key="test_api_key"
-    )
-    assert response == {"message": "FS: URL is not set"}
 
 
 @pytest.mark.asyncio

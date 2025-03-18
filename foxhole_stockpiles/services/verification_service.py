@@ -6,6 +6,8 @@ import cv2
 import numpy as np
 from pytesseract import pytesseract
 
+from foxhole_stockpiles.models.verification import Verification
+
 
 class VerificationService:
     """Verification Service."""
@@ -47,7 +49,7 @@ class VerificationService:
         lang = "custom+eng+fra+deu+por+rus+chi_sim"
         return pytesseract.image_to_string(inverted, config=config, lang=lang).split("\n")[0]
 
-    async def verify_pictures(self, pictures: list[bytes]) -> dict:
+    async def verify_pictures(self, pictures: list[bytes]) -> Verification | dict:
         """Extract user information from the pictures.
 
         This includes the name, level, if the user is in a regiment,
@@ -57,7 +59,7 @@ class VerificationService:
             pictures (list[bytes]): List of pictures to verify
 
         Returns:
-            dict: Result of the verification
+            Verification | dict: User information
         """
         if len(pictures) != 2:
             return {"error": f"Invalid number of pictures {len(pictures)}"}
@@ -69,18 +71,18 @@ class VerificationService:
             images.append(image)
 
         regiment_info = await self.find_user_info(image=images[0])
-        if regiment_info.get("name") is None:
+        if regiment_info.name is None:
             regiment_info = await self.find_user_info(image=images[1])
-            regiment_info["shard"] = await self.get_shard(image=images[0])
+            regiment_info.shard = await self.get_shard(image=images[0])
         else:
-            regiment_info["shard"] = await self.get_shard(image=images[1])
+            regiment_info.shard = await self.get_shard(image=images[1])
 
-        if regiment_info.get("name") is None:
+        if regiment_info.name is None:
             return {"error": "No name found in any of the images"}
 
         return regiment_info
 
-    async def find_user_info(self, image: cv2.typing.MatLike) -> dict:
+    async def find_user_info(self, image: cv2.typing.MatLike) -> Verification:
         """Extract user information from the image.
 
         This includes the name, level, if the user is in a regiment and if the user is colonial
@@ -89,13 +91,13 @@ class VerificationService:
             image (cv2.typing.MatLike): Image to extract user information from
 
         Returns:
-            dict: User information
+            Verification: User information
         """
         height, width, _ = image.shape
         py = height / 5
         px = width / 5
 
-        data = {"name": None, "level": None, "regiment": None}
+        data = Verification()
 
         # Extract username and level
         username_image = image[int(0.63 * py) : int(0.77 * py), int(1.6 * px) : int(3 * px)]
@@ -107,23 +109,23 @@ class VerificationService:
             parts = ocr_text.split(" Level: ")
 
             words = parts[0].split(" ")[:-1]
-            data["name"] = " ".join(words)
-            data["level"] = parts[1]
+            data.name = " ".join(words)
+            data.level = int(parts[1])
         except IndexError:
             pass
 
         # No name found. Either the image is too small of this is a map image
-        if data.get("name") is None:
+        if data.name is None:
             return data
 
-        data["colonial"] = await self.find_colonial_icon(image=username_image)
+        data.colonial = await self.find_colonial_icon(image=username_image)
 
         # Extract Regiment
         regiment_image = image[int(1.4 * py) : int(1.5 * py), :]
         ocr_text = await self.__extract_text_from_image(image=regiment_image)
         count = len(ocr_text.split("Name"))
         # 0 = None, 2 = True, 1 = False
-        data["regiment"] = None if count == 1 else count == 3
+        data.regiment = None if count == 1 else count == 3
 
         return data
 

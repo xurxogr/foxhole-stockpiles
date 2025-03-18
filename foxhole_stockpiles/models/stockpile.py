@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any, cast
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 from foxhole_stockpiles.enums.stockpile_type import StockpileType
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
@@ -14,17 +14,9 @@ class Stockpile(BaseModel):
 
     name: str = Field(description="Name of the stockpile")
     type: StockpileType = Field(description="Type of stockpile", default=StockpileType.UNDEFINED)
-    items: list[StockpileItem] | None = Field(description="List of items", default=[])
-    timestamp: datetime | None = Field(description="last update datetime", default=None)
+    items: list[StockpileItem] = Field(description="List of items", default=[])
+    timestamp: datetime = Field(description="last update datetime", default_factory=datetime.now)
     resolution: str | None = Field(description="Resolution of the screenshot", default=None)
-
-    @model_validator(mode="after")
-    def validate_model(self) -> "Stockpile":
-        """Validate the model."""
-        if not self.timestamp:
-            self.timestamp = datetime.now()
-
-        return self
 
     @field_serializer("type")
     def serialize_type(self, value: StockpileType) -> str:

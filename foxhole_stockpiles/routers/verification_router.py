@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, UploadFile
 
+from foxhole_stockpiles.models.verification import Verification
 from foxhole_stockpiles.services.verification_service import VerificationService
 
 verification_router = APIRouter()
@@ -17,7 +18,7 @@ async def upload_pictures(pictures: list[UploadFile]):
         pictures (list[UploadFile]): List of pictures to verify
 
     Returns:
-        dict: Result of the verification
+        Verification: Verification information
     """
     if len(pictures) != 2:
         return {"error": "Please upload exactly two pictures."}
@@ -25,4 +26,7 @@ async def upload_pictures(pictures: list[UploadFile]):
     result = [await pictures[0].read(), await pictures[1].read()]
 
     service = VerificationService()
-    return await service.verify_pictures(result)
+    verification = await service.verify_pictures(result)
+    if isinstance(verification, Verification):
+        return verification.model_dump()
+    return verification
