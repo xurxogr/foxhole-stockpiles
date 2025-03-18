@@ -23,17 +23,15 @@ from foxhole_stockpiles.services.singletonmeta import SingletonMeta
 class OCR(metaclass=SingletonMeta):
     """OCR Service class."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the OCR service."""
-        self.__logger = logging.getLogger(__name__)
-        self.__logger.info("Initializing OCR service")
+        self._logger = logging.getLogger(__name__)
+        self._logger.info("Initializing OCR service")
 
         # Models and classes.
-        self.__icons_model, self.__icons_classes = self.__load_model(
-            path=settings.models.icons_path
-        )
+        self._icons_model, self._icons_classes = self._load_model(path=settings.models.icons_path)
 
-    def __load_model(self, path: str) -> tuple:
+    def _load_model(self, path: str) -> tuple:
         """Load a model and its classes.
 
         Args:
@@ -55,7 +53,7 @@ class OCR(metaclass=SingletonMeta):
 
         return model, classes
 
-    async def __extract_item_from_image(self, image: cv2.typing.MatLike) -> str:
+    async def _extract_item_from_image(self, image: cv2.typing.MatLike) -> str:
         """Extract the id of the identified item in an image.
 
         Args:
@@ -68,25 +66,25 @@ class OCR(metaclass=SingletonMeta):
         resized_image = cv2.resize(image, (32, 32))
         expanded_imagen = numpy.expand_dims(resized_image, axis=0)
 
-        prediction = self.__icons_model.predict(expanded_imagen, verbose=0)
+        prediction = self._icons_model.predict(expanded_imagen, verbose=0)
 
         top_2 = numpy.argsort(prediction[0])[-2:][::-1]
         top_score = prediction[0][top_2[0]]
         second_score = prediction[0][top_2[1]]
-        top = self.__icons_classes[top_2[0]]
-        second = self.__icons_classes[top_2[1]]
+        top = self._icons_classes[top_2[0]]
+        second = self._icons_classes[top_2[1]]
 
         # Check if the difference with the next item is below a threshold.
         threshold_score = settings.developer.icons_model_threshold_score
         score_diff = top_score - second_score
         if score_diff < threshold_score:
-            self.__logger.info(
+            self._logger.info(
                 "Score diff < %s: %.3f. %s, %s", threshold_score, score_diff, top, second
             )
 
         return top
 
-    async def __extract_text_from_image(self, image: cv2.typing.MatLike) -> str:
+    async def _extract_text_from_image(self, image: cv2.typing.MatLike) -> str:
         """Extract text from an image.
 
         Args:
@@ -117,7 +115,7 @@ class OCR(metaclass=SingletonMeta):
         pytesseract_text = pytesseract.image_to_string(cropped_image, lang=lang, config=config)
         return pytesseract_text.split("\n")[0]
 
-    async def __extract_stockpile_type_from_image(self, image: cv2.typing.MatLike) -> StockpileType:
+    async def _extract_stockpile_type_from_image(self, image: cv2.typing.MatLike) -> StockpileType:
         """Extract the stockpile type from an image.
 
         Args:
@@ -126,7 +124,7 @@ class OCR(metaclass=SingletonMeta):
         Returns:
             stockpile_type: Type detected. UNDEFINED if not detected
         """
-        name = await self.__extract_text_from_image(image=image)
+        name = await self._extract_text_from_image(image=image)
         if not name:
             return StockpileType.UNDEFINED
 
@@ -140,7 +138,7 @@ class OCR(metaclass=SingletonMeta):
         try:
             return StockpileType(str(type_found))
         except ValueError:
-            self.__logger.error("Stockpile type not found: '%s'", name)
+            self._logger.error("Stockpile type not found: '%s'", name)
             return StockpileType.UNDEFINED
 
     async def extract_stockpile_from_image(
@@ -159,31 +157,31 @@ class OCR(metaclass=SingletonMeta):
             return None
 
         # Calculate image dimensions and scaling
-        image_dimensions = await self.__calculate_image_dimensions(image=image, file_name=file_name)
+        image_dimensions = await self._calculate_image_dimensions(image=image, file_name=file_name)
 
         # Process image to find item contours
-        contours = await self.__process_image_for_contours(image=image)
+        contours = await self._process_image_for_contours(image=image)
 
         # Extract items from contours
-        items, quantities, boundary_coordinates = await self.__extract_items_from_contours(
+        items, quantities, boundary_coordinates = await self._extract_items_from_contours(
             image=image,
             contours=contours,
             dimensions=image_dimensions,
         )
 
         if not items:
-            await self.__save_failed_detection(file_name=file_name, image=image)
+            await self._save_failed_detection(file_name=file_name, image=image)
             return None
 
         # Calculate stockpile boundaries
-        boundaries = await self.__calculate_stockpile_boundaries(
+        boundaries = await self._calculate_stockpile_boundaries(
             boundary_coordinates=boundary_coordinates,
             item_spacing_height=image_dimensions.item_spacing_height,
             item_spacing_width=image_dimensions.item_spacing_width,
         )
 
         # Extract stockpile metadata (type and name)
-        type_, name = await self.__extract_stockpile_metadata(image=image, boundaries=boundaries)
+        type_, name = await self._extract_stockpile_metadata(image=image, boundaries=boundaries)
 
         # Create and process stockpile
         stockpile = Stockpile(
@@ -213,13 +211,13 @@ class OCR(metaclass=SingletonMeta):
             )
 
         # Process quantities
-        await self.__process_stockpile_quantities(
+        await self._process_stockpile_quantities(
             image=image, stockpile=stockpile, quantities=quantities
         )
 
         return stockpile
 
-    async def __calculate_image_dimensions(
+    async def _calculate_image_dimensions(
         self, image: cv2.typing.MatLike, file_name: str
     ) -> ImageDimensions:
         """Calculate the dimensions and scaling factors for the image.
@@ -240,7 +238,7 @@ class OCR(metaclass=SingletonMeta):
         item_spacing_width = int(image_ratio * settings.ocr.item_spacing_width)
         item_spacing_height = int(image_ratio * settings.ocr.item_spacing_height)
 
-        self.__logger.debug(
+        self._logger.debug(
             "Parsing image %s. width: %d, height: %d, ratio: %.2f. "
             "Item size: %dx%d, spacing: %dx%d",
             file_name,
@@ -262,7 +260,7 @@ class OCR(metaclass=SingletonMeta):
             item_spacing_height=item_spacing_height,
         )
 
-    async def __process_image_for_contours(self, image: cv2.typing.MatLike):
+    async def _process_image_for_contours(self, image: cv2.typing.MatLike) -> list:
         """Process the image to extract contours.
 
         Args:
@@ -275,14 +273,14 @@ class OCR(metaclass=SingletonMeta):
         thresh = cv2.threshold(gray_image, 50, 255, cv2.THRESH_BINARY)[1]
         return cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[0]
 
-    async def __get_contour(
-        self, cnt, dimensions: ImageDimensions
+    async def _get_contour(
+        self, cnt: Any, dimensions: ImageDimensions
     ) -> tuple[int, int, int, int] | None:
         """Check if the contour is valid based on the dimensions.
 
         Args:
-            cnt: Contour to check
-            dimensions: Image dimensions and scaling factors
+            cnt (Any): Contour to check
+            dimensions (ImageDimensions): Image dimensions and scaling factors
 
         Returns:
             tuple[int, int, int, int] | None: Coordinates of the contour (x, y, w, h) or None
@@ -302,7 +300,7 @@ class OCR(metaclass=SingletonMeta):
 
         return (x, y, w, h)
 
-    async def __get_icon_boundaries_from_quantity_boundaries(
+    async def _get_icon_boundaries_from_quantity_boundaries(
         self, contour: tuple[int, int, int, int], item_spacing: int
     ) -> tuple:
         """Get the coordinates of the icon from the rectangle.
@@ -324,7 +322,7 @@ class OCR(metaclass=SingletonMeta):
 
         return icon_x1, icon_y1, icon_x2, icon_y2
 
-    async def __extract_items_from_contours(
+    async def _extract_items_from_contours(
         self, image: cv2.typing.MatLike, contours: list, dimensions: ImageDimensions
     ) -> tuple:
         """Extract stockpile items from the detected contours.
@@ -355,7 +353,7 @@ class OCR(metaclass=SingletonMeta):
         item_number = 0
 
         for cnt in contours:
-            contour = await self.__get_contour(cnt=cnt, dimensions=dimensions)
+            contour = await self._get_contour(cnt=cnt, dimensions=dimensions)
             if not contour:
                 continue
 
@@ -363,14 +361,14 @@ class OCR(metaclass=SingletonMeta):
 
             # Calculate icon boundaries from quantity boundaries
             # Icon is on the left side of the quantity separated by a spacing
-            icon_boundaries = await self.__get_icon_boundaries_from_quantity_boundaries(
+            icon_boundaries = await self._get_icon_boundaries_from_quantity_boundaries(
                 contour=contour,
                 item_spacing=dimensions.item_spacing_width,
             )
 
             # Process the item icon
             items.append(
-                await self.__process_item_icon(
+                await self._process_item_icon(
                     image=image,
                     icon_coords=icon_boundaries,
                     item_number=item_number,
@@ -401,7 +399,7 @@ class OCR(metaclass=SingletonMeta):
             boundary_coordinates,
         )
 
-    async def __process_item_icon(
+    async def _process_item_icon(
         self, image: cv2.typing.MatLike, icon_coords: tuple[int, int, int, int], item_number: int
     ) -> StockpileItem:
         """Process and identify an item icon from the image.
@@ -416,7 +414,7 @@ class OCR(metaclass=SingletonMeta):
         """
         icon_x1, icon_y1, icon_x2, icon_y2 = icon_coords
         icon_image = image[icon_y1:icon_y2, icon_x1:icon_x2]
-        item_id = await self.__extract_item_from_image(image=icon_image)
+        item_id = await self._extract_item_from_image(image=icon_image)
 
         if settings.developer.save_icons_image:
             # Create a directory with the name of the predicted item, if it doesn't exist
@@ -439,12 +437,12 @@ class OCR(metaclass=SingletonMeta):
 
         return StockpileItem(code=item_id, crated=crated)
 
-    async def __calculate_stockpile_boundaries(
+    async def _calculate_stockpile_boundaries(
         self,
         boundary_coordinates: BoundaryCoordinates,
         item_spacing_height: int,
         item_spacing_width: int,
-    ):
+    ) -> dict[str, int]:
         """Calculate the boundaries of the stockpile.
 
         Args:
@@ -453,7 +451,7 @@ class OCR(metaclass=SingletonMeta):
             item_spacing_width (int): Horizontal spacing between items
 
         Returns:
-            dict: Dictionary with boundary coordinates
+            dict[str, int: Dictionary with boundary coordinates
         """
         # Include the title in the cropped image
         min_x = boundary_coordinates.min_x
@@ -487,7 +485,9 @@ class OCR(metaclass=SingletonMeta):
             "name_y2": type_y2,
         }
 
-    async def __extract_stockpile_metadata(self, image: cv2.typing.MatLike, boundaries: dict):
+    async def _extract_stockpile_metadata(
+        self, image: cv2.typing.MatLike, boundaries: dict
+    ) -> tuple[StockpileType, str]:
         """Extract stockpile type and name from the image.
 
         Args:
@@ -507,17 +507,17 @@ class OCR(metaclass=SingletonMeta):
             boundaries["name_x1"] : boundaries["name_x2"],
         ]
 
-        type_ = await self.__extract_stockpile_type_from_image(image=stockpile_type_image)
+        type_ = await self._extract_stockpile_type_from_image(image=stockpile_type_image)
 
         # Extract name only for certain stockpile types
         if type_ in [StockpileType.SEAPORT, StockpileType.STORAGE_DEPOT]:
-            name = await self.__extract_text_from_image(image=stockpile_name_image)
+            name = await self._extract_text_from_image(image=stockpile_name_image)
         else:
             name = ""
 
         return (type_, name)
 
-    async def __save_failed_detection(self, file_name: str, image: cv2.typing.MatLike):
+    async def _save_failed_detection(self, file_name: str, image: cv2.typing.MatLike) -> None:
         """Save an image when detection fails.
 
         Args:
@@ -528,9 +528,9 @@ class OCR(metaclass=SingletonMeta):
         if saved_file_name:
             await self.save_image(file_name=saved_file_name, image=image)
 
-    async def __process_stockpile_quantities(
+    async def _process_stockpile_quantities(
         self, image: cv2.typing.MatLike, stockpile: Stockpile, quantities: list
-    ):
+    ) -> None:
         """Process and assign quantities to stockpile items.
 
         Args:
@@ -552,7 +552,7 @@ class OCR(metaclass=SingletonMeta):
 
         # Validate quantity matching
         if len(detected_quantities) != len(stockpile.items):
-            await self.__handle_quantity_mismatch(
+            await self._handle_quantity_mismatch(
                 stockpile=stockpile, detected_quantities=detected_quantities
             )
             return
@@ -561,14 +561,16 @@ class OCR(metaclass=SingletonMeta):
         for i, item in enumerate(stockpile.items):
             item.quantity = detected_quantities[i]
 
-    async def __handle_quantity_mismatch(self, stockpile: Stockpile, detected_quantities: list):
+    async def _handle_quantity_mismatch(
+        self, stockpile: Stockpile, detected_quantities: list
+    ) -> None:
         """Handle the case where detected quantities don't match the number of items.
 
         Args:
             stockpile (Stockpile): The stockpile to update
             detected_quantities (list): List of detected quantities
         """
-        self.__logger.error(
+        self._logger.error(
             "%s: Detected %d quantities but %d items",
             stockpile.name,
             len(detected_quantities),
@@ -576,7 +578,7 @@ class OCR(metaclass=SingletonMeta):
         )
 
         quantities_str = " ".join([str(item) for item in detected_quantities])
-        self.__logger.error("Quantities: %s", quantities_str)
+        self._logger.error("Quantities: %s", quantities_str)
 
         # Clear items when quantities don't match
         stockpile.items = []
@@ -629,7 +631,7 @@ class OCR(metaclass=SingletonMeta):
         image: Any,
         name_image: Any = None,
         type_image: Any = None,
-    ):
+    ) -> None:
         """Save the image to the configured path.
 
         Args:
@@ -667,11 +669,11 @@ class OCR(metaclass=SingletonMeta):
             numpy.ndarray: Composite image
         """
         gray_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY)
-        quantity_images = self.__extract_and_normalize_quantity_images(gray_image, quantity_coords)
-        composite = self.__create_composite_image(quantity_images, padding)
+        quantity_images = self._extract_and_normalize_quantity_images(gray_image, quantity_coords)
+        composite = self._create_composite_image(quantity_images, padding)
         return composite
 
-    def __extract_and_normalize_quantity_images(
+    def _extract_and_normalize_quantity_images(
         self, gray_image: numpy.ndarray, quantity_coords: list[tuple[int, int, int, int]]
     ) -> list[numpy.ndarray]:
         """Extract and normalize quantity images.
@@ -696,7 +698,7 @@ class OCR(metaclass=SingletonMeta):
             quantity_images.append(quantity_image)
         return quantity_images
 
-    def __create_composite_image(
+    def _create_composite_image(
         self, quantity_images: list[numpy.ndarray], padding: int
     ) -> numpy.ndarray:
         """Create a composite image from a list of quantity images.

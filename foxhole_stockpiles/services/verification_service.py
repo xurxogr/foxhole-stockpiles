@@ -12,15 +12,13 @@ from foxhole_stockpiles.models.verification import Verification
 class VerificationService:
     """Verification Service."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the Verification Service."""
         file_dir = os.path.dirname(os.path.abspath(__file__))
         icon_path = os.path.join(file_dir, "colonial_icon.png")
         self.colonial_icon = cv2.imread(icon_path, cv2.IMREAD_COLOR)
 
-    async def __extract_text_from_image(
-        self, image: cv2.typing.MatLike, scale: bool = False
-    ) -> str:
+    async def _extract_text_from_image(self, image: cv2.typing.MatLike, scale: bool = False) -> str:
         """Extract text from an image.
 
         Args:
@@ -101,7 +99,7 @@ class VerificationService:
 
         # Extract username and level
         username_image = image[int(0.63 * py) : int(0.77 * py), int(1.6 * px) : int(3 * px)]
-        ocr_text = await self.__extract_text_from_image(image=username_image)
+        ocr_text = await self._extract_text_from_image(image=username_image)
 
         # Remove the Icon from the text. It's detected as a word. Remove the last word
         # [name] [icon text as random word] Level: [level]
@@ -122,14 +120,14 @@ class VerificationService:
 
         # Extract Regiment
         regiment_image = image[int(1.4 * py) : int(1.5 * py), :]
-        ocr_text = await self.__extract_text_from_image(image=regiment_image)
+        ocr_text = await self._extract_text_from_image(image=regiment_image)
         count = len(ocr_text.split("Name"))
         # 0 = None, 2 = True, 1 = False
         data.regiment = None if count == 1 else count == 3
 
         return data
 
-    async def find_colonial_icon(self, image: cv2.typing.MatLike):
+    async def find_colonial_icon(self, image: cv2.typing.MatLike) -> bool:
         """Find the colonial icon in the image.
 
         Args:
@@ -167,4 +165,4 @@ class VerificationService:
 
         # Extract shard
         shard_image = image[int(4.63 * py) : int(4.7 * py), int(px / 3) : int(px)]
-        return await self.__extract_text_from_image(image=shard_image, scale=True)
+        return await self._extract_text_from_image(image=shard_image, scale=True)
