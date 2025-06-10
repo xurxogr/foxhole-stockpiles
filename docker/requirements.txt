@@ -38,7 +38,7 @@ Pygments==2.19.1
 pytesseract==0.3.13
 python-dotenv==1.0.1
 python-multipart==0.0.20
-requests==2.32.3
+requests==2.32.4
 rich==13.9.4
 setuptools==76.1.0
 six==1.17.0
