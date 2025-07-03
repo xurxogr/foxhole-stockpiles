@@ -5,7 +5,7 @@ import numpy as np
 from tensorflow import keras
 
 # Load configuration
-DATA_DIR = "icons-naval57"
+DATA_DIR = "infantry-61/icons/"
 IMG_SIZE = (32, 32)
 COLOR_MODE = "rgb"
 

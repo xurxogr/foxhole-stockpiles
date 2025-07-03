@@ -25,7 +25,7 @@ from keras.models import Sequential
 EPOCHS = 1000
 COLOR_MODE = "rgb"
 DROPOUT = 0.5
-DATA_DIR = "icons-naval57/"
+DATA_DIR = "infantry-61/icons/"
 PATIENTE = 50
 
 IMG_SIZE = (32, 32)
@@ -46,7 +46,10 @@ def scheduler(epoch, lr):
 tf.random.set_seed(RANDOM_SEED)
 
 train_ds = keras.utils.image_dataset_from_directory(
-    DATA_DIR, seed=RANDOM_SEED, color_mode=COLOR_MODE, image_size=IMG_SIZE
+    DATA_DIR,
+    seed=RANDOM_SEED,
+    color_mode=COLOR_MODE,
+    image_size=IMG_SIZE
 )
 
 class_names = train_ds.class_names
