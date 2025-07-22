@@ -35,6 +35,14 @@ class DeveloperSettings(BaseModel):
     icons_save_path: str = Field(
         description="Path to save the detected icons", default="screenshots/icons"
     )
+    auto_collect_training_data: bool = Field(
+        description="Automatically collect training data by organizing icons by resolution and CodeName", 
+        default=True
+    )
+    training_data_path: str = Field(
+        description="Path to save training data organized by resolution and CodeName", 
+        default="training_data"
+    )
 
     model_config = ConfigDict(
         extra="ignore",
@@ -48,6 +56,8 @@ class DeveloperSettings(BaseModel):
                 "icons_model_threshold_score": 0,
                 "save_icons_image": False,
                 "icons_save_path": "screenshots/icons",
+                "auto_collect_training_data": True,
+                "training_data_path": "training_data",
             }
         },
     )

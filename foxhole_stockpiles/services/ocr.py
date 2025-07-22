@@ -4,6 +4,7 @@ import json
 import logging
 import os.path
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import cv2
@@ -422,6 +423,23 @@ class OCR(metaclass=SingletonMeta):
         icon_image = image[icon_y1:icon_y2, icon_x1:icon_x2]
         item_id = await self._extract_item_from_image(image=icon_image)
 
+        # Handle crated items
+        crated = False
+        if "crated" in item_id:
+            crated = True
+            item_id = item_id.replace("-crated", "")
+
+        # Auto-collect training data: organize by resolution and CodeName
+        if self._settings.developer.auto_collect_training_data:
+            await self._save_training_data_icon(
+                icon_image=icon_image,
+                item_id=item_id,
+                crated=crated,
+                image=image,
+                item_number=item_number
+            )
+
+        # Legacy icon saving (if enabled)
         if self._settings.developer.save_icons_image:
             # Create a directory with the name of the predicted item, if it doesn't exist
             directory = f"{self._settings.developer.icons_save_path}/{item_id}/"
@@ -435,13 +453,54 @@ class OCR(metaclass=SingletonMeta):
                 icon_image,
             )
 
-        # Handle crated items
-        crated = False
-        if "crated" in item_id:
-            crated = True
-            item_id = item_id.replace("-crated", "")
-
         return StockpileItem(code=item_id, crated=crated)
+
+    async def _save_training_data_icon(
+        self, 
+        icon_image: cv2.typing.MatLike, 
+        item_id: str, 
+        crated: bool,
+        image: cv2.typing.MatLike, 
+        item_number: int
+    ) -> None:
+        """Save icon for training data collection organized by resolution and CodeName.
+
+        Args:
+            icon_image (cv2.typing.MatLike): The extracted icon image
+            item_id (str): The detected item CodeName
+            crated (bool): Whether the item is crated
+            image (cv2.typing.MatLike): The original screenshot
+            item_number (int): Current item counter
+        """
+        try:
+            # Get image resolution
+            width, height = image.shape[1], image.shape[0]
+            resolution = f"{width}x{height}"
+            
+            # Create folder name based on crated status
+            folder_name = f"{item_id}-crated" if crated else item_id
+            
+            # Create directory structure: training_data/icons/resolution/CodeName/
+            base_path = Path(self._settings.developer.training_data_path)
+            icon_path = base_path / "icons" / resolution / folder_name
+            icon_path.mkdir(parents=True, exist_ok=True)
+            
+            # Find the next available number for this CodeName in this resolution
+            existing_files = list(icon_path.glob("*.png"))
+            next_number = len(existing_files) + 1
+            
+            # Save the icon with simple numbering
+            icon_filename = f"{next_number}.png"
+            icon_filepath = icon_path / icon_filename
+            
+            cv2.imwrite(str(icon_filepath), icon_image)
+            
+            self._logger.debug(
+                f"Saved training data icon: {folder_name} ({resolution}) -> {icon_filename}"
+            )
+            
+        except Exception as e:
+            self._logger.error(f"Error saving training data icon for {item_id}: {e}")
 
     async def _calculate_stockpile_boundaries(
         self,
