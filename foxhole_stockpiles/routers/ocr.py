@@ -152,13 +152,16 @@ async def send_stockpile(stockpile: dict, api_key: str) -> dict:
         return stockpile
 
     connector = BackendConnector(url=url)
+    logger = logging.getLogger(__name__)
     try:
-        return await connector.send_stockpile(payload=stockpile, api_key=api_key)
+        response = await connector.send_stockpile(payload=stockpile, api_key=api_key)
+        if isinstance(response, str):
+            return {"message": response}
+        return response
     except Exception as e:
         message = (
             f"Error sending stockpile {stockpile.get('stockpile_name')} "
             f"({stockpile.get('stockpile_type')}) to the backend server: {e.__class__.__name__}"
         )
-        logger = logging.getLogger(__name__)
         logger.error(message)
         return {"message": message}

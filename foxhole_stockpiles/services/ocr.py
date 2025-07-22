@@ -427,7 +427,7 @@ class OCR(metaclass=SingletonMeta):
         crated = False
         if "crated" in item_id:
             crated = True
-            item_id = item_id.replace("-crated", "")
+            item_id = item_id.replace("_crated", "").replace("-crated", "")
 
         # Auto-collect training data: organize by resolution and CodeName
         if self._settings.developer.auto_collect_training_data:
@@ -456,11 +456,11 @@ class OCR(metaclass=SingletonMeta):
         return StockpileItem(code=item_id, crated=crated)
 
     async def _save_training_data_icon(
-        self, 
-        icon_image: cv2.typing.MatLike, 
-        item_id: str, 
+        self,
+        icon_image: cv2.typing.MatLike,
+        item_id: str,
         crated: bool,
-        image: cv2.typing.MatLike, 
+        image: cv2.typing.MatLike,
         item_number: int
     ) -> None:
         """Save icon for training data collection organized by resolution and CodeName.
@@ -476,29 +476,29 @@ class OCR(metaclass=SingletonMeta):
             # Get image resolution
             width, height = image.shape[1], image.shape[0]
             resolution = f"{width}x{height}"
-            
+
             # Create folder name based on crated status
             folder_name = f"{item_id}-crated" if crated else item_id
-            
+
             # Create directory structure: training_data/icons/resolution/CodeName/
             base_path = Path(self._settings.developer.training_data_path)
             icon_path = base_path / "icons" / resolution / folder_name
             icon_path.mkdir(parents=True, exist_ok=True)
-            
+
             # Find the next available number for this CodeName in this resolution
             existing_files = list(icon_path.glob("*.png"))
             next_number = len(existing_files) + 1
-            
+
             # Save the icon with simple numbering
             icon_filename = f"{next_number}.png"
             icon_filepath = icon_path / icon_filename
-            
+
             cv2.imwrite(str(icon_filepath), icon_image)
-            
+
             self._logger.debug(
                 f"Saved training data icon: {folder_name} ({resolution}) -> {icon_filename}"
             )
-            
+
         except Exception as e:
             self._logger.error(f"Error saving training data icon for {item_id}: {e}")
 
