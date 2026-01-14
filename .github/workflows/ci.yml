@@ -124,7 +124,7 @@ jobs:
         run: python build_fs.py
 
       - name: Upload executable as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: fs-windows-exe
           path: dist/fs.exe
