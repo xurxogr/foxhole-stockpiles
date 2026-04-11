@@ -45,7 +45,7 @@ dependencies = [
     "psutil>=7.2.2",
     "memory-profiler>=0.61.0",
     # PyQt6 for GUI
-    "PyQt6>=6.10.2",
+    "PyQt6>=6.11.0",
 ]
 
 [project.optional-dependencies]
@@ -66,7 +66,7 @@ dev = [
     "h5py-stubs",
 
     # Developer Tools
-    "PyQt6>=6.10.2",
+    "PyQt6>=6.11.0",
 ]
 
 [project.urls]
