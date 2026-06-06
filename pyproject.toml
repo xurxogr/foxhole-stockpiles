@@ -47,7 +47,7 @@ dependencies = [
     # Google API
     "google-api-python-client>=2.196.0",
     "google-auth-httplib2>=0.4.0",
-    "google-auth-oauthlib>=1.4.0"
+    "google-auth-oauthlib>=1.4.0",
     # PySide6 for GUI (LGPL, official Qt project)
     "PySide6>=6.6",
     # CLI framework for fs-ocr
