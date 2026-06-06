@@ -60,7 +60,7 @@ jobs:
           pip install -e .[dev]
 
       - name: Run tests with coverage
-        run: pytest --ignore=tests/gui --ignore=tests/commands/gui -p no:pytest-qt --junitxml=junit.xml
+        run: pytest --ignore=tests/gui --ignore=tests/commands/gui --ignore=fs_tools/tests/gui -p no:pytest-qt --junitxml=junit.xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v6
