@@ -10,3 +10,4 @@ class OutputDestination(StrEnum):
     FILE = "file"
     WEBHOOK = "webhook"
     CONSOLE = "console"
+    SHEETS = "sheets"

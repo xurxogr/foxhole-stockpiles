@@ -10,3 +10,4 @@ class OutputHandlerType(StrEnum):
     FILE = "file"
     WEBHOOK = "webhook"
     CONSOLE = "console"
+    SHEETS = "google sheets"

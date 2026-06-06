@@ -9,12 +9,14 @@ from foxhole_stockpiles.core.settings.sections.output import (
     OutputHandlerConfig,
     OutputSettings,
     ReturnHandlerSettings,
+    SheetsHandlerSettings,
     WebhookHandlerSettings,
 )
 from foxhole_stockpiles.handlers.base_handler import BaseOutputDestinationHandler
 from foxhole_stockpiles.handlers.console import ConsoleOutputHandler
 from foxhole_stockpiles.handlers.file import FileOutputHandler
 from foxhole_stockpiles.handlers.response import ReturnOutputHandler
+from foxhole_stockpiles.handlers.sheets import SheetsOutputHandler
 from foxhole_stockpiles.handlers.webhook import WebhookOutputHandler
 from foxhole_stockpiles.models.stockpile import Stockpile
 
@@ -57,6 +59,8 @@ class OutputCoordinator:
                 return WebhookOutputHandler(webhook_settings=handler_settings)
             case ConsoleHandlerSettings():
                 return ConsoleOutputHandler()
+            case SheetsHandlerSettings():
+                return SheetsOutputHandler(sheets_settings=handler_settings)
             case _:
                 raise ValueError(f"Unsupported handler type: {type(handler_settings)}")
 

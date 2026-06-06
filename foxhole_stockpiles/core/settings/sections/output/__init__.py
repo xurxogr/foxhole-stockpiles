@@ -17,6 +17,7 @@ from foxhole_stockpiles.core.settings.sections.output.handler_config import (
 from foxhole_stockpiles.core.settings.sections.output.json_format import JsonFormatSettings
 from foxhole_stockpiles.core.settings.sections.output.return_handler import ReturnHandlerSettings
 from foxhole_stockpiles.core.settings.sections.output.settings import OutputSettings
+from foxhole_stockpiles.core.settings.sections.output.sheets_handler import SheetsHandlerSettings
 from foxhole_stockpiles.core.settings.sections.output.webhook_handler import (
     WebhookHandlerSettings,
 )
@@ -34,4 +35,5 @@ __all__ = [
     "OutputSettings",
     "ReturnHandlerSettings",
     "WebhookHandlerSettings",
+    "SheetsHandlerSettings",
 ]

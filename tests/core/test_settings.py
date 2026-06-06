@@ -15,6 +15,7 @@ from pydantic_settings.sources import PydanticBaseSettingsSource
 
 from foxhole_stockpiles.core.settings import AppSettings, get_settings, reload_settings
 from foxhole_stockpiles.core.settings.config_migrator import ConfigMigrator
+from foxhole_stockpiles.core.settings.sections import SheetsHandlerSettings
 from foxhole_stockpiles.core.settings.sections.logging import LoggingSettings
 from foxhole_stockpiles.core.settings.sections.ocr import OCRSettings
 from foxhole_stockpiles.core.settings.sections.output import (
@@ -762,3 +763,21 @@ class TestReloadSettings:
         # After reload, get_settings should return the new instance
         assert settings1 is not settings2
         assert settings2 is settings3
+
+
+class TestSheetsHandlerSettings:
+    """Test cases for SheetsHandlerSettings."""
+
+    def test_sheets_handler_custom_values(self) -> None:
+        """Test sheets handler with custom values."""
+        settings = SheetsHandlerSettings(
+            creds_path="C:/example/creds.json",
+            spreadsheet_url="https://docs.google.com/spreadsheets/d/12345/edit?gid=0#gid=0",
+            sheet_id="Sheet1",
+        )
+        assert settings.creds_path == "C:/example/creds.json"
+        assert (
+            settings.spreadsheet_url
+            == "https://docs.google.com/spreadsheets/d/12345/edit?gid=0#gid=0"
+        )
+        assert settings.sheet_id == "Sheet1"

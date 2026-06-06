@@ -11,6 +11,7 @@ from foxhole_stockpiles.core.settings.sections.output.csv_format import CsvForma
 from foxhole_stockpiles.core.settings.sections.output.file_handler import FileHandlerSettings
 from foxhole_stockpiles.core.settings.sections.output.json_format import JsonFormatSettings
 from foxhole_stockpiles.core.settings.sections.output.return_handler import ReturnHandlerSettings
+from foxhole_stockpiles.core.settings.sections.output.sheets_handler import SheetsHandlerSettings
 from foxhole_stockpiles.core.settings.sections.output.webhook_handler import (
     WebhookHandlerSettings,
 )
@@ -43,7 +44,8 @@ HandlerSettings = Annotated[
     Annotated[ReturnHandlerSettings, Tag(OutputHandlerType.RETURN)]
     | Annotated[FileHandlerSettings, Tag(OutputHandlerType.FILE)]
     | Annotated[WebhookHandlerSettings, Tag(OutputHandlerType.WEBHOOK)]
-    | Annotated[ConsoleHandlerSettings, Tag(OutputHandlerType.CONSOLE)],
+    | Annotated[ConsoleHandlerSettings, Tag(OutputHandlerType.CONSOLE)]
+    | Annotated[SheetsHandlerSettings, Tag(OutputHandlerType.SHEETS)],
     Discriminator(_get_handler_discriminator),
 ]
 
