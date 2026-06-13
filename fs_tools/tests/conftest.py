@@ -12,6 +12,7 @@ from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 from foxhole_stockpiles.i18n import get_translator, set_translations_resource
 from tests.conftest import (  # noqa: F401
+    isolate_app_settings,
     mock_catalog_file,
     mock_color_image_array,
     mock_discord_webhook,

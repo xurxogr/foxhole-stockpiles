@@ -15,6 +15,51 @@ from unittest.mock import AsyncMock, Mock, patch
 import numpy as np
 import pytest
 
+from foxhole_stockpiles.core.settings import get_settings
+from foxhole_stockpiles.core.settings.app_settings import AppSettings
+
+
+@pytest.fixture(autouse=True)
+def isolate_app_settings(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> Generator[None, None, None]:
+    """Isolate AppSettings from the developer's machine for every test.
+
+    By default ``AppSettings`` loads ``~/.fs_config`` and any ``FS_*``-prefixed
+    environment variables, so an unguarded test would pick up whatever
+    configuration happens to exist on the machine. That makes the suite pass or
+    fail depending on the developer's real config and diverge from CI (where no
+    config file exists). This autouse fixture pins every test to a clean,
+    default ``AppSettings``:
+
+    - The JSON config source is pointed at a path that does not exist, so it
+      yields an empty dict and the model's field defaults apply.
+    - All ``FS_*`` environment variables are removed.
+    - The ``get_settings`` LRU cache is cleared before and after the test so no
+      real-config instance leaks in or out.
+
+    Tests that need specific configuration must supply it themselves, either by
+    passing values to ``AppSettings(...)`` or by writing a config file and
+    pointing ``json_file`` at it.
+
+    Yields:
+        None: Control to the test while the isolation is active.
+    """
+    for key in list(os.environ):
+        if key.startswith("FS_"):
+            monkeypatch.delenv(key, raising=False)
+
+    # A path under the per-test tmp dir that we deliberately never create, so the
+    # JSON settings source treats it as absent and falls back to defaults.
+    absent_config = tmp_path / "absent_fs_config.json"
+    monkeypatch.setitem(AppSettings.model_config, "json_file", str(absent_config))
+
+    get_settings.cache_clear()
+    try:
+        yield
+    finally:
+        get_settings.cache_clear()
+
 
 @pytest.fixture(autouse=True)
 def mock_discord_webhook() -> Generator[Mock, None, None]:

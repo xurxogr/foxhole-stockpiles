@@ -5,13 +5,8 @@ including validation, defaults, custom values, environment variable
 handling, and file-based configuration loading.
 """
 
-import os
-from unittest.mock import patch
-
 import pytest
 from pydantic import ValidationError
-from pydantic_settings import BaseSettings
-from pydantic_settings.sources import PydanticBaseSettingsSource
 
 from foxhole_stockpiles.core.settings import AppSettings, get_settings, reload_settings
 from foxhole_stockpiles.core.settings.config_migrator import ConfigMigrator
@@ -605,35 +600,18 @@ class TestAppSettings:
 
     def test_app_settings_custom_values(self) -> None:
         """Test app settings with custom values."""
-        import warnings
-
-        # Mock settings sources to avoid loading from ~/.fs_config
-        def mock_settings_customise_sources(
-            cls: type[BaseSettings],
-            init_settings: PydanticBaseSettingsSource,
-            *args: PydanticBaseSettingsSource,
-            **kwargs: PydanticBaseSettingsSource,
-        ) -> tuple[PydanticBaseSettingsSource, ...]:
-            # Only use init_settings (passed kwargs), ignore file and env
-            return (init_settings,)
-
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", message="Config key.*json_file.*will be ignored")
-            with patch.object(
-                AppSettings, "settings_customise_sources", mock_settings_customise_sources
-            ):
-                settings = AppSettings(
-                    logging=LoggingSettings(log_level="DEBUG", rotate_logs=True),
-                    scanner=ScannerSettings(template_cache_size=8),
-                    output=OutputSettings(
-                        handlers=[
-                            OutputHandlerConfig(
-                                name="File Output",
-                                handler=FileHandlerSettings(path="custom.txt"),
-                            )
-                        ]
-                    ),
-                )
+        settings = AppSettings(
+            logging=LoggingSettings(log_level="DEBUG", rotate_logs=True),
+            scanner=ScannerSettings(template_cache_size=8),
+            output=OutputSettings(
+                handlers=[
+                    OutputHandlerConfig(
+                        name="File Output",
+                        handler=FileHandlerSettings(path="custom.txt"),
+                    )
+                ]
+            ),
+        )
 
         assert settings.logging.log_level == "DEBUG"
         assert settings.logging.rotate_logs is True
@@ -656,37 +634,22 @@ class TestAppSettings:
         assert settings.scanner.template_cache_size == 8
         assert settings.stockpile_types.seaport == ["seapon"]
 
-    def test_app_settings_from_environment_variables(self) -> None:
-        """Test loading app settings from environment variables."""
-        import warnings
+    def test_app_settings_from_environment_variables(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test loading app settings from environment variables.
 
-        # Only test non-output env vars since the output structure is now handlers-based
-        env_vars = {
-            "FS_SCANNER__TEMPLATE_CACHE_SIZE": "8",
-            "FS_LOGGING__LOG_LEVEL": "WARNING",
-        }
+        Args:
+            monkeypatch (pytest.MonkeyPatch): Fixture used to set FS_* env vars.
+        """
+        # Only test non-output env vars since the output structure is now handlers-based.
+        # The isolate_app_settings fixture already disables the JSON config file, so the
+        # env source is the only one contributing here.
+        monkeypatch.setenv("FS_SCANNER__TEMPLATE_CACHE_SIZE", "8")
+        monkeypatch.setenv("FS_LOGGING__LOG_LEVEL", "WARNING")
 
-        # Mock settings sources to use env but not file
-        def mock_settings_customise_sources(
-            cls: type[BaseSettings],
-            init_settings: PydanticBaseSettingsSource,
-            env_settings: PydanticBaseSettingsSource,
-            *args: PydanticBaseSettingsSource,
-            **kwargs: PydanticBaseSettingsSource,
-        ) -> tuple[PydanticBaseSettingsSource, ...]:
-            # Use env_settings and init_settings, but not file
-            return (init_settings, env_settings)
+        settings = AppSettings()
 
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", message="Config key.*json_file.*will be ignored")
-            with patch.dict(os.environ, env_vars, clear=True):
-                with patch.object(
-                    AppSettings, "settings_customise_sources", mock_settings_customise_sources
-                ):
-                    settings = AppSettings()
-
-                    assert settings.scanner.template_cache_size == 8
-                    assert settings.logging.log_level == "WARNING"
+        assert settings.scanner.template_cache_size == 8
+        assert settings.logging.log_level == "WARNING"
 
 
 class TestGetSettings:
