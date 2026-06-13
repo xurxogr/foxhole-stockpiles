@@ -4,12 +4,33 @@ This module tests the fs-ocr command-line interface.
 """
 
 import json
+import re
 
 from typer.testing import CliRunner
 
 from fs_ocr.cli import app
 
 runner = CliRunner()
+
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def strip_ansi(text: str) -> str:
+    """Remove ANSI SGR color codes from CLI output.
+
+    Rich colorizes ``--help`` output when it detects a color-capable terminal,
+    which CI does (it forces color via ``FORCE_COLOR``). Colorizing splits
+    option names such as ``--database`` across separate style spans, so a raw
+    substring check fails on CI while passing locally. Stripping the codes makes
+    the assertions stable regardless of the environment's color settings.
+
+    Args:
+        text (str): Raw CLI output, possibly containing ANSI escape codes.
+
+    Returns:
+        str: The output with SGR color codes removed.
+    """
+    return _ANSI_RE.sub("", text)
 
 
 class TestCLISchema:
@@ -57,16 +78,18 @@ class TestCLIHelp:
         result = runner.invoke(app, ["--help"])
 
         assert result.exit_code == 0
-        assert "scan" in result.stdout
-        assert "schema" in result.stdout
-        assert "info" in result.stdout
-        assert "version" in result.stdout
+        output = strip_ansi(result.stdout)
+        assert "scan" in output
+        assert "schema" in output
+        assert "info" in output
+        assert "version" in output
 
     def test_scan_help_shows_options(self) -> None:
         """Test that scan --help shows required options."""
         result = runner.invoke(app, ["scan", "--help"])
 
         assert result.exit_code == 0
-        assert "--database" in result.stdout
-        assert "--tessdata" in result.stdout
-        assert "--early-exit" in result.stdout
+        output = strip_ansi(result.stdout)
+        assert "--database" in output
+        assert "--tessdata" in output
+        assert "--early-exit" in output

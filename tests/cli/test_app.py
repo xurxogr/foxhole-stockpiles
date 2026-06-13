@@ -4,6 +4,7 @@ Covers help output, alias registration, the ``--version`` flag, and the
 no-subcommand GUI launch behaviour.
 """
 
+import re
 from unittest.mock import patch
 
 from typer.testing import CliRunner
@@ -12,6 +13,26 @@ from foxhole_stockpiles import __version__
 from foxhole_stockpiles.cli.app import app
 
 runner = CliRunner()
+
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def strip_ansi(text: str) -> str:
+    """Remove ANSI SGR color codes from CLI output.
+
+    Rich colorizes ``--help`` output when it detects a color-capable terminal,
+    which CI does (it forces color via ``FORCE_COLOR``). Colorizing splits
+    option names such as ``--image`` across separate style spans, so a raw
+    substring check fails on CI while passing locally. Stripping the codes makes
+    the assertions stable regardless of the environment's color settings.
+
+    Args:
+        text (str): Raw CLI output, possibly containing ANSI escape codes.
+
+    Returns:
+        str: The output with SGR color codes removed.
+    """
+    return _ANSI_RE.sub("", text)
 
 
 class TestRootHelp:
@@ -22,16 +43,18 @@ class TestRootHelp:
         result = runner.invoke(app, ["--help"])
 
         assert result.exit_code == 0
+        output = strip_ansi(result.output)
         for command in ("scan", "sav", "serve", "gui"):
-            assert command in result.output
+            assert command in output
 
     def test_help_hides_aliases(self) -> None:
         """Hidden alias commands do not appear in the help listing."""
         result = runner.invoke(app, ["--help"])
 
         assert result.exit_code == 0
+        output = strip_ansi(result.output)
         for alias in ("scanner", "process-sav"):
-            assert alias not in result.output
+            assert alias not in output
 
 
 class TestVersion:
@@ -42,7 +65,7 @@ class TestVersion:
         result = runner.invoke(app, ["--version"])
 
         assert result.exit_code == 0
-        assert f"Foxhole Stockpiles v{__version__}" in result.output
+        assert f"Foxhole Stockpiles v{__version__}" in strip_ansi(result.output)
 
 
 class TestNoSubcommand:
@@ -65,14 +88,14 @@ class TestAliases:
         result = runner.invoke(app, ["scanner", "--help"])
 
         assert result.exit_code == 0
-        assert "--image" in result.output
+        assert "--image" in strip_ansi(result.output)
 
     def test_server_alias_resolves_to_serve(self) -> None:
         """The ``server`` alias exposes the same options as ``serve``."""
         result = runner.invoke(app, ["server", "--help"])
 
         assert result.exit_code == 0
-        assert "--host" in result.output
+        assert "--host" in strip_ansi(result.output)
 
 
 class TestMainEntryPoint:
