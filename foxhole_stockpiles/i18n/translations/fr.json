@@ -128,8 +128,6 @@
     "auto_trim": "Libération auto mémoire :",
     "auto_trim_checkbox": "Libérer automatiquement la mémoire après les scans",
     "auto_trim_tooltip": "Libérer automatiquement la mémoire inutilisée après chaque scan.\n\nAide à prévenir l'accumulation de mémoire lors de sessions prolongées.\nRecommandé : Activé (peut causer de brèves pauses après les scans sur certains systèmes).",
-    "web_icon_mod": "Mod icônes web :",
-    "web_icon_mod_tooltip": "Mod à utiliser pour les icônes d'objets dans l'interface web.\n\nLorsque l'interface web affiche les résultats de scan, les icônes seront chargées\ndepuis ce mod. Si une icône n'est pas trouvée dans le mod spécifié,\nelle utilisera 'vanilla' par défaut.\n\nLes mods disponibles dépendent de ce que vous avez importé dans la base de données.",
     "authentication": "Authentification",
     "no_auth": "Pas d'authentification",
     "no_auth_tooltip": "Le serveur API acceptera les requêtes de n'importe qui sans authentification.",

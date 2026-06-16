@@ -93,12 +93,6 @@ class APIServerTab(QWidget):
         self.auto_trim_input.setChecked(True)
         server_layout.addRow(self.trim_label, self.auto_trim_input)
 
-        # Web Icon Mod
-        self.web_icon_mod_label = QLabel()
-        self.web_icon_mod_input = QLineEdit()
-        self.web_icon_mod_input.setPlaceholderText("vanilla")
-        server_layout.addRow(self.web_icon_mod_label, self.web_icon_mod_input)
-
         layout.addWidget(self.server_group)
 
         # Authentication Group
@@ -206,9 +200,6 @@ class APIServerTab(QWidget):
         self.trim_label.setToolTip(t("api_server_tab.auto_trim_tooltip"))
         self.auto_trim_input.setText(t("api_server_tab.auto_trim_checkbox"))
 
-        self.web_icon_mod_label.setText(t("api_server_tab.web_icon_mod"))
-        self.web_icon_mod_label.setToolTip(t("api_server_tab.web_icon_mod_tooltip"))
-
         # Authentication Group
         self.auth_group.setTitle(t("api_server_tab.authentication"))
 
@@ -253,7 +244,6 @@ class APIServerTab(QWidget):
 
         self.memory_monitoring_input.setChecked(server_settings.enable_memory_monitoring)
         self.auto_trim_input.setChecked(server_settings.auto_trim_memory)
-        self.web_icon_mod_input.setText(server_settings.web_icon_mod)
 
         # Auth settings
         if auth_settings:
@@ -302,7 +292,6 @@ class APIServerTab(QWidget):
             reload=False,  # Always False for GUI users (development-only option)
             enable_memory_monitoring=self.memory_monitoring_input.isChecked(),
             auto_trim_memory=self.auto_trim_input.isChecked(),
-            web_icon_mod=self.web_icon_mod_input.text() or "vanilla",
         )
 
     def set_config_level(self, level: ConfigLevel) -> None:

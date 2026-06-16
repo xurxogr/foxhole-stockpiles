@@ -29,11 +29,11 @@ export FS_LOGGING__LOG_FILE=/var/log/foxhole-scanner.log
 
 Create a file at `~/.fs_config` with JSON configuration:
 
-**Note on Config Versioning:** The configuration includes a `config_version` field (current: **8**). Old configs are automatically migrated when loaded via `ConfigMigrator` - no manual action required. V5 introduced the `output.handlers` array structure (multiple output destinations); later versions added the `sav_processing` section for Foxhole save-file processing.
+**Note on Config Versioning:** The configuration includes a `config_version` field (current: **9**). Old configs are automatically migrated when loaded via `ConfigMigrator` - no manual action required. V5 introduced the `output.handlers` array structure (multiple output destinations); later versions added the `sav_processing` section for Foxhole save-file processing; V9 removed the obsolete `api_server.web_icon_mod` field.
 
 ```json
 {
-  "config_version": 8,
+  "config_version": 9,
   "api_server": {
     "cors_allow_origins": [],
     "enable_memory_monitoring": false,
@@ -83,7 +83,6 @@ Settings for the API server.
 | `log_level` | string | `"info"` | Server log level (`"debug"`, `"info"`, `"warning"`, `"error"`) |
 | `enable_memory_monitoring` | boolean | `false` | Enable memory monitoring to track memory usage per request and expose `/memory/*` endpoints |
 | `auto_trim_memory` | boolean | `true` | Automatically call `malloc_trim()` after scan requests to release freed memory back to OS |
-| `web_icon_mod` | string | `"vanilla"` | Mod to use for icons in the web interface. Falls back to 'vanilla' if not found |
 
 **Examples:**
 ```bash
@@ -445,7 +444,7 @@ export FS_SCANNER__SCREENSHOTS_FOLDER=screenshots
 
 ```json
 {
-  "config_version": 8,
+  "config_version": 9,
   "api_server": {
     "cors_allow_origins": ["https://myapp.com", "https://app.myapp.com"],
     "enable_memory_monitoring": false,
@@ -503,7 +502,7 @@ This example shows all available settings with their default values:
 
 ```json
 {
-  "config_version": 8,
+  "config_version": 9,
   "api_server": {
     "cors_allow_origins": [],
     "host": "127.0.0.1",
@@ -512,8 +511,7 @@ This example shows all available settings with their default values:
     "reload": false,
     "log_level": "info",
     "enable_memory_monitoring": false,
-    "auto_trim_memory": true,
-    "web_icon_mod": "vanilla"
+    "auto_trim_memory": true
   },
   "api_auth": {
     "auth_type": null,

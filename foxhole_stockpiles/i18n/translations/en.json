@@ -128,8 +128,6 @@
     "auto_trim": "Auto Trim Memory:",
     "auto_trim_checkbox": "Automatically trim memory after scans",
     "auto_trim_tooltip": "Automatically release unused memory after each scan completes.\n\nHelps prevent memory accumulation during long-running sessions.\nRecommended: Enabled (may cause brief pauses after scans on some systems).",
-    "web_icon_mod": "Web Icon Mod:",
-    "web_icon_mod_tooltip": "Mod to use for item icons in the web interface.\n\nWhen the web interface displays scan results, icons will be loaded\nfrom this mod. If an icon is not found in the specified mod,\nit will fall back to 'vanilla'.\n\nAvailable mods depend on what you've imported into the database.",
     "authentication": "Authentication",
     "no_auth": "No Authentication",
     "no_auth_tooltip": "API server will accept requests from anyone without authentication.",

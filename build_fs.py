@@ -56,7 +56,6 @@ def get_hidden_imports() -> list[str]:
         "foxhole_stockpiles.api.memory_middleware",
         "foxhole_stockpiles.api.web",
         "foxhole_stockpiles.api.web.routes",
-        "foxhole_stockpiles.api.web.services",
         # Typer CLI application and command modules
         "foxhole_stockpiles.cli",
         "foxhole_stockpiles.cli.app",

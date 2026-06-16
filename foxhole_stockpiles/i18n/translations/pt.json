@@ -128,8 +128,6 @@
     "auto_trim": "Libertar memória automaticamente:",
     "auto_trim_checkbox": "Libertar memória automaticamente após digitalizações",
     "auto_trim_tooltip": "Libertar automaticamente memória não utilizada após cada digitalização.\n\nAjuda a prevenir acumulação de memória durante sessões longas.\nRecomendado: Ativado (pode causar pausas breves após digitalizações em alguns sistemas).",
-    "web_icon_mod": "Mod de ícones web:",
-    "web_icon_mod_tooltip": "Mod a usar para ícones de objetos na interface web.\n\nQuando a interface web apresenta resultados de digitalização, os ícones serão carregados\ndeste mod. Se um ícone não for encontrado no mod especificado,\nusará 'vanilla' como alternativa.\n\nOs mods disponíveis dependem do que importou para a base de dados.",
     "authentication": "Autenticação",
     "no_auth": "Sem autenticação",
     "no_auth_tooltip": "O servidor API aceitará pedidos de qualquer pessoa sem autenticação.",

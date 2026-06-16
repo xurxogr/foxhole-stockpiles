@@ -460,38 +460,6 @@ def test_panel_on_database_updated_exception(qtbot: Any, panel: ServerControlPan
         panel.on_database_updated(Path("/tmp/test_db.h5"))
 
 
-def test_panel_validation_db_load_exception(qtbot: Any, panel: ServerControlPanel) -> None:
-    """Test validation state when database loading raises exception.
-
-    Args:
-        qtbot: PyQt test fixture
-        panel (ServerControlPanel): Panel instance
-    """
-    from pathlib import Path
-
-    from PySide6.QtWidgets import QApplication
-
-    from foxhole_stockpiles.gui.widgets import server_control_panel
-
-    test_db = Path(__file__).parent.parent.parent / "fixtures" / "test_db_v1.h5"
-
-    with patch.object(server_control_panel, "AppSettings") as mock_settings_class:
-        mock_settings = mock_settings_class.return_value
-        mock_settings.scanner.database_path = str(test_db)
-
-        # Mock TemplateManager to raise exception when loading database stats
-        with patch(
-            "fs_ocr._impl.template_manager.TemplateManager.get_database_statistics",
-            side_effect=OSError("Database error"),
-        ):
-            panel._update_validation_state()
-            QApplication.processEvents()
-
-            # Should show error panel
-            assert panel.error_panel.isVisible()
-            assert t("server_panel.errors.database_error_title") in panel.error_panel.text()
-
-
 def test_panel_attach_log_handler_already_attached(qtbot: Any, panel: ServerControlPanel) -> None:
     """Test _attach_log_handler doesn't duplicate handlers.
 
@@ -995,19 +963,12 @@ def test_validation_path_not_relative_to_cwd(qtbot: Any, panel: ServerControlPan
     # Use a path that is definitely not relative to cwd (root path)
     test_db = Path("/some/absolute/path/test_db.h5")
 
-    mock_stats = MagicMock()
-    mock_stats.mod_stats = {"vanilla": MagicMock()}
-
     with (
         patch.object(server_control_panel, "AppSettings") as mock_settings_class,
-        patch.object(server_control_panel, "TemplateManager") as mock_manager_class,
         patch.object(Path, "exists", return_value=True),
     ):
         mock_settings = mock_settings_class.return_value
         mock_settings.scanner.database_path = str(test_db)
-
-        mock_manager = mock_manager_class.return_value
-        mock_manager.get_database_statistics.return_value = mock_stats
 
         panel._update_validation_state()
         QApplication.processEvents()
@@ -1320,19 +1281,12 @@ def test_validation_db_path_value_error(qtbot: Any, panel: ServerControlPanel) -
     # Use a path that triggers ValueError in relative_to
     test_db = Path("/completely/different/path/test_db.h5")
 
-    mock_stats = MagicMock()
-    mock_stats.mod_stats = {"vanilla": MagicMock()}
-
     with (
         patch.object(server_control_panel, "AppSettings") as mock_settings_class,
-        patch.object(server_control_panel, "TemplateManager") as mock_manager_class,
         patch.object(Path, "exists", return_value=True),
     ):
         mock_settings = mock_settings_class.return_value
         mock_settings.scanner.database_path = str(test_db)
-
-        mock_manager = mock_manager_class.return_value
-        mock_manager.get_database_statistics.return_value = mock_stats
 
         panel._update_validation_state()
         QApplication.processEvents()

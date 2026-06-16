@@ -40,7 +40,6 @@ from foxhole_stockpiles.enums.supported_language import SupportedLanguage
 from foxhole_stockpiles.services.memory_monitor import MemoryMonitor
 from foxhole_stockpiles.services.output_coordinator import OutputCoordinator
 from fs_ocr._impl.coordinator import OCRCoordinator
-from fs_ocr._impl.template_manager import TemplateManager
 
 # Maximum file upload size (10MB) - sufficient for high-resolution screenshots
 MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024
@@ -77,16 +76,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger = logging.getLogger(__name__)
     logger.info("Starting Foxhole Stockpile Scanner API v%s", get_version_info())
     logger.info("Database path: %s", app_settings.scanner.database_path)
-
-    # Log available mods in database
-    if app_settings.scanner.database_path:
-        try:
-            manager = TemplateManager(database_path=app_settings.scanner.database_path)
-            stats = manager.get_database_statistics()
-            mods_list = sorted(stats.mod_stats.keys())
-            logger.info("Available mods in database: %s", ", ".join(mods_list))
-        except Exception as e:
-            logger.warning("Could not read database mods: %s", e)
 
     # Check if Tesseract is accessible (using our wrapper to avoid console flash on Windows)
     version = get_tesseract_version()

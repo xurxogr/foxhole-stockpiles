@@ -6,7 +6,7 @@ from typing import Any
 class ConfigMigrator:
     """Handles migration of configuration data between versions."""
 
-    CURRENT_VERSION = 8
+    CURRENT_VERSION = 9
 
     @classmethod
     def apply_migrations(cls, data: dict[str, Any]) -> dict[str, Any]:
@@ -61,6 +61,11 @@ class ConfigMigrator:
         if version == 7:
             data = cls._migrate_v7_to_v8(data)
             data["config_version"] = 8
+            version = 8
+
+        if version == 8:
+            data = cls._migrate_v8_to_v9(data)
+            data["config_version"] = 9
 
         return data
 
@@ -413,5 +418,28 @@ class ConfigMigrator:
                 "ncc_tiebreaker_threshold",
             ):
                 data["scanner"].pop(field_name, None)
+
+        return data
+
+    @staticmethod
+    def _migrate_v8_to_v9(data: dict[str, Any]) -> dict[str, Any]:
+        """Migrate from v8 to v9 (drop api_server.web_icon_mod).
+
+        The web interface no longer serves item icons from the template
+        database, so the icon mod is no longer configurable. Any stored value
+        is removed so it does not linger in ``.fs_config`` (the settings model
+        forbids unknown fields).
+
+        V8 had: ``api_server.web_icon_mod``.
+        V9 has: no such field.
+
+        Args:
+            data (dict[str, Any]): V8 configuration data.
+
+        Returns:
+            dict[str, Any]: V9 configuration data.
+        """
+        if "api_server" in data and isinstance(data["api_server"], dict):
+            data["api_server"].pop("web_icon_mod", None)
 
         return data

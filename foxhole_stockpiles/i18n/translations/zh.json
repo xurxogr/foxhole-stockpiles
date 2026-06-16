@@ -128,8 +128,6 @@
     "auto_trim": "自动释放内存：",
     "auto_trim_checkbox": "扫描后自动释放内存",
     "auto_trim_tooltip": "每次扫描完成后自动释放未使用的内存。\n\n有助于防止长时间运行会话期间的内存累积。\n推荐：启用（在某些系统上扫描后可能会导致短暂暂停）。",
-    "web_icon_mod": "Web 图标模组：",
-    "web_icon_mod_tooltip": "Web 界面中物品图标使用的模组。\n\n当 Web 界面显示扫描结果时，图标将从此模组加载。\n如果在指定模组中找不到图标，将回退到 'vanilla'。\n\n可用模组取决于您导入数据库的内容。",
     "authentication": "身份验证",
     "no_auth": "无身份验证",
     "no_auth_tooltip": "API 服务器将接受任何人的请求，无需身份验证。",

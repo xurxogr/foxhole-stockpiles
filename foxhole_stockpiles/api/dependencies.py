@@ -4,7 +4,6 @@ import logging
 from functools import lru_cache
 
 from foxhole_stockpiles.api.scan_limiter import ScanLimiter
-from foxhole_stockpiles.api.web.services import IconService
 from foxhole_stockpiles.core.events import get_event_bus
 from foxhole_stockpiles.core.settings import get_settings
 from foxhole_stockpiles.services.catalog_service import CatalogService
@@ -90,24 +89,6 @@ def get_catalog_service() -> CatalogService:
     return CatalogService(catalog_path=catalog_path)
 
 
-@lru_cache
-def get_icon_service() -> IconService:
-    """Get the icon service singleton.
-
-    Returns:
-        IconService: The icon service instance
-
-    Raises:
-        ValueError: If database_path is not configured
-    """
-    settings = get_settings()
-    coordinator = get_ocr_coordinator()
-    return IconService(
-        template_manager=coordinator._template_manager,
-        default_mod=settings.api_server.web_icon_mod,
-    )
-
-
 def clear_dependency_caches() -> None:
     """Clear all dependency caches.
 
@@ -125,7 +106,6 @@ def clear_dependency_caches() -> None:
     except Exception as e:
         logger.warning(f"Error shutting down notification service: {e}")
 
-    get_icon_service.cache_clear()
     get_catalog_service.cache_clear()
     get_output_coordinator.cache_clear()
     get_ocr_coordinator.cache_clear()

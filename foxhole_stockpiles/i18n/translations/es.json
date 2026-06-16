@@ -128,8 +128,6 @@
     "auto_trim": "Liberar memoria automáticamente:",
     "auto_trim_checkbox": "Liberar memoria automáticamente después de escaneos",
     "auto_trim_tooltip": "Liberar automáticamente memoria no utilizada después de cada escaneo.\n\nAyuda a prevenir acumulación de memoria durante sesiones largas.\nRecomendado: Habilitado (puede causar pausas breves después de escaneos en algunos sistemas).",
-    "web_icon_mod": "Mod de iconos web:",
-    "web_icon_mod_tooltip": "Mod a usar para iconos de objetos en la interfaz web.\n\nCuando la interfaz web muestra resultados de escaneo, los iconos se cargarán\nde este mod. Si un icono no se encuentra en el mod especificado,\nse usará 'vanilla' como respaldo.\n\nLos mods disponibles dependen de lo que haya importado a la base de datos.",
     "authentication": "Autenticación",
     "no_auth": "Sin autenticación",
     "no_auth_tooltip": "El servidor API aceptará solicitudes de cualquiera sin autenticación.",

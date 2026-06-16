@@ -128,8 +128,6 @@
     "auto_trim": "Automatische Speicherfreigabe:",
     "auto_trim_checkbox": "Speicher nach Scans automatisch freigeben",
     "auto_trim_tooltip": "Automatisch ungenutzten Speicher nach jedem Scan freigeben.\n\nHilft Speicheransammlungen bei lang laufenden Sitzungen zu verhindern.\nEmpfohlen: Aktiviert (kann auf einigen Systemen kurze Pausen nach Scans verursachen).",
-    "web_icon_mod": "Web-Icon-Mod:",
-    "web_icon_mod_tooltip": "Mod für Objektsymbole im Web-Interface.\n\nWenn das Web-Interface Scanergebnisse anzeigt, werden Symbole\nvon diesem Mod geladen. Wenn ein Symbol nicht im angegebenen Mod gefunden wird,\nwird auf 'vanilla' zurückgegriffen.\n\nVerfügbare Mods hängen davon ab, was Sie in die Datenbank importiert haben.",
     "authentication": "Authentifizierung",
     "no_auth": "Keine Authentifizierung",
     "no_auth_tooltip": "API-Server akzeptiert Anfragen von jedem ohne Authentifizierung.",

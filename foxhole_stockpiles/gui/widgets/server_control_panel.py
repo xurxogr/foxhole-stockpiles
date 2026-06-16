@@ -31,7 +31,6 @@ from foxhole_stockpiles.gui.utils.scanner_client import ScannerClient
 from foxhole_stockpiles.gui.utils.server_thread import ServerThread
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
 from foxhole_stockpiles.services.output_coordinator import OutputCoordinator
-from fs_ocr._impl.template_manager import TemplateManager
 
 logger = logging.getLogger(__name__)
 
@@ -282,38 +281,20 @@ class ServerControlPanel(QWidget):
                     f"{t('server_panel.errors.database_not_found_message')}"
                 )
             else:
-                # Try to load DB statistics
+                # The database file is present. FS does not read the template
+                # DB format (only fs-tools and fs-ocr do), so validity here is
+                # simply "configured and present"; mods are not introspected.
+                db_path_obj = Path(db_path)
                 try:
-                    manager = TemplateManager(database_path=Path(db_path))
-                    stats = manager.get_database_statistics()
+                    # Try to get relative path from current working directory
+                    rel_path = db_path_obj.relative_to(Path.cwd())
+                    display_path = str(rel_path)
+                except ValueError:
+                    # Path is not relative to cwd, just show filename
+                    display_path = db_path_obj.name
 
-                    # Format mods list (comma-separated)
-                    mods_text = ", ".join(sorted(stats.mod_stats.keys()))
-
-                    # Determine path to display (relative if possible)
-                    db_path_obj = Path(db_path)
-                    try:
-                        # Try to get relative path from current working directory
-                        rel_path = db_path_obj.relative_to(Path.cwd())
-                        display_path = str(rel_path)
-                    except ValueError:
-                        # Path is not relative to cwd, just show filename
-                        display_path = db_path_obj.name
-
-                    # Everything is valid
-                    is_valid = True
-                    db_info = f"Database: {display_path}  |  Mods: {mods_text}"
-
-                except (FileNotFoundError, ValueError, OSError) as e:
-                    # FileNotFoundError: database file missing
-                    # ValueError: invalid database format
-                    # OSError: database read error
-                    logger.error(f"Failed to load database statistics: {e}")
-                    error_message = (
-                        f"<b>⚠️ {t('server_panel.errors.database_error_title')}</b><br><br>"
-                        f"{t('server_panel.errors.database_error_message')}<br>"
-                        f"<small>{str(e)[:100]}</small>"
-                    )
+                is_valid = True
+                db_info = f"Database: {display_path}"
 
         except (ValidationError, OSError, ValueError):
             # ValidationError: invalid config values

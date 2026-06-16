@@ -13,7 +13,6 @@ from fastapi.testclient import TestClient
 from foxhole_stockpiles import __version__
 from foxhole_stockpiles.api.dependencies import (
     get_catalog_service,
-    get_icon_service,
     get_ocr_coordinator,
 )
 from foxhole_stockpiles.api.server import app
@@ -28,7 +27,6 @@ def clear_dependency_cache() -> Generator[None, None, None]:
     """Clear lru_cache from dependencies before and after each test."""
     from foxhole_stockpiles.api.dependencies import (
         get_catalog_service,
-        get_icon_service,
         get_notification_service,
         get_ocr_coordinator,
         get_output_coordinator,
@@ -41,7 +39,6 @@ def clear_dependency_cache() -> Generator[None, None, None]:
     get_ocr_coordinator.cache_clear()
     get_output_coordinator.cache_clear()
     get_catalog_service.cache_clear()
-    get_icon_service.cache_clear()
 
     app.dependency_overrides.clear()
 
@@ -52,7 +49,6 @@ def clear_dependency_cache() -> Generator[None, None, None]:
     get_ocr_coordinator.cache_clear()
     get_output_coordinator.cache_clear()
     get_catalog_service.cache_clear()
-    get_icon_service.cache_clear()
     app.dependency_overrides.clear()
 
 
@@ -67,7 +63,6 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     mock_settings.api.auth_token = None
     mock_settings.api_auth.auth_type = None
     mock_settings.api_auth.auth_token = None
-    mock_settings.api_server.web_icon_mod = "vanilla"
 
     monkeypatch.setattr("foxhole_stockpiles.core.settings.get_settings", lambda: mock_settings)
     monkeypatch.setattr("foxhole_stockpiles.api.dependencies.get_settings", lambda: mock_settings)
@@ -82,14 +77,6 @@ def mock_catalog_service() -> Mock:
     """Create a mock catalog service."""
     service = Mock()
     service.get_display_name.side_effect = lambda code: f"Display Name for {code}"
-    return service
-
-
-@pytest.fixture
-def mock_icon_service() -> Mock:
-    """Create a mock icon service."""
-    service = Mock()
-    service.get_icon_png = AsyncMock(return_value=b"fake_png_data")
     return service
 
 
@@ -193,7 +180,6 @@ class TestWebScan:
     async def test_scan_empty_images_list_direct(
         self,
         mock_catalog_service: Mock,
-        mock_icon_service: Mock,
     ) -> None:
         """Test web_scan directly with empty images list."""
         from fastapi import Request, UploadFile
@@ -213,7 +199,6 @@ class TestWebScan:
             request=mock_request,
             images=[mock_upload],
             coordinator=mock_coordinator,
-            icon_service=mock_icon_service,
             catalog_service=mock_catalog_service,
             action="scan",
         )
@@ -225,11 +210,9 @@ class TestWebScan:
         self,
         client: TestClient,
         mock_catalog_service: Mock,
-        mock_icon_service: Mock,
     ) -> None:
         """Test scanning with non-image file type."""
         app.dependency_overrides[get_catalog_service] = lambda: mock_catalog_service
-        app.dependency_overrides[get_icon_service] = lambda: mock_icon_service
 
         # Mock coordinator
         mock_coordinator = Mock()
@@ -255,7 +238,6 @@ class TestWebScan:
         self,
         client: TestClient,
         mock_catalog_service: Mock,
-        mock_icon_service: Mock,
     ) -> None:
         """Test successful scan of a single image."""
         # Create valid PNG image
@@ -277,7 +259,6 @@ class TestWebScan:
 
         app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
         app.dependency_overrides[get_catalog_service] = lambda: mock_catalog_service
-        app.dependency_overrides[get_icon_service] = lambda: mock_icon_service
 
         try:
             files = {"images": ("test.png", io.BytesIO(image_bytes), "image/png")}
@@ -296,7 +277,6 @@ class TestWebScan:
         self,
         client: TestClient,
         mock_catalog_service: Mock,
-        mock_icon_service: Mock,
     ) -> None:
         """Test successful scan of multiple images shows combined table."""
         img = np.zeros((100, 100, 3), dtype=np.uint8)
@@ -320,7 +300,6 @@ class TestWebScan:
 
         app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
         app.dependency_overrides[get_catalog_service] = lambda: mock_catalog_service
-        app.dependency_overrides[get_icon_service] = lambda: mock_icon_service
 
         try:
             files = [
@@ -341,7 +320,6 @@ class TestWebScan:
         self,
         client: TestClient,
         mock_catalog_service: Mock,
-        mock_icon_service: Mock,
     ) -> None:
         """Test when no stockpiles are detected."""
         img = np.zeros((100, 100, 3), dtype=np.uint8)
@@ -354,7 +332,6 @@ class TestWebScan:
 
         app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
         app.dependency_overrides[get_catalog_service] = lambda: mock_catalog_service
-        app.dependency_overrides[get_icon_service] = lambda: mock_icon_service
 
         try:
             files = {"images": ("test.png", io.BytesIO(image_bytes), "image/png")}
@@ -369,7 +346,6 @@ class TestWebScan:
         self,
         client: TestClient,
         mock_catalog_service: Mock,
-        mock_icon_service: Mock,
     ) -> None:
         """Test that scan results include timing information."""
         img = np.zeros((100, 100, 3), dtype=np.uint8)
@@ -386,7 +362,6 @@ class TestWebScan:
 
         app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
         app.dependency_overrides[get_catalog_service] = lambda: mock_catalog_service
-        app.dependency_overrides[get_icon_service] = lambda: mock_icon_service
 
         try:
             files = {"images": ("test.png", io.BytesIO(image_bytes), "image/png")}
@@ -401,7 +376,6 @@ class TestWebScan:
         self,
         client: TestClient,
         mock_catalog_service: Mock,
-        mock_icon_service: Mock,
     ) -> None:
         """Test that corrupted images show warning but continue processing."""
         # Create one valid and one corrupted image
@@ -420,7 +394,6 @@ class TestWebScan:
 
         app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
         app.dependency_overrides[get_catalog_service] = lambda: mock_catalog_service
-        app.dependency_overrides[get_icon_service] = lambda: mock_icon_service
 
         try:
             files = [
@@ -438,97 +411,6 @@ class TestWebScan:
         finally:
             app.dependency_overrides.clear()
 
-    def test_scan_with_icon_not_found(
-        self,
-        client: TestClient,
-        mock_catalog_service: Mock,
-    ) -> None:
-        """Test scan when icon service returns None for an icon."""
-        img = np.zeros((100, 100, 3), dtype=np.uint8)
-        _, buffer = cv2.imencode(".png", img)
-        image_bytes = buffer.tobytes()
-
-        mock_stockpile = Stockpile(
-            name="Test",
-            type=StockpileType.STORAGE_DEPOT,
-            items=[StockpileItem(code="MissingIcon", quantity=10, crated=False)],
-        )
-        mock_coordinator = Mock()
-        mock_coordinator.analyze_stockpile = AsyncMock(return_value=mock_stockpile)
-
-        # Icon service returns None (icon not found)
-        mock_icon_service = Mock()
-        mock_icon_service.get_icon_png = AsyncMock(return_value=None)
-
-        app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
-        app.dependency_overrides[get_catalog_service] = lambda: mock_catalog_service
-        app.dependency_overrides[get_icon_service] = lambda: mock_icon_service
-
-        try:
-            files = {"images": ("test.png", io.BytesIO(image_bytes), "image/png")}
-            response = client.post("/web/scan", files=files, data={"action": "scan"})
-
-            assert response.status_code == 200
-            # Should show placeholder instead of icon
-            assert "icon-placeholder" in response.text
-        finally:
-            app.dependency_overrides.clear()
-
-
-class TestWebIcon:
-    """Tests for the web icon endpoint."""
-
-    def test_get_icon_success(self, client: TestClient, mock_icon_service: Mock) -> None:
-        """Test successful icon retrieval."""
-        app.dependency_overrides[get_icon_service] = lambda: mock_icon_service
-
-        try:
-            response = client.get("/web/icon/TestItem")
-
-            assert response.status_code == 200
-            assert response.headers.get("content-type") == "image/png"
-            assert response.content == b"fake_png_data"
-        finally:
-            app.dependency_overrides.clear()
-
-    def test_get_icon_not_found(self, client: TestClient) -> None:
-        """Test icon not found returns 404."""
-        mock_service = Mock()
-        mock_service.get_icon_png = AsyncMock(return_value=None)
-        app.dependency_overrides[get_icon_service] = lambda: mock_service
-
-        try:
-            response = client.get("/web/icon/NonExistent")
-
-            assert response.status_code == 404
-        finally:
-            app.dependency_overrides.clear()
-
-    def test_get_icon_with_crated(self, client: TestClient, mock_icon_service: Mock) -> None:
-        """Test icon retrieval with crated flag."""
-        app.dependency_overrides[get_icon_service] = lambda: mock_icon_service
-
-        try:
-            response = client.get("/web/icon/TestItem?crated=true")
-
-            assert response.status_code == 200
-            mock_icon_service.get_icon_png.assert_called_with(code="TestItem", crated=True)
-        finally:
-            app.dependency_overrides.clear()
-
-    def test_get_icon_cache_header(self, client: TestClient, mock_icon_service: Mock) -> None:
-        """Test that icon response includes cache header."""
-        app.dependency_overrides[get_icon_service] = lambda: mock_icon_service
-
-        try:
-            response = client.get("/web/icon/TestItem")
-
-            assert response.status_code == 200
-            assert "Cache-Control" in response.headers
-            assert "max-age" in response.headers.get("Cache-Control", "")
-        finally:
-            app.dependency_overrides.clear()
-
 
 class TestRenderStockpileTable:
     """Tests for _render_stockpile_table helper function."""
@@ -542,11 +424,9 @@ class TestRenderStockpileTable:
                 StockpileItem(code="Item1", quantity=100, crated=False),
             ],
         )
-        icon_cache = {"Item1_False": "data:image/png;base64,abc123"}
 
         html = _render_stockpile_table(
             stockpile=stockpile,
-            icon_cache=icon_cache,
             catalog_service=mock_catalog_service,
         )
 
@@ -554,7 +434,6 @@ class TestRenderStockpileTable:
         assert "StorageFacility" in html  # In-game code name
         assert "100" in html
         assert "Display Name for Item1" in html
-        assert 'src="data:image/png;base64,abc123"' in html
 
     def test_render_table_with_crated_items(self, mock_catalog_service: Mock) -> None:
         """Test rendering table with crated items shows badge."""
@@ -565,35 +444,14 @@ class TestRenderStockpileTable:
                 StockpileItem(code="Item1", quantity=50, crated=True),
             ],
         )
-        icon_cache = {"Item1_True": ""}
 
         html = _render_stockpile_table(
             stockpile=stockpile,
-            icon_cache=icon_cache,
             catalog_service=mock_catalog_service,
         )
 
         assert "Crated" in html
         assert "crated-badge" in html
-
-    def test_render_table_with_missing_icon(self, mock_catalog_service: Mock) -> None:
-        """Test rendering table with missing icon shows placeholder."""
-        stockpile = Stockpile(
-            name="Test",
-            type=StockpileType.STORAGE_DEPOT,
-            items=[
-                StockpileItem(code="Item1", quantity=100, crated=False),
-            ],
-        )
-        icon_cache = {"Item1_False": ""}  # Empty icon URL
-
-        html = _render_stockpile_table(
-            stockpile=stockpile,
-            icon_cache=icon_cache,
-            catalog_service=mock_catalog_service,
-        )
-
-        assert "icon-placeholder" in html
 
     def test_render_table_with_unknown_quantity(self, mock_catalog_service: Mock) -> None:
         """Test rendering table with unknown quantity shows ?."""
@@ -604,11 +462,9 @@ class TestRenderStockpileTable:
                 StockpileItem(code="Item1", quantity=-1, crated=False),
             ],
         )
-        icon_cache = {"Item1_False": ""}
 
         html = _render_stockpile_table(
             stockpile=stockpile,
-            icon_cache=icon_cache,
             catalog_service=mock_catalog_service,
         )
 
@@ -621,11 +477,9 @@ class TestRenderStockpileTable:
             type=StockpileType.UNDEFINED,
             items=[],
         )
-        icon_cache: dict[str, str] = {}
 
         html = _render_stockpile_table(
             stockpile=stockpile,
-            icon_cache=icon_cache,
             catalog_service=mock_catalog_service,
         )
 
@@ -638,11 +492,9 @@ class TestRenderStockpileTable:
             type=StockpileType.STORAGE_DEPOT,
             items=[],
         )
-        icon_cache: dict[str, str] = {}
 
         html = _render_stockpile_table(
             stockpile=stockpile,
-            icon_cache=icon_cache,
             catalog_service=mock_catalog_service,
         )
 
@@ -658,14 +510,9 @@ class TestRenderCombinedTable:
             ("Item1", False): 150,
             ("Item2", True): 75,
         }
-        icon_cache = {
-            "Item1_False": "data:image/png;base64,abc",
-            "Item2_True": "data:image/png;base64,def",
-        }
 
         html = _render_combined_table(
             combined_items=combined_items,
-            icon_cache=icon_cache,
             catalog_service=mock_catalog_service,
         )
 
@@ -686,11 +533,9 @@ class TestRenderCombinedTable:
             ("ZItem", False): 10,
             ("AItem", False): 20,
         }
-        icon_cache = {"ZItem_False": "", "AItem_False": ""}
 
         html = _render_combined_table(
             combined_items=combined_items,
-            icon_cache=icon_cache,
             catalog_service=mock_catalog_service,
         )
 
@@ -702,11 +547,9 @@ class TestRenderCombinedTable:
     def test_render_combined_table_with_crated(self, mock_catalog_service: Mock) -> None:
         """Test combined table shows crated badge."""
         combined_items = {("Item1", True): 100}
-        icon_cache = {"Item1_True": ""}
 
         html = _render_combined_table(
             combined_items=combined_items,
-            icon_cache=icon_cache,
             catalog_service=mock_catalog_service,
         )
 

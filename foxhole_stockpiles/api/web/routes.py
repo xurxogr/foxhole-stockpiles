@@ -1,6 +1,5 @@
 """Web interface routes for the API server."""
 
-import base64
 import html
 import json
 import logging
@@ -11,16 +10,14 @@ from typing import Annotated
 import cv2
 import numpy as np
 from fastapi import APIRouter, Depends, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from foxhole_stockpiles import __version__
 from foxhole_stockpiles.api.dependencies import (
     get_catalog_service,
-    get_icon_service,
     get_ocr_coordinator,
 )
-from foxhole_stockpiles.api.web.services import IconService
 from foxhole_stockpiles.core.utils import get_bundled_resource_path, is_frozen
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.services.catalog_service import CatalogService
@@ -81,7 +78,6 @@ async def web_scan(
     request: Request,
     images: list[UploadFile],
     coordinator: Annotated[OCRCoordinator, Depends(get_ocr_coordinator)],
-    icon_service: Annotated[IconService, Depends(get_icon_service)],
     catalog_service: Annotated[CatalogService, Depends(get_catalog_service)],
     action: Annotated[str, Form()] = "scan",
 ) -> HTMLResponse:
@@ -92,7 +88,6 @@ async def web_scan(
         images: List of uploaded image files.
         action: Form action ('scan' or 'send').
         coordinator: OCR coordinator for scanning.
-        icon_service: Icon service for retrieving icons.
         catalog_service: Catalog service for display names.
 
     Returns:
@@ -148,26 +143,6 @@ async def web_scan(
             status_code=400,
             headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"},
         )
-
-    # Build icon cache for all items
-    logger.info(
-        "Building icon cache using IconService with default_mod=%s",
-        icon_service._default_mod,
-    )
-    icon_cache: dict[str, str] = {}  # key: "code_crated" -> base64 data URL
-    for stockpile in stockpiles:
-        for item in stockpile.items:
-            cache_key = f"{item.code}_{item.crated}"
-            if cache_key not in icon_cache:
-                png_bytes = await icon_service.get_icon_png(
-                    code=item.code,
-                    crated=item.crated,
-                )
-                if png_bytes:
-                    b64 = base64.b64encode(png_bytes).decode("ascii")
-                    icon_cache[cache_key] = f"data:image/png;base64,{b64}"
-                else:
-                    icon_cache[cache_key] = ""
 
     # Build combined table if multiple stockpiles
     combined_items: dict[tuple[str, bool], int] = {}
@@ -243,7 +218,6 @@ async def web_scan(
         html_parts.append(
             _render_stockpile_table(
                 stockpile=stockpile,
-                icon_cache=icon_cache,
                 catalog_service=catalog_service,
             )
         )
@@ -253,7 +227,6 @@ async def web_scan(
         html_parts.append(
             _render_combined_table(
                 combined_items=combined_items,
-                icon_cache=icon_cache,
                 catalog_service=catalog_service,
             )
         )
@@ -264,44 +237,14 @@ async def web_scan(
     )
 
 
-@router.get("/web/icon/{code}")
-async def get_icon(
-    code: str,
-    icon_service: Annotated[IconService, Depends(get_icon_service)],
-    crated: bool = False,
-) -> Response:
-    """Get icon image for an item.
-
-    Args:
-        code: Item code.
-        crated: Whether to get crated variant.
-        icon_service: Icon service instance.
-
-    Returns:
-        PNG image response or 404 if not found.
-    """
-    png_bytes = await icon_service.get_icon_png(code=code, crated=crated)
-
-    if png_bytes is None:
-        return Response(status_code=404)
-
-    return Response(
-        content=png_bytes,
-        media_type="image/png",
-        headers={"Cache-Control": "public, max-age=86400"},  # Cache for 1 day
-    )
-
-
 def _render_stockpile_table(
     stockpile: Stockpile,
-    icon_cache: dict[str, str],
     catalog_service: CatalogService,
 ) -> str:
     """Render a stockpile as an HTML table.
 
     Args:
         stockpile: The stockpile to render.
-        icon_cache: Cache of icon data URLs.
         catalog_service: Service for getting display names.
 
     Returns:
@@ -309,22 +252,13 @@ def _render_stockpile_table(
     """
     rows = []
     for item in stockpile.items:
-        cache_key = f"{item.code}_{item.crated}"
-        icon_url = icon_cache.get(cache_key, "")
         display_name = catalog_service.get_display_name(item.code)
-
-        icon_html = (
-            f'<img src="{html.escape(icon_url)}" class="icon" alt="{html.escape(item.code)}">'
-            if icon_url
-            else '<span class="icon-placeholder"></span>'
-        )
 
         crated_badge = '<span class="crated-badge">Crated</span>' if item.crated else ""
         quantity_str = f"{item.quantity:,}" if item.quantity >= 0 else "?"
 
         rows.append(f"""
             <tr>
-                <td class="icon-cell">{icon_html}</td>
                 <td>{html.escape(display_name)}{crated_badge}</td>
                 <td class="quantity-cell">{quantity_str}</td>
             </tr>
@@ -344,7 +278,6 @@ def _render_stockpile_table(
             <table class="stockpile-table">
                 <thead>
                     <tr>
-                        <th class="icon-cell">Icon</th>
                         <th>Item</th>
                         <th class="quantity-cell">Quantity</th>
                     </tr>
@@ -360,14 +293,12 @@ def _render_stockpile_table(
 
 def _render_combined_table(
     combined_items: dict[tuple[str, bool], int],
-    icon_cache: dict[str, str],
     catalog_service: CatalogService,
 ) -> str:
     """Render a combined table for multiple stockpiles.
 
     Args:
         combined_items: Dict mapping (code, crated) to total quantity.
-        icon_cache: Cache of icon data URLs.
         catalog_service: Service for getting display names.
 
     Returns:
@@ -381,21 +312,12 @@ def _render_combined_table(
 
     rows = []
     for (code, crated), quantity in sorted_items:
-        cache_key = f"{code}_{crated}"
-        icon_url = icon_cache.get(cache_key, "")
         display_name = catalog_service.get_display_name(code)
-
-        icon_html = (
-            f'<img src="{html.escape(icon_url)}" class="icon" alt="{html.escape(code)}">'
-            if icon_url
-            else '<span class="icon-placeholder"></span>'
-        )
 
         crated_badge = '<span class="crated-badge">Crated</span>' if crated else ""
 
         rows.append(f"""
             <tr>
-                <td class="icon-cell">{icon_html}</td>
                 <td>{html.escape(display_name)}{crated_badge}</td>
                 <td class="quantity-cell">{quantity:,}</td>
             </tr>
@@ -413,7 +335,6 @@ def _render_combined_table(
             <table class="stockpile-table">
                 <thead>
                     <tr>
-                        <th class="icon-cell">Icon</th>
                         <th>Item</th>
                         <th class="quantity-cell">Quantity</th>
                     </tr>

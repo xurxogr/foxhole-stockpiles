@@ -1096,28 +1096,6 @@ class TestLifespanErrorHandling:
     """Test cases for error handling during lifespan events."""
 
     @patch("foxhole_stockpiles.api.server.setup_logging")
-    @patch("foxhole_stockpiles.api.server.TemplateManager")
-    def test_startup_handles_database_read_error(
-        self,
-        mock_template_manager: Mock,
-        mock_setup_logging: Mock,
-    ) -> None:
-        """Test that startup handles database read errors gracefully.
-
-        Args:
-            mock_template_manager (Mock): Mocked TemplateManager class.
-            mock_setup_logging (Mock): Mocked setup_logging function.
-        """
-        # Make get_database_statistics raise an exception
-        mock_manager = Mock()
-        mock_manager.get_database_statistics.side_effect = Exception("Database error")
-        mock_template_manager.return_value = mock_manager
-
-        # App should still start despite the error
-        with TestClient(app):
-            pass  # Just verify app starts without crashing
-
-    @patch("foxhole_stockpiles.api.server.setup_logging")
     @patch("foxhole_stockpiles.api.server.get_notification_service")
     @patch("foxhole_stockpiles.api.server.app_settings")
     def test_shutdown_handles_notification_error(
