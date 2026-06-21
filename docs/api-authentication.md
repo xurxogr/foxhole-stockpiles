@@ -20,10 +20,6 @@ FS_API_AUTH__AUTH_TOKEN=your-secret-token
 # Enable Basic authentication
 FS_API_AUTH__AUTH_TYPE=basic
 FS_API_AUTH__AUTH_TOKEN=base64-encoded-credentials
-
-# Enable custom header authentication
-FS_API_AUTH__AUTH_TYPE=X-API-Key
-FS_API_AUTH__AUTH_TOKEN=your-api-key
 ```
 
 ### Configuration File
@@ -78,20 +74,9 @@ To generate base64 credentials:
 echo -n "username:password" | base64
 ```
 
-### 3. Custom Header
-
-**Configuration:**
-```bash
-FS_API_AUTH__AUTH_TYPE=X-API-Key
-FS_API_AUTH__AUTH_TOKEN=custom-api-key-value
-```
-
-**Client Request:**
-```bash
-curl -X POST http://localhost:8000/ocr/scan_image \
-  -H "X-API-Key: custom-api-key-value" \
-  -F "image=@stockpile.png"
-```
+> Only `bearer` and `basic` are valid for the API. `auth_type` accepts
+> `basic`/`bearer`/`forward`, but `forward` is rejected for API auth by the
+> settings validator.
 
 ## Disabling Authentication
 

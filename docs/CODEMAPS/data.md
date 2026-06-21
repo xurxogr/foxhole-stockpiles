@@ -1,87 +1,83 @@
-<!-- Generated: 2026-06-06 | Branch: refactor/01-pyside6 | Token estimate: ~900 -->
+<!-- Generated: 2026-06-21 | Branch: main | Token estimate: ~950 -->
 
 # Data Models, Config & Database
 
-All models are Pydantic v2, strict validation, JSON-serializable. Enums are `StrEnum`.
+All models are Pydantic v2, strict validation (`extra="forbid"`),
+JSON-serializable. Enums are `StrEnum`.
 
 ## Core output models
 
 ### Stockpile (`models/stockpile.py`)
 ```python
 class Stockpile(BaseModel):
-    name: str                  # stockpile name (player-given or type)
-    type: StockpileType        # enum (11 + Undefined)
+    name: str = ""
+    type: StockpileType = UNDEFINED
+    hex: str | None = None            # map region name (SAV)
+    coords: StockpileCoords | None    # map coordinates (SAV)
+    is_reserve: bool = False
     items: list[StockpileItem]
-    timestamp: datetime        # serialized ISO
-    shard: str                 # server shard (ABLE, BAKER, ...)
-    ingame_timestamp: str      # in-game time from screenshot
-    resolution: str | None
-    errors: list[str]
+    timestamp: datetime               # serialized "%Y-%m-%dT%H:%M:%S"
+    shard: str | None = None
+    ingame_timestamp: str | None = None
+    resolution: str | None = None
+    errors: list[str] | None = None
+    raw_timestamp: int | None = None  # ticks, excluded from serialization
+    def to_key(self) -> str           # type:hex:coords:name — SAV change-tracking
 ```
 
 ### StockpileItem (`models/stockpile_item.py`)
 ```python
 class StockpileItem(BaseModel):
     code: str
-    quantity: str              # OCR-extracted
-    confidence: float          # NCC match 0..1
-    faction: ItemFaction | None
-    category: ItemCategory | None
-    crated: bool
-    resolution: SupportedResolution
+    quantity: int = -1                # was str; now int (ge=-1)
+    crated: bool = False
+    confidence: float | None          # 0..1, NCC match
+    x: int | None = None              # icon pixel X (OCR source only)
+    y: int | None = None              # icon pixel Y (OCR source only)
+    candidates: list[ItemCandidate] | None  # within confidence_gap; excluded unless present
 ```
+Custom `model_serializer` emits `candidates` only when non-empty.
+(Former `faction`/`category`/`resolution` fields removed.)
 
 ### Other runtime models (`models/`)
 - `scan_result.py` `ScanResult` — API envelope `{success, data, error, processing_time_ms}`
 - `catalog_item.py` `CatalogItem` — item metadata (`cratable`, faction, category, icon)
 - `match_result.py` `MatchResult` — `{code, ncc_score, phash_distance, resolution, mod, crated}`
-- `item_candidate.py` `ItemCandidate` — detected icon (image, position, group/slot, matches)
+- `item_candidate.py` `ItemCandidate` — alternative match (code, confidence)
 - `icon_template.py` `IconTemplate` — template (image, code, faction, category, mod, crated, resolution, phash)
-- `database_statistics.py`, `detected_icon_info.py`, `stockpile_coords.py`, `stockpile_image_regions.py`
+- `stockpile_coords.py` `StockpileCoords` — `{x, y}` normalized map coords (`to_key()`)
+- `database_statistics.py`, `detected_icon_info.py`, `stockpile_image_regions.py`
 - `memory_snapshot.py`, `request_memory_stats.py` — memory monitoring
 - `mod_import_config.py`, `mod_import_progress.py`, `mod_import_result.py`, `pak_validation_result.py` — mod/asset import (uses `TemplateSettings`)
-- `notification.py`, `command_info.py`
+- `notification.py`
 
-### fs_ocr public models (`fs_ocr/api.py`)
-```python
-class ScannerConfig(BaseModel):       # engine input
-    database_path: Path
-    tessdata_path: str = "tessdata"
-    custom_model: str = "renner_numbers"
-    template_cache_size: int = 16
-    early_exit_threshold: float = 0.0
-    confidence_gap: float = 0.0
-    extract_icons: bool = False
-
-class ScannerInfo(BaseModel):
-    schema_version: Literal["1"] = "1"
-    implementation: Literal["python", "rust"] = "python"
-    version: str
-    database_version: str | None
-```
-`__all__`: `OCRScanner, ScannerConfig, ScannerInfo, Stockpile, StockpileItem, SCHEMA_VERSION`.
+### External engine models (`fs_ocr` — Rust PyPI pkg, NOT in repo)
+The external `fs-ocr` exposes `StockpileScanner`, `ScanConfig`,
+`fs_ocr.Stockpile`, `fs_ocr.StockpileItem`. The runtime adapts them in
+`services/scanner.py`; only `ScanConfig(confidence_gap=...)` is passed through.
 
 ## Enums (`enums/`)
 
 | Enum | Values |
 |---|---|
-| `StockpileType` | 11 types (Encampment, Keep, Safe House, Relic/Bunker/Border/Town Base, Underground Fortress, BMS-Longhook, Storage Depot, Seaport, Aircraft Depot) + Undefined |
-| `ItemFaction` | Colonial, Warden, Neutral |
+| `StockpileType` | ~28 in-game structures (Encampment, Keep, Safe House, Relic Base, Bunker T1/T2/T3, Border/Town T1/T2/T3, Underground Fortress, BMS Longhook/Bluefin, Storage Depot, Seaport, Aircraft Depot, Hospital, Refinery, Maintenance Tunnel, facility/factory types) + Undefined. Values are UE asset names |
+| `ItemFaction` | Colonials, Wardens, Neutral |
 | `ItemCategory` | 20+ (Ammo, AT Ammo, Weapons, … Vehicles) |
 | `SupportedLanguage` | en, pt, fr, de, ru, zh, … |
 | `SupportedResolution` | 16 (664px … 2880px) |
 | `OutputFormat` | JSON, CSV, TSV |
-| `OutputDestination` / `OutputHandlerType` | console, file, webhook, response |
-| `AuthType` | none, bearer, api_key |
+| `OutputDestination` | return, file, webhook, console, **sheets** |
+| `OutputHandlerType` | return, file, webhook, console, **google sheets** |
+| `AuthType` | basic, bearer, forward (unset = no auth; forward unsupported for API) |
 | `EventType` | server/scan lifecycle + mod_imported |
 | `ConfigLevel`, `NotifierType` | config scope, notifier kinds |
 
 ## Configuration (`core/settings/`)
 
-### AppSettings root (schema **v8**)
+### AppSettings root (schema **v9**)
 ```python
 class AppSettings(BaseSettings):
-    config_version: int        # CURRENT_VERSION = 8
+    config_version: int        # CURRENT_VERSION = 9
     api_server: APIServerSettings
     api_auth: APIAuthSettings
     external_tools: ExternalToolsSettings
@@ -94,64 +90,63 @@ class AppSettings(BaseSettings):
     gui: GUISettings
     sav_processing: SavProcessingSettings
 ```
-Sub-section files also include `ocr.py` (`OCRSettings`, consumed by
-`fs_ocr/_impl/detector.py`) and `templates.py` (`TemplateSettings`, used by mod
-import) — these are nested/consumer models, not top-level fields.
+`sections/ocr.py` (`OCRSettings`) is now an icon-geometry model used by GUI +
+`fs_tools` (add-icon, DB visualizer), not a top-level field. `sections/templates.py`
+(`TemplateSettings`) is consumed by mod-import models.
 
 ### ScannerSettings (`sections/scanner.py`)
-`database_path`, `template_cache_size`, `early_exit_threshold`,
-`confidence_gap`, `debug_mode`, `extract_icons`, `screenshots_folder`.
-(v8 dropped the formerly-configurable `custom_model`, `tessdata_path`,
-`max_ncc_candidates`, `phash_threshold`, `ncc_tiebreaker_threshold` — now fixed
-defaults. The OCR engine still receives `tessdata_path`/`custom_model` via
-`fs_ocr.api.ScannerConfig`, but they are no longer user settings.)
+`database_path`, `confidence_gap`, plus build/debug knobs. The runtime `Scanner`
+only reads `database_path` + `confidence_gap` (passed to `fs_ocr.ScanConfig`).
 
 ### OutputSettings (`sections/output/`)
-`OutputSettings.handlers: list[HandlerConfig]`; per-handler models in
-`output/`: `console_handler.py`, `file_handler.py`, `webhook_handler.py`,
-`return_handler.py`, plus format models `json_format.py`, `csv_format.py`.
+`OutputSettings.handlers: list[OutputHandlerConfig]`; per-handler models:
+`console_handler.py`, `file_handler.py`, `webhook_handler.py`,
+`return_handler.py`, **`sheets_handler.py`** (`SheetsHandlerSettings`:
+`creds_path`, `spreadsheet_url`, `sheet_id`, `start_cell`, `row_format`), plus
+format models `json_format.py`, `csv_format.py`. `handler_config.py` is the
+discriminated union wrapper.
 
 ### Sources & migration
 Priority: env `FS_<SECTION>__<KEY>` → JSON file (platform config dir,
 `json_settings_source.py`) → defaults. Stepwise upgrade in
-`config_migrator.py` (v1 → … → 8).
+`config_migrator.py` (v1 → … → 9).
 
-## Template database (HDF5, v2)
+## Template database (HDF5) — owned by `fs_tools`
 
-`fs_ocr/_impl/template_database.py`. Default `database_path` configurable.
+`fs_tools/template_db/template_database.py` (read/write) +
+`template_manager.py` (matching) + `icon_manager.py`. The external `fs-ocr`
+engine reads this DB at scan time; the runtime no longer touches it directly.
 
 ```
 database.h5
-├── metadata        {version:2, format:"hdf5", created_at}
+├── metadata        {version, format:"hdf5", created_at}
 ├── resolution_664px
 │   ├── images      (N, H, W, 3) uint8
-│   ├── codes        (N,) string
-│   ├── factions     (N,) string
-│   ├── categories   (N,) string
-│   ├── mods         (N,) string
-│   ├── phashes      (N,) uint64
-│   └── cratable     (N,) bool
+│   ├── codes / factions / categories / mods   (N,) string
+│   ├── phashes     (N,) uint64
+│   └── cratable    (N,) bool
 └── ... 15 more resolution groups (664px … 2880px)
 ```
 
-- All templates scaled relative to 1920px base.
-- O(1) faction/mod/category index sets for prefiltering; vectorized pHash distance.
-- Multi-mod (vanilla, airborne, community). Built by `fs-tools`.
+- All templates scaled relative to 1920px base; multi-mod (vanilla, airborne, community).
+- Two-phase match: pHash prefilter → NCC scoring → pixel-diff tiebreaker (inside engine/tooling).
 
 ## Catalog JSON (`data/catalog.json`)
 
 Item metadata: `code`, `name`, `category`, `faction`, `cratable`, icon ref.
 `cratable` ← `ItemProfileData.bIsCratable` (items) or presence of
-`MassProductionFactory` in `ProductionCategories` (vehicles).
+`MassProductionFactory` in `ProductionCategories` (vehicles). Read via
+`services/catalog_service.py` (`get_display_name`, etc.).
 
 ## SAV data
 
-Parsed via `services/sav_parser.py` → `fs-sav` (Rust). Produces faction-tagged
-dicts with Z/ns timestamps; NOT validated through `Stockpile`.
+Parsed via `services/sav_parser.py` → `fs-sav` (Rust). `SaveFileProcessor`
+produces `list[Stockpile]` with `hex`/`coords`/`is_reserve`/`raw_timestamp`
+populated (no `x`/`y`); change-tracking keyed by `Stockpile.to_key()`.
 
 ## Key files
 1. `models/stockpile.py`, `models/stockpile_item.py`
-2. `fs_ocr/api.py` — engine I/O models
-3. `fs_ocr/_impl/template_database.py` — HDF5 access
-4. `core/settings/app_settings.py` + `config_migrator.py`
+2. `core/settings/app_settings.py` + `config_migrator.py` (v9)
+3. `core/settings/sections/output/` — handler + format models
+4. `fs_tools/template_db/` — HDF5 access + matching
 5. `enums/` — type-safe enums

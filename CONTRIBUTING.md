@@ -74,7 +74,7 @@ ruff check .
 ruff format --check .
 
 # Run type checker (strict mode, all packages)
-mypy foxhole_stockpiles fs_ocr fs_tools
+mypy foxhole_stockpiles fs_tools
 
 # Run all pre-commit hooks
 pre-commit run --all-files
@@ -101,7 +101,7 @@ pytest --cov=foxhole_stockpiles --cov-report=html
 3. **Ensure all checks pass**:
    ```bash
    ruff check .
-   mypy foxhole_stockpiles fs_ocr fs_tools
+   mypy foxhole_stockpiles fs_tools
    pytest
    ```
 

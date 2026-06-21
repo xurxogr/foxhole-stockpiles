@@ -1,75 +1,72 @@
-<!-- Generated: 2026-06-06 | Branch: refactor/01-pyside6 | Token estimate: ~900 -->
+<!-- Generated: 2026-06-21 | Branch: main | Token estimate: ~950 -->
 
 # Architecture & Design Patterns
 
-**Type:** multi-package Python workspace (flat layout), 3 installable packages.
-Config schema **v8**.
+**Type:** multi-package Python workspace (flat layout), **2 installable packages**.
+Config schema **v9**.
 
 ## Package boundaries
 
 ```
-foxhole_stockpiles ──depends──> fs_ocr ──reuses──> foxhole_stockpiles.models
-        │                          │
-        └── fs_tools (independent app: builds the data fs_ocr consumes)
+foxhole_stockpiles ──depends──> fs-ocr (external Rust PyPI pkg)
+        │                          ▲
+        │                          │ adapter: services/scanner.py
+        └── fs_tools (independent app: builds the HDF5 DB fs-ocr consumes)
 ```
 
 - **foxhole_stockpiles** — user-facing runtime: CLI, REST API, web UI, GUI, SAV.
-- **fs_ocr** — OCR engine as a standalone package. Public API in `fs_ocr/api.py`;
-  pure-Python impl in `fs_ocr/_impl/`. Re-exports `Stockpile`/`StockpileItem`
-  from the runtime so output models match. Being aligned to a Rust replacement
-  (`../fs-ocr`); `ScannerInfo.implementation` reports `"python"`/`"rust"`.
+  Talks to the OCR engine only through `services/scanner.py`.
 - **fs_tools** — build-time tooling (catalog, template DB, asset extraction).
-  Self-contained: own `core/settings`, `models`, `gui`, `i18n`.
+  Self-contained: own `core/settings`, `models`, `gui`, `i18n`. Owns the HDF5
+  template DB read/write code under `fs_tools/template_db/`.
+- **fs-ocr** — external Rust OCR engine (PyPI `fs-ocr>=1.0.4`). NOT in this repo
+  (the former in-repo `fs_ocr` package was deleted in commit `b0e8b6e`).
 
 ## Design philosophy
 
 1. **Service layer** — focused single-responsibility classes, constructor injection.
-2. **Pluggable OCR backend** — `OCRScanner` API hides `_impl`; schema-versioned seam for a Rust swap.
-3. **Multi-handler output** — one result fans out to console/file/webhook/response.
+2. **External OCR engine behind a thin seam** — `services/scanner.py` is the one
+   module aware of `fs_ocr`; it adapts engine types to runtime models.
+3. **Multi-handler output** — one result list fans out to console/file/webhook/response/sheets.
 4. **Event-driven notifications** — decoupled via `EventBus` (`core/events/bus.py`).
 5. **Config as code** — Pydantic settings, env overrides, versioned migration.
 
 ## OCR scan pipeline (screenshot → structured data)
 
-Orchestrator: `fs_ocr/_impl/coordinator.py` → `OCRCoordinator.scan_stockpile()`.
+Seam: `services/scanner.py` → `Scanner.scan()` / `build_scanner()`.
 
 ```
-image (NDArray)
-  │
-  ▼ _impl/detector.py  (StockpileDetector)
-    scale by resolution (1920px base) → detect icon boxes, quantity boxes, groups
-  │
-  ▼ _impl/classifier.py  (StockpileTypeClassifier)
-    text-pattern match → StockpileType
-  │
-  ▼ _impl/template_manager.py + template_database.py
-    Phase 1 pHash prefilter (O(1) faction/mod/category sets)
-    Phase 2 NCC scoring on survivors
-    Phase 3 tiebreaker: mean pixel diff when NCC within ~0.0015
-    → conflict resolution (dedupe across groups, confidence ranking)
-  │
-  ▼ _impl/extractor.py  (StockpileTextExtractor)
-    Otsu threshold → morphology → Tesseract (renner_numbers) → regex digits
-  │
-  ▼ Stockpile model
-  │
+image (bytes | path | NDArray)
+  │  _coerce_image()  → BGR uint8 ndarray (cv2)
+  ▼
+fs_ocr.StockpileScanner(database_path)          # external Rust engine
+  .set_config(fs_ocr.ScanConfig(confidence_gap))
+  .scan(img, faction)  → fs_ocr.Stockpile       # runs in asyncio.to_thread
+  │   (detection, template match, Tesseract quantity OCR all inside Rust)
+  ▼  _to_runtime_stockpile()  → json.loads(result.to_json())
+     • map external StockpileType name → runtime StockpileType (tiers collapse)
+     • map external items → runtime StockpileItem (code, quantity, crated,
+       confidence, x, y)
+  ▼ Stockpile model (foxhole_stockpiles.models)
   ▼ services/output_coordinator.py → handlers/* (first non-None result wins)
 ```
 
-Public entry: `fs_ocr.api.OCRScanner(ScannerConfig).scan()/scan_sync()`.
+Faction filter: runtime `ItemFaction` → external string (`"wardens"`/`"colonials"`);
+`NEUTRAL`/`None` → no filter.
 
-## SAV pipeline (new — `.sav` world file → stockpile data)
+## SAV pipeline (`.sav` world file → stockpile data)
 
 ```
 War.sav (+ map data)
   ▼ services/savefile_processor.py (SaveFileProcessor)
   ▼ services/sav_parser.py ──delegates──> fs-sav (Rust lib)
-  ▼ faction-tagged dicts {faction, items, Z/ns timestamp}
+  ▼ list[Stockpile] with hex/coords/is_reserve/raw_timestamp populated
   ▼ services/output_coordinator.py → handlers/*
 ```
 
-SAV output is NOT validated through `Stockpile.model_validate`; `sav_parser`
-owns the dict shape.
+SAV-sourced `Stockpile`s carry map metadata (`hex`, `coords`, `is_reserve`) and a
+`raw_timestamp` (excluded from serialization) used for change-tracking via
+`Stockpile.to_key()`. OCR-sourced items carry `x`/`y` pixel coords instead.
 
 ## Entry surfaces
 
@@ -79,20 +76,20 @@ owns the dict shape.
 | REST API | `api/server.py` (FastAPI) | see backend.md |
 | Web UI | `api/web/routes.py` (Jinja) | upload form |
 | Desktop GUI | `gui/app.py` (PySide6) | |
-| OCR CLI | `fs_ocr/cli.py` | engine-only |
 | Tooling | `fs_tools/cli.py`, `fs_tools/gui` | builders/extractors |
 
 ## Settings architecture
 
-`core/settings/app_settings.py` → `AppSettings(BaseSettings)`, schema **v8**.
+`core/settings/app_settings.py` → `AppSettings(BaseSettings)`, schema **v9**.
 Top-level sections: `api_server`, `api_auth`, `external_tools`, `logging`,
 `output`, `scanner`, `stockpile_types`, `database_builder`, `notifications`,
-`gui`, `sav_processing`. (`OCRSettings`/`TemplateSettings` are sub-models
-consumed by the engine/tooling, not top-level fields.)
+`gui`, `sav_processing`. (`OCRSettings` from `sections/ocr.py` is now a geometry
+model used by GUI/tooling for icon-region math; `TemplateSettings` is consumed by
+mod-import models — neither is a top-level field.)
 
 Source priority (highest→lowest): env (`FS_<SECTION>__<KEY>`) → JSON file in
 platform config dir → defaults. Stepwise migration via `ConfigMigrator`
-(`CURRENT_VERSION = 8`).
+(`CURRENT_VERSION = 9`).
 
 ## Event system
 
@@ -102,29 +99,29 @@ pipeline. Events: server started/stopped, scan started/completed/failed, mod imp
 
 ## Error handling
 
-- Validate at boundaries (image size/format, Pydantic config, DB existence).
-- Service layer raises specific exceptions; API maps to HTTP codes
-  (401 auth, 429 rate, 503 Tesseract/DB).
+- Validate at boundaries (image decode, Pydantic config, DB existence).
+- `Scanner.__init__` raises `ValueError` (no `database_path`) / `FileNotFoundError`.
+- API maps to HTTP codes (401 auth, 429 rate/concurrency, 503 engine/DB).
 - `ScanResult` envelope: `{success, data, error, processing_time_ms}`.
 
 ## Design decisions (rationale)
 
-- **Two-phase + tiebreaker matching:** pHash kills 95%+ candidates cheaply; NCC
-  scores the rest; pixel-diff tiebreaker separates near-identical items
-  (e.g. Assembly Materials V vs VIII).
+- **External Rust OCR engine:** the matching + OCR pipeline (formerly
+  ~3k lines of Python in `fs_ocr/_impl/`) is now a compiled Rust dependency for
+  speed; the runtime keeps only a thin adapter seam.
+- **Template DB owned by fs_tools:** only the builder/tooling needs HDF5
+  read/write at runtime the engine reads the DB itself.
 - **HDF5 over pickle:** structured, queryable, language-agnostic, no exec risk.
 - **EventBus:** multiple async subscribers without tight coupling.
-- **fs_ocr split:** isolates the OCR engine so a Rust impl can replace `_impl`
-  behind the same `OCRScanner` API.
 
 > NOTE: CLAUDE.md describes a future "named pipelines" config
 > (`AppSettings.pipelines`, `general.mode`, migrator v11). That is NOT on this
-> branch — current config is flat sections at schema v8.
+> branch — current config is flat sections at schema v9.
 
 ## Key files
 
-1. `fs_ocr/api.py` — public `OCRScanner`/`ScannerConfig`
-2. `fs_ocr/_impl/coordinator.py` — pipeline orchestrator
-3. `fs_ocr/_impl/template_manager.py` — icon matching
-4. `foxhole_stockpiles/services/output_coordinator.py` — output routing
-5. `foxhole_stockpiles/core/settings/app_settings.py` — configuration
+1. `services/scanner.py` — OCR seam over external `fs_ocr`
+2. `services/output_coordinator.py` — output routing (list-based)
+3. `services/savefile_processor.py` + `sav_parser.py` — SAV pipeline
+4. `core/settings/app_settings.py` — configuration (v9)
+5. `fs_tools/template_db/template_manager.py` — icon matching / DB access

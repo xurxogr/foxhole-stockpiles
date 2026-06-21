@@ -1,5 +1,5 @@
 {
-  "config_version": 8,
+  "config_version": 9,
   "scanner": {
     "database_path": "/app/data/foxhole_templates.h5"
   }
