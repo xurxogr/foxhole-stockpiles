@@ -6,7 +6,7 @@ from typing import Any
 class ConfigMigrator:
     """Handles migration of configuration data between versions."""
 
-    CURRENT_VERSION = 10
+    CURRENT_VERSION = 11
 
     @classmethod
     def apply_migrations(cls, data: dict[str, Any]) -> dict[str, Any]:
@@ -71,6 +71,11 @@ class ConfigMigrator:
         if version == 9:
             data = cls._migrate_v9_to_v10(data)
             data["config_version"] = 10
+            version = 10
+
+        if version == 10:
+            data = cls._migrate_v10_to_v11(data)
+            data["config_version"] = 11
 
         return data
 
@@ -156,7 +161,8 @@ class ConfigMigrator:
         V4 has: stockpile_types with only user-added aliases (no undefined field)
 
         The default texts are hardcoded here as they existed at v3 time, so this
-        migration remains stable regardless of future changes to STOCKPILE_TYPE_TEXTS.
+        migration remains stable regardless of later changes. (The stockpile_types
+        section itself is dropped entirely in the v10->v11 migration.)
 
         Args:
             data: V3 configuration data
@@ -468,5 +474,41 @@ class ConfigMigrator:
         """
         data.pop("api_server", None)
         data.pop("api_auth", None)
+
+        return data
+
+    @staticmethod
+    def _migrate_v10_to_v11(data: dict[str, Any]) -> dict[str, Any]:
+        """Migrate from v10 to v11 (drop dead settings no longer consumed).
+
+        Two cleanups:
+
+        * The ``stockpile_types`` section and its config tab are removed —
+          type detection happens inside the external ``fs-ocr`` engine, so the
+          user-editable aliases had no effect.
+        * The dead ``scanner`` knobs ``template_cache_size``, ``debug_mode``
+          and ``extract_icons`` are removed — they were old in-repo-engine
+          options with no remaining consumer. (``early_exit_threshold`` is kept
+          for ``fs_tools``' candidate inspector; ``screenshots_folder`` is kept
+          and now drives screenshot saving in the capture flow.)
+
+        Any stored values are dropped so they do not linger in ``.fs_config``
+        (the settings models forbid unknown fields).
+
+        Args:
+            data (dict[str, Any]): V10 configuration data.
+
+        Returns:
+            dict[str, Any]: V11 configuration data.
+        """
+        data.pop("stockpile_types", None)
+
+        if "scanner" in data and isinstance(data["scanner"], dict):
+            for field_name in (
+                "template_cache_size",
+                "debug_mode",
+                "extract_icons",
+            ):
+                data["scanner"].pop(field_name, None)
 
         return data

@@ -24,8 +24,9 @@ class TestScannerSettingsInitialization:
         config = ScannerSettings()
 
         assert config.database_path is None
+        assert config.capture_key is None
         assert config.early_exit_threshold == 0.0
-        assert config.debug_mode is False
+        assert config.confidence_gap == 0.0
         assert config.screenshots_folder == ""
 
     def test_initialization_with_custom_values(self, tmp_path: Path) -> None:
@@ -38,14 +39,16 @@ class TestScannerSettingsInitialization:
 
         config = ScannerSettings(
             database_path=db_file,
-            early_exit_threshold=0.98,
-            debug_mode=True,
+            capture_key="F9",
+            early_exit_threshold=0.99,
+            confidence_gap=0.15,
             screenshots_folder="screenshots",
         )
 
         assert config.database_path == db_file
-        assert config.early_exit_threshold == 0.98
-        assert config.debug_mode is True
+        assert config.capture_key == "F9"
+        assert config.early_exit_threshold == 0.99
+        assert config.confidence_gap == 0.15
         assert config.screenshots_folder == "screenshots"
 
 
@@ -137,9 +140,9 @@ class TestModelConfigSettings:
 
     def test_str_strip_whitespace(self) -> None:
         """Test that string fields have whitespace stripped."""
-        config = ScannerSettings(screenshots_folder="  screenshots  ")
+        config = ScannerSettings(capture_key="  F9  ")
 
-        assert config.screenshots_folder == "screenshots"
+        assert config.capture_key == "F9"
 
     def test_extra_fields_forbidden(self) -> None:
         """Test that extra fields are forbidden."""
@@ -154,4 +157,4 @@ class TestModelConfigSettings:
 
         # Try to assign invalid value after creation
         with pytest.raises(ValidationError):
-            config.early_exit_threshold = 1.5  # Above maximum
+            config.confidence_gap = 1.5  # Above maximum

@@ -27,7 +27,6 @@ from foxhole_stockpiles.gui.widgets.config_tabs.notifications_tab import Notific
 from foxhole_stockpiles.gui.widgets.config_tabs.output_tab import OutputTab
 from foxhole_stockpiles.gui.widgets.config_tabs.sav_processing_tab import SavProcessingTab
 from foxhole_stockpiles.gui.widgets.config_tabs.scanner_tab import ScannerTab
-from foxhole_stockpiles.gui.widgets.config_tabs.stockpile_types_tab import StockpileTypesTab
 from foxhole_stockpiles.i18n import (
     get_translator,
     off_language_changed,
@@ -61,7 +60,7 @@ class ConfigWindow(QMainWindow):
     def init_ui(self) -> None:
         """Initialize the user interface."""
         self.setWindowTitle(t("config_window.title"))
-        self.setGeometry(100, 100, 950, 600)
+        self.setGeometry(100, 100, 760, 480)
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -85,7 +84,6 @@ class ConfigWindow(QMainWindow):
         self.output_tab = OutputTab()
         self.logging_tab = LoggingTab()
         self.gui_tab = GUITab()
-        self.stockpile_types_tab = StockpileTypesTab()
         self.notifications_tab = NotificationsTab()
         self.sav_processing_tab = SavProcessingTab()
 
@@ -133,9 +131,6 @@ class ConfigWindow(QMainWindow):
 
         # Advanced and Developer tabs
         if level.is_at_least(ConfigLevel.ADVANCED):
-            self.tab_widget.addTab(
-                self.stockpile_types_tab, t("config_window.tabs.stockpile_types")
-            )
             self.tab_widget.addTab(self.notifications_tab, t("config_window.tabs.notifications"))
             self.tab_widget.addTab(self.sav_processing_tab, t("config_window.tabs.sav_processing"))
 
@@ -179,7 +174,6 @@ class ConfigWindow(QMainWindow):
         self.output_tab.set_values(self.settings.output)
         self.logging_tab.set_values(self.settings.logging)
         self.gui_tab.set_values(self.settings.gui)
-        self.stockpile_types_tab.set_values(self.settings.stockpile_types)
         self.notifications_tab.set_values(self.settings.notifications)
         self.sav_processing_tab.set_values(self.settings.sav_processing)
 
@@ -202,7 +196,6 @@ class ConfigWindow(QMainWindow):
             logging=self.logging_tab.get_values(),
             gui=self.gui_tab.get_values(),
             notifications=self.notifications_tab.get_values(),
-            stockpile_types=self.stockpile_types_tab.get_values(),
             sav_processing=self.sav_processing_tab.get_values(),
         )
 

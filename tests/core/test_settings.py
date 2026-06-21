@@ -24,7 +24,6 @@ from foxhole_stockpiles.core.settings.sections.output import (
     WebhookHandlerSettings,
 )
 from foxhole_stockpiles.core.settings.sections.scanner import ScannerSettings
-from foxhole_stockpiles.core.settings.sections.stockpile_types import StockpileTypesSettings
 from foxhole_stockpiles.enums.auth_type import AuthType
 from foxhole_stockpiles.enums.output_format import OutputFormat
 
@@ -279,45 +278,6 @@ class TestOutputSettings:
         assert config.format.type == OutputFormat.TSV
 
 
-class TestStockpileTypesSettings:
-    """Test cases for StockpileTypesSettings."""
-
-    def test_stockpile_types_defaults(self) -> None:
-        """Test default stockpile types settings has empty lists."""
-        settings = StockpileTypesSettings()
-
-        # All fields should default to empty lists (snake_case matching enum names)
-        assert settings.encampment == []
-        assert settings.keep == []
-        assert settings.safe_house == []
-        assert settings.relic_base == []
-        assert settings.bunker_base_1 == []
-        assert settings.border_base == []
-        assert settings.town_base_1 == []
-        assert settings.bms_longhook == []
-        assert settings.bms_bluefin == []
-        assert settings.storage_depot == []
-        assert settings.seaport == []
-
-    def test_stockpile_types_with_aliases(self) -> None:
-        """Test stockpile types with additional aliases."""
-        settings = StockpileTypesSettings(
-            seaport=["seapon", "Seapont"],
-            storage_depot=["Storage Depo"],
-        )
-
-        assert settings.seaport == ["seapon", "Seapont"]
-        assert settings.storage_depot == ["Storage Depo"]
-
-    def test_stockpile_types_extra_fields_forbidden(self) -> None:
-        """Test that extra fields are forbidden."""
-        import pytest
-        from pydantic import ValidationError
-
-        with pytest.raises(ValidationError):
-            StockpileTypesSettings(unknown_field="value")  # type: ignore[call-arg]
-
-
 class TestConfigMigration:
     """Test cases for config version migration."""
 
@@ -340,7 +300,7 @@ class TestConfigMigration:
         migrated = ConfigMigrator.apply_migrations(v1_config)
 
         # Verify migration occurred (v1 -> ... -> v8)
-        assert migrated["config_version"] == 10
+        assert migrated["config_version"] == 11
         assert "output_format" not in migrated
         assert "output" in migrated
         assert len(migrated["output"]["handlers"]) == 1
@@ -354,7 +314,7 @@ class TestConfigMigration:
 
         # Verify the migrated config can be loaded
         settings = AppSettings(**migrated)
-        assert settings.config_version == 10
+        assert settings.config_version == 11
         assert len(settings.output.handlers) == 1
         handler = settings.output.handlers[0].handler
         assert isinstance(handler, WebhookHandlerSettings)
@@ -377,7 +337,7 @@ class TestConfigMigration:
         migrated = ConfigMigrator.apply_migrations(v2_config)
 
         # Should migrate to v7 (v2 -> ... -> v8)
-        assert migrated["config_version"] == 10
+        assert migrated["config_version"] == 11
         assert len(migrated["output"]["handlers"]) == 1
         handler_config = migrated["output"]["handlers"][0]
         assert handler_config["handler"]["type"] == "file"
@@ -385,7 +345,7 @@ class TestConfigMigration:
 
         # Verify the migrated config can be loaded
         settings = AppSettings(**migrated)
-        assert settings.config_version == 10
+        assert settings.config_version == 11
         assert len(settings.output.handlers) == 1
         handler = settings.output.handlers[0].handler
         assert isinstance(handler, FileHandlerSettings)
@@ -394,7 +354,7 @@ class TestConfigMigration:
     def test_default_config_is_v7(self) -> None:
         """Test that default config is version 7."""
         settings = AppSettings()
-        assert settings.config_version == 10
+        assert settings.config_version == 11
 
     def test_migrate_v1_to_v2_with_scanner_fields_cleanup(self) -> None:
         """Test migration removes deprecated scanner fields."""
@@ -416,7 +376,7 @@ class TestConfigMigration:
         migrated = ConfigMigrator.apply_migrations(v1_config)
 
         # Verify migration occurred (v1 -> ... -> v8)
-        assert migrated["config_version"] == 10
+        assert migrated["config_version"] == 11
         # Verify deprecated fields are removed
         assert "confidence_threshold" not in migrated["scanner"]
         assert "confidence_by_resolution" not in migrated["scanner"]
@@ -425,7 +385,7 @@ class TestConfigMigration:
 
         # Verify the migrated config can be loaded
         settings = AppSettings(**migrated)
-        assert settings.config_version == 10
+        assert settings.config_version == 11
         assert settings.scanner.early_exit_threshold == 0.95
 
     def test_migrate_config_with_non_dict_data(self) -> None:
@@ -435,64 +395,28 @@ class TestConfigMigration:
         result = ConfigMigrator.apply_migrations(None)  # type: ignore[arg-type]
         assert result is None
 
-    def test_migrate_v3_to_v7_removes_undefined(self) -> None:
-        """Test migration from v3 removes the undefined field from stockpile_types."""
+    def test_migrate_v3_with_stockpile_types_drops_section(self) -> None:
+        """A v3 config with stockpile_types migrates cleanly to v11, dropping it.
+
+        The stockpile_types section (and the intermediate v3->v4/v5->v6 alias
+        migrations) is removed at v11, so it must not survive a full migration.
+        """
         v3_config = {
             "config_version": 3,
             "stockpile_types": {
                 "seaport": ["custom_alias"],
-                "undefined": ["some_value"],  # Should be removed
+                "undefined": ["some_value"],
+                "bunker_base": ["MyCustomBase"],
             },
         }
 
-        settings = AppSettings(**v3_config)  # type: ignore[arg-type]
-
-        assert settings.config_version == 10
-        # custom_alias remains in snake_case field
-        assert settings.stockpile_types.seaport == ["custom_alias"]
-        # undefined field should not exist on the model
-        assert not hasattr(settings.stockpile_types, "undefined")
-
-    def test_migrate_v3_to_v7_filters_default_translations(self) -> None:
-        """Test migration from v3 filters out default translations, keeping only custom aliases."""
-        v3_config = {
-            "config_version": 3,
-            "stockpile_types": {
-                # Mix of defaults (should be filtered) and custom aliases (should remain)
-                "seaport": ["Seaport", "Port", "seapon", "5eaport"],  # First two are defaults
-                "storage_depot": [
-                    "Storage Depot",
-                    "Dépôt",
-                    "Storage Depo",
-                ],  # First two are defaults
-                "encampment": ["Encampment"],  # Only default, should be empty after migration
-            },
-        }
+        migrated = ConfigMigrator.apply_migrations(v3_config)
+        assert migrated["config_version"] == 11
+        assert "stockpile_types" not in migrated
 
         settings = AppSettings(**v3_config)  # type: ignore[arg-type]
-
-        assert settings.config_version == 10
-        # Only custom aliases should remain (snake_case field names)
-        assert settings.stockpile_types.seaport == ["seapon", "5eaport"]
-        assert settings.stockpile_types.storage_depot == ["Storage Depo"]
-        assert settings.stockpile_types.encampment == []
-
-    def test_migrate_v3_to_v7_keeps_only_custom_aliases(self) -> None:
-        """Test migration preserves only user-added custom aliases."""
-        v3_config = {
-            "config_version": 3,
-            "stockpile_types": {
-                "bunker_base": ["Bunker Base", "MyCustomBase", "Base Bunker"],
-                "town_base": ["custom_town"],
-            },
-        }
-
-        settings = AppSettings(**v3_config)  # type: ignore[arg-type]
-
-        assert settings.config_version == 10
-        # v5->v6 migration renames bunker_base to bunker_base_1, town_base to town_base_1
-        assert settings.stockpile_types.bunker_base_1 == ["MyCustomBase"]
-        assert settings.stockpile_types.town_base_1 == ["custom_town"]
+        assert settings.config_version == 11
+        assert not hasattr(settings, "stockpile_types")
 
     def test_migrate_v6_to_v7_removes_uesave(self) -> None:
         """Test migration from v6 removes uesave from external_tools."""
@@ -508,7 +432,7 @@ class TestConfigMigration:
 
         migrated = ConfigMigrator.apply_migrations(v6_config)
 
-        assert migrated["config_version"] == 10
+        assert migrated["config_version"] == 11
         assert "uesave" not in migrated["external_tools"]
         assert migrated["external_tools"]["repak"] == "/path/to/repak"
         assert migrated["external_tools"]["umodel"] == "/path/to/umodel"
@@ -516,7 +440,7 @@ class TestConfigMigration:
 
         # Verify the migrated config can be loaded
         settings = AppSettings(**migrated)
-        assert settings.config_version == 10
+        assert settings.config_version == 11
         assert not hasattr(settings.external_tools, "uesave")
 
     def test_migrate_v6_to_v7_no_external_tools(self) -> None:
@@ -527,10 +451,10 @@ class TestConfigMigration:
 
         migrated = ConfigMigrator.apply_migrations(v6_config)
 
-        assert migrated["config_version"] == 10
+        assert migrated["config_version"] == 11
         # Should work without error
         settings = AppSettings(**migrated)
-        assert settings.config_version == 10
+        assert settings.config_version == 11
 
     def test_migrate_v7_to_v8_drops_ocr_and_template_sections(self) -> None:
         """Test migration from v7 removes ocr/templates sections and scanner extras."""
@@ -551,7 +475,7 @@ class TestConfigMigration:
 
         migrated = ConfigMigrator.apply_migrations(v7_config)
 
-        assert migrated["config_version"] == 10
+        assert migrated["config_version"] == 11
         # Top-level sections removed
         assert "ocr" not in migrated
         assert "templates" not in migrated
@@ -565,7 +489,7 @@ class TestConfigMigration:
 
         # Verify the migrated config can be loaded
         settings = AppSettings(**migrated)
-        assert settings.config_version == 10
+        assert settings.config_version == 11
         assert not hasattr(settings, "ocr")
         assert not hasattr(settings, "templates")
         assert settings.scanner.early_exit_threshold == 0.95
@@ -579,10 +503,10 @@ class TestConfigMigration:
 
         migrated = ConfigMigrator.apply_migrations(v7_config)
 
-        assert migrated["config_version"] == 10
+        assert migrated["config_version"] == 11
         assert "ocr" not in migrated
         settings = AppSettings(**migrated)
-        assert settings.config_version == 10
+        assert settings.config_version == 11
 
     def test_migrate_v8_to_v9_drops_web_icon_mod(self) -> None:
         """Test migration from v8 removes api_server.web_icon_mod."""
@@ -599,13 +523,13 @@ class TestConfigMigration:
 
         # The full migration chain ends at v10, which drops the api_server
         # section entirely (the runtime no longer hosts a REST server).
-        assert migrated["config_version"] == 10
+        assert migrated["config_version"] == 11
         assert "api_server" not in migrated
         assert "api_auth" not in migrated
 
         # Verify the migrated config can be loaded (model forbids extra fields)
         settings = AppSettings(**migrated)
-        assert settings.config_version == 10
+        assert settings.config_version == 11
         assert not hasattr(settings, "api_server")
 
     def test_migrate_v9_to_v10_drops_api_sections(self) -> None:
@@ -619,13 +543,13 @@ class TestConfigMigration:
 
         migrated = ConfigMigrator.apply_migrations(v9_config)
 
-        assert migrated["config_version"] == 10
+        assert migrated["config_version"] == 11
         assert "api_server" not in migrated
         assert "api_auth" not in migrated
         assert migrated["scanner"]["database_path"] == "db.h5"
 
         settings = AppSettings(**migrated)
-        assert settings.config_version == 10
+        assert settings.config_version == 11
         assert settings.scanner.capture_key is None
 
     def test_migrate_v8_to_v9_no_api_server_section(self) -> None:
@@ -634,9 +558,46 @@ class TestConfigMigration:
 
         migrated = ConfigMigrator.apply_migrations(v8_config)
 
-        assert migrated["config_version"] == 10
+        assert migrated["config_version"] == 11
         settings = AppSettings(**migrated)
-        assert settings.config_version == 10
+        assert settings.config_version == 11
+
+    def test_migrate_v10_to_v11_drops_stockpile_types_and_dead_scanner_fields(self) -> None:
+        """Test migration from v10 removes stockpile_types and dead scanner knobs."""
+        v10_config = {
+            "config_version": 10,
+            "stockpile_types": {"keep": ["MyKeep"], "seaport": ["MyPort"]},
+            "scanner": {
+                "database_path": "db.h5",
+                "confidence_gap": 0.2,
+                "early_exit_threshold": 0.95,
+                "template_cache_size": 8,
+                "debug_mode": True,
+                "extract_icons": True,
+                "screenshots_folder": "shots",
+            },
+        }
+
+        migrated = ConfigMigrator.apply_migrations(v10_config)
+
+        assert migrated["config_version"] == 11
+        assert "stockpile_types" not in migrated
+        # Live scanner fields preserved (early_exit_threshold -> fs_tools;
+        # screenshots_folder -> capture saving).
+        assert migrated["scanner"]["database_path"] == "db.h5"
+        assert migrated["scanner"]["confidence_gap"] == 0.2
+        assert migrated["scanner"]["early_exit_threshold"] == 0.95
+        assert migrated["scanner"]["screenshots_folder"] == "shots"
+        # Dead scanner fields dropped
+        for dead in ("template_cache_size", "debug_mode", "extract_icons"):
+            assert dead not in migrated["scanner"]
+
+        settings = AppSettings(**migrated)
+        assert settings.config_version == 11
+        assert not hasattr(settings, "stockpile_types")
+        assert settings.scanner.confidence_gap == 0.2
+        assert settings.scanner.early_exit_threshold == 0.95
+        assert settings.scanner.screenshots_folder == "shots"
 
 
 class TestAppSettings:
@@ -648,7 +609,6 @@ class TestAppSettings:
 
         assert isinstance(settings.logging, LoggingSettings)
         assert isinstance(settings.output, OutputSettings)
-        assert isinstance(settings.stockpile_types, StockpileTypesSettings)
         # scanner field should exist
         assert hasattr(settings, "scanner")
 
@@ -656,7 +616,7 @@ class TestAppSettings:
         """Test app settings with custom values."""
         settings = AppSettings(
             logging=LoggingSettings(log_level="DEBUG", rotate_logs=True),
-            scanner=ScannerSettings(template_cache_size=8),
+            scanner=ScannerSettings(confidence_gap=0.15),
             output=OutputSettings(
                 handlers=[
                     OutputHandlerConfig(
@@ -669,7 +629,7 @@ class TestAppSettings:
 
         assert settings.logging.log_level == "DEBUG"
         assert settings.logging.rotate_logs is True
-        assert settings.scanner.template_cache_size == 8
+        assert settings.scanner.confidence_gap == 0.15
         assert len(settings.output.handlers) == 1
         handler = settings.output.handlers[0].handler
         assert isinstance(handler, FileHandlerSettings)
@@ -679,14 +639,13 @@ class TestAppSettings:
         """Test app settings with nested configuration."""
         settings = AppSettings(
             logging=LoggingSettings(log_level="DEBUG", rotate_logs=True),
-            scanner=ScannerSettings(template_cache_size=8),
-            stockpile_types=StockpileTypesSettings(seaport=["seapon"]),
+            scanner=ScannerSettings(confidence_gap=0.2, capture_key="F9"),
         )
 
         assert settings.logging.log_level == "DEBUG"
         assert settings.logging.rotate_logs is True
-        assert settings.scanner.template_cache_size == 8
-        assert settings.stockpile_types.seaport == ["seapon"]
+        assert settings.scanner.confidence_gap == 0.2
+        assert settings.scanner.capture_key == "F9"
 
     def test_app_settings_from_environment_variables(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test loading app settings from environment variables.
@@ -697,12 +656,12 @@ class TestAppSettings:
         # Only test non-output env vars since the output structure is now handlers-based.
         # The isolate_app_settings fixture already disables the JSON config file, so the
         # env source is the only one contributing here.
-        monkeypatch.setenv("FS_SCANNER__TEMPLATE_CACHE_SIZE", "8")
+        monkeypatch.setenv("FS_SCANNER__CONFIDENCE_GAP", "0.3")
         monkeypatch.setenv("FS_LOGGING__LOG_LEVEL", "WARNING")
 
         settings = AppSettings()
 
-        assert settings.scanner.template_cache_size == 8
+        assert settings.scanner.confidence_gap == 0.3
         assert settings.logging.log_level == "WARNING"
 
 
@@ -750,7 +709,7 @@ class TestGetSettings:
         assert hasattr(settings, "logging")
         assert hasattr(settings, "scanner")
         assert hasattr(settings, "output")
-        assert hasattr(settings, "stockpile_types")
+        assert not hasattr(settings, "stockpile_types")
 
 
 class TestReloadSettings:

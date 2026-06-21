@@ -18,10 +18,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **OCR engine is now the external Rust package `fs-ocr`** (PyPI); the in-repo
   `fs_ocr` package was removed. The runtime talks to it through
   `services/scanner.py`. HDF5 template DB code moved to `fs_tools/template_db/`.
-- Config schema migrated to **v10**; the capture hotkey lives at
+- Config schema migrated to **v11**; the capture hotkey lives at
   `scanner.capture_key`.
 
 ### Removed
+- **The `stockpile_types` config section and its GUI tab** (dropped in the
+  v10→v11 migration): the alias list was no longer consumed — stockpile-type
+  detection happens inside the external `fs-ocr` engine.
+- **Dead scanner settings** `template_cache_size`, `debug_mode`, and
+  `extract_icons` (also dropped in v10→v11), plus the corresponding `fs scan`
+  flags. (`early_exit_threshold` is kept for `fs-tools`' candidate inspector;
+  `screenshots_folder` is kept and now saves each captured screenshot.)
 - **The FastAPI REST server and everything around it**: the `api/` package, the
   `fs serve` command, all REST endpoints (`/ocr/scan_image`, `/health`,
   `/memory/*`, `/scan/stats`), the Jinja web UI, Docker deployment, the

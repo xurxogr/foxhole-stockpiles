@@ -17,7 +17,6 @@ from foxhole_stockpiles.core.settings.sections import (
     OutputSettings,
     SavProcessingSettings,
     ScannerSettings,
-    StockpileTypesSettings,
 )
 from foxhole_stockpiles.enums.config_level import ConfigLevel
 from foxhole_stockpiles.gui.windows.config_window import ConfigWindow
@@ -56,7 +55,6 @@ def mock_config_manager() -> Any:
         default_settings.database_builder = DatabaseBuilderSettings()
         default_settings.logging = LoggingSettings()
         default_settings.notifications = NotificationsSettings()
-        default_settings.stockpile_types = StockpileTypesSettings()
         default_settings.sav_processing = SavProcessingSettings()
         mock_instance.load_config.return_value = default_settings
 
@@ -134,21 +132,21 @@ def test_config_window_config_level_tabs(qtbot: Any, mock_config_manager: MagicM
     assert window.tab_widget.count() == 4
 
     # Test ADVANCED level
-    # (7 tabs: + Stockpile Types, Notifications, SAV Processing)
+    # (6 tabs: + Notifications, SAV Processing)
     settings.gui = GUISettings(config_level=ConfigLevel.ADVANCED)
     mock_config_manager.load_config.return_value = settings
 
     window2 = ConfigWindow()
     qtbot.addWidget(window2)
-    assert window2.tab_widget.count() == 7
+    assert window2.tab_widget.count() == 6
 
-    # Test DEVELOPER level (7 tabs: same sections as ADVANCED)
+    # Test DEVELOPER level (6 tabs: same sections as ADVANCED)
     settings.gui = GUISettings(config_level=ConfigLevel.DEVELOPER)
     mock_config_manager.load_config.return_value = settings
 
     window3 = ConfigWindow()
     qtbot.addWidget(window3)
-    assert window3.tab_widget.count() == 7
+    assert window3.tab_widget.count() == 6
     assert window3.tab_widget.tabText(0) == t("config_window.tabs.scanner")
 
 
@@ -376,24 +374,6 @@ def test_config_window_preserves_notifications_settings(config_window: ConfigWin
 
     # Should preserve notifications
     assert isinstance(settings.notifications, NotificationsSettings)
-
-
-def test_config_window_preserves_stockpile_types_settings(config_window: ConfigWindow) -> None:
-    """Test that stockpile types settings are preserved when collecting.
-
-    Args:
-        config_window: ConfigWindow instance
-    """
-    # Set custom stockpile types settings
-    custom_stockpile_types = StockpileTypesSettings()
-    assert config_window.settings is not None
-    config_window.settings.stockpile_types = custom_stockpile_types
-
-    # Collect settings (basic mode)
-    settings = config_window.collect_settings()
-
-    # Should preserve stockpile types
-    assert isinstance(settings.stockpile_types, StockpileTypesSettings)
 
 
 def test_config_window_geometry(config_window: ConfigWindow) -> None:
@@ -753,7 +733,7 @@ class TestSaveSettingsConfigLevelChange:
         config_window.save_settings()
 
         # Tabs should be rebuilt with more tabs
-        assert config_window.tab_widget.count() == 7
+        assert config_window.tab_widget.count() == 6
 
 
 class TestRetranslate:

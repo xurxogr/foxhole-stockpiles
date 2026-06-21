@@ -393,10 +393,10 @@ Core dependencies:
 
 ## Configuration
 
-Configuration is stored as JSON in the platform config directory (`~/.fs_config`). The schema is **v10** and is migrated to the latest format automatically whenever settings are loaded; no manual migration step is required.
+Configuration is stored as JSON in the platform config directory (`~/.fs_config`). The schema is **v11** and is migrated to the latest format automatically whenever settings are loaded; no manual migration step is required.
 
 **Top-level sections:**
-`external_tools`, `logging`, `output`, `scanner`, `stockpile_types`, `database_builder`, `notifications`, `gui`, `sav_processing`.
+`external_tools`, `logging`, `output`, `scanner`, `database_builder`, `notifications`, `gui`, `sav_processing`.
 
 The screenshot capture hotkey lives at `scanner.capture_key` (e.g. `"F9"`).
 

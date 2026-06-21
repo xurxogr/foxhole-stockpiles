@@ -2,11 +2,14 @@
 
 import sys
 import types
+from pathlib import Path
 from typing import Any
 
 import pytest
 
-from foxhole_stockpiles.services.capture import CaptureError, capture_window
+from foxhole_stockpiles.models.stockpile import Stockpile
+from foxhole_stockpiles.models.stockpile_item import StockpileItem
+from foxhole_stockpiles.services.capture import CaptureError, capture_window, save_screenshot
 
 
 class _FakeWindow:
@@ -73,3 +76,37 @@ def test_capture_success(monkeypatch: pytest.MonkeyPatch) -> None:
 
     data = capture_window()
     assert data == b"PNGDATA"
+
+
+def test_save_screenshot_empty_folder_returns_none(tmp_path: Path) -> None:
+    """An empty folder disables saving and returns None."""
+    assert save_screenshot(b"PNGDATA", "") is None
+
+
+def test_save_screenshot_writes_descriptive_file(tmp_path: Path) -> None:
+    """Saving writes the bytes into a per-day subfolder with a descriptive name."""
+    stockpile = Stockpile(
+        name="Logi",
+        resolution="1920x1080",
+        items=[StockpileItem(code="RifleW", quantity=10)],
+    )
+
+    path = save_screenshot(b"PNGDATA", tmp_path, stockpile)
+
+    assert path is not None
+    assert path.exists()
+    assert path.read_bytes() == b"PNGDATA"
+    assert path.suffix == ".png"
+    # Per-day subfolder (YYYY-MM-DD) under the target folder.
+    assert path.parent.parent == tmp_path
+    assert "Logi" in path.name
+    assert "1920x1080" in path.name
+
+
+def test_save_screenshot_without_stockpile(tmp_path: Path) -> None:
+    """Saving without a stockpile still writes a timestamped file."""
+    path = save_screenshot(b"PNGDATA", tmp_path)
+
+    assert path is not None
+    assert path.exists()
+    assert path.read_bytes() == b"PNGDATA"

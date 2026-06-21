@@ -12,7 +12,7 @@ Environment variables use the prefix `FS_` and nested settings are separated by 
 # Scanner settings
 export FS_SCANNER__DATABASE_PATH=/path/to/database.h5
 export FS_SCANNER__CAPTURE_KEY=F9
-export FS_SCANNER__TEMPLATE_CACHE_SIZE=16
+export FS_SCANNER__CONFIDENCE_GAP=0.0
 
 # Output handlers (JSON array)
 export FS_OUTPUT__HANDLERS='[{"name":"Local Scan","format":{"type":"json"},"handler":{"type":"return"}}]'
@@ -26,15 +26,14 @@ export FS_LOGGING__LOG_FILE=/var/log/foxhole-scanner.log
 
 Create a file at `~/.fs_config` with JSON configuration:
 
-**Note on Config Versioning:** The configuration includes a `config_version` field (current: **10**). Old configs are automatically migrated when loaded via `ConfigMigrator` - no manual action required. V5 introduced the `output.handlers` array structure (multiple output destinations); later versions added the `sav_processing` section for Foxhole save-file processing; V10 removed the obsolete `api_server` and `api_auth` sections (the FastAPI server was removed in favor of local screenshot capture).
+**Note on Config Versioning:** The configuration includes a `config_version` field (current: **11**). Old configs are automatically migrated when loaded via `ConfigMigrator` - no manual action required. V5 introduced the `output.handlers` array structure (multiple output destinations); later versions added the `sav_processing` section for Foxhole save-file processing; V10 removed the obsolete `api_server` and `api_auth` sections (the FastAPI server was removed in favor of local screenshot capture); V11 removed the `stockpile_types` section (type detection now happens inside the external `fs-ocr` engine, so the aliases had no effect).
 
 ```json
 {
-  "config_version": 10,
+  "config_version": 11,
   "scanner": {
     "database_path": "/path/to/database.h5",
-    "capture_key": "F9",
-    "screenshots_folder": ""
+    "capture_key": "F9"
   },
   "output": {
     "handlers": [
@@ -66,14 +65,11 @@ Settings for the stockpile scanner.
 |---------|------|---------|-------------|
 | `database_path` | string | `null` | Path to the template database file |
 | `capture_key` | string\|null | `null` | Global hotkey that captures the Foxhole window and scans it (e.g. `"F9"`). The captured window title is hardcoded to `"War"`. Set to `null` (or leave unset) to disable capture |
-| `template_cache_size` | integer | `16` | Max resolution databases to cache in memory (0=no cache, 16=all resolutions) |
-| `early_exit_threshold` | float | `0.0` | Early exit threshold for icon matching (0.0-1.0). Set to 0.0 to disable early exit |
+| `early_exit_threshold` | float | `0.0` | Early exit threshold for icon matching (0.0-1.0), used by the `fs-tools` candidate inspector. Set to 0.0 to disable early exit |
 | `confidence_gap` | float | `0.0` | Confidence gap for returning alternative candidates (0.0-1.0). Returns candidates within `(best_confidence - confidence_gap)` range that have the same category, crated status, and mod. Set to 0.0 to disable |
-| `debug_mode` | boolean | `false` | Enable debug mode to save debug images |
-| `extract_icons` | boolean | `false` | Extract detected icons to 'icons' folder for debugging |
-| `screenshots_folder` | string | `""` | Folder to save screenshots before processing. Empty string disables saving. Screenshots are saved in daily subfolders with format: `Date_HourWithSeconds_StorageType_Name_Resolution.png` |
+| `screenshots_folder` | string | `""` | Folder to save captured screenshots. When set, each screenshot taken via the capture hotkey is saved here in a per-day subfolder (`YYYY-MM-DD/HHMMSS_<type>_<name>_<resolution>.png`). Empty string disables saving |
 
-> **Removed in config v8:** `custom_model`, `tessdata_path`, `max_ncc_candidates`, `phash_threshold`, and `ncc_tiebreaker_threshold` are no longer user-configurable — the OCR model name, tessdata path, and icon-matching thresholds now use fixed defaults. Stored values are dropped automatically on migration.
+> **Removed in config v8:** `custom_model`, `tessdata_path`, `max_ncc_candidates`, `phash_threshold`, and `ncc_tiebreaker_threshold`. **Removed in config v11:** `template_cache_size`, `debug_mode`, and `extract_icons` — these old in-repo-engine knobs have no remaining consumer. Stored values are dropped automatically on migration.
 
 ### Output (`output`)
 
@@ -198,28 +194,6 @@ Configure application logging behavior.
 | `rotate_logs` | boolean | `false` | Enable daily log rotation |
 | `log_file` | string\|null | `null` | Path to log file, or `null` for console only |
 | `loggers` | object | `{}` | Per-logger level overrides (e.g., `{"foxhole_stockpiles": "DEBUG"}`) |
-
-### Stockpile Types (`stockpile_types`)
-
-Configure additional aliases for stockpile type recognition. The standard translations (English, French, German, Portuguese, Russian, Chinese) are hardcoded in the classifier. These settings allow adding **extra aliases** for OCR misreads or variations.
-
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `encampment` | array[string] | `[]` | Additional aliases for Encampment |
-| `keep` | array[string] | `[]` | Additional aliases for Keep |
-| `safe_house` | array[string] | `[]` | Additional aliases for Safe House |
-| `relic_base` | array[string] | `[]` | Additional aliases for Relic Base |
-| `bunker_base` | array[string] | `[]` | Additional aliases for Bunker Base |
-| `border_base` | array[string] | `[]` | Additional aliases for Border Base |
-| `town_base` | array[string] | `[]` | Additional aliases for Town Base |
-| `underground_fortress` | array[string] | `[]` | Additional aliases for Underground Fortress |
-| `bms_longhook` | array[string] | `[]` | Additional aliases for BMS - Longhook |
-| `bms_bluefin` | array[string] | `[]` | Additional aliases for BMS - Bluefin |
-| `storage_depot` | array[string] | `[]` | Additional aliases for Storage Depot |
-| `seaport` | array[string] | `[]` | Additional aliases for Seaport |
-| `aircraft_depot` | array[string] | `[]` | Additional aliases for Aircraft Depot |
-
-**Note:** Use these settings to handle OCR misreads. For example, if OCR detects "Seaport" as "seapon", add `["seapon"]` to the `seaport` setting.
 
 ### External Tools (`external_tools`)
 
@@ -414,7 +388,7 @@ This example shows all available settings with their default values:
 
 ```json
 {
-  "config_version": 10,
+  "config_version": 11,
   "logging": {
     "loggers": {},
     "log_level": "INFO",
@@ -435,26 +409,8 @@ This example shows all available settings with their default values:
   "scanner": {
     "database_path": null,
     "capture_key": null,
-    "template_cache_size": 16,
     "early_exit_threshold": 0.0,
-    "confidence_gap": 0.0,
-    "debug_mode": false,
-    "extract_icons": false,
-    "screenshots_folder": ""
-  },
-  "stockpile_types": {
-    "encampment": [],
-    "keep": [],
-    "safe_house": [],
-    "relic_base": [],
-    "bunker_base": [],
-    "border_base": [],
-    "town_base": [],
-    "underground_fortress": [],
-    "bms_longhook": [],
-    "storage_depot": [],
-    "seaport": [],
-    "aircraft_depot": []
+    "confidence_gap": 0.0
   },
   "external_tools": {
     "repak": null,
@@ -502,8 +458,7 @@ This table lists all available environment variables with their default values:
 | **Scanner** | | | |
 | `FS_SCANNER__DATABASE_PATH` | string | `null` | Template database path |
 | `FS_SCANNER__CAPTURE_KEY` | string\|null | `null` | Hotkey to capture the Foxhole "War" window and scan it (e.g. `F9`); `null` disables capture |
-| `FS_SCANNER__TEMPLATE_CACHE_SIZE` | integer | `16` | Max resolution databases to cache (0-16) |
-| `FS_SCANNER__EARLY_EXIT_THRESHOLD` | float | `0.0` | Early exit threshold |
+| `FS_SCANNER__EARLY_EXIT_THRESHOLD` | float | `0.0` | Early exit threshold (used by `fs-tools`) |
 | `FS_SCANNER__CONFIDENCE_GAP` | float | `0.0` | Confidence gap for alternative candidates |
 | `FS_SCANNER__DEBUG_MODE` | boolean | `false` | Enable debug image output |
 | `FS_SCANNER__EXTRACT_ICONS` | boolean | `false` | Extract icons to folder for debugging |

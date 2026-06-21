@@ -9,7 +9,6 @@ class StockpileType(StrEnum):
     """Stockpile type enum.
 
     Values are the in-game CodeNames used in save files.
-    Display names are available via STOCKPILE_TYPE_TEXTS[type][0].
     """
 
     # Bases (in-game CodeNames)

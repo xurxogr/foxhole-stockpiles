@@ -72,10 +72,8 @@ def _create_handler_config_for_destination(
 async def _run(
     image: str,
     database: Path | None,
-    early_exit: float | None,
     faction: str | None,
     language: SupportedLanguage | None,
-    debug_image: bool,
     log_file: Path | None,
     verbose: bool,
     quiet: bool,
@@ -89,10 +87,8 @@ async def _run(
     Args:
         image (str): Path to the input image file.
         database (Path | None): Template database path (falls back to config).
-        early_exit (float | None): Early-exit threshold for icon matching.
         faction (str | None): Faction filter string.
         language (SupportedLanguage | None): Language for text detection.
-        debug_image (bool): Save a debug image with detected regions.
         log_file (Path | None): Path to a log file.
         verbose (bool): Enable debug-level logging.
         quiet (bool): Suppress output except errors and warnings.
@@ -163,13 +159,9 @@ async def _run(
     faction_filter = ItemFaction.from_string(faction)
 
     try:
-        scanner_update: dict[str, Any] = {
-            "database_path": database_path,
-            "debug_mode": debug_image,
-        }
-        if early_exit:
-            scanner_update["early_exit_threshold"] = early_exit
-        scanner_settings: ScannerSettings = settings.scanner.model_copy(update=scanner_update)
+        scanner_settings: ScannerSettings = settings.scanner.model_copy(
+            update={"database_path": database_path}
+        )
 
         scanner = Scanner(scanner_settings)
         stockpile: Stockpile = await scanner.scan(image_array, faction=faction_filter)
@@ -195,17 +187,11 @@ def scan(
     database: Path | None = typer.Option(
         None, "--database", help="Path to the template database file."
     ),
-    early_exit: float | None = typer.Option(
-        None, "--early_exit", help="Early exit threshold for icon matching."
-    ),
     faction: str | None = typer.Option(None, "--faction", help=ItemFaction.get_cli_help_text()),
     language: SupportedLanguage | None = typer.Option(
         None,
         "--language",
         help="Language for text detection. If not specified, uses all supported languages.",
-    ),
-    debug_image: bool = typer.Option(
-        False, "--debug_image", help="Save debug image with detected regions."
     ),
     log_file: Path | None = typer.Option(
         None, "--log-file", help="Path to log file (default: console only)."
@@ -235,10 +221,8 @@ def scan(
     Args:
         image (str): Path to the input image file.
         database (Path | None): Template database path (falls back to config).
-        early_exit (float | None): Early-exit threshold for icon matching.
         faction (str | None): Faction filter string.
         language (SupportedLanguage | None): Language for text detection.
-        debug_image (bool): Save a debug image with detected regions.
         log_file (Path | None): Path to a log file.
         verbose (bool): Enable debug-level logging.
         quiet (bool): Suppress output except errors and warnings.
@@ -256,10 +240,8 @@ def scan(
         _run(
             image=image,
             database=database,
-            early_exit=early_exit,
             faction=faction,
             language=language,
-            debug_image=debug_image,
             log_file=log_file,
             verbose=verbose,
             quiet=quiet,

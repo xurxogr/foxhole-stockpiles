@@ -3,7 +3,7 @@
 # Architecture & Design Patterns
 
 **Type:** multi-package Python workspace (flat layout), **2 installable packages**.
-Config schema **v10**. Desktop app — **no REST server**.
+Config schema **v11**. Desktop app — **no REST server**.
 
 ## Package boundaries
 
@@ -78,16 +78,16 @@ SAV-sourced `Stockpile`s carry map metadata (`hex`, `coords`, `is_reserve`) and 
 
 ## Settings architecture
 
-`core/settings/app_settings.py` → `AppSettings(BaseSettings)`, schema **v10**.
+`core/settings/app_settings.py` → `AppSettings(BaseSettings)`, schema **v11**.
 Top-level sections: `external_tools`, `logging`, `output`, `scanner`,
-`stockpile_types`, `database_builder`, `notifications`, `gui`, `sav_processing`.
+`database_builder`, `notifications`, `gui`, `sav_processing`.
 (The capture hotkey is `scanner.capture_key`. `OCRSettings` from `sections/ocr.py`
 is an icon-geometry model used by GUI/tooling; `TemplateSettings` is consumed by
 mod-import models — neither is a top-level field.)
 
 Source priority (highest→lowest): env (`FS_<SECTION>__<KEY>`) → JSON file in
 platform config dir → defaults. Stepwise migration via `ConfigMigrator`
-(`CURRENT_VERSION = 10`; v9→v10 drops the old `api_server`/`api_auth` sections).
+(`CURRENT_VERSION = 11`; v9→v10 drops `api_server`/`api_auth`, v10→v11 drops `stockpile_types`).
 
 ## GUI structure
 
@@ -124,7 +124,7 @@ unused after the server removal.)
 
 > NOTE: CLAUDE.md still describes the 3-package / FastAPI layout and a future
 > "named pipelines" config — both stale on this branch (2 packages, no server,
-> flat sections at schema v10).
+> flat sections at schema v11).
 
 ## Key files
 
@@ -132,4 +132,4 @@ unused after the server removal.)
 2. `services/capture.py` + `services/local_scan.py` — capture + local scan→output
 3. `gui/widgets/capture_panel.py` — capture UI + hotkey
 4. `services/output_coordinator.py` — output routing (list-based)
-5. `core/settings/app_settings.py` — configuration (v10)
+5. `core/settings/app_settings.py` — configuration (v11)

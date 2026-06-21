@@ -368,8 +368,13 @@ class CapturePanel(QWidget):
         if service is None:
             return
 
+        settings = AppSettings()
         self._capture_busy = True
-        worker = LocalScanWorker(service, capture=True)
+        worker = LocalScanWorker(
+            service,
+            capture=True,
+            screenshots_folder=settings.scanner.screenshots_folder,
+        )
         self._start_scan_worker(worker, mark_capture=True)
 
     def scan_screenshot_from_menu(self) -> None:

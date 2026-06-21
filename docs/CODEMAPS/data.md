@@ -73,30 +73,31 @@ The external `fs-ocr` exposes `StockpileScanner`, `ScanConfig`,
 
 ## Configuration (`core/settings/`)
 
-### AppSettings root (schema **v10**)
+### AppSettings root (schema **v11**)
 ```python
 class AppSettings(BaseSettings):
-    config_version: int        # CURRENT_VERSION = 10
+    config_version: int        # CURRENT_VERSION = 11
     external_tools: ExternalToolsSettings
     logging: LoggingSettings
     output: OutputSettings
     scanner: ScannerSettings
-    stockpile_types: StockpileTypesSettings
     database_builder: DatabaseBuilderSettings
     notifications: NotificationsSettings
     gui: GUISettings
     sav_processing: SavProcessingSettings
 ```
-(`api_server` + `api_auth` were removed in v10.) `sections/ocr.py` (`OCRSettings`)
+(`api_server` + `api_auth` removed in v10; `stockpile_types` removed in v11.)
+`sections/ocr.py` (`OCRSettings`)
 is an icon-geometry model used by GUI + `fs_tools`; `sections/templates.py`
 (`TemplateSettings`) is consumed by mod-import models — neither is a top-level field.
 
 ### ScannerSettings (`sections/scanner.py`)
 `database_path`, **`capture_key`** (global hotkey, e.g. `"F9"`; `None` disables
-capture), `template_cache_size`, `early_exit_threshold`, `confidence_gap`,
-`debug_mode`, `extract_icons`, `screenshots_folder`. The runtime `Scanner`
-reads `database_path` + `confidence_gap` (passed to `fs_ocr.ScanConfig`); the GUI
-binds the hotkey from `capture_key`.
+capture), `early_exit_threshold`, `confidence_gap`, `screenshots_folder`. The
+runtime `Scanner` reads `database_path` + `confidence_gap` (passed to
+`fs_ocr.ScanConfig`); the GUI binds the hotkey from `capture_key` and saves each
+capture to `screenshots_folder` when set. `early_exit_threshold` is consumed by
+the `fs_tools` candidate inspector, not the runtime.
 
 ### OutputSettings (`sections/output/`)
 `OutputSettings.handlers: list[OutputHandlerConfig]`; per-handler models:
@@ -109,7 +110,7 @@ discriminated-union wrapper.
 ### Sources & migration
 Priority: env `FS_<SECTION>__<KEY>` → JSON file (platform config dir,
 `json_settings_source.py`) → defaults. Stepwise upgrade in `config_migrator.py`
-(v1 → … → 10). v9→v10 drops `api_server`/`api_auth`.
+(v1 → … → 11). v9→v10 drops `api_server`/`api_auth`; v10→v11 drops `stockpile_types`.
 
 ## Template database (HDF5) — owned by `fs_tools`
 
@@ -146,7 +147,7 @@ populated (no `x`/`y`); change-tracking keyed by `Stockpile.to_key()`.
 
 ## Key files
 1. `models/stockpile.py`, `models/stockpile_item.py`
-2. `core/settings/app_settings.py` + `config_migrator.py` (v10)
+2. `core/settings/app_settings.py` + `config_migrator.py` (v11)
 3. `core/settings/sections/scanner.py` — incl. `capture_key`
 4. `core/settings/sections/output/` — handler + format models
 5. `fs_tools/template_db/` — HDF5 access + matching

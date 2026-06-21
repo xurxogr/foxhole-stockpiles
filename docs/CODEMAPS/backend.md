@@ -108,8 +108,8 @@ Webhook **forward auth**: `WebhookHandlerSettings.auth_type="forward"` +
 ## Scanner config (`core/settings/sections/scanner.py`)
 
 `ScannerSettings`: `database_path`, **`capture_key`** (global hotkey),
-`template_cache_size`, `early_exit_threshold`, `confidence_gap`, `debug_mode`,
-`extract_icons`, `screenshots_folder`.
+`early_exit_threshold` (used by `fs-tools`), `confidence_gap`,
+`screenshots_folder` (capture saving).
 
 ```bash
 fs scan --image shot.png --config my.json

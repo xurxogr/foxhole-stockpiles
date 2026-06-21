@@ -21,7 +21,6 @@ from foxhole_stockpiles.core.settings.sections import (
     OutputSettings,
     SavProcessingSettings,
     ScannerSettings,
-    StockpileTypesSettings,
 )
 
 
@@ -41,9 +40,6 @@ class AppSettings(BaseSettings):
     output: OutputSettings = Field(description="Output settings", default_factory=OutputSettings)
     scanner: ScannerSettings = Field(
         description="Stockpile scanner settings", default_factory=ScannerSettings
-    )
-    stockpile_types: StockpileTypesSettings = Field(
-        description="Stockpile types settings", default_factory=StockpileTypesSettings
     )
     database_builder: DatabaseBuilderSettings = Field(
         description="Database builder settings", default_factory=DatabaseBuilderSettings
