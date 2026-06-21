@@ -15,8 +15,8 @@ from foxhole_stockpiles.core.utils import load_catalog
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.models.catalog_item import CatalogItem
 from foxhole_stockpiles.models.icon_template import IconTemplate
-from fs_ocr._impl.template_database import TemplateDatabase
-from fs_ocr._impl.template_manager import TemplateManager
+from fs_tools.template_db.template_database import TemplateDatabase
+from fs_tools.template_db.template_manager import TemplateManager
 
 
 class DatabaseBuilder:

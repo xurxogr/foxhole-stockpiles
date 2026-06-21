@@ -9,7 +9,7 @@ from foxhole_stockpiles.core.settings import get_settings
 from foxhole_stockpiles.services.catalog_service import CatalogService
 from foxhole_stockpiles.services.notification_service import NotificationService
 from foxhole_stockpiles.services.output_coordinator import OutputCoordinator
-from fs_ocr._impl.coordinator import OCRCoordinator
+from foxhole_stockpiles.services.scanner import Scanner
 
 logger = logging.getLogger(__name__)
 
@@ -42,25 +42,21 @@ def get_notification_service() -> NotificationService:
 
 
 @lru_cache
-def get_ocr_coordinator() -> OCRCoordinator:
-    """Get the OCR coordinator singleton.
+def get_scanner() -> Scanner:
+    """Get the OCR scanner singleton.
 
-    This creates a single OCRCoordinator instance that is reused across all requests,
-    significantly reducing memory usage and initialization overhead.
+    This creates a single Scanner instance (wrapping the external ``fs_ocr``
+    engine) that is reused across all requests, reducing memory usage and
+    initialization overhead.
 
     Returns:
-        OCRCoordinator: The OCR coordinator instance
+        Scanner: The scanner instance
 
     Raises:
         ValueError: If database_path is not configured in settings
     """
     settings = get_settings()
-    event_bus = get_event_bus()
-
-    if settings.scanner.database_path is None:
-        raise ValueError("scanner.database_path must be configured for the server")
-
-    return OCRCoordinator(config=settings.scanner, event_bus=event_bus)
+    return Scanner(settings.scanner)
 
 
 @lru_cache
@@ -108,6 +104,6 @@ def clear_dependency_caches() -> None:
 
     get_catalog_service.cache_clear()
     get_output_coordinator.cache_clear()
-    get_ocr_coordinator.cache_clear()
+    get_scanner.cache_clear()
     get_notification_service.cache_clear()
     get_scan_limiter.cache_clear()

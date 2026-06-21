@@ -16,12 +16,12 @@ from fastapi.templating import Jinja2Templates
 from foxhole_stockpiles import __version__
 from foxhole_stockpiles.api.dependencies import (
     get_catalog_service,
-    get_ocr_coordinator,
+    get_scanner,
 )
 from foxhole_stockpiles.core.utils import get_bundled_resource_path, is_frozen
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.services.catalog_service import CatalogService
-from fs_ocr._impl.coordinator import OCRCoordinator
+from foxhole_stockpiles.services.scanner import Scanner
 
 logger = logging.getLogger(__name__)
 
@@ -54,8 +54,8 @@ async def web_index(request: Request) -> HTMLResponse:
     db_error = None
 
     try:
-        # Try to get the OCR coordinator to check if database is accessible
-        get_ocr_coordinator()
+        # Try to build the scanner to check if the database is accessible
+        get_scanner()
     except ValueError as e:
         db_error = str(e)
     except FileNotFoundError as e:
@@ -77,7 +77,7 @@ async def web_index(request: Request) -> HTMLResponse:
 async def web_scan(
     request: Request,
     images: list[UploadFile],
-    coordinator: Annotated[OCRCoordinator, Depends(get_ocr_coordinator)],
+    scanner: Annotated[Scanner, Depends(get_scanner)],
     catalog_service: Annotated[CatalogService, Depends(get_catalog_service)],
     action: Annotated[str, Form()] = "scan",
 ) -> HTMLResponse:
@@ -87,7 +87,7 @@ async def web_scan(
         request: The FastAPI request object.
         images: List of uploaded image files.
         action: Form action ('scan' or 'send').
-        coordinator: OCR coordinator for scanning.
+        scanner: OCR scanner for scanning.
         catalog_service: Catalog service for display names.
 
     Returns:
@@ -121,7 +121,7 @@ async def web_scan(
                 continue
 
             image_bgr = np.asarray(img, dtype=np.uint8)
-            stockpile = await coordinator.analyze_stockpile(image=image_bgr)
+            stockpile = await scanner.scan(image_bgr)
             stockpiles.append(stockpile)
 
         except Exception as e:

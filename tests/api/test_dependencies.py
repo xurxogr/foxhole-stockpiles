@@ -7,8 +7,8 @@ import pytest
 from foxhole_stockpiles.api.dependencies import (
     clear_dependency_caches,
     get_notification_service,
-    get_ocr_coordinator,
     get_output_coordinator,
+    get_scanner,
 )
 from foxhole_stockpiles.core.events import EventBus
 from foxhole_stockpiles.services.notification_service import NotificationService
@@ -57,66 +57,56 @@ class TestGetNotificationService:
         get_notification_service.cache_clear()
 
 
-class TestGetOCRCoordinator:
-    """Test suite for get_ocr_coordinator dependency."""
+class TestGetScanner:
+    """Test suite for get_scanner dependency."""
 
-    def test_get_ocr_coordinator_returns_singleton(self) -> None:
-        """Test that get_ocr_coordinator returns the same instance."""
-        get_ocr_coordinator.cache_clear()
-
-        with patch("foxhole_stockpiles.api.dependencies.get_settings") as mock_settings:
-            with patch("foxhole_stockpiles.api.dependencies.get_event_bus") as mock_event_bus:
-                with patch(
-                    "foxhole_stockpiles.api.dependencies.OCRCoordinator"
-                ) as mock_coordinator_class:
-                    mock_settings.return_value.scanner.database_path = "/path/to/db.h5"
-                    mock_event_bus.return_value = EventBus()
-                    mock_coordinator = Mock()
-                    mock_coordinator_class.return_value = mock_coordinator
-
-                    coordinator1 = get_ocr_coordinator()
-                    coordinator2 = get_ocr_coordinator()
-
-                    assert coordinator1 is coordinator2
-                    assert coordinator1 is mock_coordinator
-
-        get_ocr_coordinator.cache_clear()
-
-    def test_get_ocr_coordinator_raises_when_database_path_none(self) -> None:
-        """Test that get_ocr_coordinator raises ValueError when database_path is None."""
-        get_ocr_coordinator.cache_clear()
+    def test_get_scanner_returns_singleton(self) -> None:
+        """Test that get_scanner returns the same instance."""
+        get_scanner.cache_clear()
 
         with patch("foxhole_stockpiles.api.dependencies.get_settings") as mock_settings:
-            with patch("foxhole_stockpiles.api.dependencies.get_event_bus"):
-                mock_settings.return_value.scanner.database_path = None
+            with patch("foxhole_stockpiles.api.dependencies.Scanner") as mock_scanner_class:
+                mock_settings.return_value.scanner.database_path = "/path/to/db.h5"
+                mock_scanner = Mock()
+                mock_scanner_class.return_value = mock_scanner
 
-                with pytest.raises(ValueError, match="scanner.database_path must be configured"):
-                    get_ocr_coordinator()
+                scanner1 = get_scanner()
+                scanner2 = get_scanner()
 
-        get_ocr_coordinator.cache_clear()
+                assert scanner1 is scanner2
+                assert scanner1 is mock_scanner
 
-    def test_get_ocr_coordinator_creates_with_correct_params(self) -> None:
-        """Test that get_ocr_coordinator creates OCRCoordinator with correct parameters."""
-        get_ocr_coordinator.cache_clear()
+        get_scanner.cache_clear()
+
+    def test_get_scanner_raises_when_database_path_none(self) -> None:
+        """Test that the scanner raises ValueError when database_path is None."""
+        get_scanner.cache_clear()
 
         with patch("foxhole_stockpiles.api.dependencies.get_settings") as mock_settings:
-            with patch("foxhole_stockpiles.api.dependencies.get_event_bus") as mock_event_bus:
-                with patch(
-                    "foxhole_stockpiles.api.dependencies.OCRCoordinator"
-                ) as mock_coordinator_class:
-                    mock_scanner_config = Mock()
-                    mock_scanner_config.database_path = "/path/to/db.h5"
-                    mock_settings.return_value.scanner = mock_scanner_config
-                    mock_bus = EventBus()
-                    mock_event_bus.return_value = mock_bus
+            scanner_config = Mock()
+            scanner_config.database_path = None
+            mock_settings.return_value.scanner = scanner_config
 
-                    get_ocr_coordinator()
+            with pytest.raises(ValueError, match="scanner.database_path must be configured"):
+                get_scanner()
 
-                    mock_coordinator_class.assert_called_once_with(
-                        config=mock_scanner_config, event_bus=mock_bus
-                    )
+        get_scanner.cache_clear()
 
-        get_ocr_coordinator.cache_clear()
+    def test_get_scanner_creates_with_settings(self) -> None:
+        """Test that get_scanner builds a Scanner from the scanner settings."""
+        get_scanner.cache_clear()
+
+        with patch("foxhole_stockpiles.api.dependencies.get_settings") as mock_settings:
+            with patch("foxhole_stockpiles.api.dependencies.Scanner") as mock_scanner_class:
+                mock_scanner_config = Mock()
+                mock_scanner_config.database_path = "/path/to/db.h5"
+                mock_settings.return_value.scanner = mock_scanner_config
+
+                get_scanner()
+
+                mock_scanner_class.assert_called_once_with(mock_scanner_config)
+
+        get_scanner.cache_clear()
 
 
 class TestGetOutputCoordinator:
@@ -192,7 +182,7 @@ class TestClearDependencyCaches:
         """Test that clear_dependency_caches handles case when no cache exists."""
         # Clear all caches first
         get_notification_service.cache_clear()
-        get_ocr_coordinator.cache_clear()
+        get_scanner.cache_clear()
         get_output_coordinator.cache_clear()
 
         # Should not raise any exception

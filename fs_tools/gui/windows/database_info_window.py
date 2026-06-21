@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
-from fs_ocr._impl.template_manager import TemplateManager
+from fs_tools.template_db.template_manager import TemplateManager
 
 logger = logging.getLogger(__name__)
 

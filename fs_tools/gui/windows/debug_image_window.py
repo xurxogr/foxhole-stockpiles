@@ -32,8 +32,8 @@ from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
 from foxhole_stockpiles.models.detected_icon_info import DetectedIconInfo
 from foxhole_stockpiles.models.icon_template import IconTemplate
 from foxhole_stockpiles.models.scan_result import ScanResult
-from fs_ocr._impl.template_database import TemplateDatabase
-from fs_ocr._impl.template_manager import (
+from fs_tools.template_db.template_database import TemplateDatabase
+from fs_tools.template_db.template_manager import (
     DEFAULT_MAX_NCC_CANDIDATES,
     DEFAULT_NCC_TIEBREAKER_THRESHOLD,
     DEFAULT_PHASH_THRESHOLD,
@@ -270,7 +270,7 @@ class DebugImageWindow(QDialog):
 
         # Start scan worker
         self.scan_worker = ImageScanWorker(file_path, Path(self.database_path))
-        self.scan_worker.finished.connect(self._on_scan_finished)
+        self.scan_worker.scan_finished.connect(self._on_scan_finished)
         self.scan_worker.error.connect(self._on_scan_error)
         self.scan_worker.start()
 

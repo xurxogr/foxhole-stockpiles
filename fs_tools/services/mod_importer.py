@@ -22,11 +22,11 @@ from foxhole_stockpiles.models.mod_import_config import ModImportConfig
 from foxhole_stockpiles.models.mod_import_progress import ModImportProgress
 from foxhole_stockpiles.models.mod_import_result import ModImportResult
 from foxhole_stockpiles.models.pak_validation_result import PakValidationResult
-from fs_ocr._impl.template_manager import TemplateManager
 from fs_tools.commands.database_builder.database_builder import DatabaseBuilder
 from fs_tools.commands.generate_templates.generate_templates import TemplateGenerator
 from fs_tools.commands.uasset_extractor.uasset_extractor import PakExtractor
 from fs_tools.services import external_tools
+from fs_tools.template_db.template_manager import TemplateManager
 
 logger = logging.getLogger(__name__)
 

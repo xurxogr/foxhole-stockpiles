@@ -18,11 +18,11 @@ from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.models.catalog_item import CatalogItem
 from foxhole_stockpiles.models.icon_template import IconTemplate
-from fs_ocr._impl.template_database import TemplateDatabase
 from fs_tools.commands.database_builder.database_builder import (
     DatabaseBuilder,
     main,
 )
+from fs_tools.template_db.template_database import TemplateDatabase
 
 
 class TestDatabaseBuilderInitialization:
@@ -281,7 +281,7 @@ class TestDatabaseBuilderMethods:
             from foxhole_stockpiles.enums.item_category import ItemCategory
             from foxhole_stockpiles.enums.item_faction import ItemFaction
             from foxhole_stockpiles.models.icon_template import IconTemplate
-            from fs_ocr._impl.template_database import TemplateDatabase
+            from fs_tools.template_db.template_database import TemplateDatabase
 
             db = TemplateDatabase(resolution)
             # Add a template so database is not empty
@@ -319,7 +319,7 @@ class TestDatabaseBuilderMethods:
 
         # Mock _build_resolution_database to return empty databases
         async def mock_build_db(resolution: SupportedResolution) -> Any:
-            from fs_ocr._impl.template_database import TemplateDatabase
+            from fs_tools.template_db.template_database import TemplateDatabase
 
             return TemplateDatabase(resolution)  # Empty database
 
@@ -973,7 +973,7 @@ class TestDatabaseBuilderMerge:
         existing_db.add_template(self._create_template("Pistol"))
         existing_databases = {SupportedResolution.R_1080: existing_db}
 
-        from fs_ocr._impl.template_manager import TemplateManager
+        from fs_tools.template_db.template_manager import TemplateManager
 
         TemplateManager.save_databases_to_hdf5(
             databases=existing_databases, output_path=output_path
@@ -1008,7 +1008,7 @@ class TestDatabaseBuilderMerge:
         existing_db.add_template(self._create_template("Rifle", mod="vanilla"))
         existing_databases = {SupportedResolution.R_1080: existing_db}
 
-        from fs_ocr._impl.template_manager import TemplateManager
+        from fs_tools.template_db.template_manager import TemplateManager
 
         TemplateManager.save_databases_to_hdf5(
             databases=existing_databases, output_path=output_path
@@ -1042,7 +1042,7 @@ class TestDatabaseBuilderMerge:
         existing_db.add_template(self._create_template("Rifle", mod="vanilla"))
         existing_databases = {SupportedResolution.R_1080: existing_db}
 
-        from fs_ocr._impl.template_manager import TemplateManager
+        from fs_tools.template_db.template_manager import TemplateManager
 
         TemplateManager.save_databases_to_hdf5(
             databases=existing_databases, output_path=output_path
@@ -1077,7 +1077,7 @@ class TestDatabaseBuilderMerge:
         existing_db.add_template(self._create_template("Rifle", crated=False))
         existing_databases = {SupportedResolution.R_1080: existing_db}
 
-        from fs_ocr._impl.template_manager import TemplateManager
+        from fs_tools.template_db.template_manager import TemplateManager
 
         TemplateManager.save_databases_to_hdf5(
             databases=existing_databases, output_path=output_path
@@ -1119,7 +1119,7 @@ class TestDatabaseBuilderMerge:
             SupportedResolution.R_1440: existing_db_1440,
         }
 
-        from fs_ocr._impl.template_manager import TemplateManager
+        from fs_tools.template_db.template_manager import TemplateManager
 
         TemplateManager.save_databases_to_hdf5(
             databases=existing_databases, output_path=output_path
@@ -1160,7 +1160,7 @@ class TestDatabaseBuilderMerge:
         existing_db_1080.add_template(self._create_template("Rifle"))
         existing_databases = {SupportedResolution.R_1080: existing_db_1080}
 
-        from fs_ocr._impl.template_manager import TemplateManager
+        from fs_tools.template_db.template_manager import TemplateManager
 
         TemplateManager.save_databases_to_hdf5(
             databases=existing_databases, output_path=output_path
@@ -1204,7 +1204,7 @@ class TestDatabaseBuilderMerge:
         existing_db.add_template(self._create_template("Rifle"))
         existing_databases = {SupportedResolution.R_1080: existing_db}
 
-        from fs_ocr._impl.template_manager import TemplateManager
+        from fs_tools.template_db.template_manager import TemplateManager
 
         TemplateManager.save_databases_to_hdf5(
             databases=existing_databases, output_path=output_path
@@ -1253,7 +1253,7 @@ class TestDatabaseBuilderMerge:
         existing_db.add_template(self._create_template("Pistol"))  # Will be kept
         existing_databases = {SupportedResolution.R_1080: existing_db}
 
-        from fs_ocr._impl.template_manager import TemplateManager
+        from fs_tools.template_db.template_manager import TemplateManager
 
         TemplateManager.save_databases_to_hdf5(
             databases=existing_databases, output_path=output_path

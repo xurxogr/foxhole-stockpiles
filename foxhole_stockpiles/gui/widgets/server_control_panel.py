@@ -400,14 +400,14 @@ class ServerControlPanel(QWidget):
 
         # Scan the screenshot in background thread
         worker = ScanWorker(self.scanner_client, filepath)
-        worker.finished.connect(lambda: self.screenshot_dropped.emit(filepath))
+        worker.scan_finished.connect(lambda: self.screenshot_dropped.emit(filepath))
         worker.start()
 
         # Keep reference to prevent garbage collection
         if not hasattr(self, "_scan_workers"):
             self._scan_workers = []
         self._scan_workers.append(worker)
-        worker.finished.connect(lambda: self._scan_workers.remove(worker))
+        worker.scan_finished.connect(lambda: self._scan_workers.remove(worker))
 
     def append_log(self, log_data: dict[str, str]) -> None:
         """Append a log entry to the log display.

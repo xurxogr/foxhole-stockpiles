@@ -17,11 +17,11 @@ from foxhole_stockpiles.models.detected_icon_info import DetectedIconInfo
 from foxhole_stockpiles.models.icon_template import IconTemplate
 from foxhole_stockpiles.models.scan_result import ScanResult
 from foxhole_stockpiles.models.stockpile import Stockpile
-from fs_ocr._impl.template_database import TemplateDatabase
 from fs_tools.gui.windows.debug_image_window import (
     DatabaseLoader,
     DebugImageWindow,
 )
+from fs_tools.template_db.template_database import TemplateDatabase
 
 
 @pytest.fixture
@@ -1272,7 +1272,7 @@ class TestDebugImageWindowSettings:
         Args:
             debug_window: Window fixture.
         """
-        from fs_ocr._impl.template_manager import (
+        from fs_tools.template_db.template_manager import (
             DEFAULT_MAX_NCC_CANDIDATES,
             DEFAULT_PHASH_THRESHOLD,
         )

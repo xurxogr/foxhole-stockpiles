@@ -16,8 +16,8 @@ from foxhole_stockpiles.models.mod_import_config import ModImportConfig
 from foxhole_stockpiles.models.mod_import_progress import ModImportProgress
 from foxhole_stockpiles.models.mod_import_result import ModImportResult
 from foxhole_stockpiles.models.pak_validation_result import PakValidationResult
-from fs_ocr._impl.template_database import TemplateDatabase
 from fs_tools.services.mod_importer import ModImporter
+from fs_tools.template_db.template_database import TemplateDatabase
 
 
 def create_valid_pak_validation_result() -> PakValidationResult:
@@ -405,7 +405,7 @@ class TestDatabaseQueries:
         importer = ModImporter(config=mock_config)
 
         with patch(
-            "fs_ocr._impl.template_manager.TemplateManager.load_database",
+            "fs_tools.template_db.template_manager.TemplateManager.load_database",
             new=mock_load_database,
         ):
             existing = await importer._get_existing_item_codes_from_database()
@@ -456,7 +456,7 @@ class TestDatabaseQueries:
         importer = ModImporter(config=mock_config)
 
         with patch(
-            "fs_ocr._impl.template_manager.TemplateManager.load_database",
+            "fs_tools.template_db.template_manager.TemplateManager.load_database",
             new=mock_load_database,
         ):
             existing = await importer._get_existing_item_codes_from_database()
@@ -706,7 +706,7 @@ class TestDatabaseQueryExtended:
         importer = ModImporter(config=mock_config)
 
         with patch(
-            "fs_ocr._impl.template_manager.TemplateManager.load_database",
+            "fs_tools.template_db.template_manager.TemplateManager.load_database",
             new=mock_load_database,
         ):
             existing = await importer._get_existing_item_codes_from_database()
@@ -730,7 +730,7 @@ class TestDatabaseQueryExtended:
         importer = ModImporter(config=mock_config)
 
         with patch(
-            "fs_ocr._impl.template_manager.TemplateManager.load_database",
+            "fs_tools.template_db.template_manager.TemplateManager.load_database",
             new=mock_load_database,
         ):
             existing = await importer._get_existing_item_codes_from_database()
@@ -754,7 +754,7 @@ class TestDatabaseQueryExtended:
         importer = ModImporter(config=mock_config)
 
         with patch(
-            "fs_ocr._impl.template_manager.TemplateManager.load_database",
+            "fs_tools.template_db.template_manager.TemplateManager.load_database",
             new=mock_load_database,
         ):
             existing = await importer._get_existing_item_codes_from_database()

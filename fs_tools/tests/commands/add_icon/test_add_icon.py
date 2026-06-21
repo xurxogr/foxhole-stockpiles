@@ -17,10 +17,10 @@ from foxhole_stockpiles.enums.item_category import ItemCategory
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.models.icon_template import IconTemplate
-from fs_ocr._impl.icon_manager import IconManager
-from fs_ocr._impl.template_database import TemplateDatabase
-from fs_ocr._impl.template_manager import TemplateManager
 from fs_tools.commands.add_icon.add_icon import main
+from fs_tools.template_db.icon_manager import IconManager
+from fs_tools.template_db.template_database import TemplateDatabase
+from fs_tools.template_db.template_manager import TemplateManager
 
 
 @pytest.fixture

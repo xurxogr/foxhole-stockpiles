@@ -54,6 +54,8 @@ dependencies = [
     "typer>=0.12.0",
     # SAV file parsing (Rust implementation)
     "fs-sav>=0.2.0",
+    # OCR engine (Rust implementation)
+    "fs-ocr>=1.0.4",
 ]
 
 [project.optional-dependencies]
@@ -83,7 +85,7 @@ Repository = "https://github.com/xurxogr/foxhole-stockpiles"
 version = {attr = "foxhole_stockpiles.__version__"}
 
 [tool.setuptools.packages.find]
-include = ["foxhole_stockpiles*", "fs_ocr*", "fs_tools*"]
+include = ["foxhole_stockpiles*", "fs_tools*"]
 exclude = ["fs_tools.tests*"]
 
 # Remove package-dir since we're using flat layout
@@ -133,20 +135,20 @@ convention = "google"
 extend-immutable-calls = ["typer.Option", "typer.Argument"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "fs_ocr/tests", "fs_tools/tests"]
+testpaths = ["tests", "fs_tools/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 asyncio_mode = "auto"
 qt_api = "pyside6"
-addopts = "-n auto --dist=loadfile --cov=foxhole_stockpiles --cov=fs_ocr --cov-report=term-missing"
+addopts = "-n auto --dist=loadfile --cov=foxhole_stockpiles --cov=fs_tools --cov-report=term-missing"
 filterwarnings = [
     "ignore::RuntimeWarning",
     "ignore::DeprecationWarning:foxhole_stockpiles.gui",
 ]
 
 [tool.coverage.run]
-source = ["foxhole_stockpiles", "fs_ocr"]
+source = ["foxhole_stockpiles", "fs_tools"]
 parallel = true
 branch = true
 
@@ -162,7 +164,6 @@ directory = "htmlcov"
 
 [project.scripts]
 fs = "foxhole_stockpiles.cli.app:main"
-fs-ocr = "fs_ocr.cli:main"
 fs-tools = "fs_tools.cli:main"
 
 [project.gui-scripts]

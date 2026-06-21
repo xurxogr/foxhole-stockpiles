@@ -106,7 +106,7 @@ class TestCreateHandlerConfig:
 
 
 @patch("foxhole_stockpiles.cli.commands.scan.cv2.imread")
-@patch("foxhole_stockpiles.cli.commands.scan.OCRCoordinator")
+@patch("foxhole_stockpiles.cli.commands.scan.Scanner")
 @patch("foxhole_stockpiles.cli.commands.scan.OutputCoordinator")
 @patch("foxhole_stockpiles.cli.commands.scan.setup_logging")
 class TestScanCommand:
@@ -116,7 +116,7 @@ class TestScanCommand:
         self,
         mock_setup_logging: MagicMock,
         mock_output_coordinator: MagicMock,
-        mock_coordinator_class: MagicMock,
+        mock_scanner_class: MagicMock,
         mock_imread: MagicMock,
         mock_stockpile: MagicMock,
         tmp_path: Path,
@@ -126,7 +126,7 @@ class TestScanCommand:
         Args:
             mock_setup_logging (MagicMock): Mocked setup_logging.
             mock_output_coordinator (MagicMock): Mocked OutputCoordinator.
-            mock_coordinator_class (MagicMock): Mocked OCRCoordinator.
+            mock_scanner_class (MagicMock): Mocked Scanner.
             mock_imread (MagicMock): Mocked cv2.imread.
             mock_stockpile (MagicMock): Mock stockpile fixture.
             tmp_path (Path): Temporary directory path from pytest fixture.
@@ -139,8 +139,8 @@ class TestScanCommand:
         mock_imread.return_value = np.zeros((1080, 1920, 3), dtype=np.uint8)
 
         coordinator = MagicMock()
-        coordinator.analyze_stockpile = AsyncMock(return_value=mock_stockpile)
-        mock_coordinator_class.return_value = coordinator
+        coordinator.scan = AsyncMock(return_value=mock_stockpile)
+        mock_scanner_class.return_value = coordinator
 
         handler = MagicMock()
         handler.handle_output = AsyncMock(return_value=None)
@@ -153,14 +153,14 @@ class TestScanCommand:
 
         assert result.exit_code == 0
         mock_imread.assert_called_once()
-        coordinator.analyze_stockpile.assert_awaited_once()
+        coordinator.scan.assert_awaited_once()
         handler.handle_output.assert_awaited_once()
 
     def test_faction_filter(
         self,
         mock_setup_logging: MagicMock,
         mock_output_coordinator: MagicMock,
-        mock_coordinator_class: MagicMock,
+        mock_scanner_class: MagicMock,
         mock_imread: MagicMock,
         mock_stockpile: MagicMock,
         tmp_path: Path,
@@ -170,7 +170,7 @@ class TestScanCommand:
         Args:
             mock_setup_logging (MagicMock): Mocked setup_logging.
             mock_output_coordinator (MagicMock): Mocked OutputCoordinator.
-            mock_coordinator_class (MagicMock): Mocked OCRCoordinator.
+            mock_scanner_class (MagicMock): Mocked Scanner.
             mock_imread (MagicMock): Mocked cv2.imread.
             mock_stockpile (MagicMock): Mock stockpile fixture.
             tmp_path (Path): Temporary directory path from pytest fixture.
@@ -183,8 +183,8 @@ class TestScanCommand:
         mock_imread.return_value = np.zeros((1080, 1920, 3), dtype=np.uint8)
 
         coordinator = MagicMock()
-        coordinator.analyze_stockpile = AsyncMock(return_value=mock_stockpile)
-        mock_coordinator_class.return_value = coordinator
+        coordinator.scan = AsyncMock(return_value=mock_stockpile)
+        mock_scanner_class.return_value = coordinator
 
         handler = MagicMock()
         handler.handle_output = AsyncMock(return_value={"items": []})
@@ -203,14 +203,14 @@ class TestScanCommand:
         )
 
         assert result.exit_code == 0
-        call_kwargs = coordinator.analyze_stockpile.call_args.kwargs
+        call_kwargs = coordinator.scan.call_args.kwargs
         assert call_kwargs["faction"] == ItemFaction.WARDENS
 
     def test_language_filter(
         self,
         mock_setup_logging: MagicMock,
         mock_output_coordinator: MagicMock,
-        mock_coordinator_class: MagicMock,
+        mock_scanner_class: MagicMock,
         mock_imread: MagicMock,
         mock_stockpile: MagicMock,
         tmp_path: Path,
@@ -220,13 +220,11 @@ class TestScanCommand:
         Args:
             mock_setup_logging (MagicMock): Mocked setup_logging.
             mock_output_coordinator (MagicMock): Mocked OutputCoordinator.
-            mock_coordinator_class (MagicMock): Mocked OCRCoordinator.
+            mock_scanner_class (MagicMock): Mocked Scanner.
             mock_imread (MagicMock): Mocked cv2.imread.
             mock_stockpile (MagicMock): Mock stockpile fixture.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
-        from foxhole_stockpiles.enums.supported_language import SupportedLanguage
-
         image_path = tmp_path / "shot.png"
         image_path.touch()
         database_path = tmp_path / "db.h5"
@@ -235,8 +233,8 @@ class TestScanCommand:
         mock_imread.return_value = np.zeros((1080, 1920, 3), dtype=np.uint8)
 
         coordinator = MagicMock()
-        coordinator.analyze_stockpile = AsyncMock(return_value=mock_stockpile)
-        mock_coordinator_class.return_value = coordinator
+        coordinator.scan = AsyncMock(return_value=mock_stockpile)
+        mock_scanner_class.return_value = coordinator
 
         handler = MagicMock()
         handler.handle_output = AsyncMock(return_value=None)
@@ -254,15 +252,16 @@ class TestScanCommand:
             ],
         )
 
+        # --language is accepted for backward compatibility but no longer forwarded
+        # to the engine (the external scanner auto-detects languages).
         assert result.exit_code == 0
-        call_kwargs = coordinator.analyze_stockpile.call_args.kwargs
-        assert call_kwargs["languages"] == [SupportedLanguage.FRENCH]
+        coordinator.scan.assert_awaited_once()
 
     def test_token_forwarded_to_output(
         self,
         mock_setup_logging: MagicMock,
         mock_output_coordinator: MagicMock,
-        mock_coordinator_class: MagicMock,
+        mock_scanner_class: MagicMock,
         mock_imread: MagicMock,
         mock_stockpile: MagicMock,
         tmp_path: Path,
@@ -272,7 +271,7 @@ class TestScanCommand:
         Args:
             mock_setup_logging (MagicMock): Mocked setup_logging.
             mock_output_coordinator (MagicMock): Mocked OutputCoordinator.
-            mock_coordinator_class (MagicMock): Mocked OCRCoordinator.
+            mock_scanner_class (MagicMock): Mocked Scanner.
             mock_imread (MagicMock): Mocked cv2.imread.
             mock_stockpile (MagicMock): Mock stockpile fixture.
             tmp_path (Path): Temporary directory path from pytest fixture.
@@ -285,8 +284,8 @@ class TestScanCommand:
         mock_imread.return_value = np.zeros((1080, 1920, 3), dtype=np.uint8)
 
         coordinator = MagicMock()
-        coordinator.analyze_stockpile = AsyncMock(return_value=mock_stockpile)
-        mock_coordinator_class.return_value = coordinator
+        coordinator.scan = AsyncMock(return_value=mock_stockpile)
+        mock_scanner_class.return_value = coordinator
 
         handler = MagicMock()
         handler.handle_output = AsyncMock(return_value=None)
@@ -312,7 +311,7 @@ class TestScanCommand:
         self,
         mock_setup_logging: MagicMock,
         mock_output_coordinator: MagicMock,
-        mock_coordinator_class: MagicMock,
+        mock_scanner_class: MagicMock,
         mock_imread: MagicMock,
         tmp_path: Path,
     ) -> None:
@@ -321,7 +320,7 @@ class TestScanCommand:
         Args:
             mock_setup_logging (MagicMock): Mocked setup_logging.
             mock_output_coordinator (MagicMock): Mocked OutputCoordinator.
-            mock_coordinator_class (MagicMock): Mocked OCRCoordinator.
+            mock_scanner_class (MagicMock): Mocked Scanner.
             mock_imread (MagicMock): Mocked cv2.imread.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
@@ -343,7 +342,7 @@ class TestScanCommand:
         self,
         mock_setup_logging: MagicMock,
         mock_output_coordinator: MagicMock,
-        mock_coordinator_class: MagicMock,
+        mock_scanner_class: MagicMock,
         mock_imread: MagicMock,
         tmp_path: Path,
     ) -> None:
@@ -352,7 +351,7 @@ class TestScanCommand:
         Args:
             mock_setup_logging (MagicMock): Mocked setup_logging.
             mock_output_coordinator (MagicMock): Mocked OutputCoordinator.
-            mock_coordinator_class (MagicMock): Mocked OCRCoordinator.
+            mock_scanner_class (MagicMock): Mocked Scanner.
             mock_imread (MagicMock): Mocked cv2.imread.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
@@ -368,8 +367,8 @@ class TestScanCommand:
         async def boom(*args: Any, **kwargs: Any) -> None:
             raise ValueError("processing error")
 
-        coordinator.analyze_stockpile = boom
-        mock_coordinator_class.return_value = coordinator
+        coordinator.scan = boom
+        mock_scanner_class.return_value = coordinator
 
         result = runner.invoke(
             scan.app,

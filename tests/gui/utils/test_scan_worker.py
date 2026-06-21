@@ -51,7 +51,7 @@ def test_scan_worker_run(qtbot: Any, mock_scanner_client: MagicMock) -> None:
         nonlocal finished_called
         finished_called = True
 
-    worker.finished.connect(on_finished)
+    worker.scan_finished.connect(on_finished)
 
     # Start the worker
     worker.start()
@@ -91,7 +91,7 @@ def test_scan_worker_thread_safety(qtbot: Any, mock_scanner_client: MagicMock) -
         nonlocal finished_called
         finished_called = True
 
-    worker.finished.connect(on_finished)
+    worker.scan_finished.connect(on_finished)
     worker.start()
 
     qtbot.waitUntil(lambda: finished_called, timeout=5000)
@@ -113,7 +113,7 @@ def test_scan_worker_run_directly(qtbot: Any, mock_scanner_client: MagicMock) ->
 
     # Track signal emission
     signals_received: list[bool] = []
-    worker.finished.connect(lambda: signals_received.append(True))
+    worker.scan_finished.connect(lambda: signals_received.append(True))
 
     # Call run() directly instead of start() to ensure coverage
     worker.run()

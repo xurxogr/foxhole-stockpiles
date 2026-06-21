@@ -20,6 +20,22 @@ class StockpileItem(BaseModel):
         le=1.0,
         default=None,
     )
+    x: int | None = Field(
+        description=(
+            "X pixel coordinate of the item's icon in the source screenshot. "
+            "Populated when the stockpile comes from an OCR scan; None for other "
+            "sources (e.g. .sav files)."
+        ),
+        default=None,
+    )
+    y: int | None = Field(
+        description=(
+            "Y pixel coordinate of the item's icon in the source screenshot. "
+            "Populated when the stockpile comes from an OCR scan; None for other "
+            "sources (e.g. .sav files)."
+        ),
+        default=None,
+    )
     candidates: list[ItemCandidate] | None = Field(
         description=(
             "Alternative candidates within the confidence gap. "

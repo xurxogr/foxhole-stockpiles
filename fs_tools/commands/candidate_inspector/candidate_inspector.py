@@ -16,7 +16,7 @@ from foxhole_stockpiles.core.settings import get_settings
 from foxhole_stockpiles.enums.item_category import ItemCategory
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
-from fs_ocr._impl.template_manager import TemplateManager
+from fs_tools.template_db.template_manager import TemplateManager
 
 
 async def main() -> dict[str, Any] | None:

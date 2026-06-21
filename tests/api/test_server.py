@@ -17,9 +17,9 @@ from fastapi.testclient import TestClient
 
 from foxhole_stockpiles import __version__
 from foxhole_stockpiles.api.dependencies import (
-    get_ocr_coordinator,
     get_output_coordinator,
     get_scan_limiter,
+    get_scanner,
 )
 from foxhole_stockpiles.api.scan_limiter import ScanLimiter
 from foxhole_stockpiles.api.server import MAX_UPLOAD_SIZE_BYTES, app, auth_dependency
@@ -31,7 +31,6 @@ from foxhole_stockpiles.core.settings.sections.output import (
     WebhookHandlerSettings,
 )
 from foxhole_stockpiles.enums.auth_type import AuthType
-from foxhole_stockpiles.enums.supported_language import SupportedLanguage
 
 
 @pytest.fixture(autouse=True)
@@ -45,15 +44,15 @@ def clear_dependency_cache() -> Generator[None, None, None]:
     """
     from foxhole_stockpiles.api.dependencies import (
         get_notification_service,
-        get_ocr_coordinator,
         get_output_coordinator,
         get_scan_limiter,
+        get_scanner,
     )
 
     # Clear all caches before test
     get_settings.cache_clear()
     get_notification_service.cache_clear()
-    get_ocr_coordinator.cache_clear()
+    get_scanner.cache_clear()
     get_output_coordinator.cache_clear()
     get_scan_limiter.cache_clear()
 
@@ -65,7 +64,7 @@ def clear_dependency_cache() -> Generator[None, None, None]:
     # Clean up after test
     get_settings.cache_clear()
     get_notification_service.cache_clear()
-    get_ocr_coordinator.cache_clear()
+    get_scanner.cache_clear()
     get_output_coordinator.cache_clear()
     get_scan_limiter.cache_clear()
     app.dependency_overrides.clear()
@@ -267,12 +266,19 @@ class TestScanStockpileEndpoint:
         Args:
             client (TestClient): FastAPI test client from fixture.
         """
-        # Create a text file instead of an image
-        files = {"image": ("test.txt", io.BytesIO(b"not an image"), "text/plain")}
-        response = client.post("/ocr/scan_image", files=files)
+        mock_scanner = Mock()
+        mock_scanner.scan = AsyncMock(return_value=Mock())
+        app.dependency_overrides[get_scanner] = lambda: mock_scanner
 
-        assert response.status_code == 400
-        assert "File must be an image" in response.json()["detail"]
+        try:
+            # Create a text file instead of an image
+            files = {"image": ("test.txt", io.BytesIO(b"not an image"), "text/plain")}
+            response = client.post("/ocr/scan_image", files=files)
+
+            assert response.status_code == 400
+            assert "File must be an image" in response.json()["detail"]
+        finally:
+            app.dependency_overrides.clear()
 
     def test_scan_stockpile_corrupted_image(self, client: TestClient) -> None:
         """Test scanning with corrupted image data.
@@ -280,14 +286,21 @@ class TestScanStockpileEndpoint:
         Args:
             client (TestClient): FastAPI test client from fixture.
         """
-        # Create invalid image data
-        files = {"image": ("test.png", io.BytesIO(b"corrupted"), "image/png")}
-        response = client.post("/ocr/scan_image", files=files)
+        mock_scanner = Mock()
+        mock_scanner.scan = AsyncMock(return_value=Mock())
+        app.dependency_overrides[get_scanner] = lambda: mock_scanner
 
-        # HTTPException gets caught by generic handler, returns 500
-        assert response.status_code in [400, 500]
-        detail = response.json().get("detail", "")
-        assert "Invalid image format" in detail or "Unexpected error" in detail
+        try:
+            # Create invalid image data
+            files = {"image": ("test.png", io.BytesIO(b"corrupted"), "image/png")}
+            response = client.post("/ocr/scan_image", files=files)
+
+            # HTTPException gets caught by generic handler, returns 500
+            assert response.status_code in [400, 500]
+            detail = response.json().get("detail", "")
+            assert "Invalid image format" in detail or "Unexpected error" in detail
+        finally:
+            app.dependency_overrides.clear()
 
     def test_scan_stockpile_file_too_large(self, client: TestClient) -> None:
         """Test scanning with a file that exceeds the maximum size limit.
@@ -295,14 +308,21 @@ class TestScanStockpileEndpoint:
         Args:
             client (TestClient): FastAPI test client from fixture.
         """
-        # Create a file larger than the limit
-        oversized_data = b"x" * (MAX_UPLOAD_SIZE_BYTES + 1)
-        files = {"image": ("large.png", io.BytesIO(oversized_data), "image/png")}
-        response = client.post("/ocr/scan_image", files=files)
+        mock_scanner = Mock()
+        mock_scanner.scan = AsyncMock(return_value=Mock())
+        app.dependency_overrides[get_scanner] = lambda: mock_scanner
 
-        assert response.status_code == 413
-        assert "File too large" in response.json()["detail"]
-        assert "10MB" in response.json()["detail"]
+        try:
+            # Create a file larger than the limit
+            oversized_data = b"x" * (MAX_UPLOAD_SIZE_BYTES + 1)
+            files = {"image": ("large.png", io.BytesIO(oversized_data), "image/png")}
+            response = client.post("/ocr/scan_image", files=files)
+
+            assert response.status_code == 413
+            assert "File too large" in response.json()["detail"]
+            assert "10MB" in response.json()["detail"]
+        finally:
+            app.dependency_overrides.clear()
 
     def test_scan_stockpile_success(self, client: TestClient) -> None:
         """Test successful stockpile scanning.
@@ -316,10 +336,10 @@ class TestScanStockpileEndpoint:
         _, buffer = cv2.imencode(".png", img)
         image_bytes = buffer.tobytes()
 
-        # Mock the OCR coordinator dependency
-        mock_coordinator = Mock()
-        mock_coordinator.analyze_stockpile = AsyncMock(return_value=Mock())
-        app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
+        # Mock the scanner dependency
+        mock_scanner = Mock()
+        mock_scanner.scan = AsyncMock(return_value=Mock())
+        app.dependency_overrides[get_scanner] = lambda: mock_scanner
 
         # Mock the output coordinator dependency
         mock_output_coordinator = Mock()
@@ -350,9 +370,9 @@ class TestScanStockpileEndpoint:
         image_bytes = buffer.tobytes()
 
         # Mock the coordinator dependency
-        mock_coordinator = Mock()
-        mock_coordinator.analyze_stockpile = AsyncMock(return_value=Mock())
-        app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
+        mock_scanner = Mock()
+        mock_scanner.scan = AsyncMock(return_value=Mock())
+        app.dependency_overrides[get_scanner] = lambda: mock_scanner
 
         # Mock the output handler
         # Mock the output coordinator dependency
@@ -380,9 +400,9 @@ class TestScanStockpileEndpoint:
         image_bytes = buffer.tobytes()
 
         # Mock the coordinator dependency
-        mock_coordinator = Mock()
-        mock_coordinator.analyze_stockpile = AsyncMock(return_value=Mock())
-        app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
+        mock_scanner = Mock()
+        mock_scanner.scan = AsyncMock(return_value=Mock())
+        app.dependency_overrides[get_scanner] = lambda: mock_scanner
 
         # Mock the output handler
         # Mock the output coordinator dependency
@@ -397,9 +417,9 @@ class TestScanStockpileEndpoint:
 
             assert response.status_code == 200
 
-            # Verify that analyze_stockpile was called with faction=None (neutral converted to None)
-            mock_coordinator.analyze_stockpile.assert_called_once()
-            call_kwargs = mock_coordinator.analyze_stockpile.call_args[1]
+            # Verify that scan was called with faction=None (neutral converted to None)
+            mock_scanner.scan.assert_called_once()
+            call_kwargs = mock_scanner.scan.call_args[1]
             assert call_kwargs["faction"] is None
         finally:
             app.dependency_overrides.clear()
@@ -415,9 +435,9 @@ class TestScanStockpileEndpoint:
         image_bytes = buffer.tobytes()
 
         # Mock the coordinator dependency
-        mock_coordinator = Mock()
-        mock_coordinator.analyze_stockpile = AsyncMock(return_value=Mock())
-        app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
+        mock_scanner = Mock()
+        mock_scanner.scan = AsyncMock(return_value=Mock())
+        app.dependency_overrides[get_scanner] = lambda: mock_scanner
 
         # Mock the output handler
         # Mock the output coordinator dependency
@@ -447,12 +467,19 @@ class TestScanStockpileEndpoint:
         _, buffer = cv2.imencode(".png", img)
         image_bytes = buffer.tobytes()
 
-        files = {"image": ("test.png", io.BytesIO(image_bytes), "image/png")}
-        response = client.post("/ocr/scan_image?faction=invalid", files=files)
+        mock_scanner = Mock()
+        mock_scanner.scan = AsyncMock(return_value=Mock())
+        app.dependency_overrides[get_scanner] = lambda: mock_scanner
 
-        assert response.status_code == 422
-        detail = response.json()["detail"]
-        assert any("faction" in str(error).lower() for error in detail)
+        try:
+            files = {"image": ("test.png", io.BytesIO(image_bytes), "image/png")}
+            response = client.post("/ocr/scan_image?faction=invalid", files=files)
+
+            assert response.status_code == 422
+            detail = response.json()["detail"]
+            assert any("faction" in str(error).lower() for error in detail)
+        finally:
+            app.dependency_overrides.clear()
 
     def test_scan_stockpile_with_language(self, client: TestClient) -> None:
         """Test scan with language parameter.
@@ -465,9 +492,9 @@ class TestScanStockpileEndpoint:
         image_bytes = buffer.tobytes()
 
         # Mock the coordinator dependency
-        mock_coordinator = Mock()
-        mock_coordinator.analyze_stockpile = AsyncMock(return_value=Mock())
-        app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
+        mock_scanner = Mock()
+        mock_scanner.scan = AsyncMock(return_value=Mock())
+        app.dependency_overrides[get_scanner] = lambda: mock_scanner
 
         # Mock the output handler
         # Mock the output coordinator dependency
@@ -482,10 +509,9 @@ class TestScanStockpileEndpoint:
 
             assert response.status_code == 200
 
-            # Verify analyze_stockpile was called with French language parameter
-            mock_coordinator.analyze_stockpile.assert_called_once()
-            call_kwargs = mock_coordinator.analyze_stockpile.call_args[1]
-            assert call_kwargs.get("languages") == [SupportedLanguage.FRENCH]
+            # The language query param is accepted for backward compatibility but is
+            # no longer forwarded to the engine (the external scanner auto-detects).
+            mock_scanner.scan.assert_called_once()
         finally:
             app.dependency_overrides.clear()
 
@@ -499,11 +525,18 @@ class TestScanStockpileEndpoint:
         _, buffer = cv2.imencode(".png", img)
         image_bytes = buffer.tobytes()
 
-        files = {"image": ("test.png", io.BytesIO(image_bytes), "image/png")}
-        response = client.post("/ocr/scan_image?language=invalid", files=files)
+        mock_scanner = Mock()
+        mock_scanner.scan = AsyncMock(return_value=Mock())
+        app.dependency_overrides[get_scanner] = lambda: mock_scanner
 
-        # FastAPI validation should return 422 for invalid enum value
-        assert response.status_code == 422
+        try:
+            files = {"image": ("test.png", io.BytesIO(image_bytes), "image/png")}
+            response = client.post("/ocr/scan_image?language=invalid", files=files)
+
+            # FastAPI validation should return 422 for invalid enum value
+            assert response.status_code == 422
+        finally:
+            app.dependency_overrides.clear()
 
     def test_scan_stockpile_processing_error(self, client: TestClient) -> None:
         """Test handling of processing errors during scan.
@@ -516,9 +549,9 @@ class TestScanStockpileEndpoint:
         image_bytes = buffer.tobytes()
 
         # Mock the coordinator dependency to raise ValueError
-        mock_coordinator = Mock()
-        mock_coordinator.analyze_stockpile = AsyncMock(side_effect=ValueError("Processing failed"))
-        app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
+        mock_scanner = Mock()
+        mock_scanner.scan = AsyncMock(side_effect=ValueError("Processing failed"))
+        app.dependency_overrides[get_scanner] = lambda: mock_scanner
         app.dependency_overrides[get_scan_limiter] = lambda: ScanLimiter(max_concurrent=0)
 
         try:
@@ -541,9 +574,9 @@ class TestScanStockpileEndpoint:
         image_bytes = buffer.tobytes()
 
         # Mock the coordinator dependency to raise generic exception
-        mock_coordinator = Mock()
-        mock_coordinator.analyze_stockpile = AsyncMock(side_effect=RuntimeError("Unexpected"))
-        app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
+        mock_scanner = Mock()
+        mock_scanner.scan = AsyncMock(side_effect=RuntimeError("Unexpected"))
+        app.dependency_overrides[get_scanner] = lambda: mock_scanner
         app.dependency_overrides[get_scan_limiter] = lambda: ScanLimiter(max_concurrent=0)
 
         try:
@@ -566,10 +599,10 @@ class TestScanStockpileEndpoint:
         image_bytes = buffer.tobytes()
 
         # Mock the coordinator to raise mod validation error
-        mock_coordinator = Mock()
+        mock_scanner = Mock()
         error_msg = "Mod 'CustomMod' is not supported. Available mods: Vanilla, OtherMod"
-        mock_coordinator.analyze_stockpile = AsyncMock(side_effect=ValueError(error_msg))
-        app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
+        mock_scanner.scan = AsyncMock(side_effect=ValueError(error_msg))
+        app.dependency_overrides[get_scanner] = lambda: mock_scanner
         app.dependency_overrides[get_scan_limiter] = lambda: ScanLimiter(max_concurrent=0)
 
         try:
@@ -668,9 +701,9 @@ class TestAuthHeaderHandling:
         mock_settings.output.handlers = [handler_config]
 
         # Mock the coordinator dependency
-        mock_coordinator = Mock()
-        mock_coordinator.analyze_stockpile = AsyncMock(return_value=Mock())
-        app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
+        mock_scanner = Mock()
+        mock_scanner.scan = AsyncMock(return_value=Mock())
+        app.dependency_overrides[get_scanner] = lambda: mock_scanner
 
         # Mock the output coordinator dependency
         mock_output_coordinator = Mock()
@@ -715,9 +748,9 @@ class TestAuthHeaderHandling:
         )
         mock_settings.output.handlers = [handler_config]
 
-        mock_coordinator = Mock()
-        mock_coordinator.analyze_stockpile = AsyncMock(return_value=Mock())
-        app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
+        mock_scanner = Mock()
+        mock_scanner.scan = AsyncMock(return_value=Mock())
+        app.dependency_overrides[get_scanner] = lambda: mock_scanner
 
         mock_output_coordinator = Mock()
         mock_output_coordinator.handle_output = AsyncMock(return_value={"result": "success"})
@@ -758,9 +791,9 @@ class TestAPIAuthentication:
         image_bytes = buffer.tobytes()
 
         # Mock the coordinator dependency
-        mock_coordinator = Mock()
-        mock_coordinator.analyze_stockpile = AsyncMock(return_value=Mock())
-        app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
+        mock_scanner = Mock()
+        mock_scanner.scan = AsyncMock(return_value=Mock())
+        app.dependency_overrides[get_scanner] = lambda: mock_scanner
 
         # Mock the output coordinator dependency
         mock_output_coord = Mock()
@@ -794,9 +827,9 @@ class TestAPIAuthentication:
         image_bytes = buffer.tobytes()
 
         # Mock the coordinator dependency
-        mock_coordinator = Mock()
-        mock_coordinator.analyze_stockpile = AsyncMock(return_value=Mock())
-        app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
+        mock_scanner = Mock()
+        mock_scanner.scan = AsyncMock(return_value=Mock())
+        app.dependency_overrides[get_scanner] = lambda: mock_scanner
 
         # Mock the output coordinator dependency
         mock_output_coord = Mock()
@@ -884,9 +917,9 @@ class TestAPIAuthentication:
         image_bytes = buffer.tobytes()
 
         # Mock the coordinator dependency
-        mock_coordinator = Mock()
-        mock_coordinator.analyze_stockpile = AsyncMock(return_value=Mock())
-        app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
+        mock_scanner = Mock()
+        mock_scanner.scan = AsyncMock(return_value=Mock())
+        app.dependency_overrides[get_scanner] = lambda: mock_scanner
 
         # Mock the output coordinator dependency
         mock_output_coord = Mock()

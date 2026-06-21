@@ -20,9 +20,9 @@ from foxhole_stockpiles import __version__
 from foxhole_stockpiles.api.auth import create_auth_dependency
 from foxhole_stockpiles.api.dependencies import (
     get_notification_service,
-    get_ocr_coordinator,
     get_output_coordinator,
     get_scan_limiter,
+    get_scanner,
 )
 from foxhole_stockpiles.api.memory_middleware import MemoryMonitorMiddleware
 from foxhole_stockpiles.api.scan_limiter import ScanLimiter
@@ -39,7 +39,7 @@ from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.supported_language import SupportedLanguage
 from foxhole_stockpiles.services.memory_monitor import MemoryMonitor
 from foxhole_stockpiles.services.output_coordinator import OutputCoordinator
-from fs_ocr._impl.coordinator import OCRCoordinator
+from foxhole_stockpiles.services.scanner import Scanner
 
 # Maximum file upload size (10MB) - sufficient for high-resolution screenshots
 MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024
@@ -226,7 +226,7 @@ async def health_check() -> HealthResponse:
 async def scan_stockpile(
     request: Request,
     image: UploadFile,
-    coordinator: Annotated[OCRCoordinator, Depends(get_ocr_coordinator)],
+    scanner: Annotated[Scanner, Depends(get_scanner)],
     output_coordinator: Annotated[OutputCoordinator, Depends(get_output_coordinator)],
     scan_limiter: Annotated[ScanLimiter, Depends(get_scan_limiter)],
     faction: Annotated[
@@ -242,7 +242,7 @@ async def scan_stockpile(
     Args:
         image (UploadFile): Screenshot image file (PNG, JPG, JPEG supported)
         request (Request): FastAPI request object
-        coordinator (OCRCoordinator): OCR coordinator singleton (injected)
+        scanner (Scanner): OCR scanner singleton (injected)
         output_coordinator (OutputCoordinator): Output coordinator singleton (injected)
         scan_limiter (ScanLimiter): Concurrency limiter for CPU-bound operations (injected)
         faction (ItemFaction | None): Optional faction filter to limit detection to specific
@@ -284,14 +284,9 @@ async def scan_stockpile(
         # Treat NEUTRAL as None (no faction filter)
         faction_filter = faction if faction != ItemFaction.NEUTRAL else None
 
-        # Convert single language to list for API compatibility
-        languages = [language] if language else None
-
         # Limit concurrent scans to prevent CPU contention
         async with scan_limiter.acquire():
-            stockpile = await coordinator.analyze_stockpile(
-                image=image_bgr, languages=languages, faction=faction_filter
-            )
+            stockpile = await scanner.scan(image_bgr, faction=faction_filter)
 
         # Read the token from the specified header if any webhook handler uses forward auth
         token = None

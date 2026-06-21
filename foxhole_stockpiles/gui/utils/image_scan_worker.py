@@ -1,6 +1,5 @@
-"""Worker thread for scanning a screenshot directly for debug viewer."""
+"""Worker thread for scanning a screenshot directly for the debug viewer."""
 
-import asyncio
 import logging
 from pathlib import Path
 
@@ -10,10 +9,10 @@ from numpy.typing import NDArray
 from PySide6.QtCore import QThread, Signal
 
 from foxhole_stockpiles.core.settings import get_settings
+from foxhole_stockpiles.core.settings.sections.ocr import OCRSettings
 from foxhole_stockpiles.models.detected_icon_info import DetectedIconInfo
 from foxhole_stockpiles.models.scan_result import ScanResult
-from fs_ocr._impl.coordinator import OCRCoordinator
-from fs_ocr._impl.detector import StockpileDetector
+from foxhole_stockpiles.services.scanner import Scanner
 
 logger = logging.getLogger(__name__)
 
@@ -21,11 +20,16 @@ logger = logging.getLogger(__name__)
 class ImageScanWorker(QThread):
     """Background thread for scanning a screenshot directly.
 
-    This worker runs the scanning pipeline and extracts additional position
-    information for each detected icon, suitable for the debug viewer.
+    Runs the OCR scanner and, using each item's icon coordinates from the engine,
+    derives per-icon position/size info for the debug viewer's overlay. The icon
+    box size is a constant scaled from the screenshot resolution.
+
+    Note: the result signal is named ``scan_finished`` (not ``finished``) to avoid
+    shadowing ``QThread``'s built-in ``finished`` signal, which would cause
+    connected slots to fire twice.
     """
 
-    finished = Signal(object)  # ScanResult
+    scan_finished = Signal(object)  # ScanResult
     error = Signal(str)
 
     def __init__(self, image_path: str, database_path: Path) -> None:
@@ -40,10 +44,10 @@ class ImageScanWorker(QThread):
         self.database_path = database_path
 
     def run(self) -> None:
-        """Run the scan in background thread.
+        """Run the scan in a background thread.
 
         Emits:
-            finished: Signal with ScanResult on success.
+            scan_finished: Signal with ScanResult on success.
             error: Signal with error message on failure.
         """
         try:
@@ -54,33 +58,28 @@ class ImageScanWorker(QThread):
                 return
             image: NDArray[np.uint8] = np.asarray(loaded, dtype=np.uint8)
 
-            # Get positions from detector
-            detector = StockpileDetector(image)
-            detector.analize()
+            scanner = Scanner(get_settings().scanner)
+            stockpile = scanner.scan_sync(image)
 
-            if not detector.quantities:
+            if not stockpile.items:
                 self.error.emit("No stockpile detected in the image")
                 return
 
-            stockpile_images = detector.get_stockpile_images()
-            if stockpile_images is None:
-                self.error.emit("Failed to extract stockpile regions")
-                return
+            # The engine reports each item's icon coordinates directly. The icon
+            # box is square; its size scales with the screenshot height relative
+            # to the base resolution.
+            geometry = OCRSettings()
+            scale_factor = image.shape[0] / geometry.height
+            box_size = int(geometry.box_height * scale_factor)
 
-            # Run scan using OCRCoordinator with user settings
-            config = get_settings().scanner
-            coordinator = OCRCoordinator(config=config)
-            stockpile = asyncio.run(coordinator.analyze_stockpile(image))
-
-            # Build DetectedIconInfo list
             detected_icons: list[DetectedIconInfo] = []
             for i, item in enumerate(stockpile.items):
-                if i >= len(detector.quantities):
-                    logger.warning("Item index %d exceeds detected quantities", i)
-                    break
+                if item.x is None or item.y is None:
+                    logger.warning("Item %d (%s) has no coordinates; skipping", i, item.code)
+                    continue
 
-                qx, qy = detector.quantities[i]
-                icon_x = qx - detector.icon_to_quantity_offset
+                icon_x, icon_y = item.x, item.y
+                icon_image = image[icon_y : icon_y + box_size, icon_x : icon_x + box_size]
 
                 detected_icons.append(
                     DetectedIconInfo(
@@ -89,13 +88,13 @@ class ImageScanWorker(QThread):
                         quantity=item.quantity,
                         crated=item.crated,
                         confidence=item.confidence or 0.0,
-                        icon_image=stockpile_images.icons[i],
-                        position=(icon_x, qy),
-                        size=detector.box_height,
+                        icon_image=icon_image,
+                        position=(icon_x, icon_y),
+                        size=box_size,
                     )
                 )
 
-            self.finished.emit(
+            self.scan_finished.emit(
                 ScanResult(
                     stockpile=stockpile,
                     detected_icons=detected_icons,

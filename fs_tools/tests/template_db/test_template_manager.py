@@ -1,4 +1,4 @@
-"""Tests for services.template_manager module.
+"""Tests for fs_tools.template_db.template_manager module.
 
 This module contains comprehensive tests for the TemplateManager class,
 which handles template database loading, caching, and management for
@@ -16,8 +16,8 @@ from foxhole_stockpiles.enums.item_category import ItemCategory
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.models.icon_template import IconTemplate
-from fs_ocr._impl.template_database import DATABASE_VERSION, TemplateDatabase
-from fs_ocr._impl.template_manager import TemplateManager
+from fs_tools.template_db.template_database import DATABASE_VERSION, TemplateDatabase
+from fs_tools.template_db.template_manager import TemplateManager
 
 
 def create_hdf5_database(
@@ -1478,7 +1478,7 @@ class TestPrepareDatabase:
 
     def test_prepare_empty_database(self) -> None:
         """Test preparing an empty database returns minimal data."""
-        from fs_ocr._impl.template_manager import _prepare_resolution_data
+        from fs_tools.template_db.template_manager import _prepare_resolution_data
 
         empty_db = TemplateDatabase(SupportedResolution.R_1080)
         result = _prepare_resolution_data(SupportedResolution.R_1080, empty_db)

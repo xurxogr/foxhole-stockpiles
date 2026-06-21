@@ -1,4 +1,4 @@
-"""Tests for services.template_database module.
+"""Tests for fs_tools.template_db.template_database module.
 
 This module contains comprehensive tests for the TemplateDatabase class,
 which manages resolution-specific template storage with faction, mod, and
@@ -12,7 +12,7 @@ from foxhole_stockpiles.enums.item_category import ItemCategory
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.models.icon_template import IconTemplate
-from fs_ocr._impl.template_database import TemplateDatabase
+from fs_tools.template_db.template_database import TemplateDatabase
 
 
 class TestTemplateDatabaseInitialization:

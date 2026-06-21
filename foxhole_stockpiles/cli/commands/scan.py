@@ -26,7 +26,7 @@ from foxhole_stockpiles.enums.output_format import OutputFormat
 from foxhole_stockpiles.enums.supported_language import SupportedLanguage
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.services.output_coordinator import OutputCoordinator
-from fs_ocr._impl.coordinator import OCRCoordinator
+from foxhole_stockpiles.services.scanner import Scanner
 
 app = typer.Typer(help="Scan stockpile screenshots to identify items.")
 
@@ -161,7 +161,6 @@ async def _run(
     setup_logging(logging_settings)
 
     faction_filter = ItemFaction.from_string(faction)
-    language_filter: list[SupportedLanguage] | None = [language] if language else None
 
     try:
         scanner_update: dict[str, Any] = {
@@ -172,10 +171,8 @@ async def _run(
             scanner_update["early_exit_threshold"] = early_exit
         scanner_settings: ScannerSettings = settings.scanner.model_copy(update=scanner_update)
 
-        coordinator = OCRCoordinator(scanner_settings)
-        stockpile: Stockpile = await coordinator.analyze_stockpile(
-            image_array, languages=language_filter, faction=faction_filter
-        )
+        scanner = Scanner(scanner_settings)
+        stockpile: Stockpile = await scanner.scan(image_array, faction=faction_filter)
         output_coordinator = OutputCoordinator(output_settings=output_settings)
 
         output_kwargs: dict[str, Any] = {}

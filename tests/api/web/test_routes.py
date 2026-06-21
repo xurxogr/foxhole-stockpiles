@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from foxhole_stockpiles import __version__
 from foxhole_stockpiles.api.dependencies import (
     get_catalog_service,
-    get_ocr_coordinator,
+    get_scanner,
 )
 from foxhole_stockpiles.api.server import app
 from foxhole_stockpiles.api.web.routes import _render_combined_table, _render_stockpile_table
@@ -28,15 +28,15 @@ def clear_dependency_cache() -> Generator[None, None, None]:
     from foxhole_stockpiles.api.dependencies import (
         get_catalog_service,
         get_notification_service,
-        get_ocr_coordinator,
         get_output_coordinator,
+        get_scanner,
     )
     from foxhole_stockpiles.core.settings import get_settings
 
     # Clear caches
     get_settings.cache_clear()
     get_notification_service.cache_clear()
-    get_ocr_coordinator.cache_clear()
+    get_scanner.cache_clear()
     get_output_coordinator.cache_clear()
     get_catalog_service.cache_clear()
 
@@ -46,7 +46,7 @@ def clear_dependency_cache() -> Generator[None, None, None]:
 
     get_settings.cache_clear()
     get_notification_service.cache_clear()
-    get_ocr_coordinator.cache_clear()
+    get_scanner.cache_clear()
     get_output_coordinator.cache_clear()
     get_catalog_service.cache_clear()
     app.dependency_overrides.clear()
@@ -114,7 +114,7 @@ class TestWebIndex:
     ) -> None:
         """Test that ValueError database errors are displayed."""
         monkeypatch.setattr(
-            "foxhole_stockpiles.api.web.routes.get_ocr_coordinator",
+            "foxhole_stockpiles.api.web.routes.get_scanner",
             Mock(side_effect=ValueError("Database not configured")),
         )
 
@@ -128,7 +128,7 @@ class TestWebIndex:
     ) -> None:
         """Test that FileNotFoundError database errors are displayed."""
         monkeypatch.setattr(
-            "foxhole_stockpiles.api.web.routes.get_ocr_coordinator",
+            "foxhole_stockpiles.api.web.routes.get_scanner",
             Mock(side_effect=FileNotFoundError("/path/to/db.h5")),
         )
 
@@ -142,7 +142,7 @@ class TestWebIndex:
     ) -> None:
         """Test that generic database errors are displayed."""
         monkeypatch.setattr(
-            "foxhole_stockpiles.api.web.routes.get_ocr_coordinator",
+            "foxhole_stockpiles.api.web.routes.get_scanner",
             Mock(side_effect=RuntimeError("Unexpected database error")),
         )
 
@@ -164,17 +164,25 @@ class TestWebScan:
 
     def test_scan_no_images(self, client: TestClient) -> None:
         """Test scanning with no images returns error."""
-        response = client.post("/web/scan", data={"action": "scan"})
+        app.dependency_overrides[get_scanner] = lambda: Mock()
+        try:
+            response = client.post("/web/scan", data={"action": "scan"})
 
-        assert response.status_code == 422  # No file uploaded
+            assert response.status_code == 422  # No file uploaded
+        finally:
+            app.dependency_overrides.clear()
 
     def test_scan_empty_filename(self, client: TestClient) -> None:
         """Test scanning with empty filename returns error."""
-        files = {"images": ("", io.BytesIO(b""), "image/png")}
-        response = client.post("/web/scan", files=files, data={"action": "scan"})
+        app.dependency_overrides[get_scanner] = lambda: Mock()
+        try:
+            files = {"images": ("", io.BytesIO(b""), "image/png")}
+            response = client.post("/web/scan", files=files, data={"action": "scan"})
 
-        # FastAPI validation may return 422 or our handler returns 400
-        assert response.status_code in [400, 422]
+            # FastAPI validation may return 422 or our handler returns 400
+            assert response.status_code in [400, 422]
+        finally:
+            app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     async def test_scan_empty_images_list_direct(
@@ -193,12 +201,12 @@ class TestWebScan:
         mock_upload = Mock(spec=UploadFile)
         mock_upload.filename = ""
 
-        mock_coordinator = Mock()
+        mock_scanner = Mock()
 
         response = await web_scan(
             request=mock_request,
             images=[mock_upload],
-            coordinator=mock_coordinator,
+            scanner=mock_scanner,
             catalog_service=mock_catalog_service,
             action="scan",
         )
@@ -215,15 +223,15 @@ class TestWebScan:
         app.dependency_overrides[get_catalog_service] = lambda: mock_catalog_service
 
         # Mock coordinator
-        mock_coordinator = Mock()
-        mock_coordinator.analyze_stockpile = AsyncMock(
+        mock_scanner = Mock()
+        mock_scanner.scan = AsyncMock(
             return_value=Stockpile(
                 name="Test",
                 type=StockpileType.STORAGE_DEPOT,
                 items=[],
             )
         )
-        app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
+        app.dependency_overrides[get_scanner] = lambda: mock_scanner
 
         try:
             files = {"images": ("test.txt", io.BytesIO(b"text content"), "text/plain")}
@@ -254,10 +262,10 @@ class TestWebScan:
                 StockpileItem(code="Item2", quantity=50, crated=True),
             ],
         )
-        mock_coordinator = Mock()
-        mock_coordinator.analyze_stockpile = AsyncMock(return_value=mock_stockpile)
+        mock_scanner = Mock()
+        mock_scanner.scan = AsyncMock(return_value=mock_stockpile)
 
-        app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
+        app.dependency_overrides[get_scanner] = lambda: mock_scanner
         app.dependency_overrides[get_catalog_service] = lambda: mock_catalog_service
 
         try:
@@ -295,10 +303,10 @@ class TestWebScan:
             items=[StockpileItem(code="Item1", quantity=50, crated=False)],
         )
 
-        mock_coordinator = Mock()
-        mock_coordinator.analyze_stockpile = AsyncMock(side_effect=[stockpile1, stockpile2])
+        mock_scanner = Mock()
+        mock_scanner.scan = AsyncMock(side_effect=[stockpile1, stockpile2])
 
-        app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
+        app.dependency_overrides[get_scanner] = lambda: mock_scanner
         app.dependency_overrides[get_catalog_service] = lambda: mock_catalog_service
 
         try:
@@ -327,10 +335,10 @@ class TestWebScan:
         image_bytes = buffer.tobytes()
 
         # Coordinator raises exception
-        mock_coordinator = Mock()
-        mock_coordinator.analyze_stockpile = AsyncMock(side_effect=Exception("No stockpile found"))
+        mock_scanner = Mock()
+        mock_scanner.scan = AsyncMock(side_effect=Exception("No stockpile found"))
 
-        app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
+        app.dependency_overrides[get_scanner] = lambda: mock_scanner
         app.dependency_overrides[get_catalog_service] = lambda: mock_catalog_service
 
         try:
@@ -357,10 +365,10 @@ class TestWebScan:
             type=StockpileType.STORAGE_DEPOT,
             items=[StockpileItem(code="Item1", quantity=10, crated=False)],
         )
-        mock_coordinator = Mock()
-        mock_coordinator.analyze_stockpile = AsyncMock(return_value=mock_stockpile)
+        mock_scanner = Mock()
+        mock_scanner.scan = AsyncMock(return_value=mock_stockpile)
 
-        app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
+        app.dependency_overrides[get_scanner] = lambda: mock_scanner
         app.dependency_overrides[get_catalog_service] = lambda: mock_catalog_service
 
         try:
@@ -389,10 +397,10 @@ class TestWebScan:
             type=StockpileType.STORAGE_DEPOT,
             items=[StockpileItem(code="Item1", quantity=10, crated=False)],
         )
-        mock_coordinator = Mock()
-        mock_coordinator.analyze_stockpile = AsyncMock(return_value=mock_stockpile)
+        mock_scanner = Mock()
+        mock_scanner.scan = AsyncMock(return_value=mock_stockpile)
 
-        app.dependency_overrides[get_ocr_coordinator] = lambda: mock_coordinator
+        app.dependency_overrides[get_scanner] = lambda: mock_scanner
         app.dependency_overrides[get_catalog_service] = lambda: mock_catalog_service
 
         try:

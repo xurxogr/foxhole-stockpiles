@@ -6,9 +6,14 @@ from foxhole_stockpiles.gui.utils.scanner_client import ScannerClient
 
 
 class ScanWorker(QThread):
-    """Worker thread for scanning screenshots."""
+    """Worker thread for scanning screenshots.
 
-    finished = Signal()
+    Note: the completion signal is named ``scan_finished`` (not ``finished``) to
+    avoid shadowing ``QThread``'s built-in ``finished`` signal, which would cause
+    connected slots to fire twice.
+    """
+
+    scan_finished = Signal()
 
     def __init__(self, scanner_client: ScannerClient, filepath: str) -> None:
         """Initialize the scan worker.
@@ -24,4 +29,4 @@ class ScanWorker(QThread):
     def run(self) -> None:
         """Run the scan in background thread."""
         self.scanner_client.scan_screenshot(self.filepath)
-        self.finished.emit()
+        self.scan_finished.emit()
