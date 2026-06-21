@@ -51,7 +51,8 @@
     "github_link": "GitHub Repository",
     "client_link": "FS Client (Complementary Tool)",
     "copyright": "Copyright © 2024 Xurxogr",
-    "license": "Licensed under the MIT License"
+    "license": "Licensed under the MIT License",
+    "feature_capture": "Capture and scan stockpile screenshots locally"
   },
   "server_panel": {
     "sav_group_title": "SAV Processing",
@@ -70,7 +71,7 @@
       "database_error_message": "Failed to load database",
       "no_config_title": "No Configuration Found",
       "no_config_message": "Please set up your configuration in<br><b>File → Configuration</b>",
-      "cannot_scan": "Cannot scan: Server is not running!"
+      "cannot_scan": "Cannot scan: the scanner is not ready. Check the database path in Settings."
     },
     "scan_sav": "Scan SAV",
     "start_monitor": "Start SAV Monitor",
@@ -83,7 +84,12 @@
       "error_output": "Failed to create output coordinator: {error}",
       "status_scanning": "Scanning...",
       "status_monitoring": "Monitoring..."
-    }
+    },
+    "capture_group_title": "Capture",
+    "start_capture": "Start Capture",
+    "stop_capture": "Stop Capture",
+    "status_capturing": "Status: Capturing",
+    "capture_no_key": "Configure a capture hotkey in Settings first."
   },
   "config_window": {
     "title": "Configuration",
@@ -160,7 +166,14 @@
     "extract_icons_checkbox": "Save detected icon images",
     "extract_icons_tooltip": "Save each detected item icon as a separate image file.\n\nIcons are saved to './icons/' folder with format: 'XXX_CODE.png'\nwhere XXX is the icon index (000, 001, etc.) and CODE is the detected item.\n\nDevelopment setting - useful for creating new templates or debugging detection.",
     "select_database": "Select Template Database",
-    "select_screenshots": "Select Screenshots Directory"
+    "select_screenshots": "Select Screenshots Directory",
+    "capture_hotkey": "Capture hotkey:",
+    "capture_hotkey_tooltip": "Global hotkey that captures the Foxhole window and scans it.",
+    "capture_hotkey_placeholder": "No key set",
+    "capture_change": "Change",
+    "capture_clear": "Clear",
+    "press_key_title": "Press a key",
+    "press_key_prompt": "Press the key to use for capture (Esc to cancel)."
   },
   "output_tab": {
     "description": "Configure output handlers for scan results.\nYou can add multiple handlers to send results to different destinations.",

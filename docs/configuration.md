@@ -6,19 +6,16 @@ The Foxhole Stockpile Scanner can be configured using environment variables or a
 
 ### 1. Environment Variables
 
-Environment variables use the prefix `FS_` and nested settings are separated by `__`:
+Environment variables use the prefix `FS_` and nested settings are separated by `__` (format: `FS_<SECTION>__<KEY>`):
 
 ```bash
-# API Authentication
-export FS_API_AUTH__AUTH_TYPE=bearer
-export FS_API_AUTH__AUTH_TOKEN=your-secret-token
-
 # Scanner settings
 export FS_SCANNER__DATABASE_PATH=/path/to/database.h5
+export FS_SCANNER__CAPTURE_KEY=F9
 export FS_SCANNER__TEMPLATE_CACHE_SIZE=16
 
 # Output handlers (JSON array)
-export FS_OUTPUT__HANDLERS='[{"name":"API Response","format":{"type":"json"},"handler":{"type":"return"}}]'
+export FS_OUTPUT__HANDLERS='[{"name":"Local Scan","format":{"type":"json"},"handler":{"type":"return"}}]'
 
 # Logging
 export FS_LOGGING__LOG_LEVEL=DEBUG
@@ -29,28 +26,20 @@ export FS_LOGGING__LOG_FILE=/var/log/foxhole-scanner.log
 
 Create a file at `~/.fs_config` with JSON configuration:
 
-**Note on Config Versioning:** The configuration includes a `config_version` field (current: **9**). Old configs are automatically migrated when loaded via `ConfigMigrator` - no manual action required. V5 introduced the `output.handlers` array structure (multiple output destinations); later versions added the `sav_processing` section for Foxhole save-file processing; V9 removed the obsolete `api_server.web_icon_mod` field.
+**Note on Config Versioning:** The configuration includes a `config_version` field (current: **10**). Old configs are automatically migrated when loaded via `ConfigMigrator` - no manual action required. V5 introduced the `output.handlers` array structure (multiple output destinations); later versions added the `sav_processing` section for Foxhole save-file processing; V10 removed the obsolete `api_server` and `api_auth` sections (the FastAPI server was removed in favor of local screenshot capture).
 
 ```json
 {
-  "config_version": 9,
-  "api_server": {
-    "cors_allow_origins": [],
-    "enable_memory_monitoring": false,
-    "auto_trim_memory": true
-  },
-  "api_auth": {
-    "auth_type": "bearer",
-    "auth_token": "your-secret-token"
-  },
+  "config_version": 10,
   "scanner": {
     "database_path": "/path/to/database.h5",
+    "capture_key": "F9",
     "screenshots_folder": ""
   },
   "output": {
     "handlers": [
       {
-        "name": "API Response",
+        "name": "Local Scan",
         "format": {"type": "json"},
         "handler": {"type": "return"}
       }
@@ -69,48 +58,6 @@ Create a file at `~/.fs_config` with JSON configuration:
 
 ## Configuration Sections
 
-### API Server (`api_server`)
-
-Settings for the API server.
-
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `cors_allow_origins` | array[string] | `[]` | List of allowed CORS origins. Empty list allows no cross-origin requests. Use `["*"]` to allow all origins (not recommended for production) |
-| `host` | string | `"127.0.0.1"` | Server bind host address |
-| `port` | integer | `8000` | Server bind port (1-65535) |
-| `workers` | integer | `1` | Number of worker processes |
-| `reload` | boolean | `false` | Enable auto-reload on code changes (development only) |
-| `log_level` | string | `"info"` | Server log level (`"debug"`, `"info"`, `"warning"`, `"error"`) |
-| `enable_memory_monitoring` | boolean | `false` | Enable memory monitoring to track memory usage per request and expose `/memory/*` endpoints |
-| `auto_trim_memory` | boolean | `true` | Automatically call `malloc_trim()` after scan requests to release freed memory back to OS |
-
-**Examples:**
-```bash
-# Allow all origins (development)
-export FS_API_SERVER__CORS_ALLOW_ORIGINS='["*"]'
-
-# Allow specific origins (production)
-export FS_API_SERVER__CORS_ALLOW_ORIGINS='["https://yourdomain.com","https://app.yourdomain.com"]'
-
-# Production server configuration
-export FS_API_SERVER__HOST=0.0.0.0
-export FS_API_SERVER__PORT=8080
-export FS_API_SERVER__WORKERS=4
-```
-
-### API Authentication (`api_auth`)
-
-Controls authentication for the API server endpoints.
-
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `auth_type` | string\|null | `null` | Authentication method. Valid values: `"basic"`, `"bearer"`, or `null` to disable |
-| `auth_token` | string\|null | `null` | Authentication token/credentials |
-
-**Note:** Both `auth_type` and `auth_token` must be set together or both be `null`. The `"forward"` auth type is not supported for API authentication.
-
-See [API Authentication](api-authentication.md) for detailed examples.
-
 ### Scanner (`scanner`)
 
 Settings for the stockpile scanner.
@@ -118,6 +65,7 @@ Settings for the stockpile scanner.
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
 | `database_path` | string | `null` | Path to the template database file |
+| `capture_key` | string\|null | `null` | Global hotkey that captures the Foxhole window and scans it (e.g. `"F9"`). The captured window title is hardcoded to `"War"`. Set to `null` (or leave unset) to disable capture |
 | `template_cache_size` | integer | `16` | Max resolution databases to cache in memory (0=no cache, 16=all resolutions) |
 | `early_exit_threshold` | float | `0.0` | Early exit threshold for icon matching (0.0-1.0). Set to 0.0 to disable early exit |
 | `confidence_gap` | float | `0.0` | Confidence gap for returning alternative candidates (0.0-1.0). Returns candidates within `(best_confidence - confidence_gap)` range that have the same category, crated status, and mod. Set to 0.0 to disable |
@@ -141,7 +89,7 @@ Each handler in the array has the following structure:
 
 | Setting | Type | Required | Description |
 |---------|------|----------|-------------|
-| `name` | string | Yes | Friendly name for this handler (e.g., "API Response", "File Backup") |
+| `name` | string | Yes | Friendly name for this handler (e.g., "Local Scan", "File Backup") |
 | `format` | object | Yes | Format settings for serialization |
 | `handler` | object | Yes | Handler-specific settings |
 
@@ -160,7 +108,7 @@ For CSV/TSV formats, additional settings are available:
 
 #### Handler Types (`output.handlers[].handler`)
 
-**Return Handler** - Returns data to the API caller:
+**Return Handler** - Returns the result dict to the caller (used by the CLI / local scan):
 ```json
 {"type": "return"}
 ```
@@ -195,6 +143,16 @@ Example: `{timestamp}_{stockpile_type}_{stockpile_name}_{resolution}.json` → `
 {"type": "console"}
 ```
 
+**Google Sheets Handler** - Appends results to a Google Sheet:
+| Setting | Type | Required | Description |
+|---------|------|----------|-------------|
+| `type` | string | Yes | Must be `"sheets"` |
+| `creds_path` | string | Yes | Path to the Google service-account credentials JSON file |
+| `spreadsheet_url` | string | Yes | URL of the target spreadsheet |
+| `sheet_id` | string\|null | No | Worksheet/tab ID within the spreadsheet |
+| `start_cell` | string\|null | No | Anchor cell where writing begins (e.g. `"A1"`) |
+| `row_format` | object\|null | No | Row layout settings controlling how values are written |
+
 #### Example: Multiple Handlers
 
 ```json
@@ -202,7 +160,7 @@ Example: `{timestamp}_{stockpile_type}_{stockpile_name}_{resolution}.json` → `
   "output": {
     "handlers": [
       {
-        "name": "API Response",
+        "name": "Local Scan",
         "format": {"type": "json"},
         "handler": {"type": "return"}
       },
@@ -321,8 +279,6 @@ Settings for the notifications system (e.g., Discord webhooks).
 - `stockpile.scanned` - Stockpile scan completed successfully
 - `stockpile.scan_failed` - Stockpile scan failed
 - `stockpile.scan_started` - Stockpile scan started
-- `server.started` - API server started
-- `server.stopped` - API server stopped
 
 **Message template placeholders:**
 `STOCKPILE_NAME`, `STOCKPILE_TYPE`, `SHARD`, `TIME`, `ITEM_COUNT`, `MATCHED_ITEMS`, `UNMATCHED_ITEMS`, `AVG_CONFIDENCE`, `DURATION`, `RESOLUTION`, `ERROR`
@@ -389,13 +345,6 @@ export FS_SAV_PROCESSING__EMIT_ALL_ON_START=true
 
 ## Common Configurations
 
-### API Server with Bearer Authentication
-
-```bash
-export FS_API_AUTH__AUTH_TYPE=bearer
-export FS_API_AUTH__AUTH_TOKEN=my-secret-token-123
-```
-
 ### Scanner with Webhook Output
 
 ```bash
@@ -440,48 +389,11 @@ export FS_SCANNER__SCREENSHOTS_FOLDER=screenshots
 # screenshots/2025-10-05/2025-10-05_14-30-45_Storage_Depot_My_Logi_1920x1080.png
 ```
 
-### Production API Server
+### Capture-and-Scan Hotkey
 
-```json
-{
-  "config_version": 9,
-  "api_server": {
-    "cors_allow_origins": ["https://myapp.com", "https://app.myapp.com"],
-    "enable_memory_monitoring": false,
-    "auto_trim_memory": true
-  },
-  "api_auth": {
-    "auth_type": "bearer",
-    "auth_token": "production-token"
-  },
-  "logging": {
-    "log_level": "INFO",
-    "log_file": "/var/log/foxhole-api.log",
-    "rotate_logs": true
-  },
-  "scanner": {
-    "database_path": "/opt/foxhole/templates.h5"
-  },
-  "output": {
-    "handlers": [
-      {
-        "name": "API Response",
-        "format": {"type": "json"},
-        "handler": {"type": "return"}
-      },
-      {
-        "name": "Webhook",
-        "format": {"type": "json"},
-        "handler": {
-          "type": "webhook",
-          "url": "https://api.myapp.com/stockpiles",
-          "auth_type": "bearer",
-          "token": "internal-webhook-secret"
-        }
-      }
-    ]
-  }
-}
+```bash
+# Press F9 to capture the Foxhole "War" window and scan it
+export FS_SCANNER__CAPTURE_KEY=F9
 ```
 
 ## Configuration Priority
@@ -502,21 +414,7 @@ This example shows all available settings with their default values:
 
 ```json
 {
-  "config_version": 9,
-  "api_server": {
-    "cors_allow_origins": [],
-    "host": "127.0.0.1",
-    "port": 8000,
-    "workers": 1,
-    "reload": false,
-    "log_level": "info",
-    "enable_memory_monitoring": false,
-    "auto_trim_memory": true
-  },
-  "api_auth": {
-    "auth_type": null,
-    "auth_token": null
-  },
+  "config_version": 10,
   "logging": {
     "loggers": {},
     "log_level": "INFO",
@@ -528,7 +426,7 @@ This example shows all available settings with their default values:
   "output": {
     "handlers": [
       {
-        "name": "API Response",
+        "name": "Local Scan",
         "format": {"type": "json"},
         "handler": {"type": "return"}
       }
@@ -536,6 +434,7 @@ This example shows all available settings with their default values:
   },
   "scanner": {
     "database_path": null,
+    "capture_key": null,
     "template_cache_size": 16,
     "early_exit_threshold": 0.0,
     "confidence_gap": 0.0,
@@ -590,22 +489,9 @@ This table lists all available environment variables with their default values:
 
 | Environment Variable | Type | Default Value | Description |
 |---------------------|------|---------------|-------------|
-| **API Server** | | | |
-| `FS_API_SERVER__CORS_ALLOW_ORIGINS` | JSON array | `[]` | CORS allowed origins (empty by default) |
-| `FS_API_SERVER__HOST` | string | `"127.0.0.1"` | Server bind host |
-| `FS_API_SERVER__PORT` | integer | `8000` | Server bind port |
-| `FS_API_SERVER__WORKERS` | integer | `1` | Number of worker processes |
-| `FS_API_SERVER__RELOAD` | boolean | `false` | Enable auto-reload |
-| `FS_API_SERVER__LOG_LEVEL` | string | `"info"` | Server log level (`"debug"`, `"info"`, `"warning"`, `"error"`) |
-| `FS_API_SERVER__ENABLE_MEMORY_MONITORING` | boolean | `false` | Enable memory monitoring and `/memory/*` endpoints |
-| `FS_API_SERVER__AUTO_TRIM_MEMORY` | boolean | `true` | Auto-trim memory after scans to prevent fragmentation |
-| `FS_API_SERVER__WEB_ICON_MOD` | string | `"vanilla"` | Mod for web interface icons |
-| **API Authentication** | | | |
-| `FS_API_AUTH__AUTH_TYPE` | string\|null | `null` | API auth type (`"basic"`, `"bearer"`, or `null`) |
-| `FS_API_AUTH__AUTH_TOKEN` | string\|null | `null` | API authentication token |
 | **Logging** | | | |
 | `FS_LOGGING__LOGGERS` | JSON object | `{}` | Per-logger level overrides (see special syntax below) |
-| `FS_LOGGING__LOGGERS__<LOGGER_NAME>` | string | N/A | Logger-specific level (e.g., `__foxhole_stockpiles`, `__uvicorn`) |
+| `FS_LOGGING__LOGGERS__<LOGGER_NAME>` | string | N/A | Logger-specific level (e.g., `__foxhole_stockpiles`, `__httpx`) |
 | `FS_LOGGING__LOG_LEVEL` | string | `"INFO"` | Global log level |
 | `FS_LOGGING__LOG_FORMAT` | string | `"[%(asctime)s] %(levelname)s [%(name)s] %(message)s"` | Log format string |
 | `FS_LOGGING__DATE_FORMAT` | string | `"%Y-%m-%d %H:%M:%S"` | Date format |
@@ -615,6 +501,7 @@ This table lists all available environment variables with their default values:
 | `FS_OUTPUT__HANDLERS` | JSON array | `[]` | List of output handler configurations (see examples below) |
 | **Scanner** | | | |
 | `FS_SCANNER__DATABASE_PATH` | string | `null` | Template database path |
+| `FS_SCANNER__CAPTURE_KEY` | string\|null | `null` | Hotkey to capture the Foxhole "War" window and scan it (e.g. `F9`); `null` disables capture |
 | `FS_SCANNER__TEMPLATE_CACHE_SIZE` | integer | `16` | Max resolution databases to cache (0-16) |
 | `FS_SCANNER__EARLY_EXIT_THRESHOLD` | float | `0.0` | Early exit threshold |
 | `FS_SCANNER__CONFIDENCE_GAP` | float | `0.0` | Confidence gap for alternative candidates |
@@ -643,7 +530,7 @@ This table lists all available environment variables with their default values:
 
 **Note:** For JSON values (arrays/objects), use proper JSON syntax in the environment variable:
 ```bash
-export FS_API_SERVER__CORS_ALLOW_ORIGINS='["https://example.com"]'
+export FS_DATABASE_BUILDER__TARGET_RESOLUTIONS='["1080","1440","2160"]'
 ```
 
 #### Per-Logger Level Configuration
@@ -653,13 +540,12 @@ The `loggers` setting has special syntax for environment variables. You can set 
 **Method 1: Individual logger variables (recommended)**
 ```bash
 export FS_LOGGING__LOGGERS__foxhole_stockpiles=DEBUG
-export FS_LOGGING__LOGGERS__uvicorn=WARNING
 export FS_LOGGING__LOGGERS__httpx=ERROR
 ```
 
 **Method 2: JSON object**
 ```bash
-export FS_LOGGING__LOGGERS='{"foxhole_stockpiles":"DEBUG","uvicorn":"WARNING"}'
+export FS_LOGGING__LOGGERS='{"foxhole_stockpiles":"DEBUG","httpx":"ERROR"}'
 ```
 
 **In config file:**
@@ -668,7 +554,6 @@ export FS_LOGGING__LOGGERS='{"foxhole_stockpiles":"DEBUG","uvicorn":"WARNING"}'
   "logging": {
     "loggers": {
       "foxhole_stockpiles": "DEBUG",
-      "uvicorn": "WARNING",
       "httpx": "ERROR"
     }
   }
@@ -683,9 +568,9 @@ When a logger-specific level is set, it overrides the global `log_level` for tha
 
 The `handlers` setting is a JSON array. Configure via environment variable:
 
-**Single handler (return results to API caller):**
+**Single handler (return result dict to the caller):**
 ```bash
-export FS_OUTPUT__HANDLERS='[{"name":"API Response","format":{"type":"json"},"handler":{"type":"return"}}]'
+export FS_OUTPUT__HANDLERS='[{"name":"Local Scan","format":{"type":"json"},"handler":{"type":"return"}}]'
 ```
 
 **File output:**
@@ -701,10 +586,10 @@ export FS_OUTPUT__HANDLERS='[{"name":"Webhook","format":{"type":"json"},"handler
 **Multiple handlers (results sent to all destinations):**
 ```bash
 export FS_OUTPUT__HANDLERS='[
-  {"name":"API Response","format":{"type":"json"},"handler":{"type":"return"}},
+  {"name":"Local Scan","format":{"type":"json"},"handler":{"type":"return"}},
   {"name":"Backup","format":{"type":"json"},"handler":{"type":"file","path":"backup.json"}}
 ]'
 ```
 
-Handler types: `return`, `file`, `webhook`, `console`
+Handler types: `return`, `file`, `webhook`, `console`, `sheets`
 Format types: `json`, `csv`, `tsv`

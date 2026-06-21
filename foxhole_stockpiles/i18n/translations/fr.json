@@ -51,7 +51,8 @@
     "github_link": "Dépôt GitHub",
     "client_link": "Client FS (Outil complémentaire)",
     "copyright": "Copyright © 2024 Xurxogr",
-    "license": "Sous licence MIT"
+    "license": "Sous licence MIT",
+    "feature_capture": "Capturer et scanner les captures d'écran de stocks en local"
   },
   "server_panel": {
     "sav_group_title": "Traitement SAV",
@@ -70,7 +71,7 @@
       "database_error_message": "Échec du chargement de la base de données",
       "no_config_title": "Configuration introuvable",
       "no_config_message": "Veuillez configurer votre application dans<br><b>Fichier → Configuration</b>",
-      "cannot_scan": "Impossible de scanner : Le serveur n'est pas en cours d'exécution !"
+      "cannot_scan": "Scan impossible : le scanner n'est pas prêt. Vérifiez le chemin de la base de données dans les Paramètres."
     },
     "scan_sav": "Scanner SAV",
     "start_monitor": "Démarrer Moniteur SAV",
@@ -83,7 +84,12 @@
       "error_output": "Échec de la création du coordinateur de sortie : {error}",
       "status_scanning": "Scan en cours...",
       "status_monitoring": "Surveillance en cours..."
-    }
+    },
+    "capture_group_title": "Capture",
+    "start_capture": "Démarrer la capture",
+    "stop_capture": "Arrêter la capture",
+    "status_capturing": "Statut : Capture en cours",
+    "capture_no_key": "Configurez d'abord un raccourci de capture dans les Paramètres."
   },
   "config_window": {
     "title": "Configuration",
@@ -160,7 +166,14 @@
     "extract_icons_checkbox": "Sauvegarder les images d'icônes détectées",
     "extract_icons_tooltip": "Sauvegarder chaque icône d'objet détectée comme fichier image séparé.\n\nLes icônes sont sauvegardées dans le dossier './icons/' avec format : 'XXX_CODE.png'\noù XXX est l'index de l'icône (000, 001, etc.) et CODE est l'objet détecté.\n\nParamètre de développement - utile pour créer de nouveaux modèles ou déboguer la détection.",
     "select_database": "Sélectionner la base de données de modèles",
-    "select_screenshots": "Sélectionner le répertoire des captures"
+    "select_screenshots": "Sélectionner le répertoire des captures",
+    "capture_hotkey": "Raccourci de capture :",
+    "capture_hotkey_tooltip": "Raccourci clavier global qui capture la fenêtre de Foxhole et la scanne.",
+    "capture_hotkey_placeholder": "Aucune touche définie",
+    "capture_change": "Modifier",
+    "capture_clear": "Effacer",
+    "press_key_title": "Appuyez sur une touche",
+    "press_key_prompt": "Appuyez sur la touche à utiliser pour la capture (Échap pour annuler)."
   },
   "output_tab": {
     "description": "Configurez les gestionnaires de sortie pour les résultats de scan.\nVous pouvez ajouter plusieurs gestionnaires pour envoyer les résultats vers différentes destinations.",

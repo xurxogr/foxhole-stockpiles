@@ -6,7 +6,7 @@ from typing import Any
 class ConfigMigrator:
     """Handles migration of configuration data between versions."""
 
-    CURRENT_VERSION = 9
+    CURRENT_VERSION = 10
 
     @classmethod
     def apply_migrations(cls, data: dict[str, Any]) -> dict[str, Any]:
@@ -66,6 +66,11 @@ class ConfigMigrator:
         if version == 8:
             data = cls._migrate_v8_to_v9(data)
             data["config_version"] = 9
+            version = 9
+
+        if version == 9:
+            data = cls._migrate_v9_to_v10(data)
+            data["config_version"] = 10
 
         return data
 
@@ -441,5 +446,27 @@ class ConfigMigrator:
         """
         if "api_server" in data and isinstance(data["api_server"], dict):
             data["api_server"].pop("web_icon_mod", None)
+
+        return data
+
+    @staticmethod
+    def _migrate_v9_to_v10(data: dict[str, Any]) -> dict[str, Any]:
+        """Migrate from v9 to v10 (drop the FastAPI server sections).
+
+        The runtime no longer hosts a REST API; scanning happens locally from a
+        captured screenshot. The ``api_server`` and ``api_auth`` sections are
+        removed so they do not linger in ``.fs_config``.
+
+        V9 had: top-level ``api_server`` and ``api_auth`` sections.
+        V10 has: neither (a new ``capture`` section uses its model defaults).
+
+        Args:
+            data (dict[str, Any]): V9 configuration data.
+
+        Returns:
+            dict[str, Any]: V10 configuration data.
+        """
+        data.pop("api_server", None)
+        data.pop("api_auth", None)
 
         return data

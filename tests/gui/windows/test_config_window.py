@@ -10,8 +10,6 @@ from PySide6.QtWidgets import QMessageBox
 
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.core.settings.sections import (
-    APIAuthSettings,
-    APIServerSettings,
     DatabaseBuilderSettings,
     ExternalToolsSettings,
     LoggingSettings,
@@ -21,7 +19,6 @@ from foxhole_stockpiles.core.settings.sections import (
     ScannerSettings,
     StockpileTypesSettings,
 )
-from foxhole_stockpiles.enums.auth_type import AuthType
 from foxhole_stockpiles.enums.config_level import ConfigLevel
 from foxhole_stockpiles.gui.windows.config_window import ConfigWindow
 from foxhole_stockpiles.i18n import t
@@ -53,8 +50,6 @@ def mock_config_manager() -> Any:
         # Create default settings with explicit BASIC config level
         default_settings = MagicMock(spec=AppSettings)
         default_settings.gui = GUISettings(config_level=ConfigLevel.BASIC)
-        default_settings.api_server = APIServerSettings()
-        default_settings.api_auth = APIAuthSettings()
         default_settings.scanner = ScannerSettings()
         default_settings.output = OutputSettings()
         default_settings.external_tools = ExternalToolsSettings()
@@ -103,7 +98,6 @@ def test_config_window_has_all_tabs(config_window: ConfigWindow) -> None:
     Args:
         config_window: ConfigWindow instance
     """
-    assert config_window.api_server_tab is not None
     assert config_window.scanner_tab is not None
     assert config_window.output_tab is not None
     assert config_window.logging_tab is not None
@@ -115,10 +109,10 @@ def test_config_window_basic_level_by_default(config_window: ConfigWindow) -> No
     Args:
         config_window: ConfigWindow instance
     """
-    # Default config level is BASIC which shows 5 tabs
+    # Default config level is BASIC which shows 4 tabs
     assert config_window._current_config_level == ConfigLevel.BASIC
-    assert config_window.tab_widget.count() == 5
-    assert config_window.tab_widget.tabText(0) == t("config_window.tabs.api_server")
+    assert config_window.tab_widget.count() == 4
+    assert config_window.tab_widget.tabText(0) == t("config_window.tabs.scanner")
 
 
 def test_config_window_config_level_tabs(qtbot: Any, mock_config_manager: MagicMock) -> None:
@@ -130,32 +124,32 @@ def test_config_window_config_level_tabs(qtbot: Any, mock_config_manager: MagicM
     """
     from foxhole_stockpiles.core.settings.sections.gui import GUISettings
 
-    # Test BASIC level (5 tabs)
+    # Test BASIC level (4 tabs)
     settings = AppSettings()
     settings.gui = GUISettings(config_level=ConfigLevel.BASIC)
     mock_config_manager.load_config.return_value = settings
 
     window = ConfigWindow()
     qtbot.addWidget(window)
-    assert window.tab_widget.count() == 5
+    assert window.tab_widget.count() == 4
 
     # Test ADVANCED level
-    # (8 tabs: + Stockpile Types, Notifications, SAV Processing)
+    # (7 tabs: + Stockpile Types, Notifications, SAV Processing)
     settings.gui = GUISettings(config_level=ConfigLevel.ADVANCED)
     mock_config_manager.load_config.return_value = settings
 
     window2 = ConfigWindow()
     qtbot.addWidget(window2)
-    assert window2.tab_widget.count() == 8
+    assert window2.tab_widget.count() == 7
 
-    # Test DEVELOPER level (8 tabs: same sections as ADVANCED)
+    # Test DEVELOPER level (7 tabs: same sections as ADVANCED)
     settings.gui = GUISettings(config_level=ConfigLevel.DEVELOPER)
     mock_config_manager.load_config.return_value = settings
 
     window3 = ConfigWindow()
     qtbot.addWidget(window3)
-    assert window3.tab_widget.count() == 8
-    assert window3.tab_widget.tabText(0) == t("config_window.tabs.api_server")
+    assert window3.tab_widget.count() == 7
+    assert window3.tab_widget.tabText(0) == t("config_window.tabs.scanner")
 
 
 def test_config_window_load_settings_populates_tabs(
@@ -169,8 +163,7 @@ def test_config_window_load_settings_populates_tabs(
     """
     # Create custom settings
     settings = AppSettings(
-        api_server=APIServerSettings(host="192.168.1.1", port=9000),
-        api_auth=APIAuthSettings(auth_type=AuthType.BASIC, auth_token="user:pass"),
+        scanner=ScannerSettings(capture_key="F9"),
     )
     mock_config_manager.load_config.return_value = settings
 
@@ -179,8 +172,7 @@ def test_config_window_load_settings_populates_tabs(
 
     # Verify settings were loaded
     assert window.settings is not None
-    assert window.settings.api_server.host == "192.168.1.1"
-    assert window.settings.api_server.port == 9000
+    assert window.settings.scanner.capture_key == "F9"
 
 
 def test_config_window_load_settings_error_handling(
@@ -318,8 +310,6 @@ def test_config_window_collect_settings_all_sections(config_window: ConfigWindow
 
     # Should return AppSettings instance with all sections
     assert isinstance(settings, AppSettings)
-    assert isinstance(settings.api_server, APIServerSettings)
-    assert isinstance(settings.api_auth, APIAuthSettings)
     assert isinstance(settings.scanner, ScannerSettings)
     assert isinstance(settings.output, OutputSettings)
     assert isinstance(settings.database_builder, DatabaseBuilderSettings)
@@ -334,15 +324,15 @@ def test_config_window_populate_tabs(config_window: ConfigWindow) -> None:
     """
     # Create custom settings
     custom_settings = AppSettings(
-        api_server=APIServerSettings(host="10.0.0.1", port=5000),
+        scanner=ScannerSettings(capture_key="F9"),
     )
 
     # Set and populate
     config_window.settings = custom_settings
     config_window.populate_tabs()
 
-    # Verify api_server_tab was populated
-    assert config_window.api_server_tab.port_input.value() == 5000
+    # Verify scanner_tab was populated with the capture key
+    assert config_window.scanner_tab.capture_key_display.text() == "F9"
 
 
 def test_config_window_populate_tabs_none_settings(config_window: ConfigWindow) -> None:
@@ -495,8 +485,8 @@ class TestCloseEvent:
             config_window: ConfigWindow instance
             mock_config_manager: Mock ConfigManager
         """
-        # Make changes (use api_server_tab since advanced mode is default)
-        config_window.api_server_tab.port_input.setValue(9999)
+        # Make changes (use scanner_tab to differ from loaded settings)
+        config_window.scanner_tab.database_path_input.setText("changed.h5")
         mock_config_manager.save_config.return_value = (True, "Success")
 
         event = MagicMock(spec=QCloseEvent)
@@ -517,8 +507,8 @@ class TestCloseEvent:
             config_window: ConfigWindow instance
             mock_config_manager: Mock ConfigManager
         """
-        # Make changes (use api_server_tab since advanced mode is default)
-        config_window.api_server_tab.port_input.setValue(9999)
+        # Make changes (use scanner_tab to differ from loaded settings)
+        config_window.scanner_tab.database_path_input.setText("changed.h5")
         mock_config_manager.save_config.return_value = (False, "Save failed")
 
         event = MagicMock(spec=QCloseEvent)
@@ -541,8 +531,8 @@ class TestCloseEvent:
             config_window: ConfigWindow instance
             mock_config_manager: Mock ConfigManager
         """
-        # Make changes (use api_server_tab since advanced mode is default)
-        config_window.api_server_tab.port_input.setValue(9999)
+        # Make changes (use scanner_tab to differ from loaded settings)
+        config_window.scanner_tab.database_path_input.setText("changed.h5")
 
         event = MagicMock(spec=QCloseEvent)
 
@@ -562,8 +552,8 @@ class TestCloseEvent:
             config_window: ConfigWindow instance
             mock_config_manager: Mock ConfigManager
         """
-        # Make changes (use api_server_tab since advanced mode is default)
-        config_window.api_server_tab.port_input.setValue(9999)
+        # Make changes (use scanner_tab to differ from loaded settings)
+        config_window.scanner_tab.database_path_input.setText("changed.h5")
 
         event = MagicMock(spec=QCloseEvent)
 
@@ -755,7 +745,7 @@ class TestSaveSettingsConfigLevelChange:
         """
         # Initial tab count at BASIC level
         initial_tab_count = config_window.tab_widget.count()
-        assert initial_tab_count == 5
+        assert initial_tab_count == 4
 
         # Change config level to ADVANCED
         config_window.gui_tab.config_level_input.setCurrentText("Advanced")
@@ -763,7 +753,7 @@ class TestSaveSettingsConfigLevelChange:
         config_window.save_settings()
 
         # Tabs should be rebuilt with more tabs
-        assert config_window.tab_widget.count() == 8
+        assert config_window.tab_widget.count() == 7
 
 
 class TestRetranslate:

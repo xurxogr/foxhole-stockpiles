@@ -1,6 +1,5 @@
 """Settings sections exports."""
 
-from foxhole_stockpiles.core.settings.sections.api import APIAuthSettings, APIServerSettings
 from foxhole_stockpiles.core.settings.sections.database_builder import DatabaseBuilderSettings
 from foxhole_stockpiles.core.settings.sections.external_tools import ExternalToolsSettings
 from foxhole_stockpiles.core.settings.sections.gui import GUISettings
@@ -24,8 +23,6 @@ from foxhole_stockpiles.core.settings.sections.stockpile_types import StockpileT
 from foxhole_stockpiles.core.settings.sections.templates import TemplateSettings
 
 __all__ = [
-    "APIAuthSettings",
-    "APIServerSettings",
     "ConsoleHandlerSettings",
     "CsvFormatSettings",
     "DatabaseBuilderSettings",

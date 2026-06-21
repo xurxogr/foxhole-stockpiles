@@ -5,20 +5,21 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A command-line toolset for processing Foxhole game screenshots to automatically extract stockpile information from game assets.
+A capture-first desktop app that scans Foxhole stockpile screenshots locally and extracts structured stockpile information from game assets.
 
 ## Current Implementation Status
 
-This project provides a complete pipeline for extracting game assets and building template databases for stockpile recognition, along with a scanner tool to analyze screenshots.
+This project provides a desktop runtime that captures the live Foxhole game window with a global hotkey, scans it in-process via the external Rust OCR engine, and routes the structured results to your configured outputs. It also ships the tooling pipeline for extracting game assets and building the template databases that power stockpile recognition.
 
 ## Why This Tool Exists
 
 Extracting Foxhole stockpile information by hand is slow, error-prone, and difficult to scale.
-This tool automates that process by converting screenshots into structured, machine-readable data, enabling you to:
+This tool automates that process by capturing and scanning screenshots locally, converting them into structured, machine-readable data, enabling you to:
 
 - Quickly identify and count stockpile items
-- Output results as JSON for automation and tracking
-- Integrate directly into scripts or larger data-processing pipelines
+- Capture the live game window with a single hotkey, no manual screenshotting
+- Output results as JSON/CSV/TSV for automation and tracking
+- Route results to files, webhooks, or Google Sheets
 
 The system is designed for flexibility, supporting multiple resolutions and easy database rebuilding when new game content is released.
 
@@ -33,16 +34,7 @@ Based on analysis of 1,000+ production scans:
 
 ### Speed
 - **1-2 seconds** per screenshot on modern consumer CPUs (6+ cores)
-- **3-4 seconds** on server-grade hardware (AMD EPYC 6-core)
-- **Concurrent processing** - Handles multiple scans simultaneously via API server
 - **Performance scales with CPU** - More cores = faster processing
-
-### Memory Efficiency
-- **~200 MB baseline** - Idle memory usage with cached templates
-- **~400 MB peak** - During active concurrent scanning
-- **Automatic cleanup** after each scan (gc.collect + malloc_trim)
-- **LRU cache** for template databases with configurable size
-- **Production-ready** memory management with jemalloc
 
 ### Supported Resolutions
 Optimized for all common gaming resolutions with consistent accuracy:
@@ -63,31 +55,28 @@ The project provides a comprehensive toolkit for Foxhole stockpile recognition:
 4. **Scanner Tool** - Analyzes screenshots to detect and identify stockpile items with automatic quantity recognition
 
 **Additional Tools:**
-5. **Inspector Tool** - Debugs and validates template databases
-6. **API Server** - HTTP REST API for processing screenshots
+5. **Screenshot Capture** - Captures the live Foxhole game window with a global hotkey and scans it in-process
+6. **Inspector Tool** - Debugs and validates template databases
 7. **GUI Application** - User-friendly graphical interface for configuration and scanning
-8. **Database Management** - Tools for adding icons and migrating database formats
-9. **Configuration Management** - Tools for updating configuration files
+8. **SAV Processing** - Parses Foxhole `.sav` world files into structured stockpile data
+9. **Database Management** - Tools for adding icons and migrating database formats
 
 For technical details on the system design and implementation decisions, see the [Architecture Codemap](docs/CODEMAPS/architecture.md) (and the [Codemap Index](docs/CODEMAPS/INDEX.md) for an overview of all packages).
 
 ## Available Command-Line Tools
 
-Commands are split between two binaries: **`fs`** (the runtime — scanning, serving, GUI, save files) and **`fs-tools`** (build-time asset and database tooling).
+Commands are split between two binaries: **`fs`** (the runtime — scanning, screenshot capture, GUI, save files) and **`fs-tools`** (build-time asset and database tooling). Running `fs` with no subcommand launches the GUI.
 
 ### Runtime commands (`fs`)
 
 #### fs scan
-Analyzes Foxhole stockpile screenshots to detect items and quantities using the compiled database. Automatically detects item quantities using OCR with a custom-trained Tesseract model optimized for Foxhole's Renner font. (Alias: `fs scanner`)
-
-#### fs serve
-Starts the FastAPI server for processing screenshots via HTTP API. (Aliases: `fs server`, `fs api`)
+Analyzes Foxhole stockpile screenshots to detect items and quantities using the compiled database. Automatically detects item quantities using OCR with a custom-trained Tesseract model optimized for Foxhole's Renner font.
 
 #### fs sav
-Processes Foxhole `.sav` world files (via the `fs-sav` Rust parser) into structured stockpile data. (Alias: `fs process-sav`)
+Processes Foxhole `.sav` world files (via the `fs-sav` Rust parser) into structured stockpile data.
 
 #### fs gui / fs-gui
-Launches the PySide6 graphical user interface for managing configurations and running scans. Provides a user-friendly interface for non-technical users. (Aliases: `fs ui`, `fs app`)
+Launches the PySide6 graphical user interface for managing configurations, running scans, and capturing the live game window. Provides a user-friendly interface for non-technical users.
 
 ### Tooling commands (`fs-tools`)
 
@@ -124,8 +113,8 @@ Launches the PySide6 tooling GUI for catalog/database management.
 
 The GUI uses a tiered configuration system to avoid overwhelming users with advanced options:
 
-- **Basic** (default): Essential tabs only - API Server, Scanner, Output, Logging, and GUI. Suitable for most users.
-- **Advanced**: Adds the Stockpile Types, Notifications, and SAV Processing tabs, plus additional fields in existing tabs (CORS settings, debug mode, log file configuration, custom loggers, etc.).
+- **Basic** (default): Essential tabs only - Scanner, Output, Logging, and GUI. Suitable for most users.
+- **Advanced**: Adds the Stockpile Types, Notifications, and SAV Processing tabs, plus additional fields in existing tabs (debug mode, log file configuration, custom loggers, etc.).
 - **Developer**: Same tabs as Advanced, but unlocks the remaining advanced fields for fine-tuning. Only use this if you understand the impact of these settings.
 
 **Stockpile Types Tab (Advanced):**
@@ -231,7 +220,7 @@ source venv/bin/activate
 ### 3. Install the Package
 
 ```bash
-# Install the package (includes server, GUI, and all CLI tools)
+# Install the package (includes the GUI, screenshot capture, and all CLI tools)
 pip install -e .
 
 # Install with development dependencies (adds testing, linting, etc.)
@@ -338,6 +327,17 @@ The scanner will automatically:
 - Output structured JSON data with items, quantities, and metadata
 - Validate mod names against available mods in the database
 
+### Screenshot Capture (Global Hotkey)
+
+The desktop runtime can capture the live Foxhole game window with a configurable global hotkey and scan it in-process — no manual screenshotting or external server required.
+
+1. Set a capture hotkey in **Settings** (or via config at `scanner.capture_key`, e.g. `"F9"`).
+2. Launch Foxhole and open a stockpile in-game.
+3. Make sure the Foxhole window (titled "War") is the active, non-minimized window. Capture works across multiple monitors.
+4. Press the hotkey. The runtime grabs the game window, scans it via the Rust OCR engine, and routes the result to your configured output handlers (console, file, webhook, Google Sheets, etc.).
+
+Window detection uses `pywinctl`, the global hotkey uses `pynput`, and the screen grab uses Pillow's `ImageGrab`.
+
 ### Building Custom Database (For Mods or Game Updates)
 
 If you need to include custom mods or rebuild the database for a new game version:
@@ -373,53 +373,58 @@ fs scan \
   --image your_screenshot.png
 ```
 
-## Core Dependencies
+## Packages & Core Dependencies
+
+The repository ships two installable packages:
+
+- **`foxhole_stockpiles`** - the desktop runtime: CLI, PySide6 GUI, screenshot capture, and SAV processing.
+- **`fs_tools`** - build-time asset and template-database tooling.
+
+OCR is provided by the external PyPI package **`fs-ocr`** (a Rust engine), and `.sav` parsing by the external **`fs-sav`** (Rust) package.
+
+Core dependencies:
 
 - **Image Processing**: OpenCV (opencv-python), NumPy
-- **OCR**: Tesseract OCR with pytesseract Python wrapper
+- **OCR**: `fs-ocr` (external Rust engine); Tesseract OCR powers quantity detection
+- **Screenshot Capture**: `pywinctl` (window detection), `pynput` (global hotkey), Pillow (`ImageGrab`)
+- **GUI**: PySide6
 - **Data Handling**: Pydantic v2 for validation
 - **Development**: Ruff (linting), MyPy (type checking), Pre-commit hooks
 
-## API Server
+## Configuration
 
-The project includes a FastAPI server for processing stockpile screenshots via HTTP.
+Configuration is stored as JSON in the platform config directory (`~/.fs_config`). The schema is **v10** and is migrated to the latest format automatically whenever settings are loaded; no manual migration step is required.
 
-**Usage:**
+**Top-level sections:**
+`external_tools`, `logging`, `output`, `scanner`, `stockpile_types`, `database_builder`, `notifications`, `gui`, `sav_processing`.
+
+The screenshot capture hotkey lives at `scanner.capture_key` (e.g. `"F9"`).
+
+**Environment variable overrides** use the `FS_<SECTION>__<KEY>` format, for example:
+
 ```bash
-# Start the API server (recommended)
-fs serve
-
-# Start on custom port
-fs serve --port 8080
-
-# Start with multiple workers for production
-fs serve --host 0.0.0.0 --port 8000 --workers 4
-
-# Development mode with auto-reload
-fs serve --reload --log-level debug
+FS_SCANNER__DATABASE_PATH=/path/to/fs_vanilla.h5
+FS_SCANNER__CAPTURE_KEY=F9
 ```
 
-The API exposes endpoints for:
-- `/ocr/scan_image` - Upload and analyze stockpile screenshots
-- `/health` - Health check endpoint
+### Output Handlers
 
-**Configuration:**
-Quick start with example configs:
-```bash
-# Copy minimal config example
-cp .fs_config.example .fs_config
+A scan produces one stockpile result, which is fanned out to the handlers configured under the `output.handlers` list:
 
-# Or use Docker-optimized config
-cp docs/examples/fs_config.docker .fs_config
-```
+- **console** - prints the result to stdout
+- **file** - writes JSON, CSV, or TSV to disk
+- **webhook** - HTTP POST to a URL (supports basic, bearer, and forward auth; "forward" passes a client-provided header through)
+- **return** - returns the result to the caller in-process
+- **sheets** - appends rows to a Google Sheet
 
 For more details, see:
-- [Configuration Examples](docs/examples/README.md) - Ready-to-use config files for different scenarios
-- [API Usage Guide](docs/api-usage.md)
+- [Configuration Examples](docs/examples/README.md) - Ready-to-use config files
+- [Configuration Guide](docs/configuration.md) - Environment variables and settings
+- [Webhook Integration](docs/webhooks.md) - Webhook setup and usage
 
 ### Notifications
 
-The API server includes a notification system that can send alerts to Discord channels when stockpile scans occur, server events happen, or errors are encountered.
+The runtime includes a notification system that can send alerts to Discord channels when stockpile scans occur or errors are encountered.
 
 **Configuration:**
 
@@ -449,9 +454,7 @@ Add notifications to your `.fs_config` or environment variables:
         "webhook_url": "https://discord.com/api/webhooks/ADMIN_WEBHOOK_ID/ADMIN_WEBHOOK_TOKEN",
         "username": "Admin Bot",
         "events": [
-          "stockpile.scan_failed",
-          "server.started",
-          "server.stopped"
+          "stockpile.scan_failed"
         ]
       }
     ]
@@ -483,9 +486,7 @@ Example templates:
 "message_templates": {
   "stockpile.scanned": "✅ STOCKPILE_NAME (STOCKPILE_TYPE) - ITEM_COUNT items in DURATION",
   "stockpile.scan_failed": "❌ Scan failed: ERROR",
-  "stockpile.scan_started": "🔄 Scanning stockpile...",
-  "server.started": "🚀 API server is now online",
-  "server.stopped": "🛑 API server is shutting down"
+  "stockpile.scan_started": "🔄 Scanning stockpile..."
 }
 ```
 
@@ -505,8 +506,6 @@ FS_NOTIFICATIONS__NOTIFIERS='[{"type":"discord","name":"Main","webhook_url":"htt
 - `stockpile.scan_started` - Scan has started
 - `stockpile.scanned` - Successful scan with item details
 - `stockpile.scan_failed` - Scan failed with error message
-- `server.started` - API server started
-- `server.stopped` - API server stopped
 
 **Discord Webhook Setup:**
 1. In Discord, go to Server Settings → Integrations → Webhooks
@@ -518,88 +517,8 @@ FS_NOTIFICATIONS__NOTIFIERS='[{"type":"discord","name":"Main","webhook_url":"htt
 **Multiple Notifiers:**
 You can configure multiple Discord webhooks to send different events to different channels. For example:
 - Main channel: successful scans
-- Admin channel: errors and server events
+- Admin channel: errors
 - Dev channel: all events for debugging
-
-### Docker Deployment
-
-The easiest way to run the API server is using Docker:
-
-```bash
-# Build the image (Python 3.12 by default)
-docker build -t foxhole-stockpiles .
-
-# Build with Python 3.13
-docker build --build-arg PYTHON_VERSION=3.13 -t foxhole-stockpiles:py313 .
-
-# Run with docker-compose (recommended)
-docker-compose up -d
-
-# Or run directly
-docker run -d \
-  -p 8000:8000 \
-  -v $(pwd)/data:/data:ro \
-  -e FS_SCANNER__DATABASE_PATH=/data/fs_vanilla.h5 \
-  -e FS_API_AUTH__AUTH_TYPE=bearer \
-  -e FS_API_AUTH__AUTH_TOKEN=your-secret-token \
-  foxhole-stockpiles
-```
-
-**Build Options:**
-
-- `PYTHON_VERSION` - Choose Python version (default: `3.12`, supports: `3.13`)
-  ```bash
-  docker build --build-arg PYTHON_VERSION=3.13 -t foxhole-stockpiles .
-  ```
-
-**Runtime Configuration:**
-
-The Docker image includes **jemalloc** for better memory management (enabled by default). To disable:
-```bash
-docker run -d -e LD_PRELOAD= foxhole-stockpiles
-# Or in docker-compose.yml:
-# environment:
-#   - LD_PRELOAD=
-```
-
-**Memory Optimization:**
-
-The image includes jemalloc which reduces memory fragmentation by ~20-40 MB. Python 3.13 provides an additional ~10-20 MB savings.
-
-The Docker image includes:
-- Python 3.12 runtime (or 3.13 via build arg)
-- jemalloc for improved memory management
-- All required dependencies
-- Tesseract OCR
-- Non-root user for security
-- Health checks
-- Multi-stage build for smaller image size
-
-See [docker-compose.yml](docker-compose.yml) for configuration examples.
-
-## Project Structure
-
-```
-foxhole_stockpiles/
-├── api/               # FastAPI server
-│   ├── server.py
-│   └── auth.py
-├── commands/          # Command-line tools
-│   ├── uasset_extractor/
-│   ├── generate_templates/
-│   ├── database_builder/
-│   ├── stockpile_scanner/
-│   └── candidate_inspector/
-├── core/              # Core utilities
-│   ├── logging.py
-│   └── utils.py
-├── enums/             # Enumeration types
-├── models/            # Data models
-└── services/          # Service layer
-    ├── stockpile_detector.py
-    ├── template_database.py
-    └── template_manager.py
-```
 
 ## Development
 
@@ -634,8 +553,8 @@ This creates a single `fs.exe` file in the `dist/` directory that contains all d
 
 ```bash
 # Use the executable with the same command syntax
-fs.exe scanner --database data/fs_vanilla.h5 --image screenshot.png
-fs.exe extract-assets --catalog catalog.json --pak game.pak --output assets/
+fs.exe scan --database data/fs_vanilla.h5 --image screenshot.png
+fs.exe gui
 ```
 
 The executable is typically 50-80MB and includes all required dependencies except external tools (repak.exe, umodel.exe) which must still be provided separately.
@@ -660,7 +579,7 @@ Test coverage includes:
 - Command-line tools (asset extraction, template generation, database building, scanner)
 - Core services (template matching, OCR processing, stockpile detection)
 - Data models and validation
-- API server and authentication
+- Screenshot capture and hotkey handling
 - Webhook connectors and output handlers
 
 ## Documentation
@@ -669,10 +588,11 @@ Test coverage includes:
 
 The main `fs` command (Typer-based) exposes these subcommands — run `fs <command> --help` for options:
 
-- `fs scan` (alias `scanner`) - Analyze stockpile screenshots
-- `fs serve` (aliases `server`, `api`) - Run the HTTP API server
-- `fs sav` (alias `process-sav`) - Process Foxhole save files
-- `fs gui` (aliases `ui`, `app`) - Launch the graphical user interface
+- `fs scan` - Analyze stockpile screenshots
+- `fs sav` - Process Foxhole save files
+- `fs gui` - Launch the graphical user interface
+
+Running `fs` with no subcommand launches the GUI. The installed entry points are `fs`, `fs-tools`, `fs-gui`, and `fs-tools-gui`.
 
 Configuration files are migrated to the latest format automatically whenever settings are loaded; no manual migration step is required.
 
@@ -688,11 +608,8 @@ The asset/database tooling lives in the separate `fs-tools` command, with detail
 
 ### Guides
 
-- [Configuration Examples](docs/examples/README.md) - Ready-to-use config files (minimal, Docker, production)
+- [Configuration Examples](docs/examples/README.md) - Ready-to-use config files
 - [Configuration Guide](docs/configuration.md) - Environment variables and settings
-- [API Usage](docs/api-usage.md) - HTTP API endpoints and examples
-- [Docker Deployment](docs/docker.md) - Docker and docker-compose setup
-- [API Authentication](docs/api-authentication.md) - Authentication configuration
 - [Webhook Integration](docs/webhooks.md) - Webhook setup and usage
 - [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
 

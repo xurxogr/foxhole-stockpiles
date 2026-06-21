@@ -51,7 +51,8 @@
     "github_link": "Repositório GitHub",
     "client_link": "Cliente FS (Ferramenta complementar)",
     "copyright": "Copyright © 2024 Xurxogr",
-    "license": "Licenciado sob a Licença MIT"
+    "license": "Licenciado sob a Licença MIT",
+    "feature_capture": "Capturar e digitalizar capturas de armazéns localmente"
   },
   "server_panel": {
     "sav_group_title": "Processamento SAV",
@@ -70,7 +71,7 @@
       "database_error_message": "Falha ao carregar a base de dados",
       "no_config_title": "Configuração não encontrada",
       "no_config_message": "Por favor, configure a sua aplicação em<br><b>Ficheiro → Configuração</b>",
-      "cannot_scan": "Não é possível digitalizar: O servidor não está em execução!"
+      "cannot_scan": "Não é possível digitalizar: o digitalizador não está pronto. Verifique o caminho da base de dados nas Definições."
     },
     "scan_sav": "Escanear SAV",
     "start_monitor": "Iniciar Monitor SAV",
@@ -83,7 +84,12 @@
       "error_output": "Erro ao criar coordenador de saída: {error}",
       "status_scanning": "A digitalizar...",
       "status_monitoring": "A monitorizar..."
-    }
+    },
+    "capture_group_title": "Captura",
+    "start_capture": "Iniciar captura",
+    "stop_capture": "Parar captura",
+    "status_capturing": "Estado: A capturar",
+    "capture_no_key": "Configure primeiro uma tecla de captura nas Definições."
   },
   "config_window": {
     "title": "Configuração",
@@ -160,7 +166,14 @@
     "extract_icons_checkbox": "Guardar imagens de ícones detetados",
     "extract_icons_tooltip": "Guardar cada ícone de objeto detetado como ficheiro de imagem separado.\n\nOs ícones são guardados na pasta './icons/' com formato: 'XXX_CÓDIGO.png'\nonde XXX é o índice do ícone (000, 001, etc.) e CÓDIGO é o objeto detetado.\n\nConfiguração de desenvolvimento - útil para criar novos modelos ou depurar deteção.",
     "select_database": "Selecionar base de dados de modelos",
-    "select_screenshots": "Selecionar diretório de capturas"
+    "select_screenshots": "Selecionar diretório de capturas",
+    "capture_hotkey": "Tecla de captura:",
+    "capture_hotkey_tooltip": "Tecla de atalho global que captura a janela do Foxhole e a digitaliza.",
+    "capture_hotkey_placeholder": "Nenhuma tecla definida",
+    "capture_change": "Alterar",
+    "capture_clear": "Limpar",
+    "press_key_title": "Prima uma tecla",
+    "press_key_prompt": "Prima a tecla a usar para a captura (Esc para cancelar)."
   },
   "output_tab": {
     "description": "Configure handlers de saída para resultados de digitalização.\nPode adicionar múltiplos handlers para enviar resultados para diferentes destinos.",

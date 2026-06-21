@@ -36,10 +36,10 @@ class QtLogHandler(logging.Handler, QObject):
 
         try:
             # Determine color based on logger name and level
-            if "gui" in record.name or "scanner_client" in record.name:
-                color = "#00BFFF"  # Client logs in cyan
+            if "gui" in record.name or "capture" in record.name:
+                color = "#00BFFF"  # GUI / capture logs in cyan
             else:
-                color = "#FFFFFF"  # Server logs in white
+                color = "#FFFFFF"  # Other logs in white
 
             # Override with level-specific colors
             if record.levelno >= logging.ERROR:

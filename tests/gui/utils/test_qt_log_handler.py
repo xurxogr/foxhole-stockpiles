@@ -82,7 +82,7 @@ def test_handler_client_log_color(qtbot: Any, handler: QtLogHandler) -> None:
     handler.log_message.connect(lambda data: received_data.append(data))
 
     record = logging.LogRecord(
-        name="foxhole_stockpiles.gui.utils.scanner_client",
+        name="foxhole_stockpiles.services.capture",
         level=logging.INFO,
         pathname="test.py",
         lineno=1,
@@ -108,7 +108,7 @@ def test_handler_server_log_color(qtbot: Any, handler: QtLogHandler) -> None:
     handler.log_message.connect(lambda data: received_data.append(data))
 
     record = logging.LogRecord(
-        name="foxhole_stockpiles.api.server",
+        name="foxhole_stockpiles.services.output_coordinator",
         level=logging.INFO,
         pathname="test.py",
         lineno=1,

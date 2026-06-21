@@ -132,7 +132,7 @@ class SheetsOutputHandler(BaseOutputDestinationHandler):
             list[Any]: Stockpiles in cell format
             None: On failure
         """
-        from foxhole_stockpiles.api.dependencies import get_catalog_service
+        from foxhole_stockpiles.services.catalog_service import get_catalog_service
 
         if self._row_format is None or self._row_format.strip() == "":
             return None

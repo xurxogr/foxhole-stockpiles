@@ -51,7 +51,8 @@
     "github_link": "GitHub 仓库",
     "client_link": "FS 客户端（补充工具）",
     "copyright": "版权所有 © 2024 Xurxogr",
-    "license": "根据 MIT 许可证授权"
+    "license": "根据 MIT 许可证授权",
+    "feature_capture": "在本地捕获并扫描仓库截图"
   },
   "server_panel": {
     "sav_group_title": "SAV 处理",
@@ -70,7 +71,7 @@
       "database_error_message": "加载数据库失败",
       "no_config_title": "未找到配置",
       "no_config_message": "请在<br><b>文件 → 配置</b>中设置您的配置",
-      "cannot_scan": "无法扫描：服务器未运行！"
+      "cannot_scan": "无法扫描：扫描器未就绪。请检查设置中的数据库路径。"
     },
     "scan_sav": "扫描 SAV",
     "start_monitor": "启动 SAV 监视器",
@@ -83,7 +84,12 @@
       "error_output": "创建输出协调器失败：{error}",
       "status_scanning": "扫描中...",
       "status_monitoring": "监视中..."
-    }
+    },
+    "capture_group_title": "捕获",
+    "start_capture": "开始捕获",
+    "stop_capture": "停止捕获",
+    "status_capturing": "状态：捕获中",
+    "capture_no_key": "请先在设置中配置捕获快捷键。"
   },
   "config_window": {
     "title": "配置",
@@ -160,7 +166,14 @@
     "extract_icons_checkbox": "保存检测到的物品图标",
     "extract_icons_tooltip": "将每个检测到的物品图标保存为单独的图像文件。\n\n图标保存到 './icons/' 文件夹，格式：'XXX_代码.png'\n其中 XXX 是图标索引（000、001 等），代码是检测到的物品。\n\n开发设置 - 对创建新模板或调试检测很有用。",
     "select_database": "选择模板数据库",
-    "select_screenshots": "选择截图目录"
+    "select_screenshots": "选择截图目录",
+    "capture_hotkey": "捕获快捷键：",
+    "capture_hotkey_tooltip": "捕获 Foxhole 窗口并进行扫描的全局快捷键。",
+    "capture_hotkey_placeholder": "未设置按键",
+    "capture_change": "更改",
+    "capture_clear": "清除",
+    "press_key_title": "按下一个键",
+    "press_key_prompt": "按下用于捕获的键（按 Esc 取消）。"
   },
   "output_tab": {
     "description": "配置扫描结果的输出处理器。\n您可以添加多个处理器将结果发送到不同的目的地。",

@@ -21,7 +21,6 @@ from foxhole_stockpiles.core.settings import reload_settings
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.enums.config_level import ConfigLevel
 from foxhole_stockpiles.gui.utils.config_manager import ConfigManager
-from foxhole_stockpiles.gui.widgets.config_tabs.api_server_tab import APIServerTab
 from foxhole_stockpiles.gui.widgets.config_tabs.gui_tab import GUITab
 from foxhole_stockpiles.gui.widgets.config_tabs.logging_tab import LoggingTab
 from foxhole_stockpiles.gui.widgets.config_tabs.notifications_tab import NotificationsTab
@@ -82,7 +81,6 @@ class ConfigWindow(QMainWindow):
         layout.addWidget(self.tab_widget)
 
         # Create configuration tabs
-        self.api_server_tab = APIServerTab()
         self.scanner_tab = ScannerTab()
         self.output_tab = OutputTab()
         self.logging_tab = LoggingTab()
@@ -130,7 +128,6 @@ class ConfigWindow(QMainWindow):
         level = self._current_config_level
 
         # Always visible tabs (Basic level)
-        self.tab_widget.addTab(self.api_server_tab, t("config_window.tabs.api_server"))
         self.tab_widget.addTab(self.scanner_tab, t("config_window.tabs.scanner"))
         self.tab_widget.addTab(self.output_tab, t("config_window.tabs.output"))
 
@@ -148,7 +145,6 @@ class ConfigWindow(QMainWindow):
 
         # Update field visibility in tabs based on level
         self.scanner_tab.set_config_level(level)
-        self.api_server_tab.set_config_level(level)
         self.logging_tab.set_config_level(level)
 
         # Try to restore previous tab index
@@ -179,7 +175,6 @@ class ConfigWindow(QMainWindow):
         self._build_tabs()
 
         # Populate tabs
-        self.api_server_tab.set_values(self.settings.api_server, self.settings.api_auth)
         self.scanner_tab.set_values(self.settings.scanner)
         self.output_tab.set_values(self.settings.output)
         self.logging_tab.set_values(self.settings.logging)
@@ -200,8 +195,6 @@ class ConfigWindow(QMainWindow):
         """
         defaults = self.settings or AppSettings()
         return AppSettings(
-            api_server=self.api_server_tab.get_server_values(),
-            api_auth=self.api_server_tab.get_auth_values(),
             scanner=self.scanner_tab.get_values(),
             output=self.output_tab.get_values(),
             external_tools=defaults.external_tools,

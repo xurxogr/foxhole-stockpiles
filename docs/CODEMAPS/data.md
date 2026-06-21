@@ -29,7 +29,7 @@ class Stockpile(BaseModel):
 ```python
 class StockpileItem(BaseModel):
     code: str
-    quantity: int = -1                # was str; now int (ge=-1)
+    quantity: int = -1                # int (ge=-1)
     crated: bool = False
     confidence: float | None          # 0..1, NCC match
     x: int | None = None              # icon pixel X (OCR source only)
@@ -37,10 +37,9 @@ class StockpileItem(BaseModel):
     candidates: list[ItemCandidate] | None  # within confidence_gap; excluded unless present
 ```
 Custom `model_serializer` emits `candidates` only when non-empty.
-(Former `faction`/`category`/`resolution` fields removed.)
 
 ### Other runtime models (`models/`)
-- `scan_result.py` `ScanResult` — API envelope `{success, data, error, processing_time_ms}`
+- `scan_result.py` `ScanResult` — `{success, data, error, processing_time_ms}` (CLI/scan worker)
 - `catalog_item.py` `CatalogItem` — item metadata (`cratable`, faction, category, icon)
 - `match_result.py` `MatchResult` — `{code, ncc_score, phash_distance, resolution, mod, crated}`
 - `item_candidate.py` `ItemCandidate` — alternative match (code, confidence)
@@ -68,18 +67,16 @@ The external `fs-ocr` exposes `StockpileScanner`, `ScanConfig`,
 | `OutputFormat` | JSON, CSV, TSV |
 | `OutputDestination` | return, file, webhook, console, **sheets** |
 | `OutputHandlerType` | return, file, webhook, console, **google sheets** |
-| `AuthType` | basic, bearer, forward (unset = no auth; forward unsupported for API) |
-| `EventType` | server/scan lifecycle + mod_imported |
+| `AuthType` | basic, bearer, forward — now only for the **webhook output handler** (forward = pass a client header through) |
+| `EventType` | scan started/scanned/failed (+ unused legacy `SERVER_*`) |
 | `ConfigLevel`, `NotifierType` | config scope, notifier kinds |
 
 ## Configuration (`core/settings/`)
 
-### AppSettings root (schema **v9**)
+### AppSettings root (schema **v10**)
 ```python
 class AppSettings(BaseSettings):
-    config_version: int        # CURRENT_VERSION = 9
-    api_server: APIServerSettings
-    api_auth: APIAuthSettings
+    config_version: int        # CURRENT_VERSION = 10
     external_tools: ExternalToolsSettings
     logging: LoggingSettings
     output: OutputSettings
@@ -90,26 +87,29 @@ class AppSettings(BaseSettings):
     gui: GUISettings
     sav_processing: SavProcessingSettings
 ```
-`sections/ocr.py` (`OCRSettings`) is now an icon-geometry model used by GUI +
-`fs_tools` (add-icon, DB visualizer), not a top-level field. `sections/templates.py`
-(`TemplateSettings`) is consumed by mod-import models.
+(`api_server` + `api_auth` were removed in v10.) `sections/ocr.py` (`OCRSettings`)
+is an icon-geometry model used by GUI + `fs_tools`; `sections/templates.py`
+(`TemplateSettings`) is consumed by mod-import models — neither is a top-level field.
 
 ### ScannerSettings (`sections/scanner.py`)
-`database_path`, `confidence_gap`, plus build/debug knobs. The runtime `Scanner`
-only reads `database_path` + `confidence_gap` (passed to `fs_ocr.ScanConfig`).
+`database_path`, **`capture_key`** (global hotkey, e.g. `"F9"`; `None` disables
+capture), `template_cache_size`, `early_exit_threshold`, `confidence_gap`,
+`debug_mode`, `extract_icons`, `screenshots_folder`. The runtime `Scanner`
+reads `database_path` + `confidence_gap` (passed to `fs_ocr.ScanConfig`); the GUI
+binds the hotkey from `capture_key`.
 
 ### OutputSettings (`sections/output/`)
 `OutputSettings.handlers: list[OutputHandlerConfig]`; per-handler models:
-`console_handler.py`, `file_handler.py`, `webhook_handler.py`,
-`return_handler.py`, **`sheets_handler.py`** (`SheetsHandlerSettings`:
-`creds_path`, `spreadsheet_url`, `sheet_id`, `start_cell`, `row_format`), plus
+`console_handler.py`, `file_handler.py`, `webhook_handler.py` (`auth_type` +
+`token`/`client_auth_header`), `return_handler.py`, **`sheets_handler.py`**
+(`creds_path`, `spreadsheet_url`, `sheet_id`, `start_cell`, `row_format`), plus
 format models `json_format.py`, `csv_format.py`. `handler_config.py` is the
-discriminated union wrapper.
+discriminated-union wrapper.
 
 ### Sources & migration
 Priority: env `FS_<SECTION>__<KEY>` → JSON file (platform config dir,
-`json_settings_source.py`) → defaults. Stepwise upgrade in
-`config_migrator.py` (v1 → … → 9).
+`json_settings_source.py`) → defaults. Stepwise upgrade in `config_migrator.py`
+(v1 → … → 10). v9→v10 drops `api_server`/`api_auth`.
 
 ## Template database (HDF5) — owned by `fs_tools`
 
@@ -136,7 +136,7 @@ database.h5
 Item metadata: `code`, `name`, `category`, `faction`, `cratable`, icon ref.
 `cratable` ← `ItemProfileData.bIsCratable` (items) or presence of
 `MassProductionFactory` in `ProductionCategories` (vehicles). Read via
-`services/catalog_service.py` (`get_display_name`, etc.).
+`services/catalog_service.py` (cached `get_catalog_service()`, `get_display_name`).
 
 ## SAV data
 
@@ -146,7 +146,7 @@ populated (no `x`/`y`); change-tracking keyed by `Stockpile.to_key()`.
 
 ## Key files
 1. `models/stockpile.py`, `models/stockpile_item.py`
-2. `core/settings/app_settings.py` + `config_migrator.py` (v9)
-3. `core/settings/sections/output/` — handler + format models
-4. `fs_tools/template_db/` — HDF5 access + matching
-5. `enums/` — type-safe enums
+2. `core/settings/app_settings.py` + `config_migrator.py` (v10)
+3. `core/settings/sections/scanner.py` — incl. `capture_key`
+4. `core/settings/sections/output/` — handler + format models
+5. `fs_tools/template_db/` — HDF5 access + matching

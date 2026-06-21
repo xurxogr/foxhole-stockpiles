@@ -24,51 +24,20 @@ sudo apt install python3.12
 brew install python@3.12
 ```
 
-### Tesseract Not Found
+### OCR Engine Not Available
 
 **Problem:**
-```
-TesseractNotFoundError: tesseract is not installed or it's not in your PATH
-```
+Scans fail because the OCR engine cannot start.
 
 **Solution:**
-Install Tesseract OCR:
-
-**Windows:**
+OCR is handled by the external `fs-ocr` Rust engine (installed from PyPI).
+Tesseract is consumed internally by that engine and is no longer a direct
+dependency of the runtime. Verify the engine is installed:
 ```bash
-# Download from: https://github.com/UB-Mannheim/tesseract/wiki
-# Or use chocolatey:
-choco install tesseract
+pip show fs-ocr
 ```
 
-**macOS:**
-```bash
-brew install tesseract
-```
-
-**Ubuntu/Debian:**
-```bash
-sudo apt update
-sudo apt install tesseract-ocr
-```
-
-Verify installation:
-```bash
-tesseract --version
-```
-
-### Custom Tesseract Model Not Loading
-
-**Problem:**
-Scanner uses default Tesseract model instead of custom Renner font model.
-
-**Solution:**
-Verify the custom model exists:
-```bash
-ls tessdata/custom.traineddata
-```
-
-The scanner automatically detects the `tessdata/` directory in the project root.
+If it is missing, reinstall the project dependencies so `fs-ocr` is pulled in.
 
 ## Scanner Issues
 
@@ -123,7 +92,7 @@ Scanner completes but finds 0 items in the screenshot.
 4. **Resolution mismatch**
    - Matching is most accurate when the screenshot resolution matches a template resolution
    - Use a standard, unscaled screenshot (no display scaling / cropping)
-   - The pHash/NCC matching thresholds are fixed defaults as of config v8 and are no longer user-tunable
+   - The pHash/NCC matching thresholds are fixed defaults as of config v10 and are no longer user-tunable
 
 5. **Debug the detection**
    ```bash
@@ -164,7 +133,7 @@ Scanner detects most items but misses some specific ones.
      fs-tools inspect --database templates.h5 --resolution 1080
      ```
 
-**Note:** The pHash and NCC matching thresholds are fixed defaults as of config v8 and
+**Note:** The pHash and NCC matching thresholds are fixed defaults as of config v10 and
 are no longer user-tunable. If items are consistently missed, the most common fixes are
 using a screenshot at a supported resolution and rebuilding the database for the correct
 mod version.
@@ -247,7 +216,7 @@ fs-tools inspect --database templates.h5 --resolution 1080 --icon icons/64_Unkno
 
 If the correct item appears only with low confidence, the screenshot likely doesn't match a
 database resolution, or the database is built for a different mod version — rebuild the database
-for the relevant mod rather than adjusting matching thresholds (which are fixed as of config v8).
+for the relevant mod rather than adjusting matching thresholds (which are fixed as of config v10).
 
 **Example: Mod Version Mismatch**
 
@@ -292,7 +261,8 @@ Items detected correctly but quantities are wrong.
 **Possible Causes:**
 
 1. **OCR model issue**
-   - Verify custom Tesseract model is loaded
+   - OCR runs inside the external `fs-ocr` Rust engine (which uses a custom
+     Tesseract model internally)
    - Check logs for OCR warnings
 
 2. **Screenshot quality**
@@ -303,150 +273,87 @@ Items detected correctly but quantities are wrong.
    - OCR detection boxes may need adjustment for your resolution
    - See [Configuration](configuration.md) OCR settings
 
-## API Server Issues
+## Screenshot Capture Issues
 
-### Port Already in Use
+Capture works by binding a global hotkey (`scanner.capture_key`, e.g. `"F9"`).
+When pressed, the runtime grabs the Foxhole game window (window title `"War"`)
+and scans it locally — no server is involved.
+
+### Capture Does Nothing / No Hotkey
+
+**Problem:**
+Pressing the hotkey has no effect, or no hotkey seems to be registered.
+
+**Solution:**
+The capture hotkey is not set. Configure `scanner.capture_key`:
+- In the GUI: **Settings → Scanner** tab, set the capture key.
+- Or via environment variable:
+  ```bash
+  export FS_SCANNER__CAPTURE_KEY=F9
+  ```
+
+Hotkeys with modifiers are supported (e.g. `Ctrl+F3`); a bare letter is also
+fine.
+
+### No Window Titled "War" Found
 
 **Problem:**
 ```
-ERROR: [Errno 48] Address already in use
+No window titled 'War' found. Is Foxhole running?
 ```
 
 **Solution:**
-1. Use a different port:
-   ```bash
-   uvicorn foxhole_stockpiles.api.server:app --port 8001
-   ```
+Foxhole must be running for capture to find its window. Launch the game and
+try again.
 
-2. Or kill the process using port 8000:
-   ```bash
-   # Find process
-   lsof -i :8000
-   # Kill it
-   kill -9 <PID>
-   ```
-
-### API Authentication Failing
-
-**Problem:**
-```json
-{
-  "detail": "Authentication required"
-}
-```
-
-**Solution:**
-1. Verify authentication is configured:
-   ```bash
-   echo $FS_API_AUTH__AUTH_TYPE
-   echo $FS_API_AUTH__AUTH_TOKEN
-   ```
-
-2. Check your request includes the correct header:
-   ```bash
-   # Bearer auth
-   curl -H "Authorization: Bearer your-token" http://localhost:8000/ocr/scan_image
-
-   # Custom header
-   curl -H "X-API-Key: your-token" http://localhost:8000/ocr/scan_image
-   ```
-
-3. Verify token matches:
-   ```bash
-   # Test without auth (if disabled)
-   unset FS_API_AUTH__AUTH_TYPE
-   unset FS_API_AUTH__AUTH_TOKEN
-   # Restart server and try again
-   ```
-
-### API Returns 400 Bad Request
-
-**Problem:**
-```json
-{
-  "detail": "File must be an image"
-}
-```
-
-**Solution:**
-1. Verify you're sending a file, not a path:
-   ```bash
-   # Correct: -F sends file content
-   curl -F "image=@screenshot.png" http://localhost:8000/ocr/scan_image
-
-   # Wrong: this sends the string "screenshot.png"
-   curl -d "image=screenshot.png" http://localhost:8000/ocr/scan_image
-   ```
-
-2. Check content type:
-   ```bash
-   file screenshot.png  # Should show "PNG image data"
-   ```
-
-## Webhook Issues
-
-### Webhook Not Receiving Data
-
-**Problem:**
-Scanner completes but webhook doesn't receive the payload.
-
-**Solution:**
-1. Check webhook configuration:
-   ```bash
-   echo $FS_OUTPUT__FORMAT  # Should be "webhook"
-   echo $FS_OUTPUT__WEBHOOK_URL    # Should be valid URL
-   ```
-
-2. Verify webhook URL is accessible:
-   ```bash
-   curl -X POST $FS_OUTPUT__WEBHOOK_URL \
-     -H "Content-Type: application/json" \
-     -d '{"test": "data"}'
-   ```
-
-3. Check logs for webhook errors:
-   ```bash
-   export FS_LOGGING__LOG_LEVEL=DEBUG
-   # Check output for webhook connector errors
-   ```
-
-### Webhook Returns 401 Unauthorized
-
-**Problem:**
-Webhook receives request but rejects it.
-
-**Solution:**
-1. Verify webhook authentication is configured:
-   ```bash
-   echo $FS_OUTPUT__WEBHOOK_AUTH_TYPE
-   echo $FS_OUTPUT__WEBHOOK_TOKEN
-   ```
-
-2. Check authentication matches webhook expectations:
-   ```bash
-   # Test webhook manually
-   curl -X POST https://your-webhook.com \
-     -H "Authorization: Bearer $FS_OUTPUT__WEBHOOK_TOKEN" \
-     -H "Content-Type: application/json" \
-     -d '{"test": "data"}'
-   ```
-
-### Connection Timeout
+### The Foxhole Window Is Minimized
 
 **Problem:**
 ```
-ConnectTimeout occurred. Retrying (1/3)...
+The Foxhole window is minimized
 ```
 
 **Solution:**
-1. Verify webhook server is running
-2. Check network connectivity:
-   ```bash
-   ping your-webhook-domain.com
-   curl -I https://your-webhook-domain.com
-   ```
-3. Check firewall rules
-4. Verify URL is correct (https:// vs http://)
+Restore the Foxhole window before pressing the capture hotkey. Capture cannot
+grab a minimized window.
+
+### The Foxhole Window Must Be the Active Window
+
+**Problem:**
+```
+The Foxhole window must be the active window
+```
+
+**Solution:**
+Click or focus the game window before pressing the hotkey so Foxhole is the
+active (foreground) window.
+
+### Screenshot Capture Is Not Available on This Platform
+
+**Problem:**
+```
+Screenshot capture is not available on this platform
+```
+
+**Solution:**
+Capture needs a desktop environment with window-management and screen-grab
+support — it is a Windows/desktop feature and requires `pywinctl`, `pynput`,
+and Pillow's `ImageGrab` to load. On a headless Linux host capture will not
+work. Use file-based scanning or SAV processing instead:
+```bash
+fs scan --image screenshot.png
+fs sav world.sav
+```
+
+### Capture Won't Start (No Database)
+
+**Problem:**
+Capture fails to start because the scanner has no template database.
+
+**Solution:**
+The scanner needs a valid `database_path` (the template DB) to start capture.
+See [Database Not Found](#database-not-found) for building or pointing at a
+database.
 
 ## Template Generation Issues
 
@@ -498,18 +405,18 @@ Template generation completes but produces no templates.
 Settings don't change when setting environment variables.
 
 **Solution:**
-1. Verify variable names use correct format:
+1. Verify variable names use the `FS_<SECTION>__<KEY>` format:
    ```bash
    # Correct
-   export FS_API_AUTH__AUTH_TYPE=bearer
+   export FS_SCANNER__CAPTURE_KEY=F9
 
-   # Wrong (underscore instead of double underscore)
-   export FS_API_AUTH_AUTH_TYPE=bearer
+   # Wrong (single underscore instead of double underscore)
+   export FS_SCANNER_CAPTURE_KEY=F9
    ```
 
 2. Check variable is exported:
    ```bash
-   echo $FS_API_AUTH__AUTH_TYPE
+   echo $FS_SCANNER__CAPTURE_KEY
    ```
 
 3. Restart the application after setting variables
@@ -525,12 +432,12 @@ Settings in `~/.fs_config` are not being used.
    ls -la ~/.fs_config
    ```
 
-2. Check JSON syntax is valid:
+2. Check JSON syntax is valid (the config file is schema v10):
    ```bash
    python -m json.tool ~/.fs_config
    ```
 
-3. Remember: Environment variables override config file
+3. Remember: Environment variables override the config file
 
 ## Getting Help
 
@@ -544,7 +451,7 @@ If you're still experiencing issues:
 
 2. **Collect information:**
    - Python version: `python --version`
-   - Tesseract version: `tesseract --version`
+   - `fs-ocr` engine version: `pip show fs-ocr`
    - Operating system
    - Screenshot resolution
    - Full error message and stack trace
@@ -557,8 +464,20 @@ If you're still experiencing issues:
    - Provide a minimal reproduction example
    - Attach logs (redact sensitive information)
 
+## Output / Webhook Issues
+
+Results not reaching a configured output handler?
+
+- **Nothing happens after a scan** — confirm at least one handler is configured
+  under `output.handlers`. Add a `console` handler to verify items were detected.
+- **Webhook returns 401** — check the handler's `auth_type`/`token` match what
+  your endpoint expects.
+- **Webhook never arrives** — verify the `url` is reachable; the connector retries
+  only on connection timeouts (3×, 2s apart), not on HTTP 4xx/5xx.
+
+See [Webhook Integration](webhooks.md) for full webhook setup and debugging.
+
 ## See Also
 
 - [Configuration Guide](configuration.md) - All configuration options
-- [API Usage](api-usage.md) - API server documentation
-- [Webhooks](webhooks.md) - Webhook integration guide
+- [Webhook Integration](webhooks.md) - Sending results to a webhook

@@ -433,3 +433,25 @@ def test_scanner_tab_config_level_transition(scanner_tab: ScannerTab) -> None:
     # Back to developer
     scanner_tab.set_config_level(ConfigLevel.DEVELOPER)
     assert not scanner_tab._debug_label.isHidden()
+
+
+def test_scanner_tab_capture_key_roundtrip(scanner_tab: ScannerTab) -> None:
+    """The capture hotkey round-trips through set_values/get_values.
+
+    Args:
+        scanner_tab: ScannerTab instance
+    """
+    scanner_tab.set_values(ScannerSettings(capture_key="F9"))
+    assert scanner_tab.capture_key_display.text() == "F9"
+    assert scanner_tab.get_values().capture_key == "F9"
+
+
+def test_scanner_tab_clear_capture_key(scanner_tab: ScannerTab) -> None:
+    """Clearing the capture hotkey yields a None capture_key.
+
+    Args:
+        scanner_tab: ScannerTab instance
+    """
+    scanner_tab.set_values(ScannerSettings(capture_key="F9"))
+    scanner_tab.clear_capture_key()
+    assert scanner_tab.get_values().capture_key is None

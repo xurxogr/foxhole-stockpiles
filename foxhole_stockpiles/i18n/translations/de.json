@@ -51,7 +51,8 @@
     "github_link": "GitHub-Repository",
     "client_link": "FS-Client (Ergänzungswerkzeug)",
     "copyright": "Copyright © 2024 Xurxogr",
-    "license": "Lizenziert unter der MIT-Lizenz"
+    "license": "Lizenziert unter der MIT-Lizenz",
+    "feature_capture": "Lager-Screenshots lokal aufnehmen und scannen"
   },
   "server_panel": {
     "sav_group_title": "SAV Verarbeitung",
@@ -70,7 +71,7 @@
       "database_error_message": "Datenbank konnte nicht geladen werden",
       "no_config_title": "Keine Konfiguration gefunden",
       "no_config_message": "Bitte richten Sie Ihre Konfiguration ein in<br><b>Datei → Konfiguration</b>",
-      "cannot_scan": "Scannen nicht möglich: Server läuft nicht!"
+      "cannot_scan": "Scannen nicht möglich: Der Scanner ist nicht bereit. Überprüfen Sie den Datenbankpfad in den Einstellungen."
     },
     "scan_sav": "SAV Scannen",
     "start_monitor": "SAV Monitor Starten",
@@ -83,7 +84,12 @@
       "error_output": "Fehler beim Erstellen des Ausgabekoordinators: {error}",
       "status_scanning": "Scanne...",
       "status_monitoring": "Überwache..."
-    }
+    },
+    "capture_group_title": "Aufnahme",
+    "start_capture": "Aufnahme starten",
+    "stop_capture": "Aufnahme stoppen",
+    "status_capturing": "Status: Aufnahme läuft",
+    "capture_no_key": "Konfigurieren Sie zuerst ein Aufnahme-Tastenkürzel in den Einstellungen."
   },
   "config_window": {
     "title": "Konfiguration",
@@ -160,7 +166,14 @@
     "extract_icons_checkbox": "Erkannte Icon-Bilder speichern",
     "extract_icons_tooltip": "Jedes erkannte Objektsymbol als separate Bilddatei speichern.\n\nIcons werden im './icons/' Ordner mit Format: 'XXX_CODE.png' gespeichert\nwobei XXX der Icon-Index (000, 001, etc.) und CODE das erkannte Objekt ist.\n\nEntwicklungseinstellung - nützlich zum Erstellen neuer Vorlagen oder Debuggen der Erkennung.",
     "select_database": "Vorlagen-Datenbank auswählen",
-    "select_screenshots": "Screenshots-Verzeichnis auswählen"
+    "select_screenshots": "Screenshots-Verzeichnis auswählen",
+    "capture_hotkey": "Aufnahme-Tastenkürzel:",
+    "capture_hotkey_tooltip": "Globales Tastenkürzel, das das Foxhole-Fenster aufnimmt und scannt.",
+    "capture_hotkey_placeholder": "Keine Taste festgelegt",
+    "capture_change": "Ändern",
+    "capture_clear": "Löschen",
+    "press_key_title": "Taste drücken",
+    "press_key_prompt": "Drücken Sie die Taste für die Aufnahme (Esc zum Abbrechen)."
   },
   "output_tab": {
     "description": "Konfigurieren Sie Ausgabe-Handler für Scanergebnisse.\nSie können mehrere Handler hinzufügen um Ergebnisse an verschiedene Ziele zu senden.",

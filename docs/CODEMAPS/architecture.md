@@ -3,7 +3,7 @@
 # Architecture & Design Patterns
 
 **Type:** multi-package Python workspace (flat layout), **2 installable packages**.
-Config schema **v9**.
+Config schema **v10**. Desktop app — **no REST server**.
 
 ## Package boundaries
 
@@ -14,8 +14,9 @@ foxhole_stockpiles ──depends──> fs-ocr (external Rust PyPI pkg)
         └── fs_tools (independent app: builds the HDF5 DB fs-ocr consumes)
 ```
 
-- **foxhole_stockpiles** — user-facing runtime: CLI, REST API, web UI, GUI, SAV.
-  Talks to the OCR engine only through `services/scanner.py`.
+- **foxhole_stockpiles** — desktop runtime: CLI, PySide6 GUI, screenshot
+  capture, local scan, SAV processing, output routing. Talks to the OCR engine
+  only through `services/scanner.py`.
 - **fs_tools** — build-time tooling (catalog, template DB, asset extraction).
   Self-contained: own `core/settings`, `models`, `gui`, `i18n`. Owns the HDF5
   template DB read/write code under `fs_tools/template_db/`.
@@ -27,32 +28,31 @@ foxhole_stockpiles ──depends──> fs-ocr (external Rust PyPI pkg)
 1. **Service layer** — focused single-responsibility classes, constructor injection.
 2. **External OCR engine behind a thin seam** — `services/scanner.py` is the one
    module aware of `fs_ocr`; it adapts engine types to runtime models.
-3. **Multi-handler output** — one result list fans out to console/file/webhook/response/sheets.
-4. **Event-driven notifications** — decoupled via `EventBus` (`core/events/bus.py`).
+3. **Capture-first, local-by-default** — a global hotkey captures the window and
+   scans in-process; no network round-trip.
+4. **Multi-handler output** — one result list fans out to console/file/webhook/response/sheets.
 5. **Config as code** — Pydantic settings, env overrides, versioned migration.
 
-## OCR scan pipeline (screenshot → structured data)
-
-Seam: `services/scanner.py` → `Scanner.scan()` / `build_scanner()`.
+## Capture + scan pipeline (hotkey → structured data)
 
 ```
-image (bytes | path | NDArray)
-  │  _coerce_image()  → BGR uint8 ndarray (cv2)
-  ▼
-fs_ocr.StockpileScanner(database_path)          # external Rust engine
-  .set_config(fs_ocr.ScanConfig(confidence_gap))
-  .scan(img, faction)  → fs_ocr.Stockpile       # runs in asyncio.to_thread
-  │   (detection, template match, Tesseract quantity OCR all inside Rust)
-  ▼  _to_runtime_stockpile()  → json.loads(result.to_json())
-     • map external StockpileType name → runtime StockpileType (tiers collapse)
-     • map external items → runtime StockpileItem (code, quantity, crated,
-       confidence, x, y)
-  ▼ Stockpile model (foxhole_stockpiles.models)
-  ▼ services/output_coordinator.py → handlers/* (first non-None result wins)
+global hotkey (pynput GlobalHotKeys)         scanner.capture_key, e.g. "F9"
+  ▼  gui/utils/hotkey_listener.py → Qt signal → GUI thread
+  ▼  gui/utils/capture_scan_worker.py (QThread)
+services/capture.py  capture_window()        # pywinctl finds title "War*",
+  │   must be active + non-minimized on any   #   PIL ImageGrab(all_screens) → PNG
+  ▼  services/local_scan.py  LocalScanService.scan(image)
+       │  services/scanner.py  Scanner.scan_sync(image, faction)
+       │     fs_ocr.StockpileScanner(database_path)            # external Rust
+       │       .set_config(fs_ocr.ScanConfig(confidence_gap))
+       │       .scan(img, faction) → fs_ocr.Stockpile
+       │     _to_runtime_stockpile() → runtime Stockpile
+       ▼  services/output_coordinator.py → handlers/* (first non-None result wins)
 ```
 
-Faction filter: runtime `ItemFaction` → external string (`"wardens"`/`"colonials"`);
-`NEUTRAL`/`None` → no filter.
+The same `LocalScanService` backs the GUI "scan a file" menu action and the
+`fs scan` CLI command. Faction filter: runtime `ItemFaction` → external string
+(`"wardens"`/`"colonials"`); `NEUTRAL`/`None` → no filter.
 
 ## SAV pipeline (`.sav` world file → stockpile data)
 
@@ -72,56 +72,64 @@ SAV-sourced `Stockpile`s carry map metadata (`hex`, `coords`, `is_reserve`) and 
 
 | Surface | Module | Notes |
 |---|---|---|
-| CLI `fs` | `cli/app.py` (Typer) | `scan` `serve` `gui` `sav` |
-| REST API | `api/server.py` (FastAPI) | see backend.md |
-| Web UI | `api/web/routes.py` (Jinja) | upload form |
-| Desktop GUI | `gui/app.py` (PySide6) | |
+| CLI `fs` | `cli/app.py` (Typer) | `scan` `gui` `sav`; no subcommand → GUI |
+| Desktop GUI | `gui/app.py` → `gui/windows/main_window.py` | capture panel + SAV tools |
 | Tooling | `fs_tools/cli.py`, `fs_tools/gui` | builders/extractors |
 
 ## Settings architecture
 
-`core/settings/app_settings.py` → `AppSettings(BaseSettings)`, schema **v9**.
-Top-level sections: `api_server`, `api_auth`, `external_tools`, `logging`,
-`output`, `scanner`, `stockpile_types`, `database_builder`, `notifications`,
-`gui`, `sav_processing`. (`OCRSettings` from `sections/ocr.py` is now a geometry
-model used by GUI/tooling for icon-region math; `TemplateSettings` is consumed by
+`core/settings/app_settings.py` → `AppSettings(BaseSettings)`, schema **v10**.
+Top-level sections: `external_tools`, `logging`, `output`, `scanner`,
+`stockpile_types`, `database_builder`, `notifications`, `gui`, `sav_processing`.
+(The capture hotkey is `scanner.capture_key`. `OCRSettings` from `sections/ocr.py`
+is an icon-geometry model used by GUI/tooling; `TemplateSettings` is consumed by
 mod-import models — neither is a top-level field.)
 
 Source priority (highest→lowest): env (`FS_<SECTION>__<KEY>`) → JSON file in
 platform config dir → defaults. Stepwise migration via `ConfigMigrator`
-(`CURRENT_VERSION = 9`).
+(`CURRENT_VERSION = 10`; v9→v10 drops the old `api_server`/`api_auth` sections).
+
+## GUI structure
+
+`gui/windows/main_window.py` hosts `widgets/capture_panel.py` (central widget):
+Start/Stop capture toggle (binds the hotkey listener), "scan a file" action, SAV
+scan/monitor tools, and a live log table. Config dialog
+(`windows/config_window.py`) has tabs: Scanner (incl. capture hotkey), Output,
+Logging, GUI (+ Stockpile Types / Notifications / SAV at advanced level).
 
 ## Event system
 
 `core/events/bus.py` — `EventBus.emit(EventType, data)` / `subscribe(...)`.
-Decouples NotificationService (Discord), logging, and memory metrics from the
-pipeline. Events: server started/stopped, scan started/completed/failed, mod imported.
+Decouples NotificationService (Discord) and metrics from the pipeline. Active
+events: scan started/scanned/failed. (`SERVER_*` enum members remain but are
+unused after the server removal.)
 
 ## Error handling
 
 - Validate at boundaries (image decode, Pydantic config, DB existence).
 - `Scanner.__init__` raises `ValueError` (no `database_path`) / `FileNotFoundError`.
-- API maps to HTTP codes (401 auth, 429 rate/concurrency, 503 engine/DB).
-- `ScanResult` envelope: `{success, data, error, processing_time_ms}`.
+- `services/capture.py` raises `CaptureError` (no window / minimized / inactive /
+  unavailable platform); the GUI surfaces it in the log + a message box.
 
 ## Design decisions (rationale)
 
 - **External Rust OCR engine:** the matching + OCR pipeline (formerly
-  ~3k lines of Python in `fs_ocr/_impl/`) is now a compiled Rust dependency for
-  speed; the runtime keeps only a thin adapter seam.
+  ~3k lines of Python) is now a compiled Rust dependency for speed; the runtime
+  keeps only a thin adapter seam.
+- **Server removed:** scanning is local from a captured screenshot, so the
+  FastAPI/uvicorn stack and its config were dropped (schema v9→v10).
 - **Template DB owned by fs_tools:** only the builder/tooling needs HDF5
-  read/write at runtime the engine reads the DB itself.
+  read/write; the engine reads the DB itself at scan time.
 - **HDF5 over pickle:** structured, queryable, language-agnostic, no exec risk.
-- **EventBus:** multiple async subscribers without tight coupling.
 
-> NOTE: CLAUDE.md describes a future "named pipelines" config
-> (`AppSettings.pipelines`, `general.mode`, migrator v11). That is NOT on this
-> branch — current config is flat sections at schema v9.
+> NOTE: CLAUDE.md still describes the 3-package / FastAPI layout and a future
+> "named pipelines" config — both stale on this branch (2 packages, no server,
+> flat sections at schema v10).
 
 ## Key files
 
 1. `services/scanner.py` — OCR seam over external `fs_ocr`
-2. `services/output_coordinator.py` — output routing (list-based)
-3. `services/savefile_processor.py` + `sav_parser.py` — SAV pipeline
-4. `core/settings/app_settings.py` — configuration (v9)
-5. `fs_tools/template_db/template_manager.py` — icon matching / DB access
+2. `services/capture.py` + `services/local_scan.py` — capture + local scan→output
+3. `gui/widgets/capture_panel.py` — capture UI + hotkey
+4. `services/output_coordinator.py` — output routing (list-based)
+5. `core/settings/app_settings.py` — configuration (v10)

@@ -2,6 +2,7 @@
 
 import json
 import logging
+from functools import lru_cache
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -106,3 +107,16 @@ class CatalogService:
         """
         self._load()
         return len(self._catalog)
+
+
+@lru_cache
+def get_catalog_service() -> CatalogService:
+    """Get a process-wide cached catalog service built from current settings.
+
+    Returns:
+        CatalogService: A catalog service using the configured catalog file.
+    """
+    from foxhole_stockpiles.core.settings import get_settings
+
+    catalog_path = get_settings().database_builder.catalog_file
+    return CatalogService(catalog_path=catalog_path)

@@ -1,88 +1,45 @@
-<!-- Generated: 2026-06-21 | Branch: main | Token estimate: ~900 -->
+<!-- Generated: 2026-06-21 | Branch: main | Token estimate: ~850 -->
 
-# Backend, API & CLI
+# CLI, GUI Capture & Local Pipeline
+
+No REST server — this is a desktop app. "Backend" here means the CLI commands,
+the GUI capture flow, the OCR seam, and output routing.
 
 ## CLI `fs` (Typer)
 
-**Entry:** `cli/app.py:main`. Settings loaded via `cli/_settings.py`
-(honours `--config <path>`), Rich output via `cli/_console.py`.
+**Entry:** `cli/app.py:main`. Settings via `cli/_settings.py` (honours
+`--config <path>`), Rich output via `cli/_console.py`. No subcommand → GUI.
 
 | Command | Module | Flow |
 |---|---|---|
-| `fs scan` | `cli/commands/scan.py` | `ScannerSettings` → `services.scanner.build_scanner` (external `fs_ocr`) → `OutputCoordinator` |
-| `fs serve` | `cli/commands/serve.py` | launches uvicorn on `api.server:app` |
+| `fs scan` | `cli/commands/scan.py` | `ScannerSettings` → `services.scanner.build_scanner` (external `fs_ocr`) → `OutputCoordinator` → `ScanResult`/printed output |
 | `fs gui` | `cli/commands/gui.py` | launches PySide6 desktop app |
 | `fs sav` | `cli/commands/sav.py` | `SaveFileProcessor` (resolves `.sav` + map data) → `OutputCoordinator` |
 
-> Asset/DB tooling commands (build-db, gen-templates, catalog, add-mod/icon,
-> inspect, extract-assets) live in the separate `fs-tools` CLI. The `fs-ocr`
-> engine CLI was removed (engine is now an external Rust package).
+Aliases: `scanner`→`scan`, `process-sav`→`sav`, `ui`/`app`→`gui` (hidden).
+Asset/DB tooling lives in the separate `fs-tools` CLI.
 
-## FastAPI server (`api/server.py`)
+## Screenshot capture (GUI)
 
-```python
-app = FastAPI(title="Foxhole Stockpile Scanner API", version="0.4.0")
+```
+scanner.capture_key (e.g. "F9")
+  ▼ gui/utils/hotkey_listener.py — pynput GlobalHotKeys, runs in its own thread
+     to_global_hotkey("Ctrl+F3") → "<ctrl>+<f3>"   (Meta→cmd)
+  ▼ emits a Qt signal → CapturePanel slot on the GUI thread
+  ▼ gui/utils/capture_scan_worker.py  LocalScanWorker(QThread)
+       services/capture.py  capture_window()  → PNG bytes
+       services/local_scan.py  LocalScanService.scan(bytes) → Stockpile → outputs
 ```
 
-**Lifespan:** startup loads config + verifies DB; shutdown emits notifications +
-clears DI caches.
-
-### Routes
-
-| Method | Path | Auth | Purpose |
-|---|---|---|---|
-| GET | `/health` | no | health/version (`HealthResponse`) |
-| POST | `/ocr/scan_image` | yes | main OCR; concurrency-limited; `multipart` image + `faction`/`language` query → `ScanResult` |
-| GET | `/memory/stats` | yes | memory snapshot stats |
-| POST | `/memory/gc` | yes | force GC |
-| GET | `/memory/current` | yes | current memory |
-| GET | `/memory/gc-stats` | yes | GC stats |
-| GET | `/scan/stats` | yes | scan-limiter counters (queue wait, concurrency) |
-
-**Web UI** (`api/web/routes.py`, `APIRouter`, auth-gated via `include_router(dependencies=[auth])`):
-
-| Method | Path | Purpose |
-|---|---|---|
-| GET | `/` | Jinja upload form (`templates/`) |
-| POST | `/web/scan` | form submit → HTML results |
-
-(The former `/web/icon/{code}` route was dropped — runtime no longer serves
-icons from the template DB.)
-
-### scan_image handler shape
-
+`services/capture.py`:
 ```python
-@app.post("/ocr/scan_image", dependencies=[Depends(auth_dependency)])
-async def scan_stockpile(
-    request: Request,
-    image: UploadFile,
-    scanner: Annotated[Scanner, Depends(get_scanner)],
-    output_coordinator: Annotated[OutputCoordinator, Depends(get_output_coordinator)],
-    scan_limiter: Annotated[ScanLimiter, Depends(get_scan_limiter)],
-    faction: ItemFaction | None = Query(None),
-    language: SupportedLanguage | None = Query(None),
-) -> Any
+_WINDOW_TITLE_PREFIX = "War"   # hardcoded; the Foxhole window is titled "War"
+def capture_window() -> bytes  # raises CaptureError on:
+    #   - pywinctl/Pillow unavailable (headless)
+    #   - no window titled "War*"
+    #   - window minimized / not active
+    # else: pywinctl client frame → PIL ImageGrab(all_screens=True) → PNG
 ```
-
-## Auth (`api/auth.py`)
-
-`create_auth_dependency` builds a dependency from `APIAuthSettings`
-(`auth_type` + single `auth_token`); `verify_auth` compares the `Authorization`
-header with `secrets.compare_digest`:
-- `auth_type` unset → no auth required
-- `BEARER` → header must equal `Bearer <auth_token>`
-- `BASIC` → header must equal `Basic <auth_token>` (`auth_token` = base64 `user:pass`)
-- `FORWARD` → not supported for API auth (rejected by settings validator)
-
-`auth_type` and `auth_token` must both be set or both unset (model validator).
-Env: `FS_API_AUTH__AUTH_TYPE=bearer`, `FS_API_AUTH__AUTH_TOKEN=...`.
-
-## Dependency injection (`api/dependencies.py`)
-
-`@lru_cache` singletons: `get_scanner` (**wraps external `fs_ocr` engine**),
-`get_output_coordinator`, `get_catalog_service`, `get_notification_service`,
-`get_scan_limiter`. `clear_dependency_caches()` resets them on shutdown
-(shuts down NotificationService first to unsubscribe event handlers).
 
 ## OCR seam (`services/scanner.py`)
 
@@ -97,22 +54,23 @@ class Scanner:
 
 def build_scanner(settings: ScannerSettings) -> Scanner
 ```
-
 Adapter `_to_runtime_stockpile()` parses `fs_ocr.Stockpile.to_json()` and maps
 the external `StockpileType` name + items to runtime models.
 
-## Middleware (`api/`)
+## Local scan service (`services/local_scan.py`)
 
-1. **CORS** — origins from `api_server.cors_allow_origins`.
-2. **Security headers** — CSP, `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy` on HTML.
-3. **MemoryMonitorMiddleware** (`memory_middleware.py`) — optional per-request memory tracking + auto-trim, gated by `api_server.enable_memory_monitoring`.
-
-## Concurrency limiting (`api/scan_limiter.py`)
-
-`ScanLimiter` wraps an `asyncio.Semaphore(max_concurrent_scans)` — caps
-concurrent OCR scans **per worker** (effective = workers × max_concurrent_scans).
-Tracks queue-wait stats (`ScanLimiterStats`). Exceeding capacity queues; not a
-per-IP rate limiter.
+```python
+class LocalScanService:
+    def __init__(self, settings: AppSettings):
+        self._scanner = build_scanner(settings.scanner)        # built once
+        self._output_coordinator = OutputCoordinator(settings.output)
+    def scan(self, image, faction=None) -> Stockpile:
+        stockpile = self._scanner.scan_sync(image, faction=...)
+        asyncio.run(self._output_coordinator.handle_output(stockpiles=[stockpile]))
+        return stockpile
+```
+Backs both the capture worker and the GUI "scan a file" action. The `fs scan`
+CLI wires the same scanner + `OutputCoordinator` directly.
 
 ## Output routing (`services/output_coordinator.py`)
 
@@ -121,36 +79,48 @@ async def handle_output(stockpiles: list[Stockpile], **kwargs) -> dict | None:
     for cfg in output_settings.handlers:
         result = await self._create_handler(cfg).handle(stockpiles=..., **kwargs)
         if result is not None and out is None:
-            out = result   # first non-None (e.g. ReturnHandler for API) wins
+            out = result   # first non-None (e.g. ReturnHandler) wins
     # all handlers run even if one raises (errors logged, not propagated)
 ```
 
-Handlers (`handlers/`): `console.py`, `file.py` (JSON/CSV/TSV), `webhook.py`
-(HTTP POST), `response.py` (API return), **`sheets.py`** (Google Sheets append).
-Interface: `base_handler.py` (`handle(stockpiles: list[Stockpile])`).
+Handlers (`handlers/`), all `handle(stockpiles: list[Stockpile])`:
+`console.py`, `file.py` (JSON/CSV/TSV), `webhook.py` (HTTP POST, supports
+basic/bearer/**forward** auth), `response.py` (`ReturnOutputHandler` → returns
+the dict), **`sheets.py`** (Google Sheets append). Interface: `base_handler.py`.
 
-## Response models
+Webhook **forward auth**: `WebhookHandlerSettings.auth_type="forward"` +
+`client_auth_header` — the per-call `token` kwarg is forwarded as that header.
 
-- `ScanResult` — `{success, data: Stockpile|None, error, processing_time_ms}`.
+## GUI capture panel (`gui/widgets/capture_panel.py`)
+
+`CapturePanel` is the main window's central widget:
+- **Start/Stop Capture** — toggles the `HotkeyListener`; warns if
+  `scanner.capture_key` unset or the scanner can't be built (no DB).
+- **Scan a file** (menu) — local scan of a chosen image.
+- **SAV** column — one-shot scan + monitor (`gui/utils/sav_workers.py`).
+- Live log table (`gui/utils/qt_log_handler.py`) + DB-config validation.
+
+## Response / result models
+
+- `ScanResult` (`models/scan_result.py`) — `{success, data: Stockpile|None, error, processing_time_ms}`; used by the CLI/scan worker.
 - `Stockpile` / `StockpileItem` — see data.md.
 
-## API server config (`core/settings/sections/api.py`)
+## Scanner config (`core/settings/sections/scanner.py`)
 
-`APIServerSettings`: `host`, `port`, `workers`, `reload`, `log_level`,
-`max_concurrent_scans`, `enable_memory_monitoring`, `auto_trim_memory`,
-`memory_trim_threshold`, `cors_allow_origins`, `max_upload_size_bytes`.
+`ScannerSettings`: `database_path`, **`capture_key`** (global hotkey),
+`template_cache_size`, `early_exit_threshold`, `confidence_gap`, `debug_mode`,
+`extract_icons`, `screenshots_folder`.
 
 ```bash
-fs serve                          # via CLI
-FS_API_SERVER__PORT=8000          # env override
-FS_API_AUTH__AUTH_TYPE=bearer
-FS_API_AUTH__AUTH_TOKEN=secret
+fs scan --image shot.png --config my.json
+FS_SCANNER__DATABASE_PATH=/path/to/db.h5
+FS_SCANNER__CAPTURE_KEY=F9
 ```
 
 ## Key files
 
 1. `cli/commands/scan.py` — scan wiring
-2. `api/server.py` — routes + middleware
-3. `api/dependencies.py` — DI singletons (`get_scanner`)
+2. `services/capture.py` — window capture
+3. `services/local_scan.py` — local scan → outputs
 4. `services/scanner.py` — external OCR seam
-5. `services/output_coordinator.py` — sink fan-out
+5. `gui/widgets/capture_panel.py` — capture UI + hotkey

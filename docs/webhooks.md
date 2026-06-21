@@ -1,270 +1,159 @@
 # Webhook Integration
 
-The Foxhole Stockpile Scanner can send scan results to webhooks, enabling integration with external systems, Discord bots, databases, and more.
-
-## Overview
-
-When configured with webhook output, the scanner sends a POST request with the stockpile data to your specified URL.
+Foxhole Stockpiles can send scan results to a webhook, enabling integration with
+external systems, Discord bots, databases, and more. The webhook is one of the
+configurable **output handlers** — after a screenshot is captured and scanned (or
+a `.sav` file is processed), the result is POSTed to your URL.
 
 ## Configuration
 
-### Basic Webhook Setup
+Webhook output is configured as a handler in the `output.handlers` list of your
+`~/.fs_config`. Add a handler with `"type": "webhook"`:
 
-Set the output destination to webhook and provide a URL:
-
-```bash
-export FS_OUTPUT__DESTINATION=webhook
-export FS_OUTPUT__WEBHOOK__URL=https://api.example.com/stockpiles
-```
-
-Or in `~/.fs_config`:
 ```json
 {
+  "config_version": 10,
+  "scanner": { "database_path": "/path/to/templates.h5", "capture_key": "F9" },
   "output": {
-    "format": "json",
-    "destination": "webhook",
-    "webhook": {
-      "url": "https://api.example.com/stockpiles"
-    }
+    "handlers": [
+      {
+        "name": "Webhook",
+        "format": { "type": "json" },
+        "handler": {
+          "type": "webhook",
+          "url": "https://api.example.com/stockpiles"
+        }
+      }
+    ]
   }
 }
 ```
 
-### Webhook Authentication
+You can configure multiple handlers (e.g. console + webhook); each receives the
+same result.
 
-Webhooks support three authentication methods:
+### Webhook authentication
 
-#### 1. Bearer Token
+Set `auth_type` and `token` on the webhook handler:
 
-```bash
-export FS_OUTPUT__WEBHOOK__AUTH_TYPE=bearer
-export FS_OUTPUT__WEBHOOK__TOKEN=your-webhook-token
+#### Bearer token
+```json
+"handler": {
+  "type": "webhook",
+  "url": "https://api.example.com/stockpiles",
+  "auth_type": "bearer",
+  "token": "your-webhook-token"
+}
 ```
-
 Sends: `Authorization: Bearer your-webhook-token`
 
-#### 2. Basic Authentication
-
-```bash
-export FS_OUTPUT__WEBHOOK__AUTH_TYPE=basic
-export FS_OUTPUT__WEBHOOK__TOKEN=$(echo -n "user:pass" | base64)
+#### Basic authentication
+The `token` must be the base64 encoding of `username:password`
+(`echo -n "user:pass" | base64`).
+```json
+"handler": {
+  "type": "webhook",
+  "url": "https://api.example.com/stockpiles",
+  "auth_type": "basic",
+  "token": "dXNlcjpwYXNz"
+}
 ```
-
 Sends: `Authorization: Basic dXNlcjpwYXNz`
 
-#### 3. Custom Header
+> **Advanced:** `auth_type: "forward"` with `client_auth_header` forwards a
+> per-call token as the named header. It exists for embedding the scan pipeline
+> in a larger app that supplies that token programmatically; in normal local
+> capture/scan there is no request to source it from, so use `bearer`/`basic`.
 
-```bash
-export FS_OUTPUT__WEBHOOK__AUTH_TYPE=X-API-Key
-export FS_OUTPUT__WEBHOOK__TOKEN=custom-api-key-123
-```
+## Webhook payload
 
-Sends: `X-API-Key: custom-api-key-123`
+**Method:** `POST`  **Content-Type:** `application/json`
 
-## API to Webhook Passthrough
-
-When using the API server, you can pass client authentication through to the webhook:
-
-```bash
-# Configure which header to forward
-export FS_OUTPUT__WEBHOOK__CLIENT_AUTH_HEADER=Authorization
-```
-
-Client request:
-```bash
-curl -X POST http://localhost:8000/ocr/scan_image \
-  -H "Authorization: Bearer client-token" \
-  -F "image=@screenshot.png"
-```
-
-The API will forward this token to the webhook, **overriding** the configured `webhook.token`.
-
-### Use Case: Multi-Tenant API
-
-```bash
-# API uses one auth for clients
-export FS_API_AUTH__AUTH_TYPE=bearer
-export FS_API_AUTH__AUTH_TOKEN=api-server-token
-
-# Each client's token is forwarded to webhook
-export FS_OUTPUT__WEBHOOK__CLIENT_AUTH_HEADER=X-Client-ID
-export FS_OUTPUT__WEBHOOK__URL=https://api.example.com/stockpiles
-```
-
-Clients send their own token:
-```bash
-curl -X POST http://localhost:8000/ocr/scan_image \
-  -H "Authorization: Bearer api-server-token" \
-  -H "X-Client-ID: client-abc-123" \
-  -F "image=@screenshot.png"
-```
-
-The webhook receives `X-Client-ID: client-abc-123`.
-
-## Webhook Payload
-
-### Request Format
-
-**Method:** POST
-**Content-Type:** application/json
-
-**Body:**
 ```json
 {
   "name": "Logi",
-  "type": "seaport",
+  "type": "Seaport",
   "shard": "ABLE",
   "ingame_timestamp": "Day 1,293, 1906 Hours",
-  "timestamp": "2024-01-04T09:00:00Z",
+  "timestamp": "2024-01-04T09:00:00",
   "resolution": "1920x1080",
-  "errors": [],
   "items": [
-    {
-      "code": "GrenadeLauncherC",
-      "quantity": 3,
-      "crated": false,
-      "confidence": 0.95
-    },
-    {
-      "code": "RifleW",
-      "quantity": 120,
-      "crated": true,
-      "confidence": 0.92
-    }
+    { "code": "GrenadeLauncherC", "quantity": 3, "crated": false, "confidence": 0.95 },
+    { "code": "RifleW", "quantity": 120, "crated": true, "confidence": 0.92 }
   ]
 }
 ```
 
-### Expected Response
+`.sav`-sourced results additionally include `hex`, `coords`, and `is_reserve`
+and omit per-item `x`/`y` pixel coordinates.
 
-Your webhook should return a JSON response:
+### Expected response
 
-**Success (200):**
+Your endpoint should return JSON. The scanner logs the response but does **not**
+retry on HTTP errors.
+
 ```json
-{
-  "message": "Stockpile received successfully",
-  "stockpile_id": "abc123"
-}
+{ "message": "Stockpile received successfully" }
 ```
 
-**Error (4xx/5xx):**
-```json
-{
-  "error": "Invalid stockpile data"
-}
-```
+## Retry behavior
 
-The scanner will log the response but doesn't retry on failure.
+The webhook connector retries only on **connection timeouts**:
+- Max retries: 3
+- Delay between retries: 2 seconds
+- Does **not** retry on HTTP 4xx/5xx responses.
 
-## Retry Behavior
+## Testing webhooks
 
-The webhook connector includes automatic retry for connection timeouts:
-- **Max retries:** 3
-- **Delay between retries:** 2 seconds
-- **Only retries on:** Connection timeout errors
-- **Does not retry on:** HTTP errors (4xx, 5xx)
+Point the webhook URL at a request inspector and run a scan:
 
-## Testing Webhooks
+- [webhook.site](https://webhook.site/) — copy your unique URL into `handler.url`.
+- [RequestBin](https://requestbin.com/) — same idea.
+- `nc -l 5000` and set `"url": "http://localhost:5000"` for a raw local listener.
 
-### Local Testing with RequestBin
-
-1. Create a temporary webhook URL at [RequestBin](https://requestbin.com/)
-2. Configure the scanner:
-   ```bash
-   export FS_OUTPUT__WEBHOOK__URL=https://requestbin.com/r/your-bin-id
-   ```
-3. Run a scan and check RequestBin to see the payload
-
-### Local Testing with netcat
-
-```bash
-# Listen on port 5000
-nc -l 5000
-
-# Configure scanner
-export FS_OUTPUT__WEBHOOK__URL=http://localhost:5000
-```
-
-### Testing with webhook.site
-
-1. Go to [webhook.site](https://webhook.site/)
-2. Copy your unique URL
-3. Configure:
-   ```bash
-   export FS_OUTPUT__WEBHOOK__URL=https://webhook.site/your-unique-id
-   ```
-
-## Error Handling
-
-The webhook connector handles these error scenarios:
-
-| Error | Behavior |
-|-------|----------|
-| Connection timeout | Retry up to 3 times with 2s delay |
-| HTTP 4xx/5xx | Log error, no retry |
-| Invalid JSON response | Log warning, continue |
-| Empty payload | Skip webhook, return error message |
-| Missing webhook URL | Skip webhook, return error message |
-
-Error responses are logged and returned in the API response when using the API server.
-
-## Security Considerations
-
-1. **Use HTTPS:** Always use HTTPS URLs for webhooks in production
-2. **Authenticate requests:** Configure `webhook.auth_type` and `webhook.token`
-3. **Validate incoming data:** Verify authentication on your webhook endpoint
-4. **Rate limiting:** Implement rate limiting on your webhook server
-5. **Timeout handling:** Set reasonable timeouts on your webhook endpoint
+Tip: configure a `console` handler alongside the webhook to confirm items were
+detected before debugging delivery.
 
 ## Debugging
 
 Enable debug logging to see webhook request/response details:
 
-```bash
-export FS_LOGGING__LOG_LEVEL=DEBUG
-export FS_LOGGING__LOGGERS='{"foxhole_stockpiles.connectors.webhook": "DEBUG"}'
+```json
+"logging": {
+  "log_level": "DEBUG",
+  "loggers": { "foxhole_stockpiles.connectors.webhook": "DEBUG" }
+}
 ```
 
-This will log:
-- Webhook URL being called
-- Authentication headers (redacted)
-- Response status and body
-- Retry attempts
+Logs include the URL called, redacted auth headers, response status/body, and
+retry attempts.
 
-## Common Issues
+## Common issues
 
 ### Webhook returns 401 Unauthorized
-
-Check that your `webhook.token` matches what the endpoint expects:
+Verify `auth_type`/`token` match what your endpoint expects, then test manually:
 ```bash
-# Verify token is set correctly
-echo $FS_OUTPUT__WEBHOOK__TOKEN
-
-# Test webhook manually
-curl -X POST https://your-webhook.com \
-  -H "Authorization: Bearer $FS_OUTPUT__WEBHOOK__TOKEN" \
+curl -X POST https://your-webhook.example.com \
+  -H "Authorization: Bearer your-webhook-token" \
   -H "Content-Type: application/json" \
   -d '{"test": "data"}'
 ```
 
 ### Connection timeout errors
-
-- Verify the webhook URL is accessible
-- Check firewall/network settings
-- Ensure the webhook server is running
-- Try increasing timeout (requires code modification)
+- Verify the URL is reachable and the endpoint is up.
+- Check firewall/network settings.
 
 ### Webhook receives empty data
+Make sure the scan detected items — add a `console` handler and re-run.
 
-Check that the scanner successfully detected items:
-```bash
-# Test scanner with console output first
-export FS_OUTPUT__DESTINATION=console
-fs scanner --image screenshot.png
-```
+## Security considerations
 
-## See Also
+1. **Use HTTPS** for webhook URLs.
+2. **Authenticate** with `auth_type` + `token`.
+3. **Validate** auth on your endpoint.
+4. Never commit tokens to version control.
 
-- [API Usage](api-usage.md) - Using the API server with webhooks
-- [API Authentication](api-authentication.md) - Authenticating API requests
-- [Configuration](configuration.md) - All configuration options
+## See also
+
+- [Configuration](configuration.md) — all configuration options
+- [Troubleshooting](troubleshooting.md) — capture, scanning, and output issues

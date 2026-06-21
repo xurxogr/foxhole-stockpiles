@@ -13,8 +13,6 @@ from pydantic_settings import (
 from foxhole_stockpiles.core.settings.config_migrator import ConfigMigrator
 from foxhole_stockpiles.core.settings.json_settings_source import Utf8JsonConfigSettingsSource
 from foxhole_stockpiles.core.settings.sections import (
-    APIAuthSettings,
-    APIServerSettings,
     DatabaseBuilderSettings,
     ExternalToolsSettings,
     GUISettings,
@@ -33,12 +31,6 @@ class AppSettings(BaseSettings):
     config_version: int = Field(
         default=ConfigMigrator.CURRENT_VERSION,
         description="Configuration format version for migration purposes",
-    )
-    api_server: APIServerSettings = Field(
-        description="API server settings", default_factory=APIServerSettings
-    )
-    api_auth: APIAuthSettings = Field(
-        description="API authentication settings", default_factory=APIAuthSettings
     )
     external_tools: ExternalToolsSettings = Field(
         description="External tools settings", default_factory=ExternalToolsSettings

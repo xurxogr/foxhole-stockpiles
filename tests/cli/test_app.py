@@ -44,7 +44,7 @@ class TestRootHelp:
 
         assert result.exit_code == 0
         output = strip_ansi(result.output)
-        for command in ("scan", "sav", "serve", "gui"):
+        for command in ("scan", "sav", "gui"):
             assert command in output
 
     def test_help_hides_aliases(self) -> None:
@@ -89,13 +89,6 @@ class TestAliases:
 
         assert result.exit_code == 0
         assert "--image" in strip_ansi(result.output)
-
-    def test_server_alias_resolves_to_serve(self) -> None:
-        """The ``server`` alias exposes the same options as ``serve``."""
-        result = runner.invoke(app, ["server", "--help"])
-
-        assert result.exit_code == 0
-        assert "--host" in strip_ansi(result.output)
 
 
 class TestMainEntryPoint:

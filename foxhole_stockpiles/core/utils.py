@@ -110,15 +110,13 @@ def get_bundled_resource_path(relative_path: str) -> Path:
     development mode (relative to current directory) and frozen mode.
 
     Args:
-        relative_path (str): Path relative to project root (e.g., "tessdata" or
-            "foxhole_stockpiles/api/templates")
+        relative_path (str): Path relative to project root (e.g., "tessdata").
 
     Returns:
         Path: Absolute path to the resource
 
     Example:
         >>> tessdata_path = get_bundled_resource_path("tessdata")
-        >>> templates_path = get_bundled_resource_path("foxhole_stockpiles/api/templates")
     """
     if is_frozen():
         # Running as PyInstaller bundle - use _MEIPASS

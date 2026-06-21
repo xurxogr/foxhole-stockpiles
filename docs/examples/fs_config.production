@@ -1,26 +1,17 @@
 {
-  "config_version": 9,
-  "api_server": {
-    "cors_allow_origins": ["https://yourdomain.com", "https://app.yourdomain.com"],
-    "host": "0.0.0.0",
-    "port": 8000,
-    "workers": 4
-  },
-  "api_auth": {
-    "auth_type": "bearer",
-    "auth_token": "your-secret-api-token-here"
-  },
+  "config_version": 10,
   "scanner": {
-    "database_path": "/app/data/foxhole_templates.h5",
-    "screenshots_folder": "/app/screenshots",
+    "database_path": "/path/to/foxhole_templates.h5",
+    "capture_key": "F9",
+    "screenshots_folder": "screenshots",
     "debug_mode": false
   },
   "output": {
     "handlers": [
       {
-        "name": "API Response",
+        "name": "Console",
         "format": {"type": "json"},
-        "handler": {"type": "return"}
+        "handler": {"type": "console"}
       },
       {
         "name": "Webhook",
@@ -39,10 +30,9 @@
     "log_format": "[%(asctime)s] %(levelname)s [%(name)s] %(message)s",
     "date_format": "%Y-%m-%d %H:%M:%S",
     "rotate_logs": true,
-    "log_file": "/app/logs/foxhole-api.log",
+    "log_file": "logs/foxhole-stockpiles.log",
     "loggers": {
-      "foxhole_stockpiles": "INFO",
-      "uvicorn": "WARNING"
+      "foxhole_stockpiles": "INFO"
     }
   }
 }

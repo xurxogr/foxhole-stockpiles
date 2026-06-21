@@ -16,7 +16,7 @@ from foxhole_stockpiles import __version__
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.enums.config_level import ConfigLevel
 from foxhole_stockpiles.gui.utils.qt_log_handler import QtLogHandler
-from foxhole_stockpiles.gui.widgets.server_control_panel import ServerControlPanel
+from foxhole_stockpiles.gui.widgets.capture_panel import CapturePanel
 from foxhole_stockpiles.gui.windows.config_window import ConfigWindow
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
 
@@ -68,9 +68,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(f"FS (Foxhole Stockpiles) - v{__version__}")
         self.setGeometry(100, 100, 1000, 700)
 
-        # Create central widget with server control panel
-        self.server_panel = ServerControlPanel()
-        self.setCentralWidget(self.server_panel)
+        # Create central widget with the capture control panel
+        self.capture_panel = CapturePanel()
+        self.setCentralWidget(self.capture_panel)
 
         # Create menu bar
         self.create_menu_bar()
@@ -197,7 +197,7 @@ class MainWindow(QMainWindow):
 
     def scan_screenshot(self) -> None:
         """Open file dialog to scan a screenshot."""
-        self.server_panel.scan_screenshot_from_menu()
+        self.capture_panel.scan_screenshot_from_menu()
 
     def show_configuration(self) -> None:
         """Show configuration window as modal dialog centered on main window."""
@@ -214,7 +214,7 @@ class MainWindow(QMainWindow):
         config_window.move(center_x, center_y)
 
         # Connect to refresh DB info and settings when config window closes
-        config_window.closed.connect(self.server_panel.refresh_db_info)
+        config_window.closed.connect(self.capture_panel.refresh_db_info)
         config_window.closed.connect(self._on_config_closed)
 
         config_window.show()
@@ -239,7 +239,7 @@ class MainWindow(QMainWindow):
             f"<ul>"
             f"<li>{t('about.feature_scanning')}</li>"
             f"<li>{t('about.feature_database')}</li>"
-            f"<li>{t('about.feature_server')}</li>"
+            f"<li>{t('about.feature_capture')}</li>"
             f"</ul>"
             f"<p><b>{t('about.links_title')}</b></p>"
             f"<p><a href='https://github.com/xurxogr/foxhole-stockpiles'>{t('about.github_link')}</a></p>"
@@ -287,14 +287,14 @@ class MainWindow(QMainWindow):
         """Quit the application with proper cleanup."""
         logger.info("Quitting application")
 
-        # Stop server if running
-        if hasattr(self, "server_panel") and self.server_panel.server_running:
-            logger.info("Stopping server before quit")
-            self.server_panel.stop_server()
+        # Stop capture if running
+        if hasattr(self, "capture_panel") and self.capture_panel.capturing:
+            logger.info("Stopping capture before quit")
+            self.capture_panel.stop_capture()
 
-        # Stop SAV workers if running
-        if hasattr(self, "server_panel"):
-            self.server_panel._stop_all_workers()
+        # Stop SAV / scan workers if running
+        if hasattr(self, "capture_panel"):
+            self.capture_panel._stop_all_workers()
 
         # Remove all QtLogHandler instances from all loggers before Qt cleanup
         root_logger = logging.getLogger()

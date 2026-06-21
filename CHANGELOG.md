@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Local screenshot capture**: a configurable global hotkey (`scanner.capture_key`,
+  e.g. `F9`) captures the active Foxhole window (title "War", any monitor) and
+  scans it in-process, routing the result to the configured output handlers.
+  New dependencies: `pywinctl`, `pynput` (with Pillow `ImageGrab`).
+- **Google Sheets output handler** (`sheets`).
+
+### Changed
+- **OCR engine is now the external Rust package `fs-ocr`** (PyPI); the in-repo
+  `fs_ocr` package was removed. The runtime talks to it through
+  `services/scanner.py`. HDF5 template DB code moved to `fs_tools/template_db/`.
+- Config schema migrated to **v10**; the capture hotkey lives at
+  `scanner.capture_key`.
+
+### Removed
+- **The FastAPI REST server and everything around it**: the `api/` package, the
+  `fs serve` command, all REST endpoints (`/ocr/scan_image`, `/health`,
+  `/memory/*`, `/scan/stats`), the Jinja web UI, Docker deployment, the
+  `api_server`/`api_auth` config sections (dropped in the v9→v10 migration), all
+  `FS_API_*` env vars, and the `fastapi`/`uvicorn`/`slowapi`/`python-multipart`/
+  `jinja2` dependencies. Scanning is now local.
+
 ## [0.4.0] - 2026-01-27
 
 ### Added

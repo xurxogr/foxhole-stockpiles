@@ -14,6 +14,13 @@ class ScannerSettings(BaseModel):
         ),
         default=None,
     )
+    capture_key: str | None = Field(
+        description=(
+            "Global hotkey that captures the Foxhole window and scans it (e.g. 'F9'). "
+            "When unset, screenshot capture is disabled until a key is configured."
+        ),
+        default=None,
+    )
     template_cache_size: int = Field(
         description=(
             "Maximum number of resolution databases to cache in memory (LRU cache). "
@@ -64,6 +71,7 @@ class ScannerSettings(BaseModel):
         json_schema_extra={
             "example": {
                 "database_path": "database.h5",
+                "capture_key": "F9",
                 "template_cache_size": 16,
                 "early_exit_threshold": 0.0,
                 "confidence_gap": 0.0,
