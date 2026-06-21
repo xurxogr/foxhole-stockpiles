@@ -30,7 +30,6 @@ dependencies = [
     "pillow>=12.2.0",
     "pydantic>=2.13.4",
     "pydantic_settings>=2.14.1",
-    "pytesseract>=0.3.13",
     # HDF5 for database storage
     "h5py>=3.16.0",
     # Notifications
@@ -99,7 +98,7 @@ disallow_incomplete_defs = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["pytesseract.*", "google_auth_oauthlib.*", "googleapiclient.*"]
+module = ["google_auth_oauthlib.*", "googleapiclient.*"]
 ignore_missing_imports = true
 
 [tool.pydantic-mypy]
