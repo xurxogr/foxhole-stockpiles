@@ -28,7 +28,7 @@ class IconManager:
         Args:
             database_path (Path): Path to database file (for saving)
             databases (dict[SupportedResolution, TemplateDatabase]): Pre-loaded databases
-            icon_scale (float): Icon scaling factor (ocr.box_height / ocr.height)
+            icon_scale (float): Icon scaling factor (ICON_BOX_SCALE)
 
         Raises:
             ValueError: If databases dict is empty

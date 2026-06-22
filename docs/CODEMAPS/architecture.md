@@ -81,9 +81,9 @@ SAV-sourced `Stockpile`s carry map metadata (`hex`, `coords`, `is_reserve`) and 
 `core/settings/app_settings.py` → `AppSettings(BaseSettings)`, schema **v11**.
 Top-level sections: `external_tools`, `logging`, `output`, `scanner`,
 `database_builder`, `notifications`, `gui`, `sav_processing`.
-(The capture hotkey is `scanner.capture_key`. `OCRSettings` from `sections/ocr.py`
-is an icon-geometry model used by GUI/tooling; `TemplateSettings` is consumed by
-mod-import models — neither is a top-level field.)
+(The capture hotkey is `scanner.capture_key`. `TemplateSettings` is consumed by
+mod-import models, not a top-level field. Icon geometry is the single constant
+`fs_tools/constants.py:ICON_BOX_SCALE` (fs_tools-only) — the former `OCRSettings` model was removed.)
 
 Source priority (highest→lowest): env (`FS_<SECTION>__<KEY>`) → JSON file in
 platform config dir → defaults. Stepwise migration via `ConfigMigrator`

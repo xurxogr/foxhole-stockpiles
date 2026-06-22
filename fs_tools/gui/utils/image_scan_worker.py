@@ -9,10 +9,10 @@ from numpy.typing import NDArray
 from PySide6.QtCore import QThread, Signal
 
 from foxhole_stockpiles.core.settings import get_settings
-from foxhole_stockpiles.core.settings.sections.ocr import OCRSettings
 from foxhole_stockpiles.models.detected_icon_info import DetectedIconInfo
 from foxhole_stockpiles.models.scan_result import ScanResult
 from foxhole_stockpiles.services.scanner import Scanner
+from fs_tools.constants import ICON_BOX_SCALE
 
 logger = logging.getLogger(__name__)
 
@@ -68,9 +68,7 @@ class ImageScanWorker(QThread):
             # The engine reports each item's icon coordinates directly. The icon
             # box is square; its size scales with the screenshot height relative
             # to the base resolution.
-            geometry = OCRSettings()
-            scale_factor = image.shape[0] / geometry.height
-            box_size = int(geometry.box_height * scale_factor)
+            box_size = int(ICON_BOX_SCALE * image.shape[0])
 
             detected_icons: list[DetectedIconInfo] = []
             for i, item in enumerate(stockpile.items):

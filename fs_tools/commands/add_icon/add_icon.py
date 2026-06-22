@@ -7,10 +7,10 @@ from pathlib import Path
 
 from foxhole_stockpiles.core.logging import setup_logging
 from foxhole_stockpiles.core.settings import get_settings
-from foxhole_stockpiles.core.settings.sections.ocr import OCRSettings
 from foxhole_stockpiles.enums.item_category import ItemCategory
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
+from fs_tools.constants import ICON_BOX_SCALE
 from fs_tools.template_db.icon_manager import IconManager
 from fs_tools.template_db.template_manager import TemplateManager
 
@@ -184,11 +184,10 @@ Note: Icon dimensions must exactly match the target resolution requirements.
     databases = await template_manager.load_all_resolutions()
 
     # Add icon using IconManager
-    ocr = OCRSettings()
     manager = IconManager(
         database_path=database_path,
         databases=databases,
-        icon_scale=ocr.box_height / ocr.height,
+        icon_scale=ICON_BOX_SCALE,
     )
 
     for resolution in target_resolutions:

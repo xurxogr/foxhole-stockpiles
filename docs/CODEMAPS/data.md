@@ -87,9 +87,9 @@ class AppSettings(BaseSettings):
     sav_processing: SavProcessingSettings
 ```
 (`api_server` + `api_auth` removed in v10; `stockpile_types` removed in v11.)
-`sections/ocr.py` (`OCRSettings`)
-is an icon-geometry model used by GUI + `fs_tools`; `sections/templates.py`
-(`TemplateSettings`) is consumed by mod-import models — neither is a top-level field.
+`sections/templates.py` (`TemplateSettings`) is consumed by mod-import models —
+not a top-level field. (The old `OCRSettings` icon-geometry model was removed; its
+one live value is `fs_tools/constants.py:ICON_BOX_SCALE = 64/2160` (fs_tools-only).)
 
 ### ScannerSettings (`sections/scanner.py`)
 `database_path`, **`capture_key`** (global hotkey, e.g. `"F9"`; `None` disables

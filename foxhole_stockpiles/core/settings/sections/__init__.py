@@ -5,7 +5,6 @@ from foxhole_stockpiles.core.settings.sections.external_tools import ExternalToo
 from foxhole_stockpiles.core.settings.sections.gui import GUISettings
 from foxhole_stockpiles.core.settings.sections.logging import LoggingSettings
 from foxhole_stockpiles.core.settings.sections.notifications import NotificationsSettings
-from foxhole_stockpiles.core.settings.sections.ocr import OCRSettings
 from foxhole_stockpiles.core.settings.sections.output import (
     ConsoleHandlerSettings,
     CsvFormatSettings,
@@ -31,7 +30,6 @@ __all__ = [
     "JsonFormatSettings",
     "LoggingSettings",
     "NotificationsSettings",
-    "OCRSettings",
     "OutputHandlerConfig",
     "OutputSettings",
     "ReturnHandlerSettings",

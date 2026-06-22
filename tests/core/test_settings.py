@@ -12,7 +12,6 @@ from foxhole_stockpiles.core.settings import AppSettings, get_settings, reload_s
 from foxhole_stockpiles.core.settings.config_migrator import ConfigMigrator
 from foxhole_stockpiles.core.settings.sections import SheetsHandlerSettings
 from foxhole_stockpiles.core.settings.sections.logging import LoggingSettings
-from foxhole_stockpiles.core.settings.sections.ocr import OCRSettings
 from foxhole_stockpiles.core.settings.sections.output import (
     ConsoleHandlerSettings,
     CsvFormatSettings,
@@ -84,63 +83,6 @@ class TestLoggingSettings:
             LoggingSettings(log_level="DEBUG", unknown_field="ignored")  # type: ignore[call-arg]
 
         assert "Extra inputs are not permitted" in str(exc_info.value)
-
-
-class TestOCRSettings:
-    """Test cases for OCRSettings.
-
-    This class contains tests for the OCRSettings configuration model,
-    including default values, custom configurations, and validation.
-    """
-
-    def test_ocr_settings_defaults(self) -> None:
-        """Test default OCR settings.
-
-        Verifies that OCRSettings initializes with the correct default values
-        for all OCR-related configuration parameters.
-        """
-        settings = OCRSettings()
-
-        assert settings.height == 2160
-        assert settings.box_width == 84
-        assert settings.box_height == 64
-        assert settings.column_offset == 112
-        assert settings.row_offset == 78
-        assert settings.group_offset == 98
-
-    def test_ocr_settings_custom_values(self) -> None:
-        """Test OCR settings with custom values.
-
-        Verifies that OCRSettings properly accepts and stores custom
-        configuration values for all OCR parameters.
-        """
-        settings = OCRSettings(
-            height=1080,
-            box_width=100,
-            box_height=80,
-            column_offset=120,
-            row_offset=85,
-            group_offset=105,
-        )
-
-        assert settings.height == 1080
-        assert settings.box_width == 100
-        assert settings.box_height == 80
-        assert settings.column_offset == 120
-        assert settings.row_offset == 85
-        assert settings.group_offset == 105
-
-    def test_ocr_settings_validation_positive_values(self) -> None:
-        """Test that OCR settings validate positive values."""
-        with pytest.raises(ValidationError) as exc_info:
-            OCRSettings(height=0)
-
-        assert "greater than 0" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            OCRSettings(box_width=-1)
-
-        assert "greater than 0" in str(exc_info.value)
 
 
 class TestFileHandlerSettings:

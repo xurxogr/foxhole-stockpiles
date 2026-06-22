@@ -30,12 +30,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from foxhole_stockpiles.core.settings.sections.ocr import OCRSettings
 from foxhole_stockpiles.enums.item_category import ItemCategory
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
 from foxhole_stockpiles.models.icon_template import IconTemplate
+from fs_tools.constants import ICON_BOX_SCALE
 from fs_tools.template_db.icon_manager import IconManager
 from fs_tools.template_db.template_database import TemplateDatabase
 from fs_tools.template_db.template_manager import TemplateManager
@@ -798,10 +798,7 @@ class DatabaseVisualizerWindow(QDialog):
             return
 
         # Calculate expected icon size for this resolution
-        ocr_settings = OCRSettings()
-        expected_size = int(
-            ocr_settings.box_height * int(self.current_resolution.value) / ocr_settings.height
-        )
+        expected_size = int(ICON_BOX_SCALE * int(self.current_resolution.value))
 
         # Load the image
         try:
@@ -833,11 +830,10 @@ class DatabaseVisualizerWindow(QDialog):
 
         # Replace the icon in the database
         try:
-            ocr = OCRSettings()
             manager = IconManager(
                 database_path=Path(self.database_path),
                 databases=self.all_databases,
-                icon_scale=ocr.box_height / ocr.height,
+                icon_scale=ICON_BOX_SCALE,
             )
             manager.add_icon_from_image(
                 icon_image=bgr_array,
@@ -929,11 +925,10 @@ class DatabaseVisualizerWindow(QDialog):
 
         # Delete the icon from the database
         try:
-            ocr = OCRSettings()
             manager = IconManager(
                 database_path=Path(self.database_path),
                 databases=self.all_databases,
-                icon_scale=ocr.box_height / ocr.height,
+                icon_scale=ICON_BOX_SCALE,
             )
             manager.delete_icon(
                 item_code=template.code,
