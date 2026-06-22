@@ -9,8 +9,7 @@ the configured output handlers.
 import logging
 from pathlib import Path
 
-from pydantic import ValidationError
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Signal
 from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -21,6 +20,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QMessageBox,
     QPushButton,
+    QSizePolicy,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -29,8 +29,9 @@ from PySide6.QtWidgets import (
 
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.core.utils import auto_detect_savefile
+from foxhole_stockpiles.enums.sav_mode import SavMode
 from foxhole_stockpiles.gui.utils.capture_scan_worker import LocalScanWorker
-from foxhole_stockpiles.gui.utils.hotkey_listener import HotkeyListener
+from foxhole_stockpiles.gui.utils.hotkey_listener import HotkeyListener, global_hotkeys_supported
 from foxhole_stockpiles.gui.utils.qt_log_handler import QtLogHandler
 from foxhole_stockpiles.gui.utils.sav_workers import SavMonitorWorker, SavScanWorker
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
@@ -45,6 +46,7 @@ class CapturePanel(QWidget):
     """Panel for capturing screenshots, scanning them locally, and SAV tools."""
 
     capture_triggered = Signal()
+    sav_capture_triggered = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the capture control panel.
@@ -58,9 +60,15 @@ class CapturePanel(QWidget):
         self._scan_service: LocalScanService | None = None
         self._capture_busy = False
         self._scan_workers: list[LocalScanWorker] = []
+        # Global hotkeys don't work in every environment (e.g. WSL); when
+        # unavailable, the hotkey-driven capture buttons are disabled.
+        self._hotkeys_available = global_hotkeys_supported()
 
         # SAV processing state
+        self._sav_mode: SavMode = SavMode.MANUAL
         self._sav_scan_worker: SavScanWorker | None = None
+        self._sav_hotkey_listener: HotkeyListener | None = None
+        self._sav_listening = False
         self._sav_monitor_worker: SavMonitorWorker | None = None
         self._sav_monitoring = False
 
@@ -71,8 +79,16 @@ class CapturePanel(QWidget):
 
         self.init_ui()
 
-        # Run the capture-and-scan on the GUI thread when the hotkey fires.
+        if not self._hotkeys_available:
+            logger.warning(
+                "Global hotkeys are unavailable in this environment (e.g. WSL); "
+                "screenshot and manual-SAV capture are disabled. Use the Windows "
+                "build for hotkeys, or the File menu / SAV monitor mode instead."
+            )
+
+        # Run the capture-and-scan on the GUI thread when a hotkey fires.
         self.capture_triggered.connect(self._on_capture_triggered)
+        self.sav_capture_triggered.connect(self._on_sav_capture_triggered)
 
         # Connect to language changes with cleanup on destruction
         self._language_callback = self._on_language_changed
@@ -89,6 +105,10 @@ class CapturePanel(QWidget):
         if self._hotkey_listener is not None:
             self._hotkey_listener.stop()
             self._hotkey_listener = None
+
+        if self._sav_hotkey_listener is not None:
+            self._sav_hotkey_listener.stop()
+            self._sav_hotkey_listener = None
 
         for worker in list(self._scan_workers):
             if worker.isRunning():
@@ -113,72 +133,47 @@ class CapturePanel(QWidget):
         """Initialize the user interface."""
         layout = QVBoxLayout(self)
 
-        # Top section: two columns (SAV Processing | Capture)
+        # Top section: two fixed-height columns (SAV | Capture). Each shows a
+        # single row of controls; the capture column adds a DB-info line.
         top_layout = QHBoxLayout()
 
-        # === Left side: SAV Processing ===
+        # === Left side: SAV (hotkey-driven, mirrors the capture column) ===
         self.sav_group = QGroupBox("")
+        self.sav_group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         sav_layout = QVBoxLayout(self.sav_group)
 
         sav_buttons_layout = QHBoxLayout()
-        self.scan_sav_button = QPushButton("")
-        self.scan_sav_button.clicked.connect(self.scan_sav_file)
-        sav_buttons_layout.addWidget(self.scan_sav_button)
-
-        self.monitor_sav_button = QPushButton("")
-        self.monitor_sav_button.clicked.connect(self.toggle_sav_monitor)
-        sav_buttons_layout.addWidget(self.monitor_sav_button)
-
+        self.sav_button = QPushButton("")
+        self.sav_button.clicked.connect(self._on_sav_button_clicked)
+        sav_buttons_layout.addWidget(self.sav_button)
         sav_buttons_layout.addStretch()
         sav_layout.addLayout(sav_buttons_layout)
-
-        self.sav_status_label = QLabel("")
-        self.sav_status_label.setStyleSheet("QLabel { font-size: 11px; color: #888; }")
-        sav_layout.addWidget(self.sav_status_label)
 
         top_layout.addWidget(self.sav_group, 1)
 
         # === Right side: Capture ===
         self.capture_group = QGroupBox("")
+        self.capture_group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         capture_layout = QVBoxLayout(self.capture_group)
 
         capture_control_layout = QHBoxLayout()
-        self.start_stop_button = QPushButton("Start Capture")
+        self.start_stop_button = QPushButton("")
         self.start_stop_button.clicked.connect(self.toggle_capture)
         capture_control_layout.addWidget(self.start_stop_button)
-
-        self.status_label = QLabel("Status: Stopped")
-        self.status_label.setStyleSheet("QLabel { font-weight: bold; }")
-        capture_control_layout.addWidget(self.status_label)
-
         capture_control_layout.addStretch()
-        capture_layout.addLayout(capture_control_layout)
 
-        # DB info label
+        # DB info on the same row as the capture button (right-aligned).
         self.db_info_text = QLabel("")
         self.db_info_text.setStyleSheet("QLabel { font-size: 11px; color: #888; }")
-        capture_layout.addWidget(self.db_info_text)
+        capture_control_layout.addWidget(self.db_info_text)
+
+        capture_layout.addLayout(capture_control_layout)
 
         top_layout.addWidget(self.capture_group, 1)
 
         layout.addLayout(top_layout)
 
-        # Error panel (shown when config/DB invalid, replaces logs)
-        self.error_panel = QLabel("")
-        self.error_panel.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.error_panel.setWordWrap(True)
-        self.error_panel.setStyleSheet(
-            "QLabel { "
-            "border: 2px solid #FF9800; "
-            "border-radius: 8px; "
-            "background-color: palette(alternate-base); "
-            "font-size: 13px; "
-            "padding: 15px; "
-            "}"
-        )
-        layout.addWidget(self.error_panel)
-
-        # Logs Group (shown when everything valid)
+        # Logs Group (always shown; fills the space under the fixed-height groups)
         self.logs_group = QGroupBox("")
         logs_layout = QVBoxLayout()
         self.logs_group.setLayout(logs_layout)
@@ -215,66 +210,69 @@ class CapturePanel(QWidget):
         log_controls.addWidget(self.clear_logs_button)
         logs_layout.addLayout(log_controls)
 
-        layout.addWidget(self.logs_group)
+        layout.addWidget(self.logs_group, 1)
 
         self.retranslate()
-        self._update_validation_state()
+        self._apply_sav_mode()
 
     def refresh_db_info(self) -> None:
-        """Refresh the database info and validation state (rebuilds the scanner)."""
+        """Re-read settings and refresh button availability (rebuilds the scanner)."""
         # Settings may have changed; drop the cached scan service so it rebuilds.
         self._scan_service = None
-        self._update_validation_state()
+        self._apply_sav_mode()
 
-    def _update_validation_state(self) -> None:
-        """Update the validation state and show/hide appropriate panels."""
-        is_valid = False
-        error_message = ""
-        db_info = ""
+    def _update_button_states(self) -> None:
+        """Enable each capture button only when its required settings are present.
 
+        Screenshot capture needs a valid template database and a capture
+        hotkey; SAV needs a hotkey (manual mode) or an available .sav file
+        (monitor mode). A button stays enabled while its action is running so
+        it can still be stopped. The DB-in-use label shows the configured
+        database when valid, and is blank otherwise.
+        """
         try:
             settings = AppSettings()
-            db_path = settings.scanner.database_path
+        except Exception:
+            self.db_info_text.setText("")
+            self.start_stop_button.setEnabled(self.capturing)
+            self.sav_button.setEnabled(self._sav_listening or self._sav_monitoring)
+            return
 
-            if not db_path:
-                error_message = (
-                    f"<b>⚙️ {t('server_panel.errors.config_incomplete_title')}</b><br><br>"
-                    f"{t('server_panel.errors.config_incomplete_message')}"
-                )
-            elif not Path(db_path).exists():
-                error_message = (
-                    f"<b>⚠️ {t('server_panel.errors.database_not_found_title')}</b><br><br>"
-                    f"{t('server_panel.errors.database_not_found_message')}"
-                )
-            else:
-                db_path_obj = Path(db_path)
-                try:
-                    rel_path = db_path_obj.relative_to(Path.cwd())
-                    display_path = str(rel_path)
-                except ValueError:
-                    display_path = db_path_obj.name
-
-                is_valid = True
-                db_info = f"Database: {display_path}"
-
-        except (ValidationError, OSError, ValueError):
-            error_message = (
-                f"<b>⚙️ {t('server_panel.errors.no_config_title')}</b><br><br>"
-                f"{t('server_panel.errors.no_config_message')}"
-            )
-
-        if is_valid:
-            self.db_info_text.setText(db_info)
-            self.db_info_text.setVisible(True)
-            self.error_panel.setVisible(False)
-            self.logs_group.setVisible(True)
-            self.start_stop_button.setEnabled(True)
+        db_path = settings.scanner.database_path
+        db_valid = db_path is not None and db_path.exists()
+        if db_valid and db_path is not None:
+            try:
+                display_path = str(db_path.relative_to(Path.cwd()))
+            except ValueError:
+                display_path = db_path.name
+            self.db_info_text.setText(f"Database: {display_path}")
         else:
-            self.error_panel.setText(error_message)
-            self.error_panel.setVisible(True)
-            self.db_info_text.setVisible(False)
-            self.logs_group.setVisible(False)
-            self.start_stop_button.setEnabled(False)
+            self.db_info_text.setText("")
+
+        # Screenshot capture is hotkey-driven, so it also needs working hotkeys.
+        can_capture = db_valid and bool(settings.scanner.capture_key) and self._hotkeys_available
+        self.start_stop_button.setEnabled(can_capture or self.capturing)
+
+        if self._sav_mode == SavMode.MONITOR:
+            # Monitor auto-polls; it does not use a hotkey.
+            sav_ready = self._sav_file_available(settings)
+        else:
+            # Manual SAV scanning is hotkey-driven.
+            sav_ready = bool(settings.sav_processing.sav_capture_key) and self._hotkeys_available
+        self.sav_button.setEnabled(sav_ready or self._sav_listening or self._sav_monitoring)
+
+    @staticmethod
+    def _sav_file_available(settings: AppSettings) -> bool:
+        """Return whether a .sav file is configured-and-exists or auto-detectable.
+
+        Args:
+            settings (AppSettings): The settings to read the .sav path from.
+
+        Returns:
+            bool: True if a usable .sav file path is available.
+        """
+        path = settings.sav_processing.sav_file_path or auto_detect_savefile()
+        return bool(path and path.exists())
 
     def _get_scan_service(self) -> LocalScanService | None:
         """Build (once) and return the local scan service.
@@ -342,8 +340,6 @@ class CapturePanel(QWidget):
 
         self.capturing = True
         self.start_stop_button.setText(t("server_panel.stop_capture"))
-        self.status_label.setText(t("server_panel.status_capturing"))
-        self.status_label.setStyleSheet("QLabel { font-weight: bold; color: green; }")
         logger.info("Capture started (hotkey: %s)", key)
 
     def stop_capture(self) -> None:
@@ -354,8 +350,6 @@ class CapturePanel(QWidget):
 
         self.capturing = False
         self.start_stop_button.setText(t("server_panel.start_capture"))
-        self.status_label.setText(t("server_panel.status_stopped"))
-        self.status_label.setStyleSheet("QLabel { font-weight: bold; color: red; }")
         logger.info("Capture stopped")
 
     def _on_capture_triggered(self) -> None:
@@ -484,10 +478,10 @@ class CapturePanel(QWidget):
 
         if self.capturing:
             self.start_stop_button.setText(t("server_panel.stop_capture"))
-            self.status_label.setText(t("server_panel.status_capturing"))
         else:
             self.start_stop_button.setText(t("server_panel.start_capture"))
-            self.status_label.setText(t("server_panel.status_stopped"))
+
+        self._update_sav_button_text()
 
         self.log_display.setHorizontalHeaderLabels(
             [
@@ -499,12 +493,6 @@ class CapturePanel(QWidget):
         )
 
         self.clear_logs_button.setText(t("common.clear_logs"))
-
-        self.scan_sav_button.setText(t("server_panel.scan_sav"))
-        if self._sav_monitoring:
-            self.monitor_sav_button.setText(t("server_panel.stop_monitor"))
-        else:
-            self.monitor_sav_button.setText(t("server_panel.start_monitor"))
 
     # ==================== SAV Processing ====================
 
@@ -532,13 +520,28 @@ class CapturePanel(QWidget):
 
         return sav_path, None
 
-    def scan_sav_file(self) -> None:
-        """Perform a one-time SAV file scan."""
+    def scan_sav_from_menu(self) -> None:
+        """Scan the configured .sav file once (called from the File menu)."""
         sav_path, error = self._validate_sav_config()
         if error:
             QMessageBox.warning(self, t("server_panel.sav.error_title"), error)
             return
+        self._run_sav_scan(sav_path)
 
+    def _on_sav_capture_triggered(self) -> None:
+        """Scan the .sav file once when the SAV hotkey is pressed (GUI thread)."""
+        sav_path, error = self._validate_sav_config()
+        if error:
+            logger.error("[SAV] %s", error)
+            return
+        self._run_sav_scan(sav_path)
+
+    def _run_sav_scan(self, sav_path: Path | None) -> None:
+        """Start a one-shot SAV scan worker for the given path.
+
+        Args:
+            sav_path (Path | None): Validated path to the .sav file to scan.
+        """
         if self._sav_scan_worker and self._sav_scan_worker.isRunning():
             logger.warning("SAV scan already in progress")
             return
@@ -547,34 +550,114 @@ class CapturePanel(QWidget):
             settings = AppSettings()
             output_coordinator = OutputCoordinator(settings.output)
         except Exception as e:
-            QMessageBox.critical(
-                self,
-                t("server_panel.sav.error_title"),
-                t("server_panel.sav.error_output", error=str(e)),
-            )
+            logger.error("[SAV] %s", t("server_panel.sav.error_output", error=str(e)))
             return
 
         assert sav_path is not None
 
-        logger.info(f"Starting SAV scan: {sav_path}")
-        self.sav_status_label.setText(t("server_panel.sav.status_scanning"))
-        self.sav_status_label.setStyleSheet("QLabel { font-size: 11px; color: #2196F3; }")
-        self.scan_sav_button.setEnabled(False)
-
+        logger.info("Starting SAV scan: %s", sav_path)
         self._sav_scan_worker = SavScanWorker(sav_path, output_coordinator)
         self._sav_scan_worker.error.connect(self._on_sav_error)
         self._sav_scan_worker.finished.connect(self._on_sav_scan_finished)
         self._sav_scan_worker.start()
 
-    def toggle_sav_monitor(self) -> None:
-        """Toggle SAV file monitoring on/off."""
-        if self._sav_monitoring:
-            self._stop_sav_monitor()
+    def _update_sav_button_text(self) -> None:
+        """Set the SAV button label based on the mode and active state."""
+        if self._sav_mode == SavMode.MONITOR:
+            key = (
+                "server_panel.stop_sav_monitor"
+                if self._sav_monitoring
+                else ("server_panel.start_sav_monitor")
+            )
         else:
-            self._start_sav_monitor()
+            key = (
+                "server_panel.stop_sav_capture"
+                if self._sav_listening
+                else ("server_panel.start_sav_capture")
+            )
+        self.sav_button.setText(t(key))
 
-    def _start_sav_monitor(self) -> None:
-        """Start SAV file monitoring."""
+    def _apply_sav_mode(self) -> None:
+        """Read the configured SAV mode and reconfigure the SAV control.
+
+        Switching mode stops any active listening/monitoring so the control
+        never has two SAV pipelines running at once.
+        """
+        try:
+            mode = AppSettings().sav_processing.mode
+        except Exception as e:
+            logger.warning("Could not read SAV mode: %s", e)
+            mode = SavMode.MANUAL
+
+        if mode != self._sav_mode:
+            # Stop whatever the previous mode had running before switching.
+            if self._sav_listening:
+                self.stop_sav_listen()
+            if self._sav_monitoring:
+                self.stop_sav_monitor()
+            self._sav_mode = mode
+
+        self._update_sav_button_text()
+        self._update_button_states()
+
+    def _on_sav_button_clicked(self) -> None:
+        """Dispatch the SAV button to the action for the current mode."""
+        if self._sav_mode == SavMode.MONITOR:
+            self.toggle_sav_monitor()
+        else:
+            self.toggle_sav_listen()
+
+    def toggle_sav_listen(self) -> None:
+        """Toggle listening for the SAV hotkey on/off (manual mode)."""
+        if self._sav_listening:
+            self.stop_sav_listen()
+        else:
+            self.start_sav_listen()
+
+    def start_sav_listen(self) -> None:
+        """Start listening for the SAV hotkey (presses scan the .sav once)."""
+        settings = AppSettings()
+        key = settings.sav_processing.sav_capture_key
+        if not key:
+            QMessageBox.warning(
+                self,
+                t("server_panel.sav.error_title"),
+                t("server_panel.sav_no_key"),
+            )
+            return
+
+        try:
+            self._sav_hotkey_listener = HotkeyListener(key, self.sav_capture_triggered.emit)
+            self._sav_hotkey_listener.start()
+        except (RuntimeError, ValueError) as e:
+            logger.error("Could not start SAV listening: %s", e)
+            QMessageBox.warning(self, t("server_panel.sav.error_title"), str(e))
+            self._sav_hotkey_listener = None
+            return
+
+        self._sav_listening = True
+        self._update_sav_button_text()
+        logger.info("SAV hotkey listening started (hotkey: %s)", key)
+
+    def stop_sav_listen(self) -> None:
+        """Stop listening for the SAV hotkey."""
+        if self._sav_hotkey_listener is not None:
+            self._sav_hotkey_listener.stop()
+            self._sav_hotkey_listener = None
+
+        self._sav_listening = False
+        self._update_sav_button_text()
+        logger.info("SAV hotkey listening stopped")
+
+    def toggle_sav_monitor(self) -> None:
+        """Toggle SAV file monitoring on/off (monitor mode)."""
+        if self._sav_monitoring:
+            self.stop_sav_monitor()
+        else:
+            self.start_sav_monitor()
+
+    def start_sav_monitor(self) -> None:
+        """Start auto-polling the configured .sav file for changes."""
         if self._sav_monitor_worker and self._sav_monitor_worker.isRunning():
             logger.warning("Cannot start monitor: previous monitor still stopping")
             return
@@ -598,26 +681,34 @@ class CapturePanel(QWidget):
 
         assert sav_path is not None
 
-        logger.info(f"Starting SAV monitor: {sav_path} (poll: {poll_interval}s)")
+        logger.info("Starting SAV monitor: %s (poll: %ss)", sav_path, poll_interval)
         self._sav_monitoring = True
-        self.monitor_sav_button.setText(t("server_panel.stop_monitor"))
-        self.sav_status_label.setText(t("server_panel.sav.status_monitoring"))
-        self.sav_status_label.setStyleSheet("QLabel { font-size: 11px; color: #4CAF50; }")
+        self._update_sav_button_text()
 
         self._sav_monitor_worker = SavMonitorWorker(sav_path, output_coordinator, poll_interval)
         self._sav_monitor_worker.error.connect(self._on_sav_error)
         self._sav_monitor_worker.finished.connect(self._on_sav_monitor_finished)
         self._sav_monitor_worker.start()
 
-    def _stop_sav_monitor(self) -> None:
-        """Stop SAV file monitoring."""
+    def stop_sav_monitor(self) -> None:
+        """Stop auto-polling the .sav file."""
         if self._sav_monitor_worker:
             logger.info("Stopping SAV monitor...")
             self._sav_monitor_worker.stop()
 
+        self._sav_monitoring = False
+        self._update_sav_button_text()
+
+    def _on_sav_monitor_finished(self, success: bool) -> None:
+        """Handle the SAV monitor worker finishing.
+
+        Args:
+            success (bool): Whether the monitor stopped normally.
+        """
+        if self.sender() is self._sav_monitor_worker:
             self._sav_monitoring = False
-            self.monitor_sav_button.setText(t("server_panel.start_monitor"))
-            self.sav_status_label.setText("")
+            self._update_sav_button_text()
+            self._sav_monitor_worker = None
 
     def _on_sav_error(self, error_msg: str) -> None:
         """Handle SAV processing error.
@@ -633,19 +724,4 @@ class CapturePanel(QWidget):
         Args:
             success (bool): Whether scan completed successfully.
         """
-        self.scan_sav_button.setEnabled(True)
-        self.sav_status_label.setText("")
         self._sav_scan_worker = None
-
-    def _on_sav_monitor_finished(self, success: bool) -> None:
-        """Handle SAV monitor finished.
-
-        Args:
-            success (bool): Whether monitor stopped normally.
-        """
-        sender = self.sender()
-        if sender is self._sav_monitor_worker:
-            self._sav_monitoring = False
-            self.monitor_sav_button.setText(t("server_panel.start_monitor"))
-            self.sav_status_label.setText("")
-            self._sav_monitor_worker = None

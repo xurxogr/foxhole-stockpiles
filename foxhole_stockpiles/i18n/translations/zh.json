@@ -28,7 +28,8 @@
       "configuration": "配置(&C)...",
       "scan_screenshot": "扫描截图(&S)...",
       "exit": "退出(&X)",
-      "about": "关于(&A)"
+      "about": "关于(&A)",
+      "scan_sav": "扫描 SAV(&S)..."
     },
     "tray": {
       "show": "显示",
@@ -56,40 +57,26 @@
   },
   "server_panel": {
     "sav_group_title": "SAV 处理",
-    "server_group_title": "服务器",
-    "start_server": "启动服务器",
-    "stop_server": "停止服务器",
-    "status_running": "状态：运行中",
-    "status_stopped": "状态：已停止",
     "select_screenshot": "选择要扫描的截图",
     "errors": {
-      "config_incomplete_title": "配置不完整",
-      "config_incomplete_message": "请在<br><b>文件 → 配置</b>中配置数据库路径",
-      "database_not_found_title": "数据库文件未找到",
-      "database_not_found_message": "在 <b>文件 → 配置</b> 中配置数据库路径<br>或在 <b>数据库 → 构建</b> 中构建一个",
-      "database_error_title": "数据库错误",
-      "database_error_message": "加载数据库失败",
-      "no_config_title": "未找到配置",
-      "no_config_message": "请在<br><b>文件 → 配置</b>中设置您的配置",
       "cannot_scan": "无法扫描：扫描器未就绪。请检查设置中的数据库路径。"
     },
-    "scan_sav": "扫描 SAV",
-    "start_monitor": "启动 SAV 监视器",
-    "stop_monitor": "停止 SAV 监视器",
     "sav": {
       "error_title": "SAV 处理错误",
       "error_loading_settings": "加载设置失败：{error}",
       "error_no_sav_file": "未配置 SAV 文件。请在 文件 → 配置 → SAV 处理 中配置 SAV 文件路径，或将尝试自动检测。",
       "error_sav_not_found": "配置的 SAV 文件不存在。",
-      "error_output": "创建输出协调器失败：{error}",
-      "status_scanning": "扫描中...",
-      "status_monitoring": "监视中..."
+      "error_output": "创建输出协调器失败：{error}"
     },
     "capture_group_title": "捕获",
-    "start_capture": "开始捕获",
-    "stop_capture": "停止捕获",
-    "status_capturing": "状态：捕获中",
-    "capture_no_key": "请先在设置中配置捕获快捷键。"
+    "start_capture": "开始截图捕获",
+    "stop_capture": "停止截图捕获",
+    "capture_no_key": "请先在设置中配置捕获快捷键。",
+    "sav_no_key": "请先在设置中配置 SAV 快捷键。",
+    "start_sav_capture": "开始 SAV 捕获",
+    "stop_sav_capture": "停止 SAV 捕获",
+    "start_sav_monitor": "开始 SAV 监控",
+    "stop_sav_monitor": "停止 SAV 监控"
   },
   "config_window": {
     "title": "配置",
@@ -252,6 +239,14 @@
     "emit_all_tooltip": "启用时，首次扫描时显示所有仓库。\n禁用时，仅显示更改（适用于监视）。",
     "emit_all_checkbox": "首次读取时显示所有仓库",
     "select_sav_file": "选择 SAV 文件",
-    "sav_file_filter": "SAV 文件 (*.sav);;所有文件 (*)"
+    "sav_file_filter": "SAV 文件 (*.sav);;所有文件 (*)",
+    "mode_label": "模式：",
+    "mode_tooltip": "SAV 控制的工作方式：通过快捷键扫描一次（手动）或自动轮询文件（监控）。",
+    "mode_manual": "手动（快捷键）",
+    "mode_monitor": "监控（自动）",
+    "sav_hotkey": "SAV 快捷键：",
+    "sav_hotkey_tooltip": "扫描已配置的 .sav 文件一次的全局快捷键。",
+    "sav_hotkey_placeholder": "未设置按键",
+    "sav_hotkey_change": "更改"
   }
 }

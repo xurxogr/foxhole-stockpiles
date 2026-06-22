@@ -28,7 +28,8 @@
       "configuration": "&Configuração...",
       "scan_screenshot": "&Digitalizar captura...",
       "exit": "&Sair",
-      "about": "&Sobre"
+      "about": "&Sobre",
+      "scan_sav": "&Digitalizar SAV..."
     },
     "tray": {
       "show": "Mostrar",
@@ -56,40 +57,26 @@
   },
   "server_panel": {
     "sav_group_title": "Processamento SAV",
-    "server_group_title": "Servidor",
-    "start_server": "Iniciar servidor",
-    "stop_server": "Parar servidor",
-    "status_running": "Estado: Em execução",
-    "status_stopped": "Estado: Parado",
     "select_screenshot": "Selecionar captura para digitalizar",
     "errors": {
-      "config_incomplete_title": "Configuração incompleta",
-      "config_incomplete_message": "Por favor, configure o caminho da base de dados em<br><b>Ficheiro → Configuração</b>",
-      "database_not_found_title": "Ficheiro de base de dados não encontrado",
-      "database_not_found_message": "Configure o caminho da base de dados em <b>Ficheiro → Configuração</b><br>ou construa uma em <b>Base de dados → Construir</b>",
-      "database_error_title": "Erro de base de dados",
-      "database_error_message": "Falha ao carregar a base de dados",
-      "no_config_title": "Configuração não encontrada",
-      "no_config_message": "Por favor, configure a sua aplicação em<br><b>Ficheiro → Configuração</b>",
       "cannot_scan": "Não é possível digitalizar: o digitalizador não está pronto. Verifique o caminho da base de dados nas Definições."
     },
-    "scan_sav": "Escanear SAV",
-    "start_monitor": "Iniciar Monitor SAV",
-    "stop_monitor": "Parar Monitor SAV",
     "sav": {
       "error_title": "Erro de Processamento SAV",
       "error_loading_settings": "Erro ao carregar configurações: {error}",
       "error_no_sav_file": "Nenhum ficheiro SAV configurado. Por favor, configure o caminho do ficheiro SAV em Ficheiro → Configuração → Processamento SAV, ou a auto-deteção será tentada.",
       "error_sav_not_found": "O ficheiro SAV configurado não existe.",
-      "error_output": "Erro ao criar coordenador de saída: {error}",
-      "status_scanning": "A digitalizar...",
-      "status_monitoring": "A monitorizar..."
+      "error_output": "Erro ao criar coordenador de saída: {error}"
     },
     "capture_group_title": "Captura",
-    "start_capture": "Iniciar captura",
-    "stop_capture": "Parar captura",
-    "status_capturing": "Estado: A capturar",
-    "capture_no_key": "Configure primeiro uma tecla de captura nas Definições."
+    "start_capture": "Iniciar captura de ecrã",
+    "stop_capture": "Parar captura de ecrã",
+    "capture_no_key": "Configure primeiro uma tecla de captura nas Definições.",
+    "sav_no_key": "Configure primeiro uma tecla de SAV nas Definições.",
+    "start_sav_capture": "Iniciar captura SAV",
+    "stop_sav_capture": "Parar captura SAV",
+    "start_sav_monitor": "Iniciar monitorização SAV",
+    "stop_sav_monitor": "Parar monitorização SAV"
   },
   "config_window": {
     "title": "Configuração",
@@ -252,6 +239,14 @@
     "emit_all_tooltip": "Quando ativado, mostra todos os armazéns na primeira leitura.\nQuando desativado, apenas mostra alterações (útil para monitorização).",
     "emit_all_checkbox": "Mostrar todos os armazéns na primeira leitura",
     "select_sav_file": "Selecionar ficheiro SAV",
-    "sav_file_filter": "Ficheiros SAV (*.sav);;Todos os ficheiros (*)"
+    "sav_file_filter": "Ficheiros SAV (*.sav);;Todos os ficheiros (*)",
+    "mode_label": "Modo:",
+    "mode_tooltip": "Como funciona o controlo SAV: digitalizar uma vez com a tecla (manual) ou sondar o ficheiro automaticamente (monitorização).",
+    "mode_manual": "Manual (tecla)",
+    "mode_monitor": "Monitorização (auto)",
+    "sav_hotkey": "Tecla de SAV:",
+    "sav_hotkey_tooltip": "Tecla de atalho global que digitaliza uma vez o ficheiro .sav configurado.",
+    "sav_hotkey_placeholder": "Nenhuma tecla definida",
+    "sav_hotkey_change": "Alterar"
   }
 }

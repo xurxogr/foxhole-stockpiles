@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 from foxhole_stockpiles import __version__
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.enums.config_level import ConfigLevel
+from foxhole_stockpiles.enums.sav_mode import SavMode
 from foxhole_stockpiles.gui.utils.qt_log_handler import QtLogHandler
 from foxhole_stockpiles.gui.widgets.capture_panel import CapturePanel
 from foxhole_stockpiles.gui.windows.config_window import ConfigWindow
@@ -88,6 +89,9 @@ class MainWindow(QMainWindow):
         self.scan_action = self.file_menu.addAction("")
         self.scan_action.triggered.connect(self.scan_screenshot)
 
+        self.scan_sav_action = self.file_menu.addAction("")
+        self.scan_sav_action.triggered.connect(self.scan_sav)
+
         self.file_menu.addSeparator()
 
         self.exit_action = self.file_menu.addAction("")
@@ -102,6 +106,9 @@ class MainWindow(QMainWindow):
 
         # Apply initial translations
         self.retranslate()
+
+        # Disable the manual-scan action when SAV monitor mode is configured.
+        self._apply_sav_menu_state()
 
     def _apply_config_level_to_menus(self) -> None:
         """Apply config level settings to menu visibility."""
@@ -199,6 +206,10 @@ class MainWindow(QMainWindow):
         """Open file dialog to scan a screenshot."""
         self.capture_panel.scan_screenshot_from_menu()
 
+    def scan_sav(self) -> None:
+        """Scan the configured SAV file once."""
+        self.capture_panel.scan_sav_from_menu()
+
     def show_configuration(self) -> None:
         """Show configuration window as modal dialog centered on main window."""
         config_window = ConfigWindow(self)
@@ -225,7 +236,18 @@ class MainWindow(QMainWindow):
         self.minimize_to_tray = self._load_minimize_to_tray_setting()
         # Refresh menu visibility based on config level
         self._apply_config_level_to_menus()
+        # The SAV mode may have changed; enable the manual-scan action accordingly.
+        self._apply_sav_menu_state()
         logger.info(f"Config reloaded - minimize_to_tray: {self.minimize_to_tray}")
+
+    def _apply_sav_menu_state(self) -> None:
+        """Enable File → Scan SAV only in manual mode (disabled while monitoring)."""
+        try:
+            is_manual = AppSettings().sav_processing.mode == SavMode.MANUAL
+        except Exception as e:
+            logger.warning(f"Failed to read SAV mode: {e}")
+            is_manual = True
+        self.scan_sav_action.setEnabled(is_manual)
 
     def show_about(self) -> None:
         """Show about dialog."""
@@ -320,6 +342,7 @@ class MainWindow(QMainWindow):
         self.file_menu.setTitle(t("main_window.menu.file"))
         self.config_action.setText(t("main_window.menu.configuration"))
         self.scan_action.setText(t("main_window.menu.scan_screenshot"))
+        self.scan_sav_action.setText(t("main_window.menu.scan_sav"))
         self.exit_action.setText(t("main_window.menu.exit"))
 
         # Help menu

@@ -28,7 +28,8 @@
       "configuration": "&Configuration...",
       "scan_screenshot": "&Scanner une capture...",
       "exit": "&Quitter",
-      "about": "À &propos"
+      "about": "À &propos",
+      "scan_sav": "&Scanner un SAV..."
     },
     "tray": {
       "show": "Afficher",
@@ -56,40 +57,26 @@
   },
   "server_panel": {
     "sav_group_title": "Traitement SAV",
-    "server_group_title": "Serveur",
-    "start_server": "Démarrer le serveur",
-    "stop_server": "Arrêter le serveur",
-    "status_running": "Statut : En cours",
-    "status_stopped": "Statut : Arrêté",
     "select_screenshot": "Sélectionner une capture à scanner",
     "errors": {
-      "config_incomplete_title": "Configuration incomplète",
-      "config_incomplete_message": "Veuillez configurer le chemin de la base de données dans<br><b>Fichier → Configuration</b>",
-      "database_not_found_title": "Fichier de base de données introuvable",
-      "database_not_found_message": "Configurez le chemin de la base de données dans <b>Fichier → Configuration</b><br>ou construisez-en une dans <b>Base de données → Construire</b>",
-      "database_error_title": "Erreur de base de données",
-      "database_error_message": "Échec du chargement de la base de données",
-      "no_config_title": "Configuration introuvable",
-      "no_config_message": "Veuillez configurer votre application dans<br><b>Fichier → Configuration</b>",
       "cannot_scan": "Scan impossible : le scanner n'est pas prêt. Vérifiez le chemin de la base de données dans les Paramètres."
     },
-    "scan_sav": "Scanner SAV",
-    "start_monitor": "Démarrer Moniteur SAV",
-    "stop_monitor": "Arrêter Moniteur SAV",
     "sav": {
       "error_title": "Erreur de Traitement SAV",
       "error_loading_settings": "Échec du chargement des paramètres : {error}",
       "error_no_sav_file": "Aucun fichier SAV configuré. Veuillez configurer le chemin du fichier SAV dans Fichier → Configuration → Traitement SAV, ou la détection automatique sera tentée.",
       "error_sav_not_found": "Le fichier SAV configuré n'existe pas.",
-      "error_output": "Échec de la création du coordinateur de sortie : {error}",
-      "status_scanning": "Scan en cours...",
-      "status_monitoring": "Surveillance en cours..."
+      "error_output": "Échec de la création du coordinateur de sortie : {error}"
     },
     "capture_group_title": "Capture",
-    "start_capture": "Démarrer la capture",
-    "stop_capture": "Arrêter la capture",
-    "status_capturing": "Statut : Capture en cours",
-    "capture_no_key": "Configurez d'abord un raccourci de capture dans les Paramètres."
+    "start_capture": "Démarrer la capture d'écran",
+    "stop_capture": "Arrêter la capture d'écran",
+    "capture_no_key": "Configurez d'abord un raccourci de capture dans les Paramètres.",
+    "sav_no_key": "Configurez d'abord un raccourci SAV dans les Paramètres.",
+    "start_sav_capture": "Démarrer la capture SAV",
+    "stop_sav_capture": "Arrêter la capture SAV",
+    "start_sav_monitor": "Démarrer la surveillance SAV",
+    "stop_sav_monitor": "Arrêter la surveillance SAV"
   },
   "config_window": {
     "title": "Configuration",
@@ -252,6 +239,14 @@
     "emit_all_tooltip": "Lorsque activé, affiche tous les stocks lors de la première lecture.\nLorsque désactivé, affiche uniquement les changements (utile pour la surveillance).",
     "emit_all_checkbox": "Afficher tous les stocks à la première lecture",
     "select_sav_file": "Sélectionner le fichier SAV",
-    "sav_file_filter": "Fichiers SAV (*.sav);;Tous les fichiers (*)"
+    "sav_file_filter": "Fichiers SAV (*.sav);;Tous les fichiers (*)",
+    "mode_label": "Mode :",
+    "mode_tooltip": "Fonctionnement du contrôle SAV : scanner une fois via le raccourci (manuel) ou interroger automatiquement le fichier (surveillance).",
+    "mode_manual": "Manuel (raccourci)",
+    "mode_monitor": "Surveillance (auto)",
+    "sav_hotkey": "Raccourci SAV :",
+    "sav_hotkey_tooltip": "Raccourci clavier global qui scanne une fois le fichier .sav configuré.",
+    "sav_hotkey_placeholder": "Aucune touche définie",
+    "sav_hotkey_change": "Modifier"
   }
 }

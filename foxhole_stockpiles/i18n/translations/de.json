@@ -28,7 +28,8 @@
       "configuration": "&Konfiguration...",
       "scan_screenshot": "&Screenshot scannen...",
       "exit": "&Beenden",
-      "about": "&Über"
+      "about": "&Über",
+      "scan_sav": "&SAV scannen..."
     },
     "tray": {
       "show": "Anzeigen",
@@ -56,40 +57,26 @@
   },
   "server_panel": {
     "sav_group_title": "SAV Verarbeitung",
-    "server_group_title": "Server",
-    "start_server": "Server starten",
-    "stop_server": "Server stoppen",
-    "status_running": "Status: Läuft",
-    "status_stopped": "Status: Gestoppt",
     "select_screenshot": "Screenshot zum Scannen auswählen",
     "errors": {
-      "config_incomplete_title": "Konfiguration unvollständig",
-      "config_incomplete_message": "Bitte konfigurieren Sie den Datenbankpfad in<br><b>Datei → Konfiguration</b>",
-      "database_not_found_title": "Datenbankdatei nicht gefunden",
-      "database_not_found_message": "Konfigurieren Sie den Datenbankpfad in <b>Datei → Konfiguration</b><br>oder erstellen Sie eine in <b>Datenbank → Erstellen</b>",
-      "database_error_title": "Datenbankfehler",
-      "database_error_message": "Datenbank konnte nicht geladen werden",
-      "no_config_title": "Keine Konfiguration gefunden",
-      "no_config_message": "Bitte richten Sie Ihre Konfiguration ein in<br><b>Datei → Konfiguration</b>",
       "cannot_scan": "Scannen nicht möglich: Der Scanner ist nicht bereit. Überprüfen Sie den Datenbankpfad in den Einstellungen."
     },
-    "scan_sav": "SAV Scannen",
-    "start_monitor": "SAV Monitor Starten",
-    "stop_monitor": "SAV Monitor Stoppen",
     "sav": {
       "error_title": "SAV Verarbeitungsfehler",
       "error_loading_settings": "Fehler beim Laden der Einstellungen: {error}",
       "error_no_sav_file": "Keine SAV-Datei konfiguriert. Bitte konfigurieren Sie den SAV-Dateipfad in Datei → Konfiguration → SAV Verarbeitung, oder die automatische Erkennung wird versucht.",
       "error_sav_not_found": "Die konfigurierte SAV-Datei existiert nicht.",
-      "error_output": "Fehler beim Erstellen des Ausgabekoordinators: {error}",
-      "status_scanning": "Scanne...",
-      "status_monitoring": "Überwache..."
+      "error_output": "Fehler beim Erstellen des Ausgabekoordinators: {error}"
     },
     "capture_group_title": "Aufnahme",
-    "start_capture": "Aufnahme starten",
-    "stop_capture": "Aufnahme stoppen",
-    "status_capturing": "Status: Aufnahme läuft",
-    "capture_no_key": "Konfigurieren Sie zuerst ein Aufnahme-Tastenkürzel in den Einstellungen."
+    "start_capture": "Screenshot-Aufnahme starten",
+    "stop_capture": "Screenshot-Aufnahme stoppen",
+    "capture_no_key": "Konfigurieren Sie zuerst ein Aufnahme-Tastenkürzel in den Einstellungen.",
+    "sav_no_key": "Konfigurieren Sie zuerst ein SAV-Tastenkürzel in den Einstellungen.",
+    "start_sav_capture": "SAV-Aufnahme starten",
+    "stop_sav_capture": "SAV-Aufnahme stoppen",
+    "start_sav_monitor": "SAV-Überwachung starten",
+    "stop_sav_monitor": "SAV-Überwachung stoppen"
   },
   "config_window": {
     "title": "Konfiguration",
@@ -252,6 +239,14 @@
     "emit_all_tooltip": "Wenn aktiviert, werden alle Lager beim ersten Scan ausgegeben.\nWenn deaktiviert, werden nur Änderungen ausgegeben (nützlich zur Überwachung).",
     "emit_all_checkbox": "Alle Lager bei der ersten Lesung ausgeben",
     "select_sav_file": "SAV-Datei auswählen",
-    "sav_file_filter": "SAV-Dateien (*.sav);;Alle Dateien (*)"
+    "sav_file_filter": "SAV-Dateien (*.sav);;Alle Dateien (*)",
+    "mode_label": "Modus:",
+    "mode_tooltip": "Wie die SAV-Steuerung funktioniert: einmal per Tastenkürzel scannen (manuell) oder die Datei automatisch auf Änderungen abfragen (Überwachung).",
+    "mode_manual": "Manuell (Tastenkürzel)",
+    "mode_monitor": "Überwachung (automatisch)",
+    "sav_hotkey": "SAV-Tastenkürzel:",
+    "sav_hotkey_tooltip": "Globales Tastenkürzel, das die konfigurierte .sav-Datei einmal scannt.",
+    "sav_hotkey_placeholder": "Keine Taste festgelegt",
+    "sav_hotkey_change": "Ändern"
   }
 }

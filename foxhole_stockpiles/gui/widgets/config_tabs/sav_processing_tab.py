@@ -4,6 +4,8 @@ from pathlib import Path
 
 from PySide6.QtWidgets import (
     QCheckBox,
+    QComboBox,
+    QDialog,
     QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
@@ -18,6 +20,8 @@ from PySide6.QtWidgets import (
 
 from foxhole_stockpiles.core.settings.sections.sav_processing import SavProcessingSettings
 from foxhole_stockpiles.core.utils import auto_detect_savefile
+from foxhole_stockpiles.enums.sav_mode import SavMode
+from foxhole_stockpiles.gui.widgets.capture_key_dialog import CaptureKeyDialog
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
 
 
@@ -31,6 +35,7 @@ class SavProcessingTab(QWidget):
             parent (QWidget | None): Parent widget. Defaults to None.
         """
         super().__init__(parent)
+        self._sav_capture_key_value: str | None = None
         self.init_ui()
 
     def init_ui(self) -> None:
@@ -39,6 +44,29 @@ class SavProcessingTab(QWidget):
 
         # Form layout for all fields
         form_layout = QFormLayout()
+
+        # SAV mode (manual hotkey scan vs. auto-monitor)
+        self.mode_label = QLabel()
+        self.mode_combo = QComboBox()
+        self.mode_combo.addItem("", SavMode.MANUAL)
+        self.mode_combo.addItem("", SavMode.MONITOR)
+        form_layout.addRow(self.mode_label, self.mode_combo)
+
+        # SAV hotkey (used in manual mode)
+        self.sav_key_label = QLabel()
+        sav_key_layout_widget = QWidget()
+        sav_key_layout = QHBoxLayout(sav_key_layout_widget)
+        sav_key_layout.setContentsMargins(0, 0, 0, 0)
+        self.sav_key_display = QLineEdit()
+        self.sav_key_display.setReadOnly(True)
+        self.sav_key_change = QPushButton()
+        self.sav_key_change.clicked.connect(self._change_sav_key)
+        self.sav_key_clear = QPushButton()
+        self.sav_key_clear.clicked.connect(self._clear_sav_key)
+        sav_key_layout.addWidget(self.sav_key_display)
+        sav_key_layout.addWidget(self.sav_key_change)
+        sav_key_layout.addWidget(self.sav_key_clear)
+        form_layout.addRow(self.sav_key_label, sav_key_layout_widget)
 
         # SAV file path
         self.sav_file_label = QLabel()
@@ -87,6 +115,17 @@ class SavProcessingTab(QWidget):
 
     def retranslate(self) -> None:
         """Update all translatable strings."""
+        self.mode_label.setText(t("sav_processing_tab.mode_label"))
+        self.mode_label.setToolTip(t("sav_processing_tab.mode_tooltip"))
+        self.mode_combo.setItemText(0, t("sav_processing_tab.mode_manual"))
+        self.mode_combo.setItemText(1, t("sav_processing_tab.mode_monitor"))
+
+        self.sav_key_label.setText(t("sav_processing_tab.sav_hotkey"))
+        self.sav_key_label.setToolTip(t("sav_processing_tab.sav_hotkey_tooltip"))
+        self.sav_key_display.setPlaceholderText(t("sav_processing_tab.sav_hotkey_placeholder"))
+        self.sav_key_change.setText(t("sav_processing_tab.sav_hotkey_change"))
+        self.sav_key_clear.setText(t("common.clear"))
+
         self.sav_file_label.setText(t("sav_processing_tab.sav_file_label"))
         self.sav_file_label.setToolTip(t("sav_processing_tab.sav_file_tooltip"))
         self.sav_file_input.setPlaceholderText(t("sav_processing_tab.sav_file_placeholder"))
@@ -128,6 +167,18 @@ class SavProcessingTab(QWidget):
         """Clear the SAV file path."""
         self.sav_file_input.clear()
 
+    def _change_sav_key(self) -> None:
+        """Open the key-capture dialog and store the chosen SAV hotkey."""
+        dialog = CaptureKeyDialog(self)
+        if dialog.exec() == QDialog.DialogCode.Accepted and dialog.key_text:
+            self._sav_capture_key_value = dialog.key_text
+            self.sav_key_display.setText(dialog.key_text)
+
+    def _clear_sav_key(self) -> None:
+        """Clear the configured SAV hotkey."""
+        self._sav_capture_key_value = None
+        self.sav_key_display.clear()
+
     def set_values(self, settings: SavProcessingSettings) -> None:
         """Set widget values from settings.
 
@@ -135,6 +186,11 @@ class SavProcessingTab(QWidget):
             settings (SavProcessingSettings): SavProcessingSettings instance to load
                 values from.
         """
+        mode_index = self.mode_combo.findData(settings.mode)
+        if mode_index >= 0:
+            self.mode_combo.setCurrentIndex(mode_index)
+        self._sav_capture_key_value = settings.sav_capture_key
+        self.sav_key_display.setText(settings.sav_capture_key or "")
         self.sav_file_input.setText(str(settings.sav_file_path) if settings.sav_file_path else "")
         self.poll_interval_input.setValue(settings.poll_interval)
         self.emit_all_checkbox.setChecked(settings.emit_all_on_start)
@@ -148,6 +204,8 @@ class SavProcessingTab(QWidget):
         sav_path_text = self.sav_file_input.text().strip()
 
         return SavProcessingSettings(
+            mode=self.mode_combo.currentData(),
+            sav_capture_key=self._sav_capture_key_value or None,
             sav_file_path=Path(sav_path_text) if sav_path_text else None,
             poll_interval=self.poll_interval_input.value(),
             emit_all_on_start=self.emit_all_checkbox.isChecked(),

@@ -11,10 +11,34 @@ host; :meth:`HotkeyListener.start` raises if the backend cannot be loaded.
 from __future__ import annotations
 
 import logging
+import os
+import platform
 from collections.abc import Callable
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+def global_hotkeys_supported() -> bool:
+    """Best-effort check whether global hotkeys can actually be captured here.
+
+    Global hotkeys work on native Windows/macOS and on X11, but not under WSL
+    (the Linux GUI used during development, where key events aren't delivered
+    globally) nor when the ``pynput`` backend cannot be loaded (e.g. headless).
+
+    Returns:
+        bool: True if global hotkeys are expected to work in this environment.
+    """
+    # WSL tags the Linux kernel release with "microsoft" and exports WSL_DISTRO_NAME.
+    if "microsoft" in platform.uname().release.lower() or os.environ.get("WSL_DISTRO_NAME"):
+        return False
+
+    try:
+        from pynput import keyboard  # noqa: F401
+    except Exception:
+        return False
+
+    return True
 
 
 def to_global_hotkey(key: str) -> str:

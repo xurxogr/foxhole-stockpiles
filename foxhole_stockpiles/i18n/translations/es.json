@@ -28,7 +28,8 @@
       "configuration": "&Configuración...",
       "scan_screenshot": "&Escanear captura...",
       "exit": "&Salir",
-      "about": "&Acerca de"
+      "about": "&Acerca de",
+      "scan_sav": "&Escanear SAV..."
     },
     "tray": {
       "show": "Mostrar",
@@ -56,40 +57,26 @@
   },
   "server_panel": {
     "sav_group_title": "Procesamiento SAV",
-    "server_group_title": "Servidor",
-    "start_server": "Iniciar servidor",
-    "stop_server": "Detener servidor",
-    "status_running": "Estado: En ejecución",
-    "status_stopped": "Estado: Detenido",
     "select_screenshot": "Seleccionar captura para escanear",
     "errors": {
-      "config_incomplete_title": "Configuración incompleta",
-      "config_incomplete_message": "Por favor, configure la ruta de la base de datos en<br><b>Archivo → Configuración</b>",
-      "database_not_found_title": "Archivo de base de datos no encontrado",
-      "database_not_found_message": "Configure la ruta de la base de datos en <b>Archivo → Configuración</b><br>o construya una en <b>Base de datos → Construir</b>",
-      "database_error_title": "Error de base de datos",
-      "database_error_message": "Error al cargar la base de datos",
-      "no_config_title": "Configuración no encontrada",
-      "no_config_message": "Por favor, configure su aplicación en<br><b>Archivo → Configuración</b>",
       "cannot_scan": "No se puede escanear: el escáner no está listo. Comprueba la ruta de la base de datos en los Ajustes."
     },
-    "scan_sav": "Escanear SAV",
-    "start_monitor": "Iniciar Monitor SAV",
-    "stop_monitor": "Detener Monitor SAV",
     "sav": {
       "error_title": "Error de Procesamiento SAV",
       "error_loading_settings": "Error al cargar configuración: {error}",
       "error_no_sav_file": "No hay archivo SAV configurado. Por favor, configure la ruta del archivo SAV en Archivo → Configuración → Procesamiento SAV, o se intentará auto-detectar.",
       "error_sav_not_found": "El archivo SAV configurado no existe.",
-      "error_output": "Error al crear coordinador de salida: {error}",
-      "status_scanning": "Escaneando...",
-      "status_monitoring": "Monitoreando..."
+      "error_output": "Error al crear coordinador de salida: {error}"
     },
     "capture_group_title": "Captura",
-    "start_capture": "Iniciar captura",
-    "stop_capture": "Detener captura",
-    "status_capturing": "Estado: Capturando",
-    "capture_no_key": "Configure primero una tecla de captura en los Ajustes."
+    "start_capture": "Iniciar captura de pantalla",
+    "stop_capture": "Detener captura de pantalla",
+    "capture_no_key": "Configure primero una tecla de captura en los Ajustes.",
+    "sav_no_key": "Configure primero una tecla de SAV en los Ajustes.",
+    "start_sav_capture": "Iniciar captura SAV",
+    "stop_sav_capture": "Detener captura SAV",
+    "start_sav_monitor": "Iniciar monitor SAV",
+    "stop_sav_monitor": "Detener monitor SAV"
   },
   "config_window": {
     "title": "Configuración",
@@ -252,6 +239,14 @@
     "emit_all_tooltip": "Cuando está habilitado, muestra todos los almacenes en el primer escaneo.\nCuando está deshabilitado, solo muestra cambios (útil para monitoreo).",
     "emit_all_checkbox": "Mostrar todos los almacenes en la primera lectura",
     "select_sav_file": "Seleccionar archivo SAV",
-    "sav_file_filter": "Archivos SAV (*.sav);;Todos los archivos (*)"
+    "sav_file_filter": "Archivos SAV (*.sav);;Todos los archivos (*)",
+    "mode_label": "Modo:",
+    "mode_tooltip": "Cómo funciona el control SAV: escanear una vez con la tecla (manual) o sondear el archivo automáticamente (monitor).",
+    "mode_manual": "Manual (tecla)",
+    "mode_monitor": "Monitor (automático)",
+    "sav_hotkey": "Tecla de SAV:",
+    "sav_hotkey_tooltip": "Tecla global que escanea una vez el archivo .sav configurado.",
+    "sav_hotkey_placeholder": "Sin tecla asignada",
+    "sav_hotkey_change": "Cambiar"
   }
 }

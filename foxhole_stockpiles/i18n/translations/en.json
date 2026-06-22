@@ -28,7 +28,8 @@
       "configuration": "&Configuration...",
       "scan_screenshot": "&Scan Screenshot...",
       "exit": "E&xit",
-      "about": "&About"
+      "about": "&About",
+      "scan_sav": "Scan &SAV..."
     },
     "tray": {
       "show": "Show",
@@ -56,40 +57,26 @@
   },
   "server_panel": {
     "sav_group_title": "SAV Processing",
-    "server_group_title": "Server",
-    "start_server": "Start Server",
-    "stop_server": "Stop Server",
-    "status_running": "Status: Running",
-    "status_stopped": "Status: Stopped",
     "select_screenshot": "Select Screenshot to Scan",
     "errors": {
-      "config_incomplete_title": "Configuration Incomplete",
-      "config_incomplete_message": "Please configure the database path in<br><b>File → Configuration</b>",
-      "database_not_found_title": "Database File Not Found",
-      "database_not_found_message": "Configure database path in <b>File → Configuration</b><br>or build one in <b>Database → Build</b>",
-      "database_error_title": "Database Error",
-      "database_error_message": "Failed to load database",
-      "no_config_title": "No Configuration Found",
-      "no_config_message": "Please set up your configuration in<br><b>File → Configuration</b>",
       "cannot_scan": "Cannot scan: the scanner is not ready. Check the database path in Settings."
     },
-    "scan_sav": "Scan SAV",
-    "start_monitor": "Start SAV Monitor",
-    "stop_monitor": "Stop SAV Monitor",
     "sav": {
       "error_title": "SAV Processing Error",
       "error_loading_settings": "Failed to load settings: {error}",
       "error_no_sav_file": "No SAV file configured. Please configure the SAV file path in File → Configuration → SAV Processing, or auto-detect will be attempted.",
       "error_sav_not_found": "The configured SAV file does not exist.",
-      "error_output": "Failed to create output coordinator: {error}",
-      "status_scanning": "Scanning...",
-      "status_monitoring": "Monitoring..."
+      "error_output": "Failed to create output coordinator: {error}"
     },
     "capture_group_title": "Capture",
-    "start_capture": "Start Capture",
-    "stop_capture": "Stop Capture",
-    "status_capturing": "Status: Capturing",
-    "capture_no_key": "Configure a capture hotkey in Settings first."
+    "start_capture": "Start Screenshot Capture",
+    "stop_capture": "Stop Screenshot Capture",
+    "capture_no_key": "Configure a capture hotkey in Settings first.",
+    "sav_no_key": "Configure a SAV hotkey in Settings first.",
+    "start_sav_capture": "Start SAV Capture",
+    "stop_sav_capture": "Stop SAV Capture",
+    "start_sav_monitor": "Start SAV Monitor",
+    "stop_sav_monitor": "Stop SAV Monitor"
   },
   "config_window": {
     "title": "Configuration",
@@ -272,6 +259,14 @@
     "emit_all_tooltip": "When enabled, outputs all stockpiles on first scan.\nWhen disabled, only outputs changes (useful for monitoring).",
     "emit_all_checkbox": "Output all stockpiles on first read",
     "select_sav_file": "Select SAV File",
-    "sav_file_filter": "SAV Files (*.sav);;All Files (*)"
+    "sav_file_filter": "SAV Files (*.sav);;All Files (*)",
+    "mode_label": "Mode:",
+    "mode_tooltip": "How the SAV control works: scan once via hotkey (manual) or auto-poll the file for changes (monitor).",
+    "mode_manual": "Manual (hotkey)",
+    "mode_monitor": "Monitor (auto)",
+    "sav_hotkey": "SAV hotkey:",
+    "sav_hotkey_tooltip": "Global hotkey that scans the configured .sav file once.",
+    "sav_hotkey_placeholder": "No key set",
+    "sav_hotkey_change": "Change"
   }
 }
