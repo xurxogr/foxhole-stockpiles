@@ -14,10 +14,10 @@ from PIL.Image import Resampling
 
 from foxhole_stockpiles.core.logging import setup_logging
 from foxhole_stockpiles.core.settings import get_settings
-from foxhole_stockpiles.core.settings.sections.templates import TemplateSettings
-from foxhole_stockpiles.core.utils import load_catalog
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.models.catalog_item import CatalogItem
+from fs_tools.core.settings.sections.templates import TemplateSettings
+from fs_tools.core.utils import load_catalog
 
 logger = logging.getLogger(__name__)
 

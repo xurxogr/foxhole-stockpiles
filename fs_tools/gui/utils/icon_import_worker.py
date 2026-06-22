@@ -8,9 +8,9 @@ from pathlib import Path
 from PySide6.QtCore import QThread, Signal
 
 from foxhole_stockpiles.core.settings import get_settings
-from foxhole_stockpiles.core.settings.sections.templates import TemplateSettings
-from foxhole_stockpiles.models.mod_import_config import ModImportConfig
-from foxhole_stockpiles.models.mod_import_progress import ModImportProgress
+from fs_tools.core.settings.sections.templates import TemplateSettings
+from fs_tools.models.mod_import_config import ModImportConfig
+from fs_tools.models.mod_import_progress import ModImportProgress
 from fs_tools.services.mod_importer import ModImporter
 
 logger = logging.getLogger(__name__)

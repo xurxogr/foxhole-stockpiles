@@ -11,10 +11,10 @@ import numpy
 
 from foxhole_stockpiles.core.logging import setup_logging
 from foxhole_stockpiles.core.settings import get_settings
-from foxhole_stockpiles.core.utils import load_catalog
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.models.catalog_item import CatalogItem
-from foxhole_stockpiles.models.icon_template import IconTemplate
+from fs_tools.core.utils import load_catalog
+from fs_tools.models.icon_template import IconTemplate
 from fs_tools.template_db.template_database import TemplateDatabase
 from fs_tools.template_db.template_manager import TemplateManager
 

@@ -13,14 +13,14 @@ from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.stockpile_type import StockpileType
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.i18n import t
-from foxhole_stockpiles.models.detected_icon_info import DetectedIconInfo
-from foxhole_stockpiles.models.icon_template import IconTemplate
-from foxhole_stockpiles.models.scan_result import ScanResult
 from foxhole_stockpiles.models.stockpile import Stockpile
 from fs_tools.gui.windows.debug_image_window import (
     DatabaseLoader,
     DebugImageWindow,
 )
+from fs_tools.models.detected_icon_info import DetectedIconInfo
+from fs_tools.models.icon_template import IconTemplate
+from fs_tools.models.scan_result import ScanResult
 from fs_tools.template_db.template_database import TemplateDatabase
 
 

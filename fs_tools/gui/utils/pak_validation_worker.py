@@ -7,8 +7,8 @@ from pathlib import Path
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import QWidget
 
-from foxhole_stockpiles.models.pak_validation_result import PakValidationResult
 from fs_tools.commands.uasset_extractor.uasset_extractor import PakExtractor
+from fs_tools.models.pak_validation_result import PakValidationResult
 
 logger = logging.getLogger(__name__)
 

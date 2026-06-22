@@ -11,11 +11,11 @@ from foxhole_stockpiles.enums.item_category import ItemCategory
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.models.catalog_item import CatalogItem
-from foxhole_stockpiles.models.icon_template import IconTemplate
-from foxhole_stockpiles.models.mod_import_config import ModImportConfig
-from foxhole_stockpiles.models.mod_import_progress import ModImportProgress
-from foxhole_stockpiles.models.mod_import_result import ModImportResult
-from foxhole_stockpiles.models.pak_validation_result import PakValidationResult
+from fs_tools.models.icon_template import IconTemplate
+from fs_tools.models.mod_import_config import ModImportConfig
+from fs_tools.models.mod_import_progress import ModImportProgress
+from fs_tools.models.mod_import_result import ModImportResult
+from fs_tools.models.pak_validation_result import PakValidationResult
 from fs_tools.services.mod_importer import ModImporter
 from fs_tools.template_db.template_database import TemplateDatabase
 

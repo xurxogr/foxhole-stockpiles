@@ -15,10 +15,10 @@ import numpy as np
 import pytest
 
 from foxhole_stockpiles.enums.stockpile_type import StockpileType
-from foxhole_stockpiles.models.scan_result import ScanResult
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
 from fs_tools.gui.utils.image_scan_worker import ImageScanWorker
+from fs_tools.models.scan_result import ScanResult
 
 # A 1080p image yields a clean icon box size via ICON_BOX_SCALE (= 64/2160):
 # box_size = int(64/2160 * 1080) = 32.

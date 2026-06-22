@@ -12,7 +12,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from foxhole_stockpiles.core.utils import validate_tool_path
+from fs_tools.core.utils import validate_tool_path
 from fs_tools.services import external_tools
 
 

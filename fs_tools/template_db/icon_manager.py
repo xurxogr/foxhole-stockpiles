@@ -10,7 +10,7 @@ import numpy
 from foxhole_stockpiles.enums.item_category import ItemCategory
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
-from foxhole_stockpiles.models.icon_template import IconTemplate
+from fs_tools.models.icon_template import IconTemplate
 from fs_tools.template_db.template_database import TemplateDatabase
 
 

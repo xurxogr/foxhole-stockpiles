@@ -13,13 +13,13 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from foxhole_stockpiles.models.pak_validation_result import PakValidationResult
 from fs_tools.commands.uasset_extractor.uasset_extractor import (
     CRATE_ICON_PATH,
     SUBICONS_PATH_PREFIX,
     PakExtractor,
     main,
 )
+from fs_tools.models.pak_validation_result import PakValidationResult
 
 
 class TestPakExtractorInitialization:
@@ -187,7 +187,7 @@ class TestPakExtractorMethods:
         """
         extractor.catalog_file = tmp_path / "nonexistent.json"
 
-        with patch("foxhole_stockpiles.core.utils.load_catalog") as mock_load:
+        with patch("fs_tools.commands.uasset_extractor.uasset_extractor.load_catalog") as mock_load:
             mock_load.return_value = []
             result = extractor.get_files_to_extract()
 
@@ -341,7 +341,7 @@ class TestGetFilesToExtract:
         Args:
             extractor (PakExtractor): PakExtractor instance from fixture.
         """
-        with patch("foxhole_stockpiles.core.utils.load_catalog") as mock_load:
+        with patch("fs_tools.commands.uasset_extractor.uasset_extractor.load_catalog") as mock_load:
             mock_load.return_value = []
             result = extractor.get_files_to_extract()
 

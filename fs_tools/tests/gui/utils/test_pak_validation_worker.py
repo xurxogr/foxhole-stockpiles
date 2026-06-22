@@ -4,8 +4,8 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
-from foxhole_stockpiles.models.pak_validation_result import PakValidationResult
 from fs_tools.gui.utils.pak_validation_worker import PakValidationWorker
+from fs_tools.models.pak_validation_result import PakValidationResult
 
 
 def test_pak_validation_worker_initialization(tmp_path: Path) -> None:

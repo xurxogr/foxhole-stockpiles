@@ -4,8 +4,8 @@ import numpy as np
 from numpy.typing import NDArray
 from pydantic import BaseModel, ConfigDict, Field
 
-from foxhole_stockpiles.models.detected_icon_info import DetectedIconInfo
 from foxhole_stockpiles.models.stockpile import Stockpile
+from fs_tools.models.detected_icon_info import DetectedIconInfo
 
 
 class ScanResult(BaseModel):

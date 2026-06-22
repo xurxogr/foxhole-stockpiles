@@ -69,8 +69,6 @@ def get_fs_hidden_imports() -> list[str]:
         "foxhole_stockpiles.core.settings.sections.sav_processing",
         "foxhole_stockpiles.core.settings.sections.database_builder",
         "foxhole_stockpiles.core.settings.sections.external_tools",
-        "foxhole_stockpiles.core.settings.sections.ocr",
-        "foxhole_stockpiles.core.settings.sections.templates",
         "foxhole_stockpiles.core.settings.sections.output",
         "foxhole_stockpiles.core.settings.sections.output.settings",
         "foxhole_stockpiles.core.settings.sections.output.handler_config",

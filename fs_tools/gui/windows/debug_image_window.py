@@ -25,13 +25,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from foxhole_stockpiles.core.utils import compute_icon_phash
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
-from foxhole_stockpiles.models.detected_icon_info import DetectedIconInfo
-from foxhole_stockpiles.models.icon_template import IconTemplate
-from foxhole_stockpiles.models.scan_result import ScanResult
+from fs_tools.core.utils import compute_icon_phash
 from fs_tools.gui.utils.image_scan_worker import ImageScanWorker
+from fs_tools.models.detected_icon_info import DetectedIconInfo
+from fs_tools.models.icon_template import IconTemplate
+from fs_tools.models.scan_result import ScanResult
 from fs_tools.template_db.template_database import TemplateDatabase
 from fs_tools.template_db.template_manager import (
     DEFAULT_MAX_NCC_CANDIDATES,

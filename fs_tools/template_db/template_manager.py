@@ -15,13 +15,13 @@ import h5py
 import numpy as np
 from numpy.typing import NDArray
 
-from foxhole_stockpiles.core.utils import compute_icon_phash
 from foxhole_stockpiles.enums.item_category import ItemCategory
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
-from foxhole_stockpiles.models.database_statistics import DatabaseStatistics
-from foxhole_stockpiles.models.icon_template import IconTemplate
-from foxhole_stockpiles.models.match_result import MatchResult
+from fs_tools.core.utils import compute_icon_phash
+from fs_tools.models.database_statistics import DatabaseStatistics
+from fs_tools.models.icon_template import IconTemplate
+from fs_tools.models.match_result import MatchResult
 from fs_tools.template_db.template_database import DATABASE_VERSION, TemplateDatabase
 
 logger = logging.getLogger(__name__)

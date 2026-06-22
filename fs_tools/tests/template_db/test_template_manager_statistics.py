@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from foxhole_stockpiles.models.database_statistics import DatabaseStatistics
+from fs_tools.models.database_statistics import DatabaseStatistics
 from fs_tools.template_db.template_manager import TemplateManager
 
 

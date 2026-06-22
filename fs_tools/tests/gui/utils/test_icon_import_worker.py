@@ -14,9 +14,9 @@ from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.core.settings.sections.database_builder import DatabaseBuilderSettings
 from foxhole_stockpiles.core.settings.sections.external_tools import ExternalToolsSettings
 from foxhole_stockpiles.core.settings.sections.scanner import ScannerSettings
-from foxhole_stockpiles.models.mod_import_progress import ModImportProgress
-from foxhole_stockpiles.models.mod_import_result import ModImportResult
 from fs_tools.gui.utils.icon_import_worker import IconImportWorker
+from fs_tools.models.mod_import_progress import ModImportProgress
+from fs_tools.models.mod_import_result import ModImportResult
 
 
 @pytest.fixture

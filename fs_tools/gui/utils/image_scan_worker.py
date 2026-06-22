@@ -9,10 +9,10 @@ from numpy.typing import NDArray
 from PySide6.QtCore import QThread, Signal
 
 from foxhole_stockpiles.core.settings import get_settings
-from foxhole_stockpiles.models.detected_icon_info import DetectedIconInfo
-from foxhole_stockpiles.models.scan_result import ScanResult
 from foxhole_stockpiles.services.scanner import Scanner
 from fs_tools.constants import ICON_BOX_SCALE
+from fs_tools.models.detected_icon_info import DetectedIconInfo
+from fs_tools.models.scan_result import ScanResult
 
 logger = logging.getLogger(__name__)
 

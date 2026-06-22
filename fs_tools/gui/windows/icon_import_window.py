@@ -33,9 +33,9 @@ from foxhole_stockpiles.core.settings import get_settings
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.gui.utils.qt_log_handler import QtLogHandler
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
-from foxhole_stockpiles.models.pak_validation_result import PakValidationResult
 from fs_tools.gui.utils.icon_import_worker import IconImportWorker
 from fs_tools.gui.utils.pak_validation_worker import PakValidationWorker
+from fs_tools.models.pak_validation_result import PakValidationResult
 
 logger = logging.getLogger(__name__)
 

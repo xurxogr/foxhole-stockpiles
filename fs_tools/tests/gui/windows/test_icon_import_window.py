@@ -1413,7 +1413,7 @@ def test_on_validation_complete_valid(configured_window: IconImportWindow) -> No
     Args:
         configured_window: Configured window instance
     """
-    from foxhole_stockpiles.models.pak_validation_result import PakValidationResult
+    from fs_tools.models.pak_validation_result import PakValidationResult
 
     result = PakValidationResult()
     result.is_valid = True
@@ -1442,7 +1442,7 @@ def test_on_validation_complete_missing_crate(configured_window: IconImportWindo
     Args:
         configured_window: Configured window instance
     """
-    from foxhole_stockpiles.models.pak_validation_result import PakValidationResult
+    from fs_tools.models.pak_validation_result import PakValidationResult
 
     result = PakValidationResult()
     result.is_valid = False
@@ -1471,7 +1471,7 @@ def test_on_validation_complete_missing_subicons(configured_window: IconImportWi
     Args:
         configured_window: Configured window instance
     """
-    from foxhole_stockpiles.models.pak_validation_result import PakValidationResult
+    from fs_tools.models.pak_validation_result import PakValidationResult
 
     result = PakValidationResult()
     result.is_valid = False
@@ -1494,7 +1494,7 @@ def test_on_validation_complete_missing_both(configured_window: IconImportWindow
     Args:
         configured_window: Configured window instance
     """
-    from foxhole_stockpiles.models.pak_validation_result import PakValidationResult
+    from fs_tools.models.pak_validation_result import PakValidationResult
 
     result = PakValidationResult()
     result.is_valid = False
@@ -1568,7 +1568,7 @@ def test_validate_inputs_vanilla_required_but_missing(
     Args:
         configured_window: Configured window instance
     """
-    from foxhole_stockpiles.models.pak_validation_result import PakValidationResult
+    from fs_tools.models.pak_validation_result import PakValidationResult
 
     configured_window.mod_pak_files = ["test.pak"]
     configured_window.mod_name_input.setText("test_mod")
@@ -1592,7 +1592,7 @@ def test_validate_inputs_vanilla_required_and_provided(
     Args:
         configured_window: Configured window instance
     """
-    from foxhole_stockpiles.models.pak_validation_result import PakValidationResult
+    from fs_tools.models.pak_validation_result import PakValidationResult
 
     configured_window.mod_pak_files = ["test.pak"]
     configured_window.mod_name_input.setText("test_mod")
@@ -1622,7 +1622,7 @@ def test_validate_inputs_vanilla_provided_but_invalid(
     Args:
         configured_window: Configured window instance
     """
-    from foxhole_stockpiles.models.pak_validation_result import PakValidationResult
+    from fs_tools.models.pak_validation_result import PakValidationResult
 
     configured_window.mod_pak_files = ["test.pak"]
     configured_window.mod_name_input.setText("test_mod")
@@ -1652,7 +1652,7 @@ def test_validate_inputs_vanilla_provided_not_validated(
     Args:
         configured_window: Configured window instance
     """
-    from foxhole_stockpiles.models.pak_validation_result import PakValidationResult
+    from fs_tools.models.pak_validation_result import PakValidationResult
 
     configured_window.mod_pak_files = ["test.pak"]
     configured_window.mod_name_input.setText("test_mod")
@@ -1749,7 +1749,7 @@ def test_on_vanilla_validation_complete_valid(configured_window: IconImportWindo
     Args:
         configured_window: Configured window instance
     """
-    from foxhole_stockpiles.models.pak_validation_result import PakValidationResult
+    from fs_tools.models.pak_validation_result import PakValidationResult
 
     result = PakValidationResult()
     result.is_valid = True
@@ -1778,7 +1778,7 @@ def test_on_vanilla_validation_complete_invalid(
     Args:
         configured_window: Configured window instance
     """
-    from foxhole_stockpiles.models.pak_validation_result import PakValidationResult
+    from fs_tools.models.pak_validation_result import PakValidationResult
 
     result = PakValidationResult()
     result.is_valid = False
@@ -1996,7 +1996,7 @@ def test_clear_all_paks_clears_validation_state(
         configured_window: Configured window instance
         tmp_path: Temporary directory path
     """
-    from foxhole_stockpiles.models.pak_validation_result import PakValidationResult
+    from fs_tools.models.pak_validation_result import PakValidationResult
 
     # Set up some state
     configured_window.mod_pak_files = ["test.pak"]
@@ -2082,7 +2082,7 @@ def test_update_start_button_state_mod_validation_passed(
     Args:
         configured_window: Configured window instance
     """
-    from foxhole_stockpiles.models.pak_validation_result import PakValidationResult
+    from fs_tools.models.pak_validation_result import PakValidationResult
 
     configured_window.mod_pak_files = ["test.pak"]
     result = PakValidationResult()
@@ -2101,7 +2101,7 @@ def test_update_start_button_state_mod_validation_failed_no_vanilla(
     Args:
         configured_window: Configured window instance
     """
-    from foxhole_stockpiles.models.pak_validation_result import PakValidationResult
+    from fs_tools.models.pak_validation_result import PakValidationResult
 
     configured_window.mod_pak_files = ["test.pak"]
     result = PakValidationResult()
@@ -2121,7 +2121,7 @@ def test_update_start_button_state_mod_validation_failed_vanilla_valid(
     Args:
         configured_window: Configured window instance
     """
-    from foxhole_stockpiles.models.pak_validation_result import PakValidationResult
+    from fs_tools.models.pak_validation_result import PakValidationResult
 
     configured_window.mod_pak_files = ["test.pak"]
 
@@ -2145,7 +2145,7 @@ def test_update_start_button_state_mod_validation_failed_vanilla_invalid(
     Args:
         configured_window: Configured window instance
     """
-    from foxhole_stockpiles.models.pak_validation_result import PakValidationResult
+    from fs_tools.models.pak_validation_result import PakValidationResult
 
     configured_window.mod_pak_files = ["test.pak"]
 
@@ -2184,7 +2184,7 @@ def test_clear_vanilla_pak_restores_warning_state(
     Args:
         configured_window: Configured window instance
     """
-    from foxhole_stockpiles.models.pak_validation_result import PakValidationResult
+    from fs_tools.models.pak_validation_result import PakValidationResult
 
     # Set up mod PAK files (required for start button state logic)
     configured_window.mod_pak_files = ["test.pak"]

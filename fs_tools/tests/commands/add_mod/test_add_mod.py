@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from foxhole_stockpiles.models.mod_import_progress import ModImportProgress
-from foxhole_stockpiles.models.mod_import_result import ModImportResult
 from fs_tools.commands.add_mod.add_mod import main, print_progress
+from fs_tools.models.mod_import_progress import ModImportProgress
+from fs_tools.models.mod_import_result import ModImportResult
 
 
 class TestPrintProgress:

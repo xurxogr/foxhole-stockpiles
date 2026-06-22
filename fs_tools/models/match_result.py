@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from foxhole_stockpiles.models.icon_template import IconTemplate
+from fs_tools.models.icon_template import IconTemplate
 
 
 class MatchResult(BaseModel):

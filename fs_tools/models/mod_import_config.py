@@ -4,7 +4,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from foxhole_stockpiles.core.settings.sections.templates import TemplateSettings
+from fs_tools.core.settings.sections.templates import TemplateSettings
 
 
 class ModImportConfig(BaseModel):
