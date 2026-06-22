@@ -41,6 +41,8 @@ class ToolLauncherRow(QFrame):
             "background: palette(base); }"
             "#toolLauncherRow:hover { background: palette(alternate-base); "
             "border-color: palette(highlight); }"
+            "#toolLauncherRow:disabled { background: palette(window); "
+            "border-color: palette(midlight); }"
         )
 
         layout = QHBoxLayout(self)
@@ -71,6 +73,21 @@ class ToolLauncherRow(QFrame):
         text_layout.addWidget(self._description_label)
 
         layout.addLayout(text_layout, 1)
+
+    def set_available(self, available: bool) -> None:
+        """Enable or disable the row.
+
+        A disabled row is greyed out, shows the default cursor and does not
+        emit :attr:`clicked`, so a tool whose required configuration is missing
+        cannot be launched.
+
+        Args:
+            available (bool): Whether the tool can be launched.
+        """
+        self.setEnabled(available)
+        self.setCursor(
+            Qt.CursorShape.PointingHandCursor if available else Qt.CursorShape.ArrowCursor
+        )
 
     def set_text(self, title: str, description: str) -> None:
         """Update the row's title and description text.

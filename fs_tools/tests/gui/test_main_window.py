@@ -1,11 +1,13 @@
 """Tests for the fs-tools launcher window."""
 
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from fs_tools.gui.main_window import ToolsMainWindow
+from fs_tools.gui.windows.catalog_builder_window import CatalogBuilderWindow
+from fs_tools.gui.windows.icon_import_window import IconImportWindow
 
 
 @pytest.fixture
@@ -78,6 +80,42 @@ def test_show_settings(window: ToolsMainWindow) -> None:
         window.show_settings()
         mock_cls.assert_called_once_with(window)
         mock_cls.return_value.exec.assert_called_once()
+
+
+def test_tool_rows_enabled_when_configured(qtbot: Any) -> None:
+    """All gated tool rows are enabled when their requirements are met."""
+    settings = MagicMock()
+    settings.scanner.database_path = "/db.h5"
+    with (
+        patch("fs_tools.gui.main_window.AppSettings", return_value=settings),
+        patch.object(CatalogBuilderWindow, "requirements_met", return_value=True),
+        patch.object(IconImportWindow, "requirements_met", return_value=True),
+    ):
+        win = ToolsMainWindow()
+        qtbot.addWidget(win)
+        assert win._catalog_builder_row.isEnabled()
+        assert win._icon_import_row.isEnabled()
+        assert win._visualizer_row.isEnabled()
+        assert win._debug_viewer_row.isEnabled()
+
+
+def test_tool_rows_disabled_when_unconfigured(qtbot: Any) -> None:
+    """Gated tool rows are disabled when their requirements are missing."""
+    settings = MagicMock()
+    settings.scanner.database_path = None
+    with (
+        patch("fs_tools.gui.main_window.AppSettings", return_value=settings),
+        patch.object(CatalogBuilderWindow, "requirements_met", return_value=False),
+        patch.object(IconImportWindow, "requirements_met", return_value=False),
+    ):
+        win = ToolsMainWindow()
+        qtbot.addWidget(win)
+        assert not win._catalog_builder_row.isEnabled()
+        assert not win._icon_import_row.isEnabled()
+        assert not win._visualizer_row.isEnabled()
+        assert not win._debug_viewer_row.isEnabled()
+        # The database info tool has no prerequisite and stays enabled.
+        assert win._database_info_row.isEnabled()
 
 
 def test_show_database_info(window: ToolsMainWindow) -> None:

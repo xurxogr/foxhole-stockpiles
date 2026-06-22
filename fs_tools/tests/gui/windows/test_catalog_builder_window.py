@@ -398,50 +398,6 @@ def test_close_event_worker_running_cancel(configured_window: CatalogBuilderWind
         mock_event.ignore.assert_called_once()
 
 
-# ===== Settings Dialog Tests =====
-
-
-def test_open_settings_dialog(unconfigured_window: CatalogBuilderWindow) -> None:
-    """Test opening settings dialog."""
-    with patch(
-        "fs_tools.gui.windows.catalog_builder_window.CatalogBuilderSettingsDialog"
-    ) as mock_dialog_class:
-        mock_dialog = MagicMock()
-        mock_dialog.exec.return_value = False
-        mock_dialog_class.return_value = mock_dialog
-        unconfigured_window._open_settings_dialog()
-        mock_dialog_class.assert_called_once()
-
-
-def test_open_settings_dialog_reconfigures(
-    unconfigured_window: CatalogBuilderWindow, tmp_path: Path
-) -> None:
-    """Test opening settings dialog and reconfiguring."""
-    repak_path = tmp_path / "repak.exe"
-    repak_path.touch()
-    uassetgui_path = tmp_path / "uassetgui.exe"
-    uassetgui_path.touch()
-
-    new_settings = AppSettings(
-        external_tools=ExternalToolsSettings(repak=repak_path, uassetgui=uassetgui_path)
-    )
-
-    with patch(
-        "fs_tools.gui.windows.catalog_builder_window.CatalogBuilderSettingsDialog"
-    ) as mock_dialog_class:
-        mock_dialog = MagicMock()
-        mock_dialog.exec.return_value = True
-        mock_dialog_class.return_value = mock_dialog
-
-        with patch("fs_tools.gui.windows.catalog_builder_window.reload_settings"):
-            with patch(
-                "fs_tools.gui.windows.catalog_builder_window.get_settings"
-            ) as mock_get_settings:
-                mock_get_settings.return_value = new_settings
-                unconfigured_window._open_settings_dialog()
-                assert unconfigured_window.is_configured is True
-
-
 # ===== Default PAK Directory Tests =====
 
 

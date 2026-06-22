@@ -1,6 +1,5 @@
 """Database Builder settings tab."""
 
-import os
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QUrl
@@ -14,7 +13,6 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QPushButton,
-    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -37,7 +35,10 @@ class DatabaseBuilderTab(QWidget):
             parent (QWidget | None): Parent widget. Defaults to None.
         """
         super().__init__(parent)
-        self._cpu_count = os.cpu_count() or 1
+        # The worker count is no longer edited here (it is chosen per-build in
+        # the build-database window and via the CLI ``--workers`` flag). The
+        # configured value is preserved across a save so those defaults survive.
+        self._workers: int | None = None
         self.init_ui()
 
     def init_ui(self) -> None:
@@ -66,21 +67,6 @@ class DatabaseBuilderTab(QWidget):
         catalog_layout.addWidget(self.catalog_browse_btn)
         settings_layout.addRow(self.catalog_label, catalog_layout)
 
-        # Workers
-        self.workers_label = QLabel()
-        workers_layout = QHBoxLayout()
-        self.workers_spinbox = QSpinBox()
-        self.workers_spinbox.setMinimum(0)
-        self.workers_spinbox.setMaximum(self._cpu_count)
-        self.workers_spinbox.setValue(0)
-        self.workers_spinbox.setFixedWidth(80)
-        workers_layout.addWidget(self.workers_spinbox)
-        self.workers_hint = QLabel()
-        self.workers_hint.setStyleSheet("color: gray; font-size: 11px;")
-        workers_layout.addWidget(self.workers_hint)
-        workers_layout.addStretch()
-        settings_layout.addRow(self.workers_label, workers_layout)
-
         layout.addWidget(self.settings_group)
 
         # Resolutions Group
@@ -93,7 +79,8 @@ class DatabaseBuilderTab(QWidget):
         resolutions_layout.addWidget(self.resolutions_info)
 
         self.resolution_list = QListWidget()
-        self.resolution_list.setMaximumHeight(100)
+        # Shows several resolutions at once; the list scrolls for the rest.
+        self.resolution_list.setMaximumHeight(120)
 
         # Add "All" option first (will be translated in retranslate)
         all_item = self.resolution_list.addItem("")
@@ -154,13 +141,6 @@ class DatabaseBuilderTab(QWidget):
         self.catalog_file_input.setPlaceholderText(t("database_builder_tab.catalog_placeholder"))
         self.catalog_download_btn.setText(t("external_tools_tab.download"))
         self.catalog_browse_btn.setText(t("common.browse"))
-
-        self.workers_label.setText(t("database_builder_tab.workers"))
-        self.workers_label.setToolTip(t("database_builder_tab.workers_tooltip"))
-        workers_hint_text = t("database_builder_tab.workers_hint").replace(
-            "{cores}", str(self._cpu_count)
-        )
-        self.workers_hint.setText(workers_hint_text)
 
         self.resolutions_group.setTitle(t("database_builder_tab.resolutions_group"))
         self.resolutions_info.setText(t("database_builder_tab.resolutions_info"))
@@ -247,7 +227,8 @@ class DatabaseBuilderTab(QWidget):
                 values from.
         """
         self.catalog_file_input.setText(str(settings.catalog_file) if settings.catalog_file else "")
-        self.workers_spinbox.setValue(settings.workers if settings.workers is not None else 0)
+        # Preserved unchanged: workers is configured per-build, not in this tab.
+        self._workers = settings.workers
 
         # Set resolution checkboxes
         # Disconnect to avoid triggering events during setup
@@ -342,12 +323,9 @@ class DatabaseBuilderTab(QWidget):
             # Nothing selected - save as empty list
             target_resolutions = []
 
-        # Get workers value (0 means auto-detect, which we store as None)
-        workers_value = self.workers_spinbox.value()
-        workers = workers_value if workers_value > 0 else None
-
         return DatabaseBuilderSettings(
             catalog_file=Path(catalog_text) if catalog_text else None,
             target_resolutions=target_resolutions,
-            workers=workers,
+            # Carried through from the loaded settings (not edited in this tab).
+            workers=self._workers,
         )

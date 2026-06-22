@@ -37,9 +37,9 @@ def test_database_builder_tab_initialization(database_builder_tab: DatabaseBuild
         database_builder_tab: DatabaseBuilderTab instance
     """
     # Note: extractor_tool_input and converter_tool_input are now in ExternalToolsTab
+    # Note: workers is no longer edited here; it is configured per-build.
     assert database_builder_tab.catalog_file_input is not None
     assert database_builder_tab.resolution_list is not None
-    assert database_builder_tab.workers_spinbox is not None
 
 
 def test_database_builder_tab_widget_count(database_builder_tab: DatabaseBuilderTab) -> None:
@@ -438,80 +438,41 @@ def test_database_builder_tab_set_values_on_fresh_instance(qtbot: Any) -> None:
 
 
 # ===== Workers Tests =====
+# Workers is no longer edited in this tab (it is configured per-build in the
+# build-database window and via the CLI). The tab must preserve whatever value
+# was loaded so that saving the general config never wipes it.
 
 
-def test_database_builder_tab_workers_default_zero(
+def test_database_builder_tab_workers_default_none(
     database_builder_tab: DatabaseBuilderTab,
 ) -> None:
-    """Test that workers spinbox defaults to 0 (auto-detect).
+    """Test that the carried-through workers value defaults to None.
 
     Args:
         database_builder_tab: DatabaseBuilderTab instance
     """
-    assert database_builder_tab.workers_spinbox.value() == 0
+    assert database_builder_tab.get_values().workers is None
 
 
-def test_database_builder_tab_set_workers_value(
+def test_database_builder_tab_preserves_workers_value(
     database_builder_tab: DatabaseBuilderTab,
 ) -> None:
-    """Test setting workers value from settings.
+    """Test that a configured workers value survives a load/save round-trip.
 
     Args:
         database_builder_tab: DatabaseBuilderTab instance
     """
-    settings = DatabaseBuilderSettings(workers=4)
-    database_builder_tab.set_values(settings)
-    assert database_builder_tab.workers_spinbox.value() == 4
+    database_builder_tab.set_values(DatabaseBuilderSettings(workers=4))
+    assert database_builder_tab.get_values().workers == 4
 
 
-def test_database_builder_tab_set_workers_none_becomes_zero(
+def test_database_builder_tab_preserves_workers_none(
     database_builder_tab: DatabaseBuilderTab,
 ) -> None:
-    """Test that None workers value becomes 0 in spinbox.
+    """Test that a None workers value is preserved (not coerced).
 
     Args:
         database_builder_tab: DatabaseBuilderTab instance
     """
-    settings = DatabaseBuilderSettings(workers=None)
-    database_builder_tab.set_values(settings)
-    assert database_builder_tab.workers_spinbox.value() == 0
-
-
-def test_database_builder_tab_get_workers_value(
-    database_builder_tab: DatabaseBuilderTab,
-) -> None:
-    """Test getting workers value from spinbox.
-
-    Args:
-        database_builder_tab: DatabaseBuilderTab instance
-    """
-    database_builder_tab.workers_spinbox.setValue(8)
-    settings = database_builder_tab.get_values()
-    assert settings.workers == 8
-
-
-def test_database_builder_tab_get_workers_zero_becomes_none(
-    database_builder_tab: DatabaseBuilderTab,
-) -> None:
-    """Test that 0 workers value becomes None in settings.
-
-    Args:
-        database_builder_tab: DatabaseBuilderTab instance
-    """
-    database_builder_tab.workers_spinbox.setValue(0)
-    settings = database_builder_tab.get_values()
-    assert settings.workers is None
-
-
-def test_database_builder_tab_workers_roundtrip(
-    database_builder_tab: DatabaseBuilderTab,
-) -> None:
-    """Test workers value roundtrip.
-
-    Args:
-        database_builder_tab: DatabaseBuilderTab instance
-    """
-    original_settings = DatabaseBuilderSettings(workers=2)
-    database_builder_tab.set_values(original_settings)
-    retrieved_settings = database_builder_tab.get_values()
-    assert retrieved_settings.workers == 2
+    database_builder_tab.set_values(DatabaseBuilderSettings(workers=None))
+    assert database_builder_tab.get_values().workers is None

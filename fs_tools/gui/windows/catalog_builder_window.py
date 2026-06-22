@@ -27,13 +27,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from foxhole_stockpiles.core.settings import get_settings, reload_settings
+from foxhole_stockpiles.core.settings import get_settings
+from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.gui.utils.qt_log_handler import QtLogHandler
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
 from fs_tools.gui.utils.catalog_builder_worker import CatalogBuilderWorker
-from fs_tools.gui.windows.catalog_builder_settings_dialog import (
-    CatalogBuilderSettingsDialog,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +49,8 @@ class CatalogBuilderWindow(QMainWindow):
         self.build_worker: CatalogBuilderWorker | None = None
         self.pak_file: str | None = None
 
-        # Check if catalog builder is configured
+        # The launcher only enables this window once it is configured, so the
+        # full UI is always built. ``is_configured`` is kept for introspection.
         self.settings = get_settings()
         self.is_configured = self._check_configuration()
 
@@ -62,10 +61,6 @@ class CatalogBuilderWindow(QMainWindow):
         self.log_handler.setLevel(log_level)
 
         self.init_ui()
-
-        # Disable UI if not configured
-        if not self.is_configured:
-            self._disable_ui_with_warning()
 
     def init_ui(self) -> None:
         """Initialize the user interface."""
@@ -239,15 +234,19 @@ class CatalogBuilderWindow(QMainWindow):
         self.clear_logs_button.setText(t("common.clear_logs"))
         self.close_button.setText(t("common.close"))
 
-    def _check_configuration(self) -> bool:
-        """Check if catalog builder is properly configured.
+    @staticmethod
+    def requirements_met(settings: AppSettings) -> bool:
+        """Return whether the catalog builder has everything it needs.
+
+        Args:
+            settings (AppSettings): The settings to check.
 
         Returns:
-            bool: True if all required tools are configured, False otherwise
+            bool: True if repak and uassetgui are both configured and exist on
+                disk, False otherwise.
         """
-        external_tools = self.settings.external_tools
+        external_tools = settings.external_tools
 
-        # Check if repak and uassetgui are configured and exist
         if not external_tools.repak or not external_tools.repak.exists():
             return False
         if not external_tools.uassetgui or not external_tools.uassetgui.exists():
@@ -255,67 +254,13 @@ class CatalogBuilderWindow(QMainWindow):
 
         return True
 
-    def _disable_ui_with_warning(self) -> None:
-        """Disable the UI and show configuration warning."""
-        warning_widget = QWidget(self)
-        warning_layout = QVBoxLayout(warning_widget)
-        warning_layout.setContentsMargins(20, 20, 20, 20)
+    def _check_configuration(self) -> bool:
+        """Check if catalog builder is properly configured.
 
-        warning_layout.addStretch()
-
-        warning_label = QLabel(
-            f"<h2>{t('catalog_builder.config_required_title')}</h2>"
-            f"<p><b>{t('catalog_builder.config_required_message')}</b></p>"
-            f"<p>{t('catalog_builder.config_required_intro')}</p>"
-            "<ul>"
-            f"<li><b>{t('catalog_builder.config_required_extractor')}</b></li>"
-            f"<li><b>{t('catalog_builder.config_required_converter')}</b></li>"
-            "</ul>"
-        )
-        warning_label.setWordWrap(True)
-        warning_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        warning_label.setStyleSheet(
-            "QLabel { "
-            "border: 2px solid #FF9800; "
-            "border-radius: 8px; "
-            "padding: 30px; "
-            "font-size: 13px; "
-            "background-color: palette(alternate-base); "
-            "}"
-        )
-        warning_layout.addWidget(warning_label)
-
-        warning_layout.addStretch()
-
-        button_layout = QHBoxLayout()
-        button_layout.addStretch()
-
-        configure_button = QPushButton(t("common.configure"))
-        configure_button.setFixedWidth(120)
-        configure_button.clicked.connect(self._open_settings_dialog)
-        button_layout.addWidget(configure_button)
-
-        close_button = QPushButton(t("common.close"))
-        close_button.setFixedWidth(100)
-        close_button.clicked.connect(self.close)
-        button_layout.addWidget(close_button)
-
-        button_layout.addStretch()
-        warning_layout.addLayout(button_layout)
-
-        self.setCentralWidget(warning_widget)
-
-    def _open_settings_dialog(self) -> None:
-        """Open the catalog builder settings dialog."""
-        dialog = CatalogBuilderSettingsDialog(self)
-        if dialog.exec():
-            reload_settings()
-            self.settings = get_settings()
-            self.is_configured = self._check_configuration()
-
-            if self.is_configured:
-                self.init_ui()
-                logger.info("Catalog builder configured successfully")
+        Returns:
+            bool: True if all required tools are configured, False otherwise
+        """
+        return self.requirements_met(self.settings)
 
     def _get_default_pak_directory(self) -> str:
         """Get default directory for PAK files based on platform.

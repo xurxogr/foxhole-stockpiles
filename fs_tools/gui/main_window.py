@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from foxhole_stockpiles import __version__
+from foxhole_stockpiles.core.settings import reload_settings
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
 from fs_tools.gui.widgets.tool_launcher_row import ToolLauncherRow
@@ -95,6 +96,9 @@ class ToolsMainWindow(QMainWindow):
 
         # Apply translations.
         self.retranslate()
+
+        # Enable only the tools whose required configuration is present.
+        self._refresh_tool_availability()
 
         # Connect to language change signal with cleanup.
         self._language_callback = self._on_language_changed
@@ -200,6 +204,28 @@ class ToolsMainWindow(QMainWindow):
             return None
         return database_path
 
+    def _refresh_tool_availability(self) -> None:
+        """Enable each tool row only when its required configuration is present.
+
+        Tools that need external executables or a catalog (catalog builder,
+        icon import) and tools that need a template database (visualizer, debug
+        viewer) are disabled until those settings are configured, so a tool is
+        only reachable once it can actually run. The database info tool has no
+        prerequisite and stays enabled.
+        """
+        try:
+            settings = AppSettings()
+        except Exception as e:
+            logger.warning("Could not read settings for tool availability: %s", e)
+            return
+
+        self._catalog_builder_row.set_available(CatalogBuilderWindow.requirements_met(settings))
+        self._icon_import_row.set_available(IconImportWindow.requirements_met(settings))
+
+        has_database = bool(settings.scanner.database_path)
+        self._visualizer_row.set_available(has_database)
+        self._debug_viewer_row.set_available(has_database)
+
     def _track(self, window: QWidget) -> None:
         """Keep a reference to a launched window.
 
@@ -233,6 +259,11 @@ class ToolsMainWindow(QMainWindow):
         dialog = SettingsDialog(self)
         dialog.setWindowModality(Qt.WindowModality.ApplicationModal)
         dialog.exec()
+
+        # Settings may have changed; refresh the cached settings and re-evaluate
+        # which tools are now available.
+        reload_settings()
+        self._refresh_tool_availability()
 
     def show_database_visualizer(self) -> None:
         """Open the database visualizer dialog."""

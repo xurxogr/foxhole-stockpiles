@@ -3,7 +3,9 @@
 import logging
 from pathlib import Path
 
+from PySide6.QtGui import QShowEvent
 from PySide6.QtWidgets import (
+    QApplication,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -40,7 +42,7 @@ class SettingsDialog(QDialog):
     This dialog configures everything fs-tools relies on:
     - Template database path (scanner.database_path)
     - External tools: repak, umodel and uassetgui
-    - Database builder settings: catalog file, resolutions, workers
+    - Database builder settings: catalog file and resolutions
 
     All values are persisted to the shared ``.fs_config`` file.
     """
@@ -58,11 +60,12 @@ class SettingsDialog(QDialog):
 
     def init_ui(self) -> None:
         """Initialize the user interface."""
-        # Width is kept proportional to the height (golden ratio) so the
-        # dialog stays balanced if the height is ever adjusted.
-        height = 740
-        self.setMinimumHeight(height)
-        self.setMinimumWidth(round(height * 1.618))
+        # Wide (golden-ratio proportioned). The height is fitted to the content
+        # the first time the dialog is shown (see showEvent), so the whole form
+        # is visible without a scrollbar on every platform.
+        self._dialog_width = round(740 * 1.618)
+        self.setMinimumWidth(self._dialog_width)
+        self._height_fitted = False
 
         outer_layout = QVBoxLayout(self)
 
@@ -122,10 +125,21 @@ class SettingsDialog(QDialog):
         self.db_builder_tab = DatabaseBuilderTab()
         layout.addWidget(self.db_builder_tab)
 
+        # The two tab widgets wrap their group boxes in a layout that adds its
+        # own margins, which would make those sections narrower than the
+        # directly-added Language/Database boxes. Drop the wrapper margins so
+        # every section rectangle spans the same width.
+        for tab in (self.external_tools_tab, self.db_builder_tab):
+            tab_layout = tab.layout()
+            if tab_layout is not None:
+                tab_layout.setContentsMargins(0, 0, 0, 0)
+
         layout.addStretch()
 
         scroll_area.setWidget(content)
         outer_layout.addWidget(scroll_area)
+        self._scroll_area = scroll_area
+        self._scroll_content = content
 
         # Status label for error messages
         self.status_label = QLabel()
@@ -149,6 +163,38 @@ class SettingsDialog(QDialog):
         self._language_callback = self._on_language_changed
         on_language_changed(self._language_callback)
         self.destroyed.connect(lambda cb=self._language_callback: off_language_changed(cb))
+
+    def showEvent(self, event: QShowEvent) -> None:
+        """Fit the dialog height to its content the first time it is shown.
+
+        Args:
+            event (QShowEvent): The show event.
+        """
+        super().showEvent(event)
+        if not self._height_fitted:
+            self._height_fitted = True
+            self._fit_height_to_content()
+
+    def _fit_height_to_content(self) -> None:
+        """Grow the dialog so the whole form fits without a vertical scrollbar.
+
+        The non-scrolling chrome (info header, buttons, margins) is measured
+        directly as ``dialog height - viewport height`` and added to the
+        content's height hint, so the height adapts to each platform's font and
+        DPI metrics. A small slack is added so metric rounding never trips a
+        scrollbar; any surplus simply shows as empty space, which is fine.
+        """
+        chrome = self.height() - self._scroll_area.viewport().height()
+        slack = 8
+        needed = chrome + self._scroll_content.sizeHint().height() + slack
+
+        # Never grow past the available screen height (fall back to the
+        # computed value if no screen is reported yet).
+        screen = self.screen() or QApplication.primaryScreen()
+        if screen is not None:
+            needed = min(needed, screen.availableGeometry().height() - 80)
+
+        self.resize(self._dialog_width, needed)
 
     def _on_language_changed(self, _language: str) -> None:
         """Handle language change event.
