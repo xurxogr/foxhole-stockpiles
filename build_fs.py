@@ -1,13 +1,24 @@
-"""Build script for creating fs executable (unified CLI and GUI)."""
+"""Build script for the project executables.
+
+Builds two standalone executables with PyInstaller:
+
+* ``fs``       - desktop runtime: unified CLI + PySide6 GUI.
+* ``fs-tools`` - build-time tooling CLI + GUI (catalog/template database tools).
+"""
 
 import os
 import subprocess
 import sys
+from dataclasses import dataclass, field
 from pathlib import Path
 
 
-def get_hidden_imports() -> list[str]:
-    """Get all hidden imports for the unified build."""
+def get_fs_hidden_imports() -> list[str]:
+    """Get all hidden imports for the ``fs`` runtime build.
+
+    Returns:
+        list[str]: Module names to force-include in the build.
+    """
     return [
         # Core dependencies
         "cv2",
@@ -132,140 +143,230 @@ def get_hidden_imports() -> list[str]:
     ]
 
 
-def build_executable(project_root: Path) -> bool:
-    """Build the unified executable (fs.exe).
-
-    Args:
-        project_root: Path to project root directory
+def get_fs_tools_hidden_imports() -> list[str]:
+    """Get all hidden imports for the ``fs-tools`` tooling build.
 
     Returns:
-        True if build successful, False otherwise
+        list[str]: Module names to force-include in the build.
+    """
+    return [
+        # Core dependencies
+        "cv2",
+        "numpy",
+        "numpy.core._methods",
+        "numpy.lib.format",
+        "pydantic",
+        "pydantic.json_schema",
+        "pydantic_settings",
+        "h5py",
+        "PIL",
+        "typer",
+        # PySide6 dependencies (for the tooling GUI)
+        "PySide6",
+        "PySide6.QtCore",
+        "PySide6.QtGui",
+        "PySide6.QtWidgets",
+        # Shared runtime package (fs_tools reuses its settings/i18n/models)
+        "foxhole_stockpiles",
+        "foxhole_stockpiles.core.settings.app_settings",
+        "foxhole_stockpiles.i18n",
+        "foxhole_stockpiles.i18n.translator",
+        # fs_tools package itself
+        "fs_tools",
+        "fs_tools.cli",
+        "fs_tools.gui",
+        # Tool command modules are imported by name (importlib) from cli.py and
+        # are not seen by PyInstaller's static analysis.
+        "fs_tools.commands.catalog_builder.catalog_builder",
+        "fs_tools.commands.database_builder.database_builder",
+        "fs_tools.commands.generate_templates.generate_templates",
+        "fs_tools.commands.uasset_extractor.uasset_extractor",
+        "fs_tools.commands.add_icon.add_icon",
+        "fs_tools.commands.add_mod.add_mod",
+        "fs_tools.commands.candidate_inspector.candidate_inspector",
+    ]
+
+
+@dataclass(frozen=True)
+class BuildSpec:
+    """Definition of a single PyInstaller executable build.
+
+    Attributes:
+        name (str): Executable name (PyInstaller ``--name``).
+        entry_script (str): Path to the entry script, relative to project root.
+        collect_packages (list[str]): Packages to ``--collect-submodules``.
+        hidden_imports (list[str]): Modules to force-include via ``--hidden-import``.
+        data_dirs (list[tuple[str, str]]): ``(source, dest)`` data directory pairs,
+            with ``source`` relative to project root.
+        test_args (list[list[str]]): Argument lists to smoke-test the built exe.
+    """
+
+    name: str
+    entry_script: str
+    collect_packages: list[str]
+    hidden_imports: list[str]
+    data_dirs: list[tuple[str, str]] = field(default_factory=list)
+    test_args: list[list[str]] = field(default_factory=list)
+
+
+def build_executable(project_root: Path, spec: BuildSpec) -> bool:
+    """Build a standalone executable from a build spec.
+
+    Args:
+        project_root (Path): Path to the project root directory.
+        spec (BuildSpec): The executable build definition.
+
+    Returns:
+        bool: True if the build succeeded and smoke tests passed, False otherwise.
     """
     print("=" * 50)
-    print("Building Unified Executable (fs.exe)")
+    print(f"Building Executable ({spec.name}.exe)")
     print("=" * 50)
     print()
-    print("This executable provides:")
-    print("  - GUI mode: Run 'fs' with no arguments")
-    print("  - CLI mode: Run 'fs <command>' for CLI commands")
-    print()
 
-    hidden_imports = get_hidden_imports()
-
-    # Build PyInstaller command
-    # Use --windowed so no console appears on double-click
-    # CLI commands attach to parent console or allocate one when needed
+    # Use --windowed so no console appears on double-click; CLI commands attach
+    # to the parent console (or allocate one) when needed.
     cmd = [
         "pyinstaller",
         "--onefile",
         "--name",
-        "fs",
+        spec.name,
         "--windowed",
     ]
 
-    # Add data files (tessdata for OCR, translations for the GUI)
-    # Use os.pathsep for cross-platform compatibility (';' on Windows, ':' on Unix)
-    tessdata_src = project_root / "tessdata"
-    tessdata_dst = "tessdata"
-    cmd.extend(["--add-data", f"{tessdata_src}{os.pathsep}{tessdata_dst}"])
+    # Add data directories (tessdata, translations, ...).
+    # Use os.pathsep for cross-platform compatibility (';' on Windows, ':' on Unix).
+    for src_rel, dst in spec.data_dirs:
+        src = project_root / src_rel
+        cmd.extend(["--add-data", f"{src}{os.pathsep}{dst}"])
 
-    translations_src = project_root / "foxhole_stockpiles" / "i18n" / "translations"
-    translations_dst = os.path.join("foxhole_stockpiles", "i18n", "translations")
-    cmd.extend(["--add-data", f"{translations_src}{os.pathsep}{translations_dst}"])
-
-    # Recursively collect every submodule of the package. PyInstaller's static
-    # analysis misses subpackages imported by name (e.g.
-    # core.settings.sections.output), so collect them all explicitly.
-    cmd.extend(["--collect-submodules", "foxhole_stockpiles"])
+    # Recursively collect every submodule of the listed packages. PyInstaller's
+    # static analysis misses subpackages imported by name, so collect them all.
+    for package in spec.collect_packages:
+        cmd.extend(["--collect-submodules", package])
 
     # Add hidden imports (third-party packages with dynamic imports).
-    for import_name in hidden_imports:
+    for import_name in spec.hidden_imports:
         cmd.extend(["--hidden-import", import_name])
 
-    # Exclude development dependencies
+    # Exclude development dependencies.
     exclude_modules = ["pytest", "mypy", "ruff", "pre_commit"]
     for module in exclude_modules:
         cmd.extend(["--exclude-module", module])
 
-    # Add the main script
-    cmd.append("foxhole_stockpiles/__main__.py")
+    # Add the main script.
+    cmd.append(spec.entry_script)
 
-    print(f"Building with {len(hidden_imports)} hidden imports...")
+    print(f"Building with {len(spec.hidden_imports)} hidden imports...")
 
     try:
         subprocess.run(cmd, cwd=project_root, check=True)
-
-        # Check result
-        exe_path = project_root / "dist" / "fs.exe"
-        if exe_path.exists():
-            size_mb = exe_path.stat().st_size / (1024 * 1024)
-            print("\n[OK] Build successful!")
-            print(f"  Executable: {exe_path}")
-            print(f"  Size: {size_mb:.1f} MB")
-
-            # Test the executable
-            print("\n  Testing executable...")
-
-            # Test help
-            result = subprocess.run([str(exe_path), "--help"], capture_output=True, text=True)
-            if result.returncode == 0:
-                print("  [OK] Help command works")
-            else:
-                print("  [FAIL] Help command failed")
-                return False
-
-            # Test subcommand help
-            result = subprocess.run(
-                [str(exe_path), "scanner", "--help"], capture_output=True, text=True
-            )
-            if result.returncode == 0:
-                print("  [OK] Scanner subcommand works")
-            else:
-                print("  [FAIL] Scanner subcommand failed")
-                return False
-
-            print("\n  Usage:")
-            print("    fs          - Launch GUI (console window hidden)")
-            print("    fs gui      - Launch GUI explicitly")
-            print("    fs <cmd>    - Run CLI command")
-            return True
-
-        else:
-            print("[FAIL] Executable not found after build")
-            return False
-
     except subprocess.CalledProcessError as e:
         print(f"[FAIL] Build failed: {e}")
         return False
 
+    exe_path = project_root / "dist" / f"{spec.name}.exe"
+    if not exe_path.exists():
+        print("[FAIL] Executable not found after build")
+        return False
+
+    size_mb = exe_path.stat().st_size / (1024 * 1024)
+    print("\n[OK] Build successful!")
+    print(f"  Executable: {exe_path}")
+    print(f"  Size: {size_mb:.1f} MB")
+
+    # Smoke-test the executable.
+    print("\n  Testing executable...")
+    for args in spec.test_args:
+        result = subprocess.run(
+            [str(exe_path), *args],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        label = " ".join(args) or "(no args)"
+        if result.returncode == 0:
+            print(f"  [OK] '{label}' works")
+        else:
+            print(f"  [FAIL] '{label}' failed")
+            return False
+
+    return True
+
+
+def get_build_specs() -> list[BuildSpec]:
+    """Get the build specs for every executable produced by this script.
+
+    Returns:
+        list[BuildSpec]: The ``fs`` and ``fs-tools`` executable build specs.
+    """
+    return [
+        BuildSpec(
+            name="fs",
+            entry_script="foxhole_stockpiles/__main__.py",
+            collect_packages=["foxhole_stockpiles"],
+            hidden_imports=get_fs_hidden_imports(),
+            data_dirs=[
+                ("tessdata", "tessdata"),
+                (
+                    os.path.join("foxhole_stockpiles", "i18n", "translations"),
+                    os.path.join("foxhole_stockpiles", "i18n", "translations"),
+                ),
+            ],
+            test_args=[["--help"], ["scan", "--help"]],
+        ),
+        BuildSpec(
+            name="fs-tools",
+            # fs_tools/cli.py runs main() under `if __name__ == "__main__"`.
+            entry_script=os.path.join("fs_tools", "cli.py"),
+            collect_packages=["fs_tools", "foxhole_stockpiles"],
+            hidden_imports=get_fs_tools_hidden_imports(),
+            data_dirs=[
+                (
+                    os.path.join("fs_tools", "i18n", "translations"),
+                    os.path.join("fs_tools", "i18n", "translations"),
+                ),
+            ],
+            test_args=[["--help"], ["build-db", "--help"]],
+        ),
+    ]
+
 
 def main() -> None:
-    """Build the unified executable."""
+    """Build every project executable and print a summary."""
     project_root = Path(__file__).parent
 
-    print("Building Foxhole Stockpiles Executable")
+    print("Building Foxhole Stockpiles Executables")
     print("=" * 50)
     print()
 
+    specs = get_build_specs()
+    results: dict[str, bool] = {}
+
     try:
-        success = build_executable(project_root)
-
-        print("\n" + "=" * 50)
-        print("Build Summary")
-        print("=" * 50)
-        print(f"fs.exe: {'[OK] Success' if success else '[FAIL] Failed'}")
-
-        if success:
-            print("\nBuild completed successfully!")
-            print("\nExecutable in dist/:")
-            print("  - fs.exe: Unified CLI/GUI tool")
-            print("            Run without args for GUI, with command for CLI")
-        else:
-            print("\nBuild failed. Check output above for details.")
-            sys.exit(1)
-
+        for spec in specs:
+            results[spec.name] = build_executable(project_root, spec)
+            print()
     except FileNotFoundError:
         print("[FAIL] PyInstaller not found. Install with: pip install pyinstaller")
+        sys.exit(1)
+
+    print("=" * 50)
+    print("Build Summary")
+    print("=" * 50)
+    for name, success in results.items():
+        print(f"{name}.exe: {'[OK] Success' if success else '[FAIL] Failed'}")
+
+    if all(results.values()):
+        print("\nBuild completed successfully!")
+        print("\nExecutables in dist/:")
+        print("  - fs.exe:       Unified CLI/GUI runtime")
+        print("                  Run without args for GUI, with command for CLI")
+        print("  - fs-tools.exe: Catalog/template database tooling")
+        print("                  Run without args for GUI, with command for CLI")
+    else:
+        print("\nBuild failed. Check output above for details.")
         sys.exit(1)
 
 
