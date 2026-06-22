@@ -14,8 +14,6 @@ import tempfile
 from collections.abc import Callable
 from pathlib import Path
 
-from foxhole_stockpiles.core.settings import AppSettings
-from foxhole_stockpiles.core.settings.sections.templates import TemplateSettings
 from foxhole_stockpiles.core.utils import load_catalog
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.models.mod_import_config import ModImportConfig
@@ -674,45 +672,3 @@ class ModImporter:
         )
 
         logger.info("Database build completed successfully")
-
-
-def create_config_from_settings(
-    settings: AppSettings,
-    mod_pak_files: list[str],
-    mod_name: str,
-    overwrite: bool = False,
-    vanilla_pak_file: str | None = None,
-) -> ModImportConfig:
-    """Create ModImportConfig from application settings.
-
-    Args:
-        settings: Application settings
-        mod_pak_files: List of mod PAK file paths
-        mod_name: Name of the mod
-        overwrite: Whether to overwrite existing templates
-        vanilla_pak_file: Optional vanilla PAK file path
-
-    Returns:
-        ModImportConfig: Configuration for mod import
-
-    Raises:
-        ValueError: If required settings are not configured
-    """
-    external_tools = settings.external_tools
-    db_builder = settings.database_builder
-
-    if not db_builder.catalog_file:
-        raise ValueError("catalog_file not configured in database_builder settings")
-
-    return ModImportConfig(
-        mod_pak_files=mod_pak_files,
-        mod_name=mod_name,
-        catalog_path=db_builder.catalog_file,
-        overwrite=overwrite,
-        vanilla_pak_file=vanilla_pak_file,
-        extractor_tool=external_tools.repak,
-        converter_tool=external_tools.umodel,
-        database_path=settings.scanner.database_path,
-        target_resolutions=db_builder.target_resolutions,
-        template_settings=TemplateSettings(),
-    )

@@ -17,7 +17,6 @@ from foxhole_stockpiles.core.settings.sections import (
     ExternalToolsSettings,
     GUISettings,
     LoggingSettings,
-    NotificationsSettings,
     OutputSettings,
     SavProcessingSettings,
     ScannerSettings,
@@ -43,9 +42,6 @@ class AppSettings(BaseSettings):
     )
     database_builder: DatabaseBuilderSettings = Field(
         description="Database builder settings", default_factory=DatabaseBuilderSettings
-    )
-    notifications: NotificationsSettings = Field(
-        description="Notifications settings", default_factory=NotificationsSettings
     )
     gui: GUISettings = Field(description="GUI settings", default_factory=GUISettings)
     sav_processing: SavProcessingSettings = Field(

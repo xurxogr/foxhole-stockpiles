@@ -98,7 +98,6 @@
       "api_server": "API 服务器",
       "scanner": "扫描器",
       "output": "输出",
-      "notifications": "通知",
       "sav_processing": "SAV 处理",
       "logging": "日志",
       "gui": "界面"
@@ -205,46 +204,6 @@
     },
     "remove_handler_title": "移除处理器",
     "remove_handler_message": "您确定要移除 '{name}' 吗？"
-  },
-  "notifications_tab": {
-    "description": "配置 Discord webhook 以接收有关仓库扫描和服务器事件的通知。\n您可以添加具有不同设置的多个通知器。",
-    "enable_notifications": "启用通知",
-    "enable_tooltip": "启用或禁用所有通知的主开关",
-    "notifiers_group": "Discord 通知器",
-    "notifier_dialog": {
-      "title_add": "添加通知器",
-      "title_edit": "编辑通知器",
-      "basic_settings": "基本设置",
-      "name_placeholder": "例如：主 Discord",
-      "name_tooltip": "用于识别此通知器的友好名称",
-      "webhook_url": "Webhook URL：",
-      "webhook_placeholder": "https://discord.com/api/webhooks/...",
-      "webhook_tooltip": "用于发送通知的 Discord webhook URL",
-      "username": "用户名：",
-      "username_placeholder": "Foxhole Stockpiles",
-      "username_tooltip": "webhook 消息显示的自定义用户名",
-      "events_group": "要通知的事件",
-      "events_description": "选择哪些事件应触发通知：",
-      "templates_group": "自定义消息模板（可选）",
-      "templates_description": "覆盖默认消息模板。留空使用默认值。\n占位符：STOCKPILE_NAME、STOCKPILE_TYPE、SHARD、TIME、ITEM_COUNT、\nMATCHED_ITEMS、UNMATCHED_ITEMS、AVG_CONFIDENCE、DURATION、RESOLUTION、ERROR",
-      "webhook_required": "Webhook URL 是必需的。",
-      "webhook_invalid": "Webhook URL 必须以 'https://discord.com/api/webhooks/' 开头",
-      "event_required": "请至少选择一个要通知的事件。"
-    },
-    "events": {
-      "stockpile_scanned": "仓库已扫描",
-      "stockpile_scanned_desc": "当仓库扫描成功完成时",
-      "scan_failed": "扫描失败",
-      "scan_failed_desc": "当仓库扫描失败时",
-      "scan_started": "扫描开始",
-      "scan_started_desc": "当仓库扫描开始时",
-      "server_started": "服务器启动",
-      "server_started_desc": "当 API 服务器启动时",
-      "server_stopped": "服务器停止",
-      "server_stopped_desc": "当 API 服务器停止时"
-    },
-    "remove_notifier_title": "移除通知器",
-    "remove_notifier_message": "您确定要移除 '{name}' 吗？"
   },
   "gui_tab": {
     "config_level_group": "配置级别",

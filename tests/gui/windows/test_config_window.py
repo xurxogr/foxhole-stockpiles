@@ -13,7 +13,6 @@ from foxhole_stockpiles.core.settings.sections import (
     DatabaseBuilderSettings,
     ExternalToolsSettings,
     LoggingSettings,
-    NotificationsSettings,
     OutputSettings,
     SavProcessingSettings,
     ScannerSettings,
@@ -54,7 +53,6 @@ def mock_config_manager() -> Any:
         default_settings.external_tools = ExternalToolsSettings()
         default_settings.database_builder = DatabaseBuilderSettings()
         default_settings.logging = LoggingSettings()
-        default_settings.notifications = NotificationsSettings()
         default_settings.sav_processing = SavProcessingSettings()
         mock_instance.load_config.return_value = default_settings
 
@@ -132,21 +130,21 @@ def test_config_window_config_level_tabs(qtbot: Any, mock_config_manager: MagicM
     assert window.tab_widget.count() == 4
 
     # Test ADVANCED level
-    # (6 tabs: + Notifications, SAV Processing)
+    # (5 tabs: + SAV Processing)
     settings.gui = GUISettings(config_level=ConfigLevel.ADVANCED)
     mock_config_manager.load_config.return_value = settings
 
     window2 = ConfigWindow()
     qtbot.addWidget(window2)
-    assert window2.tab_widget.count() == 6
+    assert window2.tab_widget.count() == 5
 
-    # Test DEVELOPER level (6 tabs: same sections as ADVANCED)
+    # Test DEVELOPER level (5 tabs: same sections as ADVANCED)
     settings.gui = GUISettings(config_level=ConfigLevel.DEVELOPER)
     mock_config_manager.load_config.return_value = settings
 
     window3 = ConfigWindow()
     qtbot.addWidget(window3)
-    assert window3.tab_widget.count() == 6
+    assert window3.tab_widget.count() == 5
     assert window3.tab_widget.tabText(0) == t("config_window.tabs.scanner")
 
 
@@ -356,24 +354,6 @@ def test_config_window_close_button_closes_window(qtbot: Any, config_window: Con
     # close_button is a named attribute on ConfigWindow
     assert config_window.close_button is not None
     assert config_window.close_button.text() == t("common.close")
-
-
-def test_config_window_preserves_notifications_settings(config_window: ConfigWindow) -> None:
-    """Test that notifications settings are preserved when collecting.
-
-    Args:
-        config_window: ConfigWindow instance
-    """
-    # Set custom notifications settings
-    custom_notifications = NotificationsSettings()
-    assert config_window.settings is not None
-    config_window.settings.notifications = custom_notifications
-
-    # Collect settings (basic mode)
-    settings = config_window.collect_settings()
-
-    # Should preserve notifications
-    assert isinstance(settings.notifications, NotificationsSettings)
 
 
 def test_config_window_geometry(config_window: ConfigWindow) -> None:
@@ -733,7 +713,7 @@ class TestSaveSettingsConfigLevelChange:
         config_window.save_settings()
 
         # Tabs should be rebuilt with more tabs
-        assert config_window.tab_widget.count() == 6
+        assert config_window.tab_widget.count() == 5
 
 
 class TestRetranslate:

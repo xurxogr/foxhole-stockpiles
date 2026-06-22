@@ -33,25 +33,6 @@ class ExternalToolsTab(QWidget):
         "uassetgui": "https://github.com/atenfyr/UAssetGUI/releases",
     }
 
-    # Tool descriptions (for programmatic access - tooltips use translations)
-    TOOL_DESCRIPTIONS = {
-        "repak": (
-            "Path to repak executable for extracting PAK files.\n\n"
-            "Required for extracting game assets from PAK files.\n"
-            "Download from: https://github.com/trumank/repak"
-        ),
-        "umodel": (
-            "Path to umodel executable for converting UAsset files to PNG.\n\n"
-            "Required for the 'Build Database' feature.\n"
-            "Download from: https://www.gildor.org/en/projects/umodel"
-        ),
-        "uassetgui": (
-            "Path to UAssetGUI executable for converting UAsset files to JSON.\n\n"
-            "Required for the 'Build Catalog' feature.\n"
-            "Download from: https://github.com/atenfyr/UAssetGUI"
-        ),
-    }
-
     def __init__(
         self,
         parent: QWidget | None = None,

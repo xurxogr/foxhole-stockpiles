@@ -98,7 +98,6 @@
       "api_server": "Servidor API",
       "scanner": "Escáner",
       "output": "Salida",
-      "notifications": "Notificaciones",
       "sav_processing": "Procesamiento SAV",
       "logging": "Registros",
       "gui": "Interfaz"
@@ -205,46 +204,6 @@
     },
     "remove_handler_title": "Eliminar manejador",
     "remove_handler_message": "¿Está seguro de que desea eliminar '{name}'?"
-  },
-  "notifications_tab": {
-    "description": "Configure webhooks de Discord para recibir notificaciones sobre escaneos de almacenes\ny eventos del servidor. Puede añadir múltiples notificadores con diferentes configuraciones.",
-    "enable_notifications": "Habilitar notificaciones",
-    "enable_tooltip": "Interruptor maestro para habilitar o deshabilitar todas las notificaciones",
-    "notifiers_group": "Notificadores de Discord",
-    "notifier_dialog": {
-      "title_add": "Añadir notificador",
-      "title_edit": "Editar notificador",
-      "basic_settings": "Configuración básica",
-      "name_placeholder": "ej., Discord principal",
-      "name_tooltip": "Un nombre amigable para identificar este notificador",
-      "webhook_url": "URL Webhook:",
-      "webhook_placeholder": "https://discord.com/api/webhooks/...",
-      "webhook_tooltip": "URL del webhook de Discord para enviar notificaciones",
-      "username": "Usuario:",
-      "username_placeholder": "Foxhole Stockpiles",
-      "username_tooltip": "Nombre de usuario personalizado mostrado para mensajes del webhook",
-      "events_group": "Eventos a notificar",
-      "events_description": "Seleccione qué eventos deben disparar notificaciones:",
-      "templates_group": "Plantillas de mensaje personalizadas (Opcional)",
-      "templates_description": "Sobrescribir plantillas de mensaje por defecto. Deje en blanco para usar valores por defecto.\nMarcadores: STOCKPILE_NAME, STOCKPILE_TYPE, SHARD, TIME, ITEM_COUNT,\nMATCHED_ITEMS, UNMATCHED_ITEMS, AVG_CONFIDENCE, DURATION, RESOLUTION, ERROR",
-      "webhook_required": "La URL del webhook es requerida.",
-      "webhook_invalid": "La URL del webhook debe comenzar con 'https://discord.com/api/webhooks/'",
-      "event_required": "Por favor, seleccione al menos un evento a notificar."
-    },
-    "events": {
-      "stockpile_scanned": "Almacén escaneado",
-      "stockpile_scanned_desc": "Cuando un escaneo de almacén se completa exitosamente",
-      "scan_failed": "Escaneo fallido",
-      "scan_failed_desc": "Cuando un escaneo de almacén falla",
-      "scan_started": "Escaneo iniciado",
-      "scan_started_desc": "Cuando un escaneo de almacén comienza",
-      "server_started": "Servidor iniciado",
-      "server_started_desc": "Cuando el servidor API inicia",
-      "server_stopped": "Servidor detenido",
-      "server_stopped_desc": "Cuando el servidor API se detiene"
-    },
-    "remove_notifier_title": "Eliminar notificador",
-    "remove_notifier_message": "¿Está seguro de que desea eliminar '{name}'?"
   },
   "gui_tab": {
     "config_level_group": "Nivel de configuración",

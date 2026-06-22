@@ -32,8 +32,6 @@ dependencies = [
     "pydantic_settings>=2.14.1",
     # HDF5 for database storage
     "h5py>=3.16.0",
-    # Notifications
-    "discord-webhook>=1.3.1",
     # Screenshot capture (window detection + global hotkey)
     "pywinctl>=0.4",
     "pynput>=1.7.7",

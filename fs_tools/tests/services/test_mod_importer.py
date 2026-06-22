@@ -1387,56 +1387,6 @@ class TestBuildDatabase:
 # ===== Create Config From Settings Tests =====
 
 
-class TestCreateConfigFromSettings:
-    """Test suite for create_config_from_settings function."""
-
-    def test_create_config_success(self, tmp_path: Path) -> None:
-        """Test successful config creation from settings."""
-        from fs_tools.services.mod_importer import create_config_from_settings
-
-        catalog = tmp_path / "catalog.json"
-        catalog.touch()
-
-        settings = MagicMock()
-        settings.database_builder.catalog_file = catalog
-        settings.database_builder.target_resolutions = ["1080"]
-        settings.external_tools.repak = tmp_path / "repak.exe"
-        settings.external_tools.umodel = tmp_path / "umodel.exe"
-        settings.scanner.database_path = tmp_path / "db.h5"
-        settings.templates = None
-
-        config = create_config_from_settings(
-            settings=settings,
-            mod_pak_files=["test.pak"],
-            mod_name="TestMod",
-            overwrite=True,
-            vanilla_pak_file="vanilla.pak",
-        )
-
-        assert config.mod_pak_files == ["test.pak"]
-        assert config.mod_name == "TestMod"
-        assert config.overwrite is True
-        assert config.vanilla_pak_file == "vanilla.pak"
-        assert config.catalog_path == catalog
-
-    def test_create_config_no_catalog_raises(self) -> None:
-        """Test config creation raises when catalog is not configured."""
-        from fs_tools.services.mod_importer import create_config_from_settings
-
-        settings = MagicMock()
-        settings.database_builder.catalog_file = None
-
-        with pytest.raises(ValueError, match="catalog_file not configured"):
-            create_config_from_settings(
-                settings=settings,
-                mod_pak_files=["test.pak"],
-                mod_name="TestMod",
-            )
-
-
-# ===== PAK Validation Tests =====
-
-
 class TestPakValidation:
     """Test suite for PAK file validation."""
 

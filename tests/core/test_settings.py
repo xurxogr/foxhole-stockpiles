@@ -242,7 +242,7 @@ class TestConfigMigration:
         migrated = ConfigMigrator.apply_migrations(v1_config)
 
         # Verify migration occurred (v1 -> ... -> v8)
-        assert migrated["config_version"] == 11
+        assert migrated["config_version"] == 12
         assert "output_format" not in migrated
         assert "output" in migrated
         assert len(migrated["output"]["handlers"]) == 1
@@ -256,7 +256,7 @@ class TestConfigMigration:
 
         # Verify the migrated config can be loaded
         settings = AppSettings(**migrated)
-        assert settings.config_version == 11
+        assert settings.config_version == 12
         assert len(settings.output.handlers) == 1
         handler = settings.output.handlers[0].handler
         assert isinstance(handler, WebhookHandlerSettings)
@@ -279,7 +279,7 @@ class TestConfigMigration:
         migrated = ConfigMigrator.apply_migrations(v2_config)
 
         # Should migrate to v7 (v2 -> ... -> v8)
-        assert migrated["config_version"] == 11
+        assert migrated["config_version"] == 12
         assert len(migrated["output"]["handlers"]) == 1
         handler_config = migrated["output"]["handlers"][0]
         assert handler_config["handler"]["type"] == "file"
@@ -287,7 +287,7 @@ class TestConfigMigration:
 
         # Verify the migrated config can be loaded
         settings = AppSettings(**migrated)
-        assert settings.config_version == 11
+        assert settings.config_version == 12
         assert len(settings.output.handlers) == 1
         handler = settings.output.handlers[0].handler
         assert isinstance(handler, FileHandlerSettings)
@@ -296,7 +296,7 @@ class TestConfigMigration:
     def test_default_config_is_v7(self) -> None:
         """Test that default config is version 7."""
         settings = AppSettings()
-        assert settings.config_version == 11
+        assert settings.config_version == 12
 
     def test_migrate_v1_to_v2_with_scanner_fields_cleanup(self) -> None:
         """Test migration removes deprecated scanner fields."""
@@ -318,7 +318,7 @@ class TestConfigMigration:
         migrated = ConfigMigrator.apply_migrations(v1_config)
 
         # Verify migration occurred (v1 -> ... -> v8)
-        assert migrated["config_version"] == 11
+        assert migrated["config_version"] == 12
         # Verify deprecated fields are removed
         assert "confidence_threshold" not in migrated["scanner"]
         assert "confidence_by_resolution" not in migrated["scanner"]
@@ -327,7 +327,7 @@ class TestConfigMigration:
 
         # Verify the migrated config can be loaded
         settings = AppSettings(**migrated)
-        assert settings.config_version == 11
+        assert settings.config_version == 12
         assert settings.scanner.early_exit_threshold == 0.95
 
     def test_migrate_config_with_non_dict_data(self) -> None:
@@ -353,12 +353,34 @@ class TestConfigMigration:
         }
 
         migrated = ConfigMigrator.apply_migrations(v3_config)
-        assert migrated["config_version"] == 11
+        assert migrated["config_version"] == 12
         assert "stockpile_types" not in migrated
 
         settings = AppSettings(**v3_config)  # type: ignore[arg-type]
-        assert settings.config_version == 11
+        assert settings.config_version == 12
         assert not hasattr(settings, "stockpile_types")
+
+    def test_migrate_v11_to_v12_drops_notifications(self) -> None:
+        """A v11 config with a notifications section migrates to v12, dropping it.
+
+        The notifications stack was dead code (never wired into the scan flow),
+        so the section is removed and must not survive a full migration.
+        """
+        v11_config = {
+            "config_version": 11,
+            "notifications": {
+                "enabled": True,
+                "notifiers": [{"type": "discord", "webhook_url": "https://example/x"}],
+            },
+        }
+
+        migrated = ConfigMigrator.apply_migrations(v11_config)
+        assert migrated["config_version"] == 12
+        assert "notifications" not in migrated
+
+        settings = AppSettings(**v11_config)  # type: ignore[arg-type]
+        assert settings.config_version == 12
+        assert not hasattr(settings, "notifications")
 
     def test_migrate_v6_to_v7_removes_uesave(self) -> None:
         """Test migration from v6 removes uesave from external_tools."""
@@ -374,7 +396,7 @@ class TestConfigMigration:
 
         migrated = ConfigMigrator.apply_migrations(v6_config)
 
-        assert migrated["config_version"] == 11
+        assert migrated["config_version"] == 12
         assert "uesave" not in migrated["external_tools"]
         assert migrated["external_tools"]["repak"] == "/path/to/repak"
         assert migrated["external_tools"]["umodel"] == "/path/to/umodel"
@@ -382,7 +404,7 @@ class TestConfigMigration:
 
         # Verify the migrated config can be loaded
         settings = AppSettings(**migrated)
-        assert settings.config_version == 11
+        assert settings.config_version == 12
         assert not hasattr(settings.external_tools, "uesave")
 
     def test_migrate_v6_to_v7_no_external_tools(self) -> None:
@@ -393,10 +415,10 @@ class TestConfigMigration:
 
         migrated = ConfigMigrator.apply_migrations(v6_config)
 
-        assert migrated["config_version"] == 11
+        assert migrated["config_version"] == 12
         # Should work without error
         settings = AppSettings(**migrated)
-        assert settings.config_version == 11
+        assert settings.config_version == 12
 
     def test_migrate_v7_to_v8_drops_ocr_and_template_sections(self) -> None:
         """Test migration from v7 removes ocr/templates sections and scanner extras."""
@@ -417,7 +439,7 @@ class TestConfigMigration:
 
         migrated = ConfigMigrator.apply_migrations(v7_config)
 
-        assert migrated["config_version"] == 11
+        assert migrated["config_version"] == 12
         # Top-level sections removed
         assert "ocr" not in migrated
         assert "templates" not in migrated
@@ -431,7 +453,7 @@ class TestConfigMigration:
 
         # Verify the migrated config can be loaded
         settings = AppSettings(**migrated)
-        assert settings.config_version == 11
+        assert settings.config_version == 12
         assert not hasattr(settings, "ocr")
         assert not hasattr(settings, "templates")
         assert settings.scanner.early_exit_threshold == 0.95
@@ -445,10 +467,10 @@ class TestConfigMigration:
 
         migrated = ConfigMigrator.apply_migrations(v7_config)
 
-        assert migrated["config_version"] == 11
+        assert migrated["config_version"] == 12
         assert "ocr" not in migrated
         settings = AppSettings(**migrated)
-        assert settings.config_version == 11
+        assert settings.config_version == 12
 
     def test_migrate_v8_to_v9_drops_web_icon_mod(self) -> None:
         """Test migration from v8 removes api_server.web_icon_mod."""
@@ -465,13 +487,13 @@ class TestConfigMigration:
 
         # The full migration chain ends at v10, which drops the api_server
         # section entirely (the runtime no longer hosts a REST server).
-        assert migrated["config_version"] == 11
+        assert migrated["config_version"] == 12
         assert "api_server" not in migrated
         assert "api_auth" not in migrated
 
         # Verify the migrated config can be loaded (model forbids extra fields)
         settings = AppSettings(**migrated)
-        assert settings.config_version == 11
+        assert settings.config_version == 12
         assert not hasattr(settings, "api_server")
 
     def test_migrate_v9_to_v10_drops_api_sections(self) -> None:
@@ -485,13 +507,13 @@ class TestConfigMigration:
 
         migrated = ConfigMigrator.apply_migrations(v9_config)
 
-        assert migrated["config_version"] == 11
+        assert migrated["config_version"] == 12
         assert "api_server" not in migrated
         assert "api_auth" not in migrated
         assert migrated["scanner"]["database_path"] == "db.h5"
 
         settings = AppSettings(**migrated)
-        assert settings.config_version == 11
+        assert settings.config_version == 12
         assert settings.scanner.capture_key is None
 
     def test_migrate_v8_to_v9_no_api_server_section(self) -> None:
@@ -500,9 +522,9 @@ class TestConfigMigration:
 
         migrated = ConfigMigrator.apply_migrations(v8_config)
 
-        assert migrated["config_version"] == 11
+        assert migrated["config_version"] == 12
         settings = AppSettings(**migrated)
-        assert settings.config_version == 11
+        assert settings.config_version == 12
 
     def test_migrate_v10_to_v11_drops_stockpile_types_and_dead_scanner_fields(self) -> None:
         """Test migration from v10 removes stockpile_types and dead scanner knobs."""
@@ -522,7 +544,7 @@ class TestConfigMigration:
 
         migrated = ConfigMigrator.apply_migrations(v10_config)
 
-        assert migrated["config_version"] == 11
+        assert migrated["config_version"] == 12
         assert "stockpile_types" not in migrated
         # Live scanner fields preserved (early_exit_threshold -> fs_tools;
         # screenshots_folder -> capture saving).
@@ -535,7 +557,7 @@ class TestConfigMigration:
             assert dead not in migrated["scanner"]
 
         settings = AppSettings(**migrated)
-        assert settings.config_version == 11
+        assert settings.config_version == 12
         assert not hasattr(settings, "stockpile_types")
         assert settings.scanner.confidence_gap == 0.2
         assert settings.scanner.early_exit_threshold == 0.95

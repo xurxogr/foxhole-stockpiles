@@ -98,7 +98,6 @@
       "api_server": "API-Server",
       "scanner": "Scanner",
       "output": "Ausgabe",
-      "notifications": "Benachrichtigungen",
       "sav_processing": "SAV Verarbeitung",
       "logging": "Protokollierung",
       "gui": "Oberfläche"
@@ -205,46 +204,6 @@
     },
     "remove_handler_title": "Handler entfernen",
     "remove_handler_message": "Sind Sie sicher dass Sie '{name}' entfernen möchten?"
-  },
-  "notifications_tab": {
-    "description": "Konfigurieren Sie Discord-Webhooks um Benachrichtigungen über Lagerscans\nund Server-Ereignisse zu erhalten. Sie können mehrere Benachrichtiger mit verschiedenen Einstellungen hinzufügen.",
-    "enable_notifications": "Benachrichtigungen aktivieren",
-    "enable_tooltip": "Hauptschalter zum Aktivieren oder Deaktivieren aller Benachrichtigungen",
-    "notifiers_group": "Discord-Benachrichtiger",
-    "notifier_dialog": {
-      "title_add": "Benachrichtiger hinzufügen",
-      "title_edit": "Benachrichtiger bearbeiten",
-      "basic_settings": "Grundeinstellungen",
-      "name_placeholder": "z.B., Haupt-Discord",
-      "name_tooltip": "Ein freundlicher Name zur Identifizierung dieses Benachrichtigers",
-      "webhook_url": "Webhook-URL:",
-      "webhook_placeholder": "https://discord.com/api/webhooks/...",
-      "webhook_tooltip": "Discord-Webhook-URL zum Senden von Benachrichtigungen",
-      "username": "Benutzername:",
-      "username_placeholder": "Foxhole Stockpiles",
-      "username_tooltip": "Benutzerdefinierter Benutzername für Webhook-Nachrichten",
-      "events_group": "Zu benachrichtigende Ereignisse",
-      "events_description": "Wählen Sie welche Ereignisse Benachrichtigungen auslösen sollen:",
-      "templates_group": "Benutzerdefinierte Nachrichtenvorlagen (Optional)",
-      "templates_description": "Standard-Nachrichtenvorlagen überschreiben. Leer lassen für Standards.\nPlatzhalter: STOCKPILE_NAME, STOCKPILE_TYPE, SHARD, TIME, ITEM_COUNT,\nMATCHED_ITEMS, UNMATCHED_ITEMS, AVG_CONFIDENCE, DURATION, RESOLUTION, ERROR",
-      "webhook_required": "Webhook-URL ist erforderlich.",
-      "webhook_invalid": "Webhook-URL muss mit 'https://discord.com/api/webhooks/' beginnen",
-      "event_required": "Bitte wählen Sie mindestens ein Ereignis zur Benachrichtigung."
-    },
-    "events": {
-      "stockpile_scanned": "Lager gescannt",
-      "stockpile_scanned_desc": "Wenn ein Lagerscan erfolgreich abgeschlossen wird",
-      "scan_failed": "Scan fehlgeschlagen",
-      "scan_failed_desc": "Wenn ein Lagerscan fehlschlägt",
-      "scan_started": "Scan gestartet",
-      "scan_started_desc": "Wenn ein Lagerscan beginnt",
-      "server_started": "Server gestartet",
-      "server_started_desc": "Wenn der API-Server startet",
-      "server_stopped": "Server gestoppt",
-      "server_stopped_desc": "Wenn der API-Server stoppt"
-    },
-    "remove_notifier_title": "Benachrichtiger entfernen",
-    "remove_notifier_message": "Sind Sie sicher dass Sie '{name}' entfernen möchten?"
   },
   "gui_tab": {
     "config_level_group": "Konfigurationsstufe",

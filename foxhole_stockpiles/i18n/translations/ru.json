@@ -98,7 +98,6 @@
       "api_server": "API сервер",
       "scanner": "Сканер",
       "output": "Вывод",
-      "notifications": "Уведомления",
       "sav_processing": "Обработка SAV",
       "logging": "Логирование",
       "gui": "Интерфейс"
@@ -205,46 +204,6 @@
     },
     "remove_handler_title": "Удалить обработчик",
     "remove_handler_message": "Вы уверены, что хотите удалить '{name}'?"
-  },
-  "notifications_tab": {
-    "description": "Настройка вебхуков Discord для получения уведомлений о сканировании складов\nи событиях сервера. Вы можете добавить несколько уведомителей с разными настройками.",
-    "enable_notifications": "Включить уведомления",
-    "enable_tooltip": "Главный переключатель для включения или отключения всех уведомлений",
-    "notifiers_group": "Уведомители Discord",
-    "notifier_dialog": {
-      "title_add": "Добавить уведомитель",
-      "title_edit": "Редактировать уведомитель",
-      "basic_settings": "Основные настройки",
-      "name_placeholder": "напр., Основной Discord",
-      "name_tooltip": "Понятное имя для идентификации этого уведомителя",
-      "webhook_url": "URL вебхука:",
-      "webhook_placeholder": "https://discord.com/api/webhooks/...",
-      "webhook_tooltip": "URL вебхука Discord для отправки уведомлений",
-      "username": "Имя пользователя:",
-      "username_placeholder": "Foxhole Stockpiles",
-      "username_tooltip": "Пользовательское имя для сообщений вебхука",
-      "events_group": "События для уведомлений",
-      "events_description": "Выберите события, которые должны вызывать уведомления:",
-      "templates_group": "Пользовательские шаблоны сообщений (опционально)",
-      "templates_description": "Переопределите шаблоны сообщений по умолчанию. Оставьте пустым для использования стандартных.\nЗаполнители: STOCKPILE_NAME, STOCKPILE_TYPE, SHARD, TIME, ITEM_COUNT,\nMATCHED_ITEMS, UNMATCHED_ITEMS, AVG_CONFIDENCE, DURATION, RESOLUTION, ERROR",
-      "webhook_required": "URL вебхука обязателен.",
-      "webhook_invalid": "URL вебхука должен начинаться с 'https://discord.com/api/webhooks/'",
-      "event_required": "Пожалуйста, выберите хотя бы одно событие для уведомления."
-    },
-    "events": {
-      "stockpile_scanned": "Склад отсканирован",
-      "stockpile_scanned_desc": "Когда сканирование склада успешно завершено",
-      "scan_failed": "Сканирование не удалось",
-      "scan_failed_desc": "Когда сканирование склада завершилось с ошибкой",
-      "scan_started": "Сканирование начато",
-      "scan_started_desc": "Когда начинается сканирование склада",
-      "server_started": "Сервер запущен",
-      "server_started_desc": "Когда API сервер запускается",
-      "server_stopped": "Сервер остановлен",
-      "server_stopped_desc": "Когда API сервер останавливается"
-    },
-    "remove_notifier_title": "Удалить уведомитель",
-    "remove_notifier_message": "Вы уверены, что хотите удалить '{name}'?"
   },
   "gui_tab": {
     "config_level_group": "Уровень конфигурации",

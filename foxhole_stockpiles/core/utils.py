@@ -5,11 +5,10 @@ import gc
 import json
 import logging
 import os
-import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any
 
 import cv2
 import numpy as np
@@ -67,30 +66,6 @@ def validate_tool_path(path: Path) -> None:
             raise ValueError(
                 f"Invalid executable extension '{path.suffix}' for Windows tool: {path}"
             )
-
-
-def get_tesseract_version() -> str | None:
-    """Get Tesseract version without showing console window on Windows.
-
-    Returns:
-        str | None: Tesseract version string, or None if not found
-    """
-    try:
-        result = subprocess.run(
-            ["tesseract", "--version"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-            **get_subprocess_kwargs(),
-        )
-        if result.returncode == 0:
-            # First line is typically "tesseract X.X.X"
-            stdout: str = result.stdout
-            first_line = stdout.strip().split("\n")[0]
-            return first_line
-        return None
-    except (subprocess.SubprocessError, FileNotFoundError, subprocess.TimeoutExpired):
-        return None
 
 
 def is_frozen() -> bool:
@@ -162,31 +137,6 @@ def load_catalog(path: Path) -> list[CatalogItem]:
     return valid_items
 
 
-T = TypeVar("T")
-
-
-def most_frequent[T](items: list[T]) -> T | None:
-    """Return the most frequently occurring item, or None if there's a tie.
-
-    Args:
-        items (list[T]): List of items to analyze.
-
-    Returns:
-        T | None: The most frequently occurring item, or None if multiple items tie for most
-            frequent.
-    """
-    if not items:
-        return None
-
-    unique_items = set(items)
-    max_count = max(items.count(item) for item in unique_items)
-
-    # Count how many items have the maximum frequency
-    items_with_max_count = sum(1 for item in unique_items if items.count(item) == max_count)
-
-    return None if items_with_max_count > 1 else max(unique_items, key=items.count)
-
-
 def compute_icon_phash(icon_image: NDArray[np.uint8]) -> int:
     """Compute perceptual hash for an icon image.
 
@@ -209,30 +159,6 @@ def compute_icon_phash(icon_image: NDArray[np.uint8]) -> int:
     # Create binary hash based on pixel values above/below average
     bits = (img_resized > avg).astype(np.uint8)
     return int("".join(str(b) for b in bits.flatten()), 2)
-
-
-def extract_day_and_hour(text: str) -> str:
-    """Extracts Days and Hours from a formatted string.
-
-    Args:
-        text (str): Input text containing numbers and commas.
-
-    Returns:
-        str: Formatted string with days and hours, e.g. "1234, 15:30".
-    """
-    # Find all digit/comma groups and join
-    result = "".join(re.findall(r"[\d,]+", text))
-    # Remove first comma if exactly two commas
-    if result.count(",") == 2:
-        result = result.replace(",", "", 1)
-    # Try to split into left/right by first comma
-    parts = result.split(",", 1)
-    if len(parts) == 2:
-        left, right = parts
-        digits = re.sub(r"\D", "", right)
-        if len(digits) == 4:
-            return f"{left}, {digits[:2]}:{digits[2:]}"
-    return result
 
 
 def malloc_trim(pad: int = 0) -> int:

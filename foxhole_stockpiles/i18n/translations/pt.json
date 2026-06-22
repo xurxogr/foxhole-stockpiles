@@ -98,7 +98,6 @@
       "api_server": "Servidor API",
       "scanner": "Digitalizador",
       "output": "Saída",
-      "notifications": "Notificações",
       "sav_processing": "Processamento SAV",
       "logging": "Registos",
       "gui": "Interface"
@@ -205,46 +204,6 @@
     },
     "remove_handler_title": "Remover handler",
     "remove_handler_message": "Tem a certeza de que deseja remover '{name}'?"
-  },
-  "notifications_tab": {
-    "description": "Configure webhooks do Discord para receber notificações sobre digitalizações de armazéns\ne eventos do servidor. Pode adicionar múltiplos notificadores com diferentes configurações.",
-    "enable_notifications": "Ativar notificações",
-    "enable_tooltip": "Interruptor principal para ativar ou desativar todas as notificações",
-    "notifiers_group": "Notificadores do Discord",
-    "notifier_dialog": {
-      "title_add": "Adicionar notificador",
-      "title_edit": "Editar notificador",
-      "basic_settings": "Configuração básica",
-      "name_placeholder": "ex., Discord principal",
-      "name_tooltip": "Um nome amigável para identificar este notificador",
-      "webhook_url": "URL Webhook:",
-      "webhook_placeholder": "https://discord.com/api/webhooks/...",
-      "webhook_tooltip": "URL do webhook do Discord para enviar notificações",
-      "username": "Utilizador:",
-      "username_placeholder": "Foxhole Stockpiles",
-      "username_tooltip": "Nome de utilizador personalizado mostrado para mensagens do webhook",
-      "events_group": "Eventos a notificar",
-      "events_description": "Selecione quais eventos devem disparar notificações:",
-      "templates_group": "Modelos de mensagem personalizados (Opcional)",
-      "templates_description": "Sobrescrever modelos de mensagem predefinidos. Deixe em branco para usar valores predefinidos.\nMarcadores: STOCKPILE_NAME, STOCKPILE_TYPE, SHARD, TIME, ITEM_COUNT,\nMATCHED_ITEMS, UNMATCHED_ITEMS, AVG_CONFIDENCE, DURATION, RESOLUTION, ERROR",
-      "webhook_required": "O URL do webhook é obrigatório.",
-      "webhook_invalid": "O URL do webhook deve começar com 'https://discord.com/api/webhooks/'",
-      "event_required": "Por favor, selecione pelo menos um evento a notificar."
-    },
-    "events": {
-      "stockpile_scanned": "Armazém digitalizado",
-      "stockpile_scanned_desc": "Quando uma digitalização de armazém é concluída com sucesso",
-      "scan_failed": "Digitalização falhada",
-      "scan_failed_desc": "Quando uma digitalização de armazém falha",
-      "scan_started": "Digitalização iniciada",
-      "scan_started_desc": "Quando uma digitalização de armazém começa",
-      "server_started": "Servidor iniciado",
-      "server_started_desc": "Quando o servidor API inicia",
-      "server_stopped": "Servidor parado",
-      "server_stopped_desc": "Quando o servidor API para"
-    },
-    "remove_notifier_title": "Remover notificador",
-    "remove_notifier_message": "Tem a certeza de que deseja remover '{name}'?"
   },
   "gui_tab": {
     "config_level_group": "Nível de configuração",

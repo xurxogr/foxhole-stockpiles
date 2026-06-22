@@ -117,33 +117,33 @@ def unconfigured_window(
 def test_configured_window_initialization(configured_window: CatalogBuilderWindow) -> None:
     """Test configured window initialization."""
     assert configured_window.windowTitle() == t("catalog_builder.title")
-    assert configured_window.is_configured is True
+    assert CatalogBuilderWindow.requirements_met(configured_window.settings) is True
     assert configured_window.pak_file is None
     assert configured_window.build_worker is None
 
 
 def test_unconfigured_window_shows_warning(unconfigured_window: CatalogBuilderWindow) -> None:
     """Test unconfigured window shows configuration warning."""
-    assert unconfigured_window.is_configured is False
+    assert CatalogBuilderWindow.requirements_met(unconfigured_window.settings) is False
 
 
 # ===== Check Configuration Tests =====
 
 
-def test_check_configuration_true(configured_window: CatalogBuilderWindow) -> None:
-    """Test _check_configuration returns True when configured."""
-    assert configured_window._check_configuration() is True
+def test_requirements_met_true(configured_window: CatalogBuilderWindow) -> None:
+    """Test requirements_met returns True when configured."""
+    assert CatalogBuilderWindow.requirements_met(configured_window.settings) is True
 
 
-def test_check_configuration_missing_tools(qtbot: Any, tmp_path: Path) -> None:
-    """Test _check_configuration returns False when tools missing."""
+def test_requirements_met_missing_tools(qtbot: Any, tmp_path: Path) -> None:
+    """Test requirements_met returns False when tools missing."""
     settings = AppSettings(external_tools=ExternalToolsSettings(repak=None, uassetgui=None))
 
     with patch("fs_tools.gui.windows.catalog_builder_window.get_settings") as mock_get_settings:
         mock_get_settings.return_value = settings
         window = CatalogBuilderWindow()
         qtbot.addWidget(window)
-        assert window._check_configuration() is False
+        assert CatalogBuilderWindow.requirements_met(window.settings) is False
 
 
 # ===== PAK File Selection Tests =====

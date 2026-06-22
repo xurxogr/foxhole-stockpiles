@@ -4,7 +4,6 @@ from foxhole_stockpiles.core.settings.sections.database_builder import DatabaseB
 from foxhole_stockpiles.core.settings.sections.external_tools import ExternalToolsSettings
 from foxhole_stockpiles.core.settings.sections.gui import GUISettings
 from foxhole_stockpiles.core.settings.sections.logging import LoggingSettings
-from foxhole_stockpiles.core.settings.sections.notifications import NotificationsSettings
 from foxhole_stockpiles.core.settings.sections.output import (
     ConsoleHandlerSettings,
     CsvFormatSettings,
@@ -29,7 +28,6 @@ __all__ = [
     "GUISettings",
     "JsonFormatSettings",
     "LoggingSettings",
-    "NotificationsSettings",
     "OutputHandlerConfig",
     "OutputSettings",
     "ReturnHandlerSettings",

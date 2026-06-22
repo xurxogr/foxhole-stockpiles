@@ -914,65 +914,6 @@ class TemplateManager:
         write_time = time.perf_counter() - write_start
         logger.debug("HDF5 write time: %.3f seconds", write_time)
 
-    def needs_migration(self) -> bool:
-        """Check if database needs to be migrated to current version.
-
-        Returns:
-            bool: True if database exists and is not at the current version
-        """
-        if not self.database_path.exists():
-            return False
-
-        db_version = self._check_database_version(self.database_path)
-        # Version 0 means invalid/corrupted, not a migration case
-        return db_version != 0 and db_version != DATABASE_VERSION
-
-    def migrate_database(self, output_path: Path | None = None, workers: int | None = None) -> None:
-        """Migrate database from current version to latest version.
-
-        Applies all necessary migrations sequentially (e.g., v1→v2→v3→v4).
-
-        Args:
-            output_path (Path | None): Output path for migrated database. If None, uses
-                database_path with appropriate extension
-            workers (int | None): Number of worker processes for parallel data preparation.
-                If None, uses os.cpu_count(). Set to 1 to disable multiprocessing.
-
-        Raises:
-            FileNotFoundError: If database_path doesn't exist
-            ValueError: If database is corrupted or migration fails
-        """
-        if not self.database_path.exists():
-            raise FileNotFoundError(f"Database file not found: {self.database_path}")
-
-        # Get current version
-        current_version = self._check_database_version(self.database_path)
-
-        if current_version == 0:
-            raise ValueError("Database file is corrupted or in an unrecognized format")
-
-        if current_version == DATABASE_VERSION:
-            raise ValueError(f"Database is already at version {DATABASE_VERSION}")
-
-        logger.info(
-            "Starting migration from version %d to version %d", current_version, DATABASE_VERSION
-        )
-
-        while current_version < DATABASE_VERSION:
-            next_version = current_version + 1
-            logger.info("Applying migration: v%d → v%d", current_version, next_version)
-
-            match current_version:
-                case _:
-                    raise ValueError(
-                        f"No migration path from version {current_version} to {next_version}. "
-                        "Please regenerate the database using 'fs generate-templates'."
-                    )
-
-            current_version = next_version
-
-        logger.info("Migration complete: now at version %d", DATABASE_VERSION)
-
     def __repr__(self) -> str:
         """String representation of the template manager."""
         return (

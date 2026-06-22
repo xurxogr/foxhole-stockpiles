@@ -40,8 +40,6 @@ def get_fs_hidden_imports() -> list[str]:
         "pynput",
         "pynput.keyboard",
         "pywinctl",
-        # Notifications
-        "discord_webhook",
         # Google Sheets output handler
         "google.oauth2.credentials",
         "google.auth.transport.requests",
@@ -68,9 +66,7 @@ def get_fs_hidden_imports() -> list[str]:
         "foxhole_stockpiles.core.settings.sections.scanner",
         "foxhole_stockpiles.core.settings.sections.logging",
         "foxhole_stockpiles.core.settings.sections.gui",
-        "foxhole_stockpiles.core.settings.sections.notifications",
         "foxhole_stockpiles.core.settings.sections.sav_processing",
-        "foxhole_stockpiles.core.settings.sections.stockpile_types",
         "foxhole_stockpiles.core.settings.sections.database_builder",
         "foxhole_stockpiles.core.settings.sections.external_tools",
         "foxhole_stockpiles.core.settings.sections.ocr",
@@ -92,8 +88,6 @@ def get_fs_hidden_imports() -> list[str]:
         "foxhole_stockpiles.services.local_scan",
         "foxhole_stockpiles.services.output_coordinator",
         "foxhole_stockpiles.services.catalog_service",
-        "foxhole_stockpiles.services.notification_service",
-        "foxhole_stockpiles.services.memory_monitor",
         "foxhole_stockpiles.services.sav_parser",
         "foxhole_stockpiles.services.savefile_processor",
         # Output handlers
@@ -127,9 +121,7 @@ def get_fs_hidden_imports() -> list[str]:
         "foxhole_stockpiles.gui.widgets.config_tabs.output_tab",
         "foxhole_stockpiles.gui.widgets.config_tabs.gui_tab",
         "foxhole_stockpiles.gui.widgets.config_tabs.logging_tab",
-        "foxhole_stockpiles.gui.widgets.config_tabs.notifications_tab",
         "foxhole_stockpiles.gui.widgets.config_tabs.sav_processing_tab",
-        "foxhole_stockpiles.gui.widgets.config_tabs.stockpile_types_tab",
         "foxhole_stockpiles.gui.utils",
         "foxhole_stockpiles.gui.utils.qt_log_handler",
         "foxhole_stockpiles.gui.utils.config_manager",

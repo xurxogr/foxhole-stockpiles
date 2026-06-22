@@ -23,7 +23,6 @@ from foxhole_stockpiles.enums.config_level import ConfigLevel
 from foxhole_stockpiles.gui.utils.config_manager import ConfigManager
 from foxhole_stockpiles.gui.widgets.config_tabs.gui_tab import GUITab
 from foxhole_stockpiles.gui.widgets.config_tabs.logging_tab import LoggingTab
-from foxhole_stockpiles.gui.widgets.config_tabs.notifications_tab import NotificationsTab
 from foxhole_stockpiles.gui.widgets.config_tabs.output_tab import OutputTab
 from foxhole_stockpiles.gui.widgets.config_tabs.sav_processing_tab import SavProcessingTab
 from foxhole_stockpiles.gui.widgets.config_tabs.scanner_tab import ScannerTab
@@ -84,7 +83,6 @@ class ConfigWindow(QMainWindow):
         self.output_tab = OutputTab()
         self.logging_tab = LoggingTab()
         self.gui_tab = GUITab()
-        self.notifications_tab = NotificationsTab()
         self.sav_processing_tab = SavProcessingTab()
 
         # Track current config level and language
@@ -131,7 +129,6 @@ class ConfigWindow(QMainWindow):
 
         # Advanced and Developer tabs
         if level.is_at_least(ConfigLevel.ADVANCED):
-            self.tab_widget.addTab(self.notifications_tab, t("config_window.tabs.notifications"))
             self.tab_widget.addTab(self.sav_processing_tab, t("config_window.tabs.sav_processing"))
 
         # Always visible tabs (continued)
@@ -174,7 +171,6 @@ class ConfigWindow(QMainWindow):
         self.output_tab.set_values(self.settings.output)
         self.logging_tab.set_values(self.settings.logging)
         self.gui_tab.set_values(self.settings.gui)
-        self.notifications_tab.set_values(self.settings.notifications)
         self.sav_processing_tab.set_values(self.settings.sav_processing)
 
     def collect_settings(self) -> AppSettings:
@@ -195,7 +191,6 @@ class ConfigWindow(QMainWindow):
             database_builder=defaults.database_builder,
             logging=self.logging_tab.get_values(),
             gui=self.gui_tab.get_values(),
-            notifications=self.notifications_tab.get_values(),
             sav_processing=self.sav_processing_tab.get_values(),
         )
 

@@ -134,7 +134,7 @@ def test_icon_import_window_initialization_configured(configured_window: IconImp
         configured_window: Configured window instance
     """
     assert configured_window.windowTitle() == t("database_builder.title")
-    assert configured_window.is_configured is True
+    assert IconImportWindow.requirements_met(configured_window.settings) is True
     assert configured_window.import_worker is None
     assert configured_window.mod_pak_files == []
     assert configured_window.vanilla_pak_file is None
@@ -150,7 +150,7 @@ def test_icon_import_window_initialization_unconfigured(
         unconfigured_window: Unconfigured window instance
     """
     assert unconfigured_window.windowTitle() == t("database_builder.title")
-    assert unconfigured_window.is_configured is False
+    assert IconImportWindow.requirements_met(unconfigured_window.settings) is False
 
 
 def test_icon_import_window_widgets_exist(configured_window: IconImportWindow) -> None:
@@ -180,7 +180,7 @@ def test_icon_import_window_cancel_button_disabled(configured_window: IconImport
 # ===== Configuration Check Tests =====
 
 
-def test_check_configuration_all_present(qtbot: Any, tmp_path: Path) -> None:
+def test_requirements_met_all_present(qtbot: Any, tmp_path: Path) -> None:
     """Test configuration check when all tools are present.
 
     Args:
@@ -209,10 +209,10 @@ def test_check_configuration_all_present(qtbot: Any, tmp_path: Path) -> None:
     with patch("fs_tools.gui.windows.icon_import_window.get_settings", return_value=settings):
         window = IconImportWindow()
         qtbot.addWidget(window)
-        assert window._check_configuration() is True
+        assert IconImportWindow.requirements_met(window.settings) is True
 
 
-def test_check_configuration_missing_extractor(qtbot: Any, tmp_path: Path) -> None:
+def test_requirements_met_missing_extractor(qtbot: Any, tmp_path: Path) -> None:
     """Test configuration check when extractor tool is missing.
 
     Args:
@@ -238,10 +238,10 @@ def test_check_configuration_missing_extractor(qtbot: Any, tmp_path: Path) -> No
     with patch("fs_tools.gui.windows.icon_import_window.get_settings", return_value=settings):
         window = IconImportWindow()
         qtbot.addWidget(window)
-        assert window._check_configuration() is False
+        assert IconImportWindow.requirements_met(window.settings) is False
 
 
-def test_check_configuration_missing_converter(qtbot: Any, tmp_path: Path) -> None:
+def test_requirements_met_missing_converter(qtbot: Any, tmp_path: Path) -> None:
     """Test configuration check when converter tool is missing.
 
     Args:
@@ -267,10 +267,10 @@ def test_check_configuration_missing_converter(qtbot: Any, tmp_path: Path) -> No
     with patch("fs_tools.gui.windows.icon_import_window.get_settings", return_value=settings):
         window = IconImportWindow()
         qtbot.addWidget(window)
-        assert window._check_configuration() is False
+        assert IconImportWindow.requirements_met(window.settings) is False
 
 
-def test_check_configuration_missing_catalog(qtbot: Any, tmp_path: Path) -> None:
+def test_requirements_met_missing_catalog(qtbot: Any, tmp_path: Path) -> None:
     """Test configuration check when catalog file is missing.
 
     Args:
@@ -296,10 +296,10 @@ def test_check_configuration_missing_catalog(qtbot: Any, tmp_path: Path) -> None
     with patch("fs_tools.gui.windows.icon_import_window.get_settings", return_value=settings):
         window = IconImportWindow()
         qtbot.addWidget(window)
-        assert window._check_configuration() is False
+        assert IconImportWindow.requirements_met(window.settings) is False
 
 
-def test_check_configuration_file_not_exists(qtbot: Any, tmp_path: Path) -> None:
+def test_requirements_met_file_not_exists(qtbot: Any, tmp_path: Path) -> None:
     """Test configuration check when files don't exist.
 
     Args:
@@ -319,7 +319,7 @@ def test_check_configuration_file_not_exists(qtbot: Any, tmp_path: Path) -> None
     with patch("fs_tools.gui.windows.icon_import_window.get_settings", return_value=settings):
         window = IconImportWindow()
         qtbot.addWidget(window)
-        assert window._check_configuration() is False
+        assert IconImportWindow.requirements_met(window.settings) is False
 
 
 # ===== PAK File Management Tests =====

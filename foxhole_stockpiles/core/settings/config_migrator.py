@@ -6,7 +6,7 @@ from typing import Any
 class ConfigMigrator:
     """Handles migration of configuration data between versions."""
 
-    CURRENT_VERSION = 11
+    CURRENT_VERSION = 12
 
     @classmethod
     def apply_migrations(cls, data: dict[str, Any]) -> dict[str, Any]:
@@ -76,6 +76,11 @@ class ConfigMigrator:
         if version == 10:
             data = cls._migrate_v10_to_v11(data)
             data["config_version"] = 11
+            version = 11
+
+        if version == 11:
+            data = cls._migrate_v11_to_v12(data)
+            data["config_version"] = 12
 
         return data
 
@@ -510,5 +515,26 @@ class ConfigMigrator:
                 "extract_icons",
             ):
                 data["scanner"].pop(field_name, None)
+
+        return data
+
+    @staticmethod
+    def _migrate_v11_to_v12(data: dict[str, Any]) -> dict[str, Any]:
+        """Migrate from v11 to v12 (drop the dead notifications section).
+
+        The ``notifications`` section, its config tab and the Discord notifier
+        were leftovers from the removed REST-server/event-bus architecture: no
+        runtime code ever instantiated the notification service or emitted the
+        events it listened for, so configured notifications were never sent.
+        The whole stack is removed; any stored value is dropped so it does not
+        linger in ``.fs_config`` (the settings models forbid unknown fields).
+
+        Args:
+            data (dict[str, Any]): V11 configuration data.
+
+        Returns:
+            dict[str, Any]: V12 configuration data.
+        """
+        data.pop("notifications", None)
 
         return data

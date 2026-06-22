@@ -50,9 +50,8 @@ class CatalogBuilderWindow(QMainWindow):
         self.pak_file: str | None = None
 
         # The launcher only enables this window once it is configured, so the
-        # full UI is always built. ``is_configured`` is kept for introspection.
+        # full UI is always built.
         self.settings = get_settings()
-        self.is_configured = self._check_configuration()
 
         # Setup log handler
         self.log_handler = QtLogHandler()
@@ -253,14 +252,6 @@ class CatalogBuilderWindow(QMainWindow):
             return False
 
         return True
-
-    def _check_configuration(self) -> bool:
-        """Check if catalog builder is properly configured.
-
-        Returns:
-            bool: True if all required tools are configured, False otherwise
-        """
-        return self.requirements_met(self.settings)
 
     def _get_default_pak_directory(self) -> str:
         """Get default directory for PAK files based on platform.

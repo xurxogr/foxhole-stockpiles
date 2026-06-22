@@ -1,7 +1,6 @@
 """Template database for resolution-specific template storage and filtering."""
 
 import logging
-import time
 from typing import Any, cast
 
 import h5py
@@ -153,81 +152,6 @@ class TemplateDatabase:
             set[str]: Set of mod names present in the database
         """
         return set(self.mod_lookup.keys())
-
-    def save_to_hdf5_group(self, group: h5py.Group) -> None:
-        """Save database to an HDF5 group.
-
-        Args:
-            group (h5py.Group): HDF5 group to save data to (e.g., /1080/)
-        """
-        start_time = time.perf_counter()
-        n_templates = len(self.templates)
-
-        if n_templates == 0:
-            logger.warning("No templates to save for resolution %s", self.resolution)
-            # Still save metadata for empty database
-            group.attrs["resolution"] = self.resolution.value
-            group.attrs["template_count"] = 0
-            group.attrs["icon_size"] = 0
-            group.attrs["version"] = DATABASE_VERSION
-            group.attrs["format"] = DATABASE_FORMAT
-            return
-
-        logger.debug("Saving %d templates to HDF5 group %s", n_templates, group.name)
-
-        # Get image dimensions from first template (all same size for this resolution)
-        first_image = self.templates[0].image
-        img_h, img_w, img_c = first_image.shape
-
-        # Create datasets with appropriate dtypes and compression
-        # Images: (N, H, W, 3) uint8 with compression
-        images_ds = group.create_dataset(
-            "images",
-            shape=(n_templates, img_h, img_w, img_c),
-            dtype=np.uint8,
-            compression="gzip",
-            compression_opts=4,
-        )
-
-        # Metadata: variable-length strings for codes and mods
-        str_dtype = h5py.string_dtype(encoding="utf-8")
-        codes_ds = group.create_dataset("codes", shape=(n_templates,), dtype=str_dtype)
-        mods_ds = group.create_dataset("mods", shape=(n_templates,), dtype=str_dtype)
-
-        # Metadata: fixed-size types
-        crated_ds = group.create_dataset("crated", shape=(n_templates,), dtype=bool)
-        faction_ds = group.create_dataset("faction", shape=(n_templates,), dtype=np.uint8)
-        category_ds = group.create_dataset("category", shape=(n_templates,), dtype=np.uint8)
-
-        # Optimization data
-        phash_ds = group.create_dataset("phash", shape=(n_templates,), dtype=np.uint64)
-
-        # Fill datasets
-        for i, template in enumerate(self.templates):
-            images_ds[i] = template.image
-            codes_ds[i] = template.code
-            mods_ds[i] = template.mod
-            crated_ds[i] = template.crated  # type: ignore[assignment]
-            faction_ds[i] = list(ItemFaction).index(template.faction)  # type: ignore[assignment]
-            category_ds[i] = list(ItemCategory).index(template.category)  # type: ignore[assignment]
-            phash_ds[i] = template.phash  # type: ignore[assignment]
-
-        # Store metadata as attributes
-        group.attrs["resolution"] = self.resolution.value
-        group.attrs["template_count"] = n_templates
-        group.attrs["icon_size"] = img_h
-        group.attrs["version"] = DATABASE_VERSION
-        group.attrs["format"] = DATABASE_FORMAT
-
-        elapsed = time.perf_counter() - start_time
-        logger.info(
-            "Saved %d templates (%dx%d) to HDF5 group %s in %.2f seconds",
-            n_templates,
-            img_h,
-            img_w,
-            group.name,
-            elapsed,
-        )
 
     @classmethod
     def load_from_hdf5_group(

@@ -10,7 +10,6 @@ import tempfile
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, Mock, patch
 
 import numpy as np
 import pytest
@@ -59,25 +58,6 @@ def isolate_app_settings(
         yield
     finally:
         get_settings.cache_clear()
-
-
-@pytest.fixture(autouse=True)
-def mock_discord_webhook() -> Generator[Mock, None, None]:
-    """Mock Discord webhook to prevent real messages from being sent during tests.
-
-    This fixture is autouse=True to ensure no test ever accidentally sends
-    real Discord messages, even if a real webhook URL is configured.
-
-    Yields:
-        Mock: The mocked AsyncDiscordWebhook class.
-    """
-    with patch("foxhole_stockpiles.notifiers.discord.AsyncDiscordWebhook") as mock_webhook:
-        mock_instance = AsyncMock()
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_instance.execute.return_value = mock_response
-        mock_webhook.return_value = mock_instance
-        yield mock_webhook
 
 
 # Configure Qt to run in offscreen mode for all tests to prevent GUI windows from appearing

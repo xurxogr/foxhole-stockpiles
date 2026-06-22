@@ -98,7 +98,6 @@
       "api_server": "API Server",
       "scanner": "Scanner",
       "output": "Output",
-      "notifications": "Notifications",
       "sav_processing": "SAV Processing",
       "logging": "Logging",
       "gui": "GUI"
@@ -225,46 +224,6 @@
     },
     "remove_handler_title": "Remove Handler",
     "remove_handler_message": "Are you sure you want to remove '{name}'?"
-  },
-  "notifications_tab": {
-    "description": "Configure Discord webhooks to receive notifications about stockpile scans\nand server events. You can add multiple notifiers with different settings.",
-    "enable_notifications": "Enable Notifications",
-    "enable_tooltip": "Master switch to enable or disable all notifications",
-    "notifiers_group": "Discord Notifiers",
-    "notifier_dialog": {
-      "title_add": "Add Notifier",
-      "title_edit": "Edit Notifier",
-      "basic_settings": "Basic Settings",
-      "name_placeholder": "e.g., Main Discord",
-      "name_tooltip": "A friendly name to identify this notifier",
-      "webhook_url": "Webhook URL:",
-      "webhook_placeholder": "https://discord.com/api/webhooks/...",
-      "webhook_tooltip": "Discord webhook URL for sending notifications",
-      "username": "Username:",
-      "username_placeholder": "Foxhole Stockpiles",
-      "username_tooltip": "Custom username shown for webhook messages",
-      "events_group": "Events to Notify",
-      "events_description": "Select which events should trigger notifications:",
-      "templates_group": "Custom Message Templates (Optional)",
-      "templates_description": "Override default message templates. Leave blank to use defaults.\nPlaceholders: STOCKPILE_NAME, STOCKPILE_TYPE, SHARD, TIME, ITEM_COUNT,\nMATCHED_ITEMS, UNMATCHED_ITEMS, AVG_CONFIDENCE, DURATION, RESOLUTION, ERROR",
-      "webhook_required": "Webhook URL is required.",
-      "webhook_invalid": "Webhook URL must start with 'https://discord.com/api/webhooks/'",
-      "event_required": "Please select at least one event to notify."
-    },
-    "events": {
-      "stockpile_scanned": "Stockpile Scanned",
-      "stockpile_scanned_desc": "When a stockpile scan completes successfully",
-      "scan_failed": "Scan Failed",
-      "scan_failed_desc": "When a stockpile scan fails",
-      "scan_started": "Scan Started",
-      "scan_started_desc": "When a stockpile scan begins",
-      "server_started": "Server Started",
-      "server_started_desc": "When the API server starts",
-      "server_stopped": "Server Stopped",
-      "server_stopped_desc": "When the API server stops"
-    },
-    "remove_notifier_title": "Remove Notifier",
-    "remove_notifier_message": "Are you sure you want to remove '{name}'?"
   },
   "gui_tab": {
     "config_level_group": "Configuration Level",

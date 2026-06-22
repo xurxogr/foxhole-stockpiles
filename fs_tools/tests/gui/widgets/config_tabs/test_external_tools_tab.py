@@ -616,7 +616,7 @@ def test_open_url(qtbot: Any, external_tools_tab: ExternalToolsTab) -> None:
         assert url_arg.toString() == "https://example.com"
 
 
-# ===== Tool URLs and Descriptions Tests =====
+# ===== Tool URLs Tests =====
 
 
 def test_tool_urls_defined() -> None:
@@ -624,10 +624,3 @@ def test_tool_urls_defined() -> None:
     assert "repak" in ExternalToolsTab.TOOL_URLS
     assert "umodel" in ExternalToolsTab.TOOL_URLS
     assert "uassetgui" in ExternalToolsTab.TOOL_URLS
-
-
-def test_tool_descriptions_defined() -> None:
-    """Test that all tool descriptions are defined."""
-    assert "repak" in ExternalToolsTab.TOOL_DESCRIPTIONS
-    assert "umodel" in ExternalToolsTab.TOOL_DESCRIPTIONS
-    assert "uassetgui" in ExternalToolsTab.TOOL_DESCRIPTIONS

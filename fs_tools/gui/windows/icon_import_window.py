@@ -68,9 +68,8 @@ class IconImportWindow(QMainWindow):
         self.vanilla_validation_worker: PakValidationWorker | None = None
 
         # The launcher only enables this window once it is configured, so the
-        # full UI is always built. ``is_configured`` is kept for introspection.
+        # full UI is always built.
         self.settings = get_settings()
-        self.is_configured = self._check_configuration()
 
         # Setup log handler (shared across all imports)
         # Use log level from settings
@@ -372,14 +371,6 @@ class IconImportWindow(QMainWindow):
             return False
 
         return True
-
-    def _check_configuration(self) -> bool:
-        """Check if database builder is properly configured.
-
-        Returns:
-            bool: True if all required settings are configured, False otherwise
-        """
-        return self.requirements_met(self.settings)
 
     def _get_default_pak_directory(self) -> str:
         """Get default directory for PAK files based on platform.
