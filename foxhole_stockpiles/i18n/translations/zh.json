@@ -76,7 +76,17 @@
     "start_sav_capture": "开始 SAV 捕获",
     "stop_sav_capture": "停止 SAV 捕获",
     "start_sav_monitor": "开始 SAV 监控",
-    "stop_sav_monitor": "停止 SAV 监控"
+    "stop_sav_monitor": "停止 SAV 监控",
+    "clip_group_title": "剪贴板",
+    "start_clip_capture": "开始剪贴板捕获",
+    "stop_clip_capture": "停止剪贴板捕获",
+    "start_clip_monitor": "开始剪贴板监控",
+    "stop_clip_monitor": "停止剪贴板监控",
+    "clip_no_key": "请先在设置中配置剪贴板快捷键。",
+    "clip": {
+      "error_title": "剪贴板处理错误",
+      "error_no_catalog": "未配置物品目录。请在设置中设置目录文件。"
+    }
   },
   "config_window": {
     "title": "配置",
@@ -87,7 +97,8 @@
       "output": "输出",
       "sav_processing": "SAV 处理",
       "logging": "日志",
-      "gui": "界面"
+      "gui": "界面",
+      "clipboard": "剪贴板"
     },
     "dialogs": {
       "error_loading_title": "加载配置时出错",
@@ -239,5 +250,17 @@
     "sav_hotkey_tooltip": "扫描已配置的 .sav 文件一次的全局快捷键。",
     "sav_hotkey_placeholder": "未设置按键",
     "sav_hotkey_change": "更改"
+  },
+  "clipboard_tab": {
+    "mode_tooltip": "剪贴板控制的工作方式：通过快捷键读取一次（手动）或自动轮询剪贴板以获取新的导出（监控）。",
+    "clip_hotkey": "剪贴板快捷键：",
+    "clip_hotkey_tooltip": "读取剪贴板一次的全局快捷键。",
+    "poll_interval_tooltip": "监控时检查剪贴板新内容的频率。\n\n较低的值能更快检测到变化，但会占用更多CPU。\n建议：1.0秒。",
+    "mode_label": "模式：",
+    "mode_manual": "手动（快捷键）",
+    "mode_monitor": "监控（自动）",
+    "poll_interval_label": "轮询间隔：",
+    "clip_hotkey_placeholder": "未设置按键",
+    "clip_hotkey_change": "更改"
   }
 }

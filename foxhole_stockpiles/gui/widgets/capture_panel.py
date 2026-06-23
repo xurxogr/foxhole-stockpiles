@@ -29,13 +29,22 @@ from PySide6.QtWidgets import (
 
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.core.utils import auto_detect_savefile
+from foxhole_stockpiles.enums.clip_mode import ClipMode
 from foxhole_stockpiles.enums.sav_mode import SavMode
 from foxhole_stockpiles.gui.utils.capture_scan_worker import LocalScanWorker
+from foxhole_stockpiles.gui.utils.clipboard_workers import (
+    ClipboardMonitorWorker,
+    ClipboardScanWorker,
+)
 from foxhole_stockpiles.gui.utils.hotkey_listener import HotkeyListener, global_hotkeys_supported
 from foxhole_stockpiles.gui.utils.qt_log_handler import QtLogHandler
 from foxhole_stockpiles.gui.utils.sav_workers import SavMonitorWorker, SavScanWorker
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
 from foxhole_stockpiles.models.stockpile import Stockpile
+from foxhole_stockpiles.services.clipboard_scan import (
+    ClipboardScanService,
+    build_clipboard_scan_service,
+)
 from foxhole_stockpiles.services.local_scan import LocalScanService
 from foxhole_stockpiles.services.output_coordinator import OutputCoordinator
 
@@ -47,6 +56,7 @@ class CapturePanel(QWidget):
 
     capture_triggered = Signal()
     sav_capture_triggered = Signal()
+    clip_capture_triggered = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the capture control panel.
@@ -72,6 +82,15 @@ class CapturePanel(QWidget):
         self._sav_monitor_worker: SavMonitorWorker | None = None
         self._sav_monitoring = False
 
+        # Clipboard processing state
+        self._clip_mode: ClipMode = ClipMode.MANUAL
+        self._clip_service: ClipboardScanService | None = None
+        self._clip_scan_worker: ClipboardScanWorker | None = None
+        self._clip_hotkey_listener: HotkeyListener | None = None
+        self._clip_listening = False
+        self._clip_monitor_worker: ClipboardMonitorWorker | None = None
+        self._clip_monitoring = False
+
         # Setup log handler and attach to root logger immediately
         self.log_handler = QtLogHandler()
         self.log_handler.log_message.connect(self.append_log)
@@ -89,6 +108,7 @@ class CapturePanel(QWidget):
         # Run the capture-and-scan on the GUI thread when a hotkey fires.
         self.capture_triggered.connect(self._on_capture_triggered)
         self.sav_capture_triggered.connect(self._on_sav_capture_triggered)
+        self.clip_capture_triggered.connect(self._on_clip_capture_triggered)
 
         # Connect to language changes with cleanup on destruction
         self._language_callback = self._on_language_changed
@@ -110,6 +130,10 @@ class CapturePanel(QWidget):
             self._sav_hotkey_listener.stop()
             self._sav_hotkey_listener = None
 
+        if self._clip_hotkey_listener is not None:
+            self._clip_hotkey_listener.stop()
+            self._clip_hotkey_listener = None
+
         for worker in list(self._scan_workers):
             if worker.isRunning():
                 worker.wait(2000)
@@ -120,6 +144,13 @@ class CapturePanel(QWidget):
 
         if self._sav_scan_worker and self._sav_scan_worker.isRunning():
             self._sav_scan_worker.wait(2000)
+
+        if self._clip_monitor_worker and self._clip_monitor_worker.isRunning():
+            self._clip_monitor_worker.stop()
+            self._clip_monitor_worker.wait(2000)
+
+        if self._clip_scan_worker and self._clip_scan_worker.isRunning():
+            self._clip_scan_worker.wait(2000)
 
     def _on_language_changed(self, _language: str) -> None:
         """Handle language change event.
@@ -150,6 +181,20 @@ class CapturePanel(QWidget):
         sav_layout.addLayout(sav_buttons_layout)
 
         top_layout.addWidget(self.sav_group, 1)
+
+        # === Middle: Clipboard (hotkey-driven, mirrors the SAV column) ===
+        self.clip_group = QGroupBox("")
+        self.clip_group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        clip_layout = QVBoxLayout(self.clip_group)
+
+        clip_buttons_layout = QHBoxLayout()
+        self.clip_button = QPushButton("")
+        self.clip_button.clicked.connect(self._on_clip_button_clicked)
+        clip_buttons_layout.addWidget(self.clip_button)
+        clip_buttons_layout.addStretch()
+        clip_layout.addLayout(clip_buttons_layout)
+
+        top_layout.addWidget(self.clip_group, 1)
 
         # === Right side: Capture ===
         self.capture_group = QGroupBox("")
@@ -214,12 +259,15 @@ class CapturePanel(QWidget):
 
         self.retranslate()
         self._apply_sav_mode()
+        self._apply_clip_mode()
 
     def refresh_db_info(self) -> None:
         """Re-read settings and refresh button availability (rebuilds the scanner)."""
-        # Settings may have changed; drop the cached scan service so it rebuilds.
+        # Settings may have changed; drop the cached services so they rebuild.
         self._scan_service = None
+        self._clip_service = None
         self._apply_sav_mode()
+        self._apply_clip_mode()
 
     def _update_button_states(self) -> None:
         """Enable each capture button only when its required settings are present.
@@ -236,6 +284,7 @@ class CapturePanel(QWidget):
             self.db_info_text.setText("")
             self.start_stop_button.setEnabled(self.capturing)
             self.sav_button.setEnabled(self._sav_listening or self._sav_monitoring)
+            self.clip_button.setEnabled(self._clip_listening or self._clip_monitoring)
             return
 
         db_path = settings.scanner.database_path
@@ -260,6 +309,30 @@ class CapturePanel(QWidget):
             # Manual SAV scanning is hotkey-driven.
             sav_ready = bool(settings.sav_processing.sav_capture_key) and self._hotkeys_available
         self.sav_button.setEnabled(sav_ready or self._sav_listening or self._sav_monitoring)
+
+        # Clipboard scanning needs a catalog; monitor auto-polls, manual is
+        # hotkey-driven.
+        catalog_ok = self._catalog_available(settings)
+        if self._clip_mode == ClipMode.MONITOR:
+            clip_ready = catalog_ok
+        else:
+            clip_ready = (
+                catalog_ok and bool(settings.clipboard.clip_capture_key) and self._hotkeys_available
+            )
+        self.clip_button.setEnabled(clip_ready or self._clip_listening or self._clip_monitoring)
+
+    @staticmethod
+    def _catalog_available(settings: AppSettings) -> bool:
+        """Return whether a usable item catalog file is configured.
+
+        Args:
+            settings (AppSettings): The settings to read the catalog path from.
+
+        Returns:
+            bool: True if a catalog file is configured and exists.
+        """
+        catalog_path = settings.database_builder.catalog_file
+        return bool(catalog_path and catalog_path.exists())
 
     @staticmethod
     def _sav_file_available(settings: AppSettings) -> bool:
@@ -474,6 +547,7 @@ class CapturePanel(QWidget):
     def retranslate(self) -> None:
         """Update all translatable strings."""
         self.sav_group.setTitle(t("server_panel.sav_group_title"))
+        self.clip_group.setTitle(t("server_panel.clip_group_title"))
         self.capture_group.setTitle(t("server_panel.capture_group_title"))
 
         if self.capturing:
@@ -482,6 +556,7 @@ class CapturePanel(QWidget):
             self.start_stop_button.setText(t("server_panel.start_capture"))
 
         self._update_sav_button_text()
+        self._update_clip_button_text()
 
         self.log_display.setHorizontalHeaderLabels(
             [
@@ -725,3 +800,225 @@ class CapturePanel(QWidget):
             success (bool): Whether scan completed successfully.
         """
         self._sav_scan_worker = None
+
+    # ==================== Clipboard Processing ====================
+
+    def _get_clip_service(self) -> ClipboardScanService | None:
+        """Build (once) and return the clipboard scan service.
+
+        Returns:
+            ClipboardScanService | None: The service, or None if it could not be
+                built (e.g. catalog missing); an error is logged in that case.
+        """
+        if self._clip_service is not None:
+            return self._clip_service
+
+        try:
+            self._clip_service = build_clipboard_scan_service(AppSettings())
+        except Exception as e:  # noqa: BLE001 - surface config/catalog errors in the log
+            logger.error("Cannot initialize clipboard scanner: %s", e)
+            return None
+        return self._clip_service
+
+    def _update_clip_button_text(self) -> None:
+        """Set the clipboard button label based on the mode and active state."""
+        if self._clip_mode == ClipMode.MONITOR:
+            key = (
+                "server_panel.stop_clip_monitor"
+                if self._clip_monitoring
+                else "server_panel.start_clip_monitor"
+            )
+        else:
+            key = (
+                "server_panel.stop_clip_capture"
+                if self._clip_listening
+                else "server_panel.start_clip_capture"
+            )
+        self.clip_button.setText(t(key))
+
+    def _apply_clip_mode(self) -> None:
+        """Read the configured clipboard mode and reconfigure the control.
+
+        Switching mode stops any active listening/monitoring so the control
+        never has two clipboard pipelines running at once.
+        """
+        try:
+            mode = AppSettings().clipboard.mode
+        except Exception as e:
+            logger.warning("Could not read clipboard mode: %s", e)
+            mode = ClipMode.MANUAL
+
+        if mode != self._clip_mode:
+            if self._clip_listening:
+                self.stop_clip_listen()
+            if self._clip_monitoring:
+                self.stop_clip_monitor()
+            self._clip_mode = mode
+
+        self._update_clip_button_text()
+        self._update_button_states()
+
+    def _on_clip_button_clicked(self) -> None:
+        """Dispatch the clipboard button to the action for the current mode."""
+        if self._clip_mode == ClipMode.MONITOR:
+            self.toggle_clip_monitor()
+        else:
+            self.toggle_clip_listen()
+
+    def toggle_clip_listen(self) -> None:
+        """Toggle listening for the clipboard hotkey on/off (manual mode)."""
+        if self._clip_listening:
+            self.stop_clip_listen()
+        else:
+            self.start_clip_listen()
+
+    def start_clip_listen(self) -> None:
+        """Start listening for the clipboard hotkey (presses read the clipboard)."""
+        settings = AppSettings()
+        key = settings.clipboard.clip_capture_key
+        if not key:
+            QMessageBox.warning(
+                self,
+                t("server_panel.clip.error_title"),
+                t("server_panel.clip_no_key"),
+            )
+            return
+
+        # Ensure the clipboard scanner can be built before we start listening.
+        if self._get_clip_service() is None:
+            QMessageBox.warning(
+                self,
+                t("server_panel.clip.error_title"),
+                t("server_panel.clip.error_no_catalog"),
+            )
+            return
+
+        try:
+            self._clip_hotkey_listener = HotkeyListener(key, self.clip_capture_triggered.emit)
+            self._clip_hotkey_listener.start()
+        except (RuntimeError, ValueError) as e:
+            logger.error("Could not start clipboard listening: %s", e)
+            QMessageBox.warning(self, t("server_panel.clip.error_title"), str(e))
+            self._clip_hotkey_listener = None
+            return
+
+        self._clip_listening = True
+        self._update_clip_button_text()
+        logger.info("Clipboard hotkey listening started (hotkey: %s)", key)
+
+    def stop_clip_listen(self) -> None:
+        """Stop listening for the clipboard hotkey."""
+        if self._clip_hotkey_listener is not None:
+            self._clip_hotkey_listener.stop()
+            self._clip_hotkey_listener = None
+
+        self._clip_listening = False
+        self._update_clip_button_text()
+        logger.info("Clipboard hotkey listening stopped")
+
+    def _on_clip_capture_triggered(self) -> None:
+        """Read and scan the clipboard once when the hotkey fires (GUI thread)."""
+        if self._clip_scan_worker and self._clip_scan_worker.isRunning():
+            logger.debug("Clipboard scan already in progress; ignoring hotkey")
+            return
+
+        service = self._get_clip_service()
+        if service is None:
+            return
+
+        worker = ClipboardScanWorker(service)
+        worker.stockpile_found.connect(self._on_clip_stockpile_found)
+        worker.error.connect(self._on_clip_error)
+        worker.finished.connect(lambda _success: self._on_clip_scan_finished())
+        self._clip_scan_worker = worker
+        worker.start()
+
+    def toggle_clip_monitor(self) -> None:
+        """Toggle clipboard monitoring on/off (monitor mode)."""
+        if self._clip_monitoring:
+            self.stop_clip_monitor()
+        else:
+            self.start_clip_monitor()
+
+    def start_clip_monitor(self) -> None:
+        """Start auto-polling the clipboard for new stockpile exports."""
+        if self._clip_monitor_worker and self._clip_monitor_worker.isRunning():
+            logger.warning("Cannot start monitor: previous clipboard monitor still stopping")
+            return
+
+        service = self._get_clip_service()
+        if service is None:
+            QMessageBox.warning(
+                self,
+                t("server_panel.clip.error_title"),
+                t("server_panel.clip.error_no_catalog"),
+            )
+            return
+
+        try:
+            poll_interval = AppSettings().clipboard.poll_interval
+        except Exception as e:
+            QMessageBox.critical(self, t("server_panel.clip.error_title"), str(e))
+            return
+
+        # Treat whatever is already on the clipboard as "seen" so only a new
+        # export triggers an emit.
+        service.prime()
+
+        logger.info("Starting clipboard monitor (poll: %ss)", poll_interval)
+        self._clip_monitoring = True
+        self._update_clip_button_text()
+
+        self._clip_monitor_worker = ClipboardMonitorWorker(service, poll_interval)
+        self._clip_monitor_worker.error.connect(self._on_clip_error)
+        self._clip_monitor_worker.stockpile_found.connect(self._on_clip_stockpile_found)
+        self._clip_monitor_worker.finished.connect(self._on_clip_monitor_finished)
+        self._clip_monitor_worker.start()
+
+    def stop_clip_monitor(self) -> None:
+        """Stop auto-polling the clipboard."""
+        if self._clip_monitor_worker:
+            logger.info("Stopping clipboard monitor...")
+            self._clip_monitor_worker.stop()
+
+        self._clip_monitoring = False
+        self._update_clip_button_text()
+
+    def _on_clip_monitor_finished(self, success: bool) -> None:
+        """Handle the clipboard monitor worker finishing.
+
+        Args:
+            success (bool): Whether the monitor stopped normally.
+        """
+        if self.sender() is self._clip_monitor_worker:
+            self._clip_monitoring = False
+            self._update_clip_button_text()
+            self._clip_monitor_worker = None
+
+    def _on_clip_stockpile_found(self, stockpile: Stockpile | None) -> None:
+        """Log a short summary when a clipboard scan yields a stockpile.
+
+        Args:
+            stockpile (Stockpile | None): The parsed stockpile, or None if the
+                clipboard did not hold a recognized stockpile export.
+        """
+        if stockpile is None:
+            logger.info("No stockpile data found in clipboard")
+            return
+        logger.info(
+            "Clipboard scan complete: %d item(s) (%s)",
+            len(stockpile.items),
+            stockpile.type,
+        )
+
+    def _on_clip_error(self, error_msg: str) -> None:
+        """Handle a clipboard processing error.
+
+        Args:
+            error_msg (str): Error message.
+        """
+        logger.error("[Clipboard] %s", error_msg)
+
+    def _on_clip_scan_finished(self) -> None:
+        """Handle a one-shot clipboard scan finishing."""
+        self._clip_scan_worker = None

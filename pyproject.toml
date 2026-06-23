@@ -34,6 +34,8 @@ dependencies = [
     # Screenshot capture (window detection + global hotkey)
     "pywinctl>=0.4",
     "pynput>=1.7.7",
+    # Clipboard access (shared by GUI and CLI clipboard scanning)
+    "pyperclip>=1.8",
     # Memory profiling
     "psutil>=7.2.2",
     "memory-profiler>=0.61.0",
@@ -92,7 +94,13 @@ disallow_incomplete_defs = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["google_auth_oauthlib.*", "googleapiclient.*", "pynput.*", "pywinctl.*"]
+module = [
+    "google_auth_oauthlib.*",
+    "googleapiclient.*",
+    "pynput.*",
+    "pywinctl.*",
+    "pyperclip.*",
+]
 ignore_missing_imports = true
 
 [tool.pydantic-mypy]

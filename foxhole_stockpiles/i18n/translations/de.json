@@ -76,7 +76,17 @@
     "start_sav_capture": "SAV-Aufnahme starten",
     "stop_sav_capture": "SAV-Aufnahme stoppen",
     "start_sav_monitor": "SAV-Überwachung starten",
-    "stop_sav_monitor": "SAV-Überwachung stoppen"
+    "stop_sav_monitor": "SAV-Überwachung stoppen",
+    "clip_group_title": "Zwischenablage",
+    "start_clip_capture": "Zwischenablage-Aufnahme starten",
+    "stop_clip_capture": "Zwischenablage-Aufnahme stoppen",
+    "start_clip_monitor": "Zwischenablage-Überwachung starten",
+    "stop_clip_monitor": "Zwischenablage-Überwachung stoppen",
+    "clip_no_key": "Konfigurieren Sie zuerst ein Zwischenablage-Tastenkürzel in den Einstellungen.",
+    "clip": {
+      "error_title": "Fehler bei der Zwischenablage-Verarbeitung",
+      "error_no_catalog": "Kein Gegenstandskatalog konfiguriert. Legen Sie die Katalogdatei in den Einstellungen fest."
+    }
   },
   "config_window": {
     "title": "Konfiguration",
@@ -87,7 +97,8 @@
       "output": "Ausgabe",
       "sav_processing": "SAV Verarbeitung",
       "logging": "Protokollierung",
-      "gui": "Oberfläche"
+      "gui": "Oberfläche",
+      "clipboard": "Zwischenablage"
     },
     "dialogs": {
       "error_loading_title": "Fehler beim Laden der Konfiguration",
@@ -239,5 +250,17 @@
     "sav_hotkey_tooltip": "Globales Tastenkürzel, das die konfigurierte .sav-Datei einmal scannt.",
     "sav_hotkey_placeholder": "Keine Taste festgelegt",
     "sav_hotkey_change": "Ändern"
+  },
+  "clipboard_tab": {
+    "mode_tooltip": "Wie die Zwischenablage-Steuerung funktioniert: einmal per Tastenkürzel lesen (manuell) oder die Zwischenablage automatisch auf neue Exporte abfragen (Überwachung).",
+    "clip_hotkey": "Zwischenablage-Tastenkürzel:",
+    "clip_hotkey_tooltip": "Globales Tastenkürzel, das die Zwischenablage einmal liest.",
+    "poll_interval_tooltip": "Wie oft die Zwischenablage beim Überwachen auf neuen Inhalt geprüft wird.\n\nNiedrigere Werte erkennen Änderungen schneller, verbrauchen aber mehr CPU.\nEmpfohlen: 1,0 Sekunden.",
+    "mode_label": "Modus:",
+    "mode_manual": "Manuell (Tastenkürzel)",
+    "mode_monitor": "Überwachung (automatisch)",
+    "poll_interval_label": "Abfrageintervall:",
+    "clip_hotkey_placeholder": "Keine Taste festgelegt",
+    "clip_hotkey_change": "Ändern"
   }
 }

@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 from foxhole_stockpiles.core.settings import reload_settings
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.gui.utils.config_manager import ConfigManager
+from foxhole_stockpiles.gui.widgets.config_tabs.clipboard_tab import ClipboardTab
 from foxhole_stockpiles.gui.widgets.config_tabs.gui_tab import GUITab
 from foxhole_stockpiles.gui.widgets.config_tabs.logging_tab import LoggingTab
 from foxhole_stockpiles.gui.widgets.config_tabs.output_tab import OutputTab
@@ -83,6 +84,7 @@ class ConfigWindow(QMainWindow):
         self.logging_tab = LoggingTab()
         self.gui_tab = GUITab()
         self.sav_processing_tab = SavProcessingTab()
+        self.clipboard_tab = ClipboardTab()
 
         # Track current language (for retranslation on save)
         self._current_language: str = get_translator().language
@@ -122,6 +124,7 @@ class ConfigWindow(QMainWindow):
         self.tab_widget.addTab(self.scanner_tab, t("config_window.tabs.scanner"))
         self.tab_widget.addTab(self.output_tab, t("config_window.tabs.output"))
         self.tab_widget.addTab(self.sav_processing_tab, t("config_window.tabs.sav_processing"))
+        self.tab_widget.addTab(self.clipboard_tab, t("config_window.tabs.clipboard"))
         self.tab_widget.addTab(self.logging_tab, t("config_window.tabs.logging"))
         self.tab_widget.addTab(self.gui_tab, t("config_window.tabs.gui"))
 
@@ -154,6 +157,7 @@ class ConfigWindow(QMainWindow):
         self.logging_tab.set_values(self.settings.logging)
         self.gui_tab.set_values(self.settings.gui)
         self.sav_processing_tab.set_values(self.settings.sav_processing)
+        self.clipboard_tab.set_values(self.settings.clipboard)
 
     def collect_settings(self) -> AppSettings:
         """Collect settings from all tabs.
@@ -174,6 +178,7 @@ class ConfigWindow(QMainWindow):
             logging=self.logging_tab.get_values(),
             gui=self.gui_tab.get_values(),
             sav_processing=self.sav_processing_tab.get_values(),
+            clipboard=self.clipboard_tab.get_values(),
         )
 
     def save_settings(self) -> None:

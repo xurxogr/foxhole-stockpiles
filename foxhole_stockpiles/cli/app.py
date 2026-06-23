@@ -11,7 +11,7 @@ import typer
 
 from foxhole_stockpiles import __version__
 from foxhole_stockpiles.cli._console import attach_console
-from foxhole_stockpiles.cli.commands import gui, sav, scan
+from foxhole_stockpiles.cli.commands import clip, gui, sav, scan
 
 # Subcommand names that launch the GUI; the console is not attached for these.
 _GUI_COMMANDS = frozenset({"gui"})
@@ -24,6 +24,7 @@ app = typer.Typer(
 
 app.add_typer(scan.app, name="scan")
 app.add_typer(sav.app, name="sav")
+app.add_typer(clip.app, name="clip")
 app.add_typer(gui.app, name="gui")
 
 

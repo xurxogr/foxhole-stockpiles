@@ -13,6 +13,7 @@ from pydantic_settings import (
 from foxhole_stockpiles.core.settings.config_migrator import ConfigMigrator
 from foxhole_stockpiles.core.settings.json_settings_source import Utf8JsonConfigSettingsSource
 from foxhole_stockpiles.core.settings.sections import (
+    ClipboardSettings,
     DatabaseBuilderSettings,
     ExternalToolsSettings,
     GUISettings,
@@ -46,6 +47,9 @@ class AppSettings(BaseSettings):
     gui: GUISettings = Field(description="GUI settings", default_factory=GUISettings)
     sav_processing: SavProcessingSettings = Field(
         description="SAV file processing settings", default_factory=SavProcessingSettings
+    )
+    clipboard: ClipboardSettings = Field(
+        description="Clipboard processing settings", default_factory=ClipboardSettings
     )
     model_config = SettingsConfigDict(
         env_nested_delimiter="__",

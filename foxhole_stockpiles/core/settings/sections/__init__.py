@@ -1,5 +1,6 @@
 """Settings sections exports."""
 
+from foxhole_stockpiles.core.settings.sections.clipboard import ClipboardSettings
 from foxhole_stockpiles.core.settings.sections.database_builder import DatabaseBuilderSettings
 from foxhole_stockpiles.core.settings.sections.external_tools import ExternalToolsSettings
 from foxhole_stockpiles.core.settings.sections.gui import GUISettings
@@ -19,6 +20,7 @@ from foxhole_stockpiles.core.settings.sections.sav_processing import SavProcessi
 from foxhole_stockpiles.core.settings.sections.scanner import ScannerSettings
 
 __all__ = [
+    "ClipboardSettings",
     "ConsoleHandlerSettings",
     "CsvFormatSettings",
     "DatabaseBuilderSettings",

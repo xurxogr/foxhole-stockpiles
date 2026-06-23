@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QMessageBox
 
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.core.settings.sections import (
+    ClipboardSettings,
     DatabaseBuilderSettings,
     ExternalToolsSettings,
     LoggingSettings,
@@ -52,6 +53,7 @@ def mock_config_manager() -> Any:
         default_settings.database_builder = DatabaseBuilderSettings()
         default_settings.logging = LoggingSettings()
         default_settings.sav_processing = SavProcessingSettings()
+        default_settings.clipboard = ClipboardSettings()
         mock_instance.load_config.return_value = default_settings
 
         yield mock_instance
@@ -98,13 +100,13 @@ def test_config_window_has_all_tabs(config_window: ConfigWindow) -> None:
 
 
 def test_config_window_shows_all_tabs(config_window: ConfigWindow) -> None:
-    """Test ConfigWindow always shows all five settings tabs.
+    """Test ConfigWindow always shows all six settings tabs.
 
     Args:
         config_window: ConfigWindow instance
     """
-    # scanner, output, sav_processing, logging, gui
-    assert config_window.tab_widget.count() == 5
+    # scanner, output, sav_processing, clipboard, logging, gui
+    assert config_window.tab_widget.count() == 6
     assert config_window.tab_widget.tabText(0) == t("config_window.tabs.scanner")
 
 

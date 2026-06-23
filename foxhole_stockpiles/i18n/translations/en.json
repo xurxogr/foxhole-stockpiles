@@ -76,7 +76,17 @@
     "start_sav_capture": "Start SAV Capture",
     "stop_sav_capture": "Stop SAV Capture",
     "start_sav_monitor": "Start SAV Monitor",
-    "stop_sav_monitor": "Stop SAV Monitor"
+    "stop_sav_monitor": "Stop SAV Monitor",
+    "clip_group_title": "Clipboard",
+    "start_clip_capture": "Start Clipboard Capture",
+    "stop_clip_capture": "Stop Clipboard Capture",
+    "start_clip_monitor": "Start Clipboard Monitor",
+    "stop_clip_monitor": "Stop Clipboard Monitor",
+    "clip_no_key": "Configure a clipboard hotkey in Settings first.",
+    "clip": {
+      "error_title": "Clipboard Processing Error",
+      "error_no_catalog": "No item catalog configured. Set the catalog file in Settings."
+    }
   },
   "config_window": {
     "title": "Configuration",
@@ -87,7 +97,8 @@
       "output": "Output",
       "sav_processing": "SAV Processing",
       "logging": "Logging",
-      "gui": "GUI"
+      "gui": "GUI",
+      "clipboard": "Clipboard"
     },
     "dialogs": {
       "error_loading_title": "Error Loading Configuration",
@@ -259,5 +270,17 @@
     "sav_hotkey_tooltip": "Global hotkey that scans the configured .sav file once.",
     "sav_hotkey_placeholder": "No key set",
     "sav_hotkey_change": "Change"
+  },
+  "clipboard_tab": {
+    "mode_tooltip": "How the clipboard control works: read once via hotkey (manual) or auto-poll the clipboard for new exports (monitor).",
+    "clip_hotkey": "Clipboard hotkey:",
+    "clip_hotkey_tooltip": "Global hotkey that reads the clipboard once.",
+    "poll_interval_tooltip": "How often to check the clipboard for new content when monitoring.\n\nLower values detect changes faster but use more CPU.\nRecommended: 1.0 seconds.",
+    "mode_label": "Mode:",
+    "mode_manual": "Manual (hotkey)",
+    "mode_monitor": "Monitor (auto)",
+    "poll_interval_label": "Poll Interval:",
+    "clip_hotkey_placeholder": "No key set",
+    "clip_hotkey_change": "Change"
   }
 }

@@ -76,7 +76,17 @@
     "start_sav_capture": "Iniciar captura SAV",
     "stop_sav_capture": "Detener captura SAV",
     "start_sav_monitor": "Iniciar monitor SAV",
-    "stop_sav_monitor": "Detener monitor SAV"
+    "stop_sav_monitor": "Detener monitor SAV",
+    "clip_group_title": "Portapapeles",
+    "start_clip_capture": "Iniciar captura del portapapeles",
+    "stop_clip_capture": "Detener captura del portapapeles",
+    "start_clip_monitor": "Iniciar monitor del portapapeles",
+    "stop_clip_monitor": "Detener monitor del portapapeles",
+    "clip_no_key": "Configura primero un atajo del portapapeles en Ajustes.",
+    "clip": {
+      "error_title": "Error de procesamiento del portapapeles",
+      "error_no_catalog": "No hay catálogo de objetos configurado. Configura el archivo de catálogo en Ajustes."
+    }
   },
   "config_window": {
     "title": "Configuración",
@@ -87,7 +97,8 @@
       "output": "Salida",
       "sav_processing": "Procesamiento SAV",
       "logging": "Registros",
-      "gui": "Interfaz"
+      "gui": "Interfaz",
+      "clipboard": "Portapapeles"
     },
     "dialogs": {
       "error_loading_title": "Error al cargar configuración",
@@ -239,5 +250,17 @@
     "sav_hotkey_tooltip": "Tecla global que escanea una vez el archivo .sav configurado.",
     "sav_hotkey_placeholder": "Sin tecla asignada",
     "sav_hotkey_change": "Cambiar"
+  },
+  "clipboard_tab": {
+    "mode_tooltip": "Cómo funciona el control del portapapeles: leer una vez con un atajo (manual) o sondear automáticamente el portapapeles en busca de nuevas exportaciones (monitor).",
+    "clip_hotkey": "Atajo del portapapeles:",
+    "clip_hotkey_tooltip": "Atajo global que lee el portapapeles una vez.",
+    "poll_interval_tooltip": "Con qué frecuencia comprobar el portapapeles en busca de contenido nuevo al monitorizar.\n\nValores más bajos detectan cambios más rápido pero usan más CPU.\nRecomendado: 1.0 segundos.",
+    "mode_label": "Modo:",
+    "mode_manual": "Manual (tecla)",
+    "mode_monitor": "Monitor (automático)",
+    "poll_interval_label": "Intervalo de sondeo:",
+    "clip_hotkey_placeholder": "Sin tecla asignada",
+    "clip_hotkey_change": "Cambiar"
   }
 }

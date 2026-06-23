@@ -76,7 +76,17 @@
     "start_sav_capture": "Iniciar captura SAV",
     "stop_sav_capture": "Parar captura SAV",
     "start_sav_monitor": "Iniciar monitorização SAV",
-    "stop_sav_monitor": "Parar monitorização SAV"
+    "stop_sav_monitor": "Parar monitorização SAV",
+    "clip_group_title": "Área de transferência",
+    "start_clip_capture": "Iniciar captura da área de transferência",
+    "stop_clip_capture": "Parar captura da área de transferência",
+    "start_clip_monitor": "Iniciar monitor da área de transferência",
+    "stop_clip_monitor": "Parar monitor da área de transferência",
+    "clip_no_key": "Configure primeiro um atalho da área de transferência nas Configurações.",
+    "clip": {
+      "error_title": "Erro de processamento da área de transferência",
+      "error_no_catalog": "Nenhum catálogo de itens configurado. Defina o arquivo de catálogo nas Configurações."
+    }
   },
   "config_window": {
     "title": "Configuração",
@@ -87,7 +97,8 @@
       "output": "Saída",
       "sav_processing": "Processamento SAV",
       "logging": "Registos",
-      "gui": "Interface"
+      "gui": "Interface",
+      "clipboard": "Área de transferência"
     },
     "dialogs": {
       "error_loading_title": "Erro ao carregar configuração",
@@ -239,5 +250,17 @@
     "sav_hotkey_tooltip": "Tecla de atalho global que digitaliza uma vez o ficheiro .sav configurado.",
     "sav_hotkey_placeholder": "Nenhuma tecla definida",
     "sav_hotkey_change": "Alterar"
+  },
+  "clipboard_tab": {
+    "mode_tooltip": "Como o controle da área de transferência funciona: ler uma vez com um atalho (manual) ou consultar automaticamente a área de transferência por novas exportações (monitor).",
+    "clip_hotkey": "Atalho da área de transferência:",
+    "clip_hotkey_tooltip": "Atalho global que lê a área de transferência uma vez.",
+    "poll_interval_tooltip": "Com que frequência verificar a área de transferência por novo conteúdo ao monitorar.\n\nValores mais baixos detectam mudanças mais rápido, mas usam mais CPU.\nRecomendado: 1,0 segundos.",
+    "mode_label": "Modo:",
+    "mode_manual": "Manual (tecla)",
+    "mode_monitor": "Monitorização (auto)",
+    "poll_interval_label": "Intervalo de sondagem:",
+    "clip_hotkey_placeholder": "Nenhuma tecla definida",
+    "clip_hotkey_change": "Alterar"
   }
 }

@@ -76,7 +76,17 @@
     "start_sav_capture": "Démarrer la capture SAV",
     "stop_sav_capture": "Arrêter la capture SAV",
     "start_sav_monitor": "Démarrer la surveillance SAV",
-    "stop_sav_monitor": "Arrêter la surveillance SAV"
+    "stop_sav_monitor": "Arrêter la surveillance SAV",
+    "clip_group_title": "Presse-papiers",
+    "start_clip_capture": "Démarrer la capture du presse-papiers",
+    "stop_clip_capture": "Arrêter la capture du presse-papiers",
+    "start_clip_monitor": "Démarrer la surveillance du presse-papiers",
+    "stop_clip_monitor": "Arrêter la surveillance du presse-papiers",
+    "clip_no_key": "Configurez d'abord un raccourci du presse-papiers dans les Paramètres.",
+    "clip": {
+      "error_title": "Erreur de traitement du presse-papiers",
+      "error_no_catalog": "Aucun catalogue d'objets configuré. Définissez le fichier de catalogue dans les Paramètres."
+    }
   },
   "config_window": {
     "title": "Configuration",
@@ -87,7 +97,8 @@
       "output": "Sortie",
       "sav_processing": "Traitement SAV",
       "logging": "Journaux",
-      "gui": "Interface"
+      "gui": "Interface",
+      "clipboard": "Presse-papiers"
     },
     "dialogs": {
       "error_loading_title": "Erreur de chargement de la configuration",
@@ -239,5 +250,17 @@
     "sav_hotkey_tooltip": "Raccourci clavier global qui scanne une fois le fichier .sav configuré.",
     "sav_hotkey_placeholder": "Aucune touche définie",
     "sav_hotkey_change": "Modifier"
+  },
+  "clipboard_tab": {
+    "mode_tooltip": "Fonctionnement du contrôle du presse-papiers : lire une fois via un raccourci (manuel) ou interroger automatiquement le presse-papiers pour de nouvelles exportations (surveillance).",
+    "clip_hotkey": "Raccourci du presse-papiers :",
+    "clip_hotkey_tooltip": "Raccourci global qui lit le presse-papiers une fois.",
+    "poll_interval_tooltip": "Fréquence de vérification du presse-papiers pour du nouveau contenu lors de la surveillance.\n\nDes valeurs plus basses détectent les changements plus vite mais utilisent plus de CPU.\nRecommandé : 1,0 seconde.",
+    "mode_label": "Mode :",
+    "mode_manual": "Manuel (raccourci)",
+    "mode_monitor": "Surveillance (auto)",
+    "poll_interval_label": "Intervalle de sondage :",
+    "clip_hotkey_placeholder": "Aucune touche définie",
+    "clip_hotkey_change": "Modifier"
   }
 }
