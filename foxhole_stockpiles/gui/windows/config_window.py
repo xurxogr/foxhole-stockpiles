@@ -19,7 +19,6 @@ from PySide6.QtWidgets import (
 
 from foxhole_stockpiles.core.settings import reload_settings
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
-from foxhole_stockpiles.enums.config_level import ConfigLevel
 from foxhole_stockpiles.gui.utils.config_manager import ConfigManager
 from foxhole_stockpiles.gui.widgets.config_tabs.gui_tab import GUITab
 from foxhole_stockpiles.gui.widgets.config_tabs.logging_tab import LoggingTab
@@ -85,11 +84,10 @@ class ConfigWindow(QMainWindow):
         self.gui_tab = GUITab()
         self.sav_processing_tab = SavProcessingTab()
 
-        # Track current config level and language
-        self._current_config_level: ConfigLevel = ConfigLevel.BASIC
+        # Track current language (for retranslation on save)
         self._current_language: str = get_translator().language
 
-        # Initialize tabs (will be updated after settings load)
+        # Build all tabs
         self._build_tabs()
 
         # Create button box
@@ -114,30 +112,18 @@ class ConfigWindow(QMainWindow):
         self.setStatusBar(self.status_bar)
 
     def _build_tabs(self) -> None:
-        """Build tabs based on current config level."""
+        """Build all configuration tabs."""
         # Remember current tab index
         current_tab_index = self.tab_widget.currentIndex()
 
         # Clear all tabs
         self.tab_widget.clear()
 
-        level = self._current_config_level
-
-        # Always visible tabs (Basic level)
         self.tab_widget.addTab(self.scanner_tab, t("config_window.tabs.scanner"))
         self.tab_widget.addTab(self.output_tab, t("config_window.tabs.output"))
-
-        # Advanced and Developer tabs
-        if level.is_at_least(ConfigLevel.ADVANCED):
-            self.tab_widget.addTab(self.sav_processing_tab, t("config_window.tabs.sav_processing"))
-
-        # Always visible tabs (continued)
+        self.tab_widget.addTab(self.sav_processing_tab, t("config_window.tabs.sav_processing"))
         self.tab_widget.addTab(self.logging_tab, t("config_window.tabs.logging"))
         self.tab_widget.addTab(self.gui_tab, t("config_window.tabs.gui"))
-
-        # Update field visibility in tabs based on level
-        self.scanner_tab.set_config_level(level)
-        self.logging_tab.set_config_level(level)
 
         # Try to restore previous tab index
         if current_tab_index >= 0 and current_tab_index < self.tab_widget.count():
@@ -161,10 +147,6 @@ class ConfigWindow(QMainWindow):
         """Populate all tabs with current settings."""
         if not self.settings:
             return
-
-        # Set config level first (affects tab visibility and field visibility)
-        self._current_config_level = self.settings.gui.config_level
-        self._build_tabs()
 
         # Populate tabs
         self.scanner_tab.set_values(self.settings.scanner)
@@ -200,8 +182,7 @@ class ConfigWindow(QMainWindow):
             # Collect settings from tabs (already validated by Pydantic)
             new_settings = self.collect_settings()
 
-            # Check if config level or language changed
-            config_level_changed = new_settings.gui.config_level != self._current_config_level
+            # Check if the language changed
             language_changed = new_settings.gui.language != self._current_language
 
             # Save settings
@@ -218,18 +199,7 @@ class ConfigWindow(QMainWindow):
                     self._current_language = new_settings.gui.language
                     set_language(new_settings.gui.language)
 
-                # Rebuild tabs if config level changed
-                if config_level_changed:
-                    self._current_config_level = new_settings.gui.config_level
-                    self._build_tabs()
-                    # Re-populate tabs with current settings
-                    self.populate_tabs()
-                    level = new_settings.gui.config_level
-                    self.status_bar.showMessage(
-                        t("config_window.dialogs.tabs_updated", level=level.value), 5000
-                    )
-                else:
-                    self.status_bar.showMessage(t("config_window.dialogs.saved_successfully"), 3000)
+                self.status_bar.showMessage(t("config_window.dialogs.saved_successfully"), 3000)
 
                 logger.info("Settings saved successfully")
             else:

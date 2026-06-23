@@ -97,7 +97,6 @@
       "error_unexpected": "An unexpected error occurred:\n{error}",
       "unsaved_changes_title": "Unsaved Changes",
       "unsaved_changes_message": "There are pending changes. Do you want to save them?",
-      "tabs_updated": "Configuration saved. Tabs updated for {level} mode.",
       "saved_successfully": "Configuration saved successfully!"
     }
   },
@@ -213,14 +212,6 @@
     "remove_handler_message": "Are you sure you want to remove '{name}'?"
   },
   "gui_tab": {
-    "config_level_group": "Configuration Level",
-    "level": "Level:",
-    "level_tooltip": "Controls which configuration options are visible in the GUI.\n\nBasic: Essential settings only (recommended for most users)\nAdvanced: Additional tuning options for power users\nDeveloper: Full access including OCR/Template settings",
-    "level_basic": "Basic",
-    "level_advanced": "Advanced",
-    "level_developer": "Developer",
-    "warning_advanced": "Advanced mode enables additional options that affect scan accuracy.\nOnly modify these settings if you understand their impact.",
-    "warning_developer": "Developer mode enables critical settings including OCR and Template tabs.\nIncorrect configuration can completely break scanning functionality.\nOnly use this if you are a developer or advanced user who understands the risks.",
     "window_behavior_group": "Window Behavior",
     "minimize_to_tray": "Minimize to Tray:",
     "minimize_checkbox": "Minimize to tray on close",

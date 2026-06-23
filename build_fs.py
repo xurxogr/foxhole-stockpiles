@@ -427,7 +427,6 @@ def get_build_specs() -> list[BuildSpec]:
             hidden_imports=get_fs_hidden_imports(),
             exclude_modules=get_unused_qt_modules(),
             data_dirs=[
-                ("tessdata", "tessdata"),
                 (
                     os.path.join("foxhole_stockpiles", "i18n", "translations"),
                     os.path.join("foxhole_stockpiles", "i18n", "translations"),

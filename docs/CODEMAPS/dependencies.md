@@ -1,4 +1,4 @@
-<!-- Generated: 2026-06-21 | Branch: main | Token estimate: ~800 -->
+<!-- Generated: 2026-06-23 | Branch: main | Token estimate: ~800 -->
 
 # Dependencies & External Tools
 
@@ -8,10 +8,8 @@ Source of truth: `pyproject.toml`. Python **3.12+**.
 
 | Package | Min | Role |
 |---|---|---|
-| opencv-python-headless | 4.13.0.90 | image decode/coerce in the OCR seam |
 | numpy | 2.4.5 | arrays / image buffers |
 | pillow | 12.2.0 | image I/O + **screen grab** (`ImageGrab`) |
-| pytesseract | 0.3.13 | Tesseract wrapper (tooling / legacy paths) |
 | h5py | 3.16.0 | HDF5 template DB (built/read by `fs_tools`) |
 | pydantic | 2.13.4 | models / validation |
 | pydantic-settings | 2.14.1 | env + file config |
@@ -25,12 +23,13 @@ Source of truth: `pyproject.toml`. Python **3.12+**.
 | google-auth-oauthlib | 1.4.0 | Google OAuth installed-app flow |
 | PySide6 | 6.6 | desktop GUI (LGPL) |
 | httpx | 0.28.1 | async HTTP (webhooks) |
-| discord-webhook | 1.3.1 | Discord notifications |
 | psutil | 7.2.2 | process/memory utils |
 | memory-profiler | 0.61.0 | memory profiling |
 
 **Removed in the server-removal refactor:** `fastapi`, `uvicorn[standard]`,
 `python-multipart`, `jinja2`, `slowapi`.
+**Removed since:** `opencv-python-headless` + `pytesseract` (OCR/matching moved
+into the `fs-ocr` Rust engine), `discord-webhook` (notifications stack dropped).
 
 ## Sibling / external Rust packages
 
@@ -42,7 +41,7 @@ Source of truth: `pyproject.toml`. Python **3.12+**.
 
 | Tool | Required for | Platform | Integration |
 |---|---|---|---|
-| **Tesseract OCR** (5.x) | OCR (consumed inside `fs-ocr`; tooling via `pytesseract`) | any | custom model `tessdata/renner_numbers.traineddata` |
+| **Tesseract OCR** (5.x) | **Chinese OCR only** — `fs-ocr` handles quantities and all other languages itself; install Tesseract + `chi_sim` data to scan Chinese | any | optional (Chinese only) |
 | **repak** | PAK extraction (`fs-tools`) | Win/Linux | `connectors/` + `fs_tools` |
 | **umodel(.exe)** | UE asset conversion (`fs-tools`) | Windows | `connectors/` + `fs_tools` |
 
@@ -91,7 +90,7 @@ Packaging: `tool.setuptools.packages.find` includes `foxhole_stockpiles*` +
 ## Build / dev scripts (repo root, not packaged)
 
 - `build_fs.py` — PyInstaller build of `fs.exe` (`--onefile --windowed`,
-  `--collect-submodules foxhole_stockpiles`; bundles `tessdata` + i18n translations).
+  `--collect-submodules foxhole_stockpiles`; bundles i18n translations).
 - `sincroniza.sh` — rsync the source (minus the multi-GB `data/` PAKs) to a
   Windows path for building the exe there.
 - `build_database.sh` — extract PAKs + build the template DB via `fs-tools`.
@@ -101,7 +100,7 @@ Packaging: `tool.setuptools.packages.find` includes `foxhole_stockpiles*` +
 
 ```jsonc
 // platform config dir (~/.fs_config)
-{ "config_version": 11,
+{ "config_version": 13,
   "scanner": { "database_path": "...templates.h5", "capture_key": "F9", "confidence_gap": 0.0 },
   "output": { "handlers": [ /* console/file/webhook/return/sheets */ ] },
   "sav_processing": { /* save dir / map data resolution */ } }
@@ -113,8 +112,7 @@ FS_SCANNER__CAPTURE_KEY=F9
 
 ## Licensing
 
-Project MIT. Deps MIT/BSD/Apache; pytesseract GPLv3 (compatible);
-PySide6 LGPLv3.
+Project MIT. Deps MIT/BSD/Apache; PySide6 LGPLv3.
 
 ## Key files
 1. `pyproject.toml` — declarations + entry points

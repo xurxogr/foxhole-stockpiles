@@ -97,7 +97,6 @@
       "error_unexpected": "Une erreur inattendue s'est produite :\n{error}",
       "unsaved_changes_title": "Modifications non enregistrées",
       "unsaved_changes_message": "Il y a des modifications en attente. Voulez-vous les enregistrer ?",
-      "tabs_updated": "Configuration enregistrée. Onglets mis à jour pour le mode {level}.",
       "saved_successfully": "Configuration enregistrée avec succès !"
     }
   },
@@ -193,14 +192,6 @@
     "remove_handler_message": "Êtes-vous sûr de vouloir supprimer '{name}' ?"
   },
   "gui_tab": {
-    "config_level_group": "Niveau de configuration",
-    "level": "Niveau :",
-    "level_tooltip": "Contrôle quelles options de configuration sont visibles dans l'interface.\n\nBasique : Paramètres essentiels uniquement (recommandé pour la plupart)\nAvancé : Options supplémentaires pour utilisateurs expérimentés\nDéveloppeur : Accès complet incluant les paramètres OCR/Modèles",
-    "level_basic": "Basique",
-    "level_advanced": "Avancé",
-    "level_developer": "Développeur",
-    "warning_advanced": "Le mode avancé active des options supplémentaires qui affectent la précision du scan.\nNe modifiez ces paramètres que si vous comprenez leur impact.",
-    "warning_developer": "Le mode développeur active des paramètres critiques incluant les onglets OCR et Modèles.\nUne mauvaise configuration peut complètement casser la fonctionnalité de scan.\nN'utilisez ceci que si vous êtes développeur ou utilisateur avancé qui comprend les risques.",
     "window_behavior_group": "Comportement de la fenêtre",
     "minimize_to_tray": "Réduire dans la barre :",
     "minimize_checkbox": "Réduire dans la barre système à la fermeture",

@@ -6,7 +6,6 @@ from unittest.mock import patch
 import pytest
 from PySide6.QtWidgets import QMenuBar
 
-from foxhole_stockpiles.enums.config_level import ConfigLevel
 from foxhole_stockpiles.gui.windows.main_window import MainWindow
 from foxhole_stockpiles.i18n import t
 
@@ -163,9 +162,7 @@ def test_tray_icon_creation_when_available(qtbot: Any) -> None:
         with patch.object(QSystemTrayIcon, "isSystemTrayAvailable", return_value=True):
             with patch("foxhole_stockpiles.gui.windows.main_window.AppSettings") as mock_settings:
                 # Default config has minimize_to_tray=False
-                mock_settings.return_value.gui = GUISettings(
-                    minimize_to_tray=False, config_level=ConfigLevel.BASIC
-                )
+                mock_settings.return_value.gui = GUISettings(minimize_to_tray=False)
 
                 window = MainWindow()
                 qtbot.addWidget(window)
@@ -249,9 +246,7 @@ def test_load_minimize_to_tray_from_config(qtbot: Any) -> None:
     with patch("foxhole_stockpiles.gui.widgets.capture_panel.LocalScanService"):
         with patch.object(QSystemTrayIcon, "isSystemTrayAvailable", return_value=True):
             with patch("foxhole_stockpiles.gui.windows.main_window.AppSettings") as mock_settings:
-                mock_settings.return_value.gui = GUISettings(
-                    minimize_to_tray=True, config_level=ConfigLevel.BASIC
-                )
+                mock_settings.return_value.gui = GUISettings(minimize_to_tray=True)
 
                 window = MainWindow()
                 qtbot.addWidget(window)
@@ -276,46 +271,6 @@ def test_load_minimize_to_tray_default_on_error(qtbot: Any) -> None:
             assert window.minimize_to_tray is False
 
 
-def test_apply_config_level_to_menus_basic(qtbot: Any) -> None:
-    """Test menu visibility with basic config level.
-
-    Args:
-        qtbot: PyQt test fixture
-    """
-    from foxhole_stockpiles.core.settings.sections.gui import GUISettings
-
-    with patch("foxhole_stockpiles.gui.widgets.capture_panel.LocalScanService"):
-        with patch("foxhole_stockpiles.gui.windows.main_window.AppSettings") as mock_settings:
-            mock_settings.return_value.gui = GUISettings(config_level=ConfigLevel.BASIC)
-
-            window = MainWindow()
-            qtbot.addWidget(window)
-
-            # Advanced menu actions should be hidden
-            for action in window._advanced_menu_actions:
-                assert not action.isVisible()
-
-
-def test_apply_config_level_to_menus_advanced(qtbot: Any) -> None:
-    """Test menu visibility with advanced config level.
-
-    Args:
-        qtbot: PyQt test fixture
-    """
-    from foxhole_stockpiles.core.settings.sections.gui import GUISettings
-
-    with patch("foxhole_stockpiles.gui.widgets.capture_panel.LocalScanService"):
-        with patch("foxhole_stockpiles.gui.windows.main_window.AppSettings") as mock_settings:
-            mock_settings.return_value.gui = GUISettings(config_level=ConfigLevel.ADVANCED)
-
-            window = MainWindow()
-            qtbot.addWidget(window)
-
-            # Advanced menu actions should be visible
-            for action in window._advanced_menu_actions:
-                assert action.isVisible()
-
-
 def test_on_config_closed_reloads_settings(qtbot: Any, window: MainWindow) -> None:
     """Test that _on_config_closed reloads settings.
 
@@ -326,9 +281,7 @@ def test_on_config_closed_reloads_settings(qtbot: Any, window: MainWindow) -> No
     from foxhole_stockpiles.core.settings.sections.gui import GUISettings
 
     with patch("foxhole_stockpiles.gui.windows.main_window.AppSettings") as mock_settings:
-        mock_settings.return_value.gui = GUISettings(
-            minimize_to_tray=True, config_level=ConfigLevel.ADVANCED
-        )
+        mock_settings.return_value.gui = GUISettings(minimize_to_tray=True)
 
         window._on_config_closed()
 

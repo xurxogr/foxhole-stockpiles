@@ -6,7 +6,6 @@ from unittest.mock import patch
 import pytest
 
 from foxhole_stockpiles.core.settings.sections.logging import LoggingSettings
-from foxhole_stockpiles.enums.config_level import ConfigLevel
 from foxhole_stockpiles.gui.widgets.config_tabs.logging_tab import LoggingTab
 
 
@@ -380,43 +379,13 @@ def test_logging_tab_custom_logger_level_options(logging_tab: LoggingTab) -> Non
     assert "CRITICAL" in levels
 
 
-def test_logging_tab_set_config_level_basic(logging_tab: LoggingTab) -> None:
-    """Test set_config_level with BASIC level hides advanced widgets.
+def test_logging_tab_all_widgets_visible(logging_tab: LoggingTab) -> None:
+    """All logging widgets are present and not hidden (no config-level gating).
 
     Args:
         logging_tab: LoggingTab instance
     """
-    logging_tab.set_config_level(ConfigLevel.BASIC)
-
     # Use isHidden() instead of isVisible() since parent widget is not shown
-
-    # Only root level should be visible
-    assert not logging_tab.root_level_combo.isHidden()
-
-    # Advanced widgets should be hidden
-    assert logging_tab._log_format_label.isHidden()
-    assert logging_tab.log_format_input.isHidden()
-    assert logging_tab._date_format_label.isHidden()
-    assert logging_tab.date_format_input.isHidden()
-    assert logging_tab._rotate_logs_label.isHidden()
-    assert logging_tab.rotate_logs_input.isHidden()
-    assert logging_tab._log_file_label.isHidden()
-    assert logging_tab._log_file_widget.isHidden()
-    assert logging_tab._custom_loggers_header.isHidden()
-    assert logging_tab._loggers_scroll.isHidden()
-
-
-def test_logging_tab_set_config_level_advanced(logging_tab: LoggingTab) -> None:
-    """Test set_config_level with ADVANCED level shows all widgets.
-
-    Args:
-        logging_tab: LoggingTab instance
-    """
-    logging_tab.set_config_level(ConfigLevel.ADVANCED)
-
-    # Use isHidden() instead of isVisible() since parent widget is not shown
-
-    # All widgets should be visible
     assert not logging_tab.root_level_combo.isHidden()
     assert not logging_tab._log_format_label.isHidden()
     assert not logging_tab.log_format_input.isHidden()
@@ -428,48 +397,3 @@ def test_logging_tab_set_config_level_advanced(logging_tab: LoggingTab) -> None:
     assert not logging_tab._log_file_widget.isHidden()
     assert not logging_tab._custom_loggers_header.isHidden()
     assert not logging_tab._loggers_scroll.isHidden()
-
-
-def test_logging_tab_set_config_level_developer(logging_tab: LoggingTab) -> None:
-    """Test set_config_level with DEVELOPER level shows all widgets.
-
-    Args:
-        logging_tab: LoggingTab instance
-    """
-    logging_tab.set_config_level(ConfigLevel.DEVELOPER)
-
-    # Use isHidden() instead of isVisible() since parent widget is not shown
-
-    # All widgets should be visible (same as advanced for logging tab)
-    assert not logging_tab.root_level_combo.isHidden()
-    assert not logging_tab._log_format_label.isHidden()
-    assert not logging_tab.log_format_input.isHidden()
-    assert not logging_tab._date_format_label.isHidden()
-    assert not logging_tab.date_format_input.isHidden()
-    assert not logging_tab._rotate_logs_label.isHidden()
-    assert not logging_tab.rotate_logs_input.isHidden()
-    assert not logging_tab._log_file_label.isHidden()
-    assert not logging_tab._log_file_widget.isHidden()
-    assert not logging_tab._custom_loggers_header.isHidden()
-    assert not logging_tab._loggers_scroll.isHidden()
-
-
-def test_logging_tab_config_level_transition(logging_tab: LoggingTab) -> None:
-    """Test transitioning between config levels.
-
-    Args:
-        logging_tab: LoggingTab instance
-    """
-    # Use isHidden() instead of isVisible() since parent widget is not shown
-
-    # Start with advanced
-    logging_tab.set_config_level(ConfigLevel.ADVANCED)
-    assert not logging_tab._log_format_label.isHidden()
-
-    # Transition to basic
-    logging_tab.set_config_level(ConfigLevel.BASIC)
-    assert logging_tab._log_format_label.isHidden()
-
-    # Back to advanced
-    logging_tab.set_config_level(ConfigLevel.ADVANCED)
-    assert not logging_tab._log_format_label.isHidden()

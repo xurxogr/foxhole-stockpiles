@@ -16,7 +16,7 @@ When reporting bugs, please include:
 1. **Environment Information**:
    - Python version (`python --version`)
    - Operating system
-   - Installation method (pip, Docker, etc.)
+   - Installation method (pip, source, etc.)
    - Relevant package versions
 
 2. **Steps to Reproduce**:
@@ -132,7 +132,7 @@ Examples:
 ```
 Add support for custom resolution templates
 Fix OCR detection for low-contrast screenshots
-Update Docker configuration for production deployment
+Add a new output handler format
 ```
 
 ## Code Style Guidelines

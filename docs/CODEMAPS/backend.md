@@ -1,4 +1,4 @@
-<!-- Generated: 2026-06-21 | Branch: main | Token estimate: ~850 -->
+<!-- Generated: 2026-06-23 | Branch: main | Token estimate: ~850 -->
 
 # CLI, GUI Capture & Local Pipeline
 
@@ -12,7 +12,7 @@ the GUI capture flow, the OCR seam, and output routing.
 
 | Command | Module | Flow |
 |---|---|---|
-| `fs scan` | `cli/commands/scan.py` | `ScannerSettings` → `services.scanner.build_scanner` (external `fs_ocr`) → `OutputCoordinator` → `ScanResult`/printed output |
+| `fs scan` | `cli/commands/scan.py` | `ScannerSettings` → `services.scanner` (external `fs_ocr`) → `OutputCoordinator` → handler dict / printed JSON |
 | `fs gui` | `cli/commands/gui.py` | launches PySide6 desktop app |
 | `fs sav` | `cli/commands/sav.py` | `SaveFileProcessor` (resolves `.sav` + map data) → `OutputCoordinator` |
 
@@ -99,10 +99,11 @@ Webhook **forward auth**: `WebhookHandlerSettings.auth_type="forward"` +
 - **SAV** column — one-shot scan + monitor (`gui/utils/sav_workers.py`).
 - Live log table (`gui/utils/qt_log_handler.py`) + DB-config validation.
 
-## Response / result models
+## Result shape
 
-- `ScanResult` (`models/scan_result.py`) — `{success, data: Stockpile|None, error, processing_time_ms}`; used by the CLI/scan worker.
-- `Stockpile` / `StockpileItem` — see data.md.
+There is no dedicated result model. `ReturnHandler` emits a plain `dict` (the
+first non-None handler result), and `fs scan` prints it as indented JSON.
+The payload models are `Stockpile` / `StockpileItem` — see data.md.
 
 ## Scanner config (`core/settings/sections/scanner.py`)
 

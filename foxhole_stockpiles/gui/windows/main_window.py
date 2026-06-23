@@ -14,7 +14,6 @@ from PySide6.QtWidgets import (
 
 from foxhole_stockpiles import __version__
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
-from foxhole_stockpiles.enums.config_level import ConfigLevel
 from foxhole_stockpiles.enums.sav_mode import SavMode
 from foxhole_stockpiles.gui.utils.qt_log_handler import QtLogHandler
 from foxhole_stockpiles.gui.widgets.capture_panel import CapturePanel
@@ -32,12 +31,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         # Load minimize_to_tray preference from config (default: False)
         self.minimize_to_tray = self._load_minimize_to_tray_setting()
-        # Track menu actions that should be hidden based on config level
-        self._advanced_menu_actions: list[QAction] = []
         self.init_ui()
         self.create_tray_icon()
-        # Apply config level to menu visibility
-        self._apply_config_level_to_menus()
         # Connect to language changes with cleanup on destruction
         self._language_callback = self._on_language_changed
         on_language_changed(self._language_callback)
@@ -109,17 +104,6 @@ class MainWindow(QMainWindow):
 
         # Disable the manual-scan action when SAV monitor mode is configured.
         self._apply_sav_menu_state()
-
-    def _apply_config_level_to_menus(self) -> None:
-        """Apply config level settings to menu visibility."""
-        try:
-            settings = AppSettings()
-            config_level = settings.gui.config_level
-            # Advanced menu actions are visible at advanced and developer levels
-            for action in self._advanced_menu_actions:
-                action.setVisible(config_level.is_at_least(ConfigLevel.ADVANCED))
-        except Exception as e:
-            logger.warning(f"Failed to apply config level to menus: {e}")
 
     def _create_fs_icon(self) -> QIcon:
         """Create a simple FS icon for the system tray.
@@ -234,8 +218,6 @@ class MainWindow(QMainWindow):
         """Handle config window closed - refresh settings from config."""
         # Reload minimize_to_tray setting
         self.minimize_to_tray = self._load_minimize_to_tray_setting()
-        # Refresh menu visibility based on config level
-        self._apply_config_level_to_menus()
         # The SAV mode may have changed; enable the manual-scan action accordingly.
         self._apply_sav_menu_state()
         logger.info(f"Config reloaded - minimize_to_tray: {self.minimize_to_tray}")

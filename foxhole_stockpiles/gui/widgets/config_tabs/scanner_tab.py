@@ -17,7 +17,6 @@ from PySide6.QtWidgets import (
 )
 
 from foxhole_stockpiles.core.settings.sections.scanner import ScannerSettings
-from foxhole_stockpiles.enums.config_level import ConfigLevel
 from foxhole_stockpiles.gui.widgets.capture_key_dialog import CaptureKeyDialog
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
 
@@ -146,14 +145,6 @@ class ScannerTab(QWidget):
             t("scanner_tab.screenshots_folder_placeholder")
         )
         self.screenshots_browse.setText(t("common.browse"))
-
-    def set_config_level(self, level: ConfigLevel) -> None:
-        """Show or hide fields based on the configuration level.
-
-        Args:
-            level (ConfigLevel): The configuration level to set.
-        """
-        # All scanner fields are visible at every level.
 
     def change_capture_key(self) -> None:
         """Open the key-capture dialog and store the chosen hotkey."""

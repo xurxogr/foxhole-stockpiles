@@ -14,7 +14,7 @@ Example `~/.fs_config` files for common setups.
    - Set `scanner.capture_key` to the global hotkey you want (e.g. `"F9"`).
    - Configure output handlers (console / file / webhook / Google Sheets).
 
-3. **Run the app** — older config files are migrated to the latest schema (v11)
+3. **Run the app** — older config files are migrated to the latest schema (v13)
    automatically the first time settings load; no manual step is needed.
 
 ## Available Examples
@@ -25,7 +25,7 @@ Example `~/.fs_config` files for common setups.
 
 ```json
 {
-  "config_version": 11,
+  "config_version": 13,
   "scanner": {
     "database_path": "/app/data/foxhole_templates.h5"
   }

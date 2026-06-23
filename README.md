@@ -42,7 +42,7 @@ Optimized for all common gaming resolutions with consistent accuracy:
 - 1920x1200, 2560x1440, 3840x2160 (4K)
 - 1600x1200, 1600x900, 1280x1024
 
-**Note:** Performance varies with CPU speed and available cores. The scanner uses OpenCV and Tesseract (C libraries) which benefit significantly from multi-core processors.
+**Note:** Performance varies with CPU speed and available cores. The matching and OCR run inside the external `fs-ocr` Rust engine, which benefits significantly from multi-core processors.
 
 ## What It Does
 
@@ -70,7 +70,7 @@ Commands are split between two binaries: **`fs`** (the runtime — scanning, scr
 ### Runtime commands (`fs`)
 
 #### fs scan
-Analyzes Foxhole stockpile screenshots to detect items and quantities using the compiled database. Automatically detects item quantities using OCR with a custom-trained Tesseract model optimized for Foxhole's Renner font.
+Analyzes Foxhole stockpile screenshots to detect items and quantities using the compiled database. Item quantities are read by the OCR engine (`fs-ocr`).
 
 #### fs sav
 Processes Foxhole `.sav` world files (via the `fs-sav` Rust parser) into structured stockpile data.
@@ -92,9 +92,6 @@ Generates resolution-specific template variants from extracted assets with prope
 #### fs-tools build-db
 Compiles processed templates into optimized binary databases for fast runtime loading.
 
-#### fs-tools inspect
-Debugging tool for inspecting database contents and testing icon recognition.
-
 #### fs-tools add-icon
 Manually adds individual icons to existing template databases without rebuilding the entire database.
 
@@ -109,19 +106,10 @@ Launches the PySide6 tooling GUI for catalog/database management.
 - `fs gui` - Launches GUI via CLI dispatcher
 - `fs-gui` - Direct GUI launcher (no console window on Windows, recommended for building standalone executables)
 
-**Configuration Levels:**
+**Configuration Window:**
 
-The GUI uses a tiered configuration system to avoid overwhelming users with advanced options:
-
-- **Basic** (default): Essential tabs only - Scanner, Output, Logging, and GUI. Suitable for most users.
-- **Advanced**: Adds the Stockpile Types, Notifications, and SAV Processing tabs, plus additional fields in existing tabs (debug mode, log file configuration, custom loggers, etc.).
-- **Developer**: Same tabs as Advanced, but unlocks the remaining advanced fields for fine-tuning. Only use this if you understand the impact of these settings.
-
-**Stockpile Types Tab (Advanced):**
-
-The Stockpile Types tab allows you to add custom aliases for stockpile type names to handle OCR errors. For example, if OCR sometimes detects "Seaport" as "seapon", you can add "seapon" as an alias. The default translations for all supported languages are already built-in.
-
-Change the configuration level in the GUI tab within the Configuration window.
+The GUI's Configuration window has five tabs, all always visible: Scanner
+(including the capture hotkey), Output, SAV Processing, Logging, and GUI.
 
 **Localization:**
 
@@ -179,8 +167,7 @@ This will override just that key while keeping all other translations from the b
 ## Requirements
 
 - Python 3.12 or higher
-- **Tesseract OCR** - Required for quantity detection from stockpile screenshots
-- Custom Tesseract model for Renner font recognition (included in repository)
+- **Tesseract OCR** *(only for Chinese)* - OCR runs inside the bundled `fs-ocr` engine, which handles quantity detection and all other languages out of the box. You only need a system Tesseract install (plus the Chinese language data) to scan **Chinese**-language screenshots.
 
 ### For Scanner Only
 
@@ -227,73 +214,32 @@ pip install -e .
 pip install -e .[dev]
 ```
 
-### 4. Install and Configure Tesseract OCR
+### 4. Install Tesseract OCR (only for Chinese support)
 
-#### Install Tesseract
+OCR runs inside the bundled `fs-ocr` engine, which handles quantity detection
+and all languages **except Chinese** out of the box — no setup required. You only
+need to install Tesseract if you want to scan **Chinese**-language screenshots,
+along with its Chinese Simplified (`chi_sim`) language data:
 
 **Windows:**
 ```bash
 # Download and install from: https://github.com/UB-Mannheim/tesseract/wiki
 # Or using chocolatey:
 choco install tesseract
+# Then add chi_sim.traineddata from https://github.com/tesseract-ocr/tessdata
+# into your Tesseract tessdata folder (default: C:\Program Files\Tesseract-OCR\tessdata\)
 ```
 
 **macOS:**
 ```bash
-brew install tesseract
+brew install tesseract tesseract-lang
 ```
 
 **Ubuntu/Debian:**
 ```bash
 sudo apt update
-sudo apt install tesseract-ocr
+sudo apt install tesseract-ocr tesseract-ocr-chi-sim
 ```
-
-#### Set Up Custom Renner Font Model
-
-The stockpile scanner uses a custom-trained Tesseract model (`renner_numbers.traineddata`) optimized for recognizing quantities in Foxhole's Renner font. **This model is required for accurate quantity detection and is already included in the repository** in the `tessdata/` folder.
-
-The directory structure is:
-```
-foxhole-stockpiles/
-├── tessdata/
-│   └── renner_numbers.traineddata  # Already provided - required for quantity detection
-└── ...
-```
-
-The scanner automatically uses this custom model for quantity detection. For stockpile names, types, and other text detection, the scanner uses standard Tesseract language models.
-
-#### Install Additional Language Support (Optional)
-
-Foxhole supports multiple languages. If you want to detect stockpile information in languages other than English, you need to install the corresponding Tesseract language data files:
-
-**Supported Languages:**
-- English (eng) - Included with Tesseract by default
-- Portuguese (por)
-- French (fra)
-- German (deu)
-- Russian (rus)
-- Chinese Simplified (chi_sim)
-
-**Installation:**
-
-**Ubuntu/Debian:**
-```bash
-sudo apt install tesseract-ocr-por tesseract-ocr-fra tesseract-ocr-deu \
-                 tesseract-ocr-rus tesseract-ocr-chi-sim
-```
-
-**macOS:**
-```bash
-brew install tesseract-lang
-```
-
-**Windows:**
-- Download language data files from https://github.com/tesseract-ocr/tessdata
-- Place `.traineddata` files in your Tesseract installation's `tessdata` folder
-  - Default location: `C:\Program Files\Tesseract-OCR\tessdata\`
-
-**Note:** If you only play Foxhole in English, you don't need to install additional language packs. The scanner will work perfectly with just the English model (included by default) and the bundled `renner_numbers` model for quantity detection.
 
 ### 5. Set Up Pre-Commit Hooks (Optional, for Development)
 
@@ -323,7 +269,7 @@ fs scan --database data/fs_vanilla.h5 --image screenshot.png --faction colonials
 
 The scanner will automatically:
 - Detect and identify all items in the stockpile
-- Extract quantities using OCR with the custom Renner font model
+- Extract quantities using the OCR engine
 - Output structured JSON data with items, quantities, and metadata
 - Validate mod names against available mods in the database
 
@@ -384,8 +330,8 @@ OCR is provided by the external PyPI package **`fs-ocr`** (a Rust engine), and `
 
 Core dependencies:
 
-- **Image Processing**: OpenCV (opencv-python), NumPy
-- **OCR**: `fs-ocr` (external Rust engine); Tesseract OCR powers quantity detection
+- **Image Handling**: NumPy, Pillow
+- **OCR & Matching**: `fs-ocr` (external Rust engine); Tesseract powers quantity detection inside it
 - **Screenshot Capture**: `pywinctl` (window detection), `pynput` (global hotkey), Pillow (`ImageGrab`)
 - **GUI**: PySide6
 - **Data Handling**: Pydantic v2 for validation
@@ -393,10 +339,10 @@ Core dependencies:
 
 ## Configuration
 
-Configuration is stored as JSON in the platform config directory (`~/.fs_config`). The schema is **v11** and is migrated to the latest format automatically whenever settings are loaded; no manual migration step is required.
+Configuration is stored as JSON in the platform config directory (`~/.fs_config`). The schema is **v13** and is migrated to the latest format automatically whenever settings are loaded; no manual migration step is required.
 
 **Top-level sections:**
-`external_tools`, `logging`, `output`, `scanner`, `database_builder`, `notifications`, `gui`, `sav_processing`.
+`external_tools`, `logging`, `output`, `scanner`, `database_builder`, `gui`, `sav_processing`.
 
 The screenshot capture hotkey lives at `scanner.capture_key` (e.g. `"F9"`).
 
@@ -422,103 +368,9 @@ For more details, see:
 - [Configuration Guide](docs/configuration.md) - Environment variables and settings
 - [Webhook Integration](docs/webhooks.md) - Webhook setup and usage
 
-### Notifications
-
-The runtime includes a notification system that can send alerts to Discord channels when stockpile scans occur or errors are encountered.
-
-**Configuration:**
-
-Add notifications to your `.fs_config` or environment variables:
-
-```json
-{
-  "notifications": {
-    "enabled": true,
-    "notifiers": [
-      {
-        "type": "discord",
-        "name": "Main Server",
-        "webhook_url": "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN",
-        "username": "Stockpile Bot",
-        "events": [
-          "stockpile.scanned",
-          "stockpile.scan_failed"
-        ],
-        "message_templates": {
-          "stockpile.scanned": "📦 STOCKPILE_NAME @ SHARD [TIME] - ITEM_COUNT items (UNMATCHED_ITEMS unknown) - AVG_CONFIDENCE confidence"
-        }
-      },
-      {
-        "type": "discord",
-        "name": "Admin Channel",
-        "webhook_url": "https://discord.com/api/webhooks/ADMIN_WEBHOOK_ID/ADMIN_WEBHOOK_TOKEN",
-        "username": "Admin Bot",
-        "events": [
-          "stockpile.scan_failed"
-        ]
-      }
-    ]
-  }
-}
-```
-
-**Message Templates:**
-
-Customize notification messages using placeholders. If not specified, default templates are used.
-
-Placeholders are replaced with actual values - just use them as-is in your message template.
-
-Available placeholders:
-- `STOCKPILE_NAME` - Name of the stockpile
-- `STOCKPILE_TYPE` - Type of stockpile (Public, Private, etc.)
-- `SHARD` - Shard/server name
-- `TIME` - In-game time
-- `ITEM_COUNT` - Total number of items
-- `MATCHED_ITEMS` - Number of successfully matched items
-- `UNMATCHED_ITEMS` - Number of unknown/unmatched items
-- `AVG_CONFIDENCE` - Average confidence (formatted as percentage, e.g., "85.6%")
-- `DURATION` - Scan duration (formatted as seconds, e.g., "2.34s")
-- `RESOLUTION` - Screenshot resolution
-- `ERROR` - Error message (for failed events)
-
-Example templates:
-```json
-"message_templates": {
-  "stockpile.scanned": "✅ STOCKPILE_NAME (STOCKPILE_TYPE) - ITEM_COUNT items in DURATION",
-  "stockpile.scan_failed": "❌ Scan failed: ERROR",
-  "stockpile.scan_started": "🔄 Scanning stockpile..."
-}
-```
-
-**Note:** Placeholders are case-sensitive and will be replaced exactly as written. Any text not matching a placeholder will remain unchanged, so typos like `{stockpile_name` won't cause errors.
-
-**Environment Variables:**
-
-```bash
-# Enable notifications
-FS_NOTIFICATIONS__ENABLED=true
-
-# Configure Discord notifiers (JSON array)
-FS_NOTIFICATIONS__NOTIFIERS='[{"type":"discord","name":"Main","webhook_url":"https://discord.com/...","events":["stockpile.scanned"]}]'
-```
-
-**Available Event Types:**
-- `stockpile.scan_started` - Scan has started
-- `stockpile.scanned` - Successful scan with item details
-- `stockpile.scan_failed` - Scan failed with error message
-
-**Discord Webhook Setup:**
-1. In Discord, go to Server Settings → Integrations → Webhooks
-2. Click "New Webhook" or "Create Webhook"
-3. Set a name and choose the channel
-4. Copy the Webhook URL
-5. Add the URL to your configuration
-
-**Multiple Notifiers:**
-You can configure multiple Discord webhooks to send different events to different channels. For example:
-- Main channel: successful scans
-- Admin channel: errors
-- Dev channel: all events for debugging
+> **Sending scans to Discord:** there is no built-in notification system. Use a
+> **webhook output handler** pointed at a Discord-compatible endpoint (or any
+> HTTP service). See [Webhook Integration](docs/webhooks.md).
 
 ## Development
 

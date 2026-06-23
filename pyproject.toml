@@ -14,7 +14,7 @@ authors = [
 maintainers = [
     {name = "Jorge García", email = "jgroca@gmail.com"},
 ]
-keywords = ["foxhole", "gaming", "ocr", "image-processing", "fastapi"]
+keywords = ["foxhole", "gaming", "ocr", "image-processing", "stockpile"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3",

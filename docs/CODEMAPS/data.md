@@ -1,4 +1,4 @@
-<!-- Generated: 2026-06-21 | Branch: main | Token estimate: ~950 -->
+<!-- Generated: 2026-06-23 | Branch: main | Token estimate: ~950 -->
 
 # Data Models, Config & Database
 
@@ -39,16 +39,14 @@ class StockpileItem(BaseModel):
 Custom `model_serializer` emits `candidates` only when non-empty.
 
 ### Other runtime models (`models/`)
-- `scan_result.py` `ScanResult` — `{success, data, error, processing_time_ms}` (CLI/scan worker)
 - `catalog_item.py` `CatalogItem` — item metadata (`cratable`, faction, category, icon)
-- `match_result.py` `MatchResult` — `{code, ncc_score, phash_distance, resolution, mod, crated}`
 - `item_candidate.py` `ItemCandidate` — alternative match (code, confidence)
-- `icon_template.py` `IconTemplate` — template (image, code, faction, category, mod, crated, resolution, phash)
 - `stockpile_coords.py` `StockpileCoords` — `{x, y}` normalized map coords (`to_key()`)
-- `database_statistics.py`, `detected_icon_info.py`, `stockpile_image_regions.py`
 - `memory_snapshot.py`, `request_memory_stats.py` — memory monitoring
-- `mod_import_config.py`, `mod_import_progress.py`, `mod_import_result.py`, `pak_validation_result.py` — mod/asset import (uses `TemplateSettings`)
-- `notification.py`
+
+(Matching/template/mod-import models — `MatchResult`, `IconTemplate`,
+`mod_import_*`, etc. — now live in `fs_tools/models/`, not the runtime. The old
+`ScanResult` model was dropped; `fs scan` returns the output handlers' dict.)
 
 ### External engine models (`fs_ocr` — Rust PyPI pkg, NOT in repo)
 The external `fs-ocr` exposes `StockpileScanner`, `ScanConfig`,
@@ -68,25 +66,24 @@ The external `fs-ocr` exposes `StockpileScanner`, `ScanConfig`,
 | `OutputDestination` | return, file, webhook, console, **sheets** |
 | `OutputHandlerType` | return, file, webhook, console, **google sheets** |
 | `AuthType` | basic, bearer, forward — now only for the **webhook output handler** (forward = pass a client header through) |
-| `EventType` | scan started/scanned/failed (+ unused legacy `SERVER_*`) |
-| `ConfigLevel`, `NotifierType` | config scope, notifier kinds |
+| `SavMode` | manual (hotkey scans once), monitor (poll `.sav` + emit changes) |
 
 ## Configuration (`core/settings/`)
 
-### AppSettings root (schema **v11**)
+### AppSettings root (schema **v13**)
 ```python
 class AppSettings(BaseSettings):
-    config_version: int        # CURRENT_VERSION = 11
+    config_version: int        # CURRENT_VERSION = 13
     external_tools: ExternalToolsSettings
     logging: LoggingSettings
     output: OutputSettings
     scanner: ScannerSettings
     database_builder: DatabaseBuilderSettings
-    notifications: NotificationsSettings
     gui: GUISettings
     sav_processing: SavProcessingSettings
 ```
-(`api_server` + `api_auth` removed in v10; `stockpile_types` removed in v11.)
+(`api_server`/`api_auth` removed in v10; `stockpile_types` in v11;
+`notifications` in v12; `gui.config_level` in v13.)
 `sections/templates.py` (`TemplateSettings`) is consumed by mod-import models —
 not a top-level field. (The old `OCRSettings` icon-geometry model was removed; its
 one live value is `fs_tools/constants.py:ICON_BOX_SCALE = 64/2160` (fs_tools-only).)
@@ -110,7 +107,8 @@ discriminated-union wrapper.
 ### Sources & migration
 Priority: env `FS_<SECTION>__<KEY>` → JSON file (platform config dir,
 `json_settings_source.py`) → defaults. Stepwise upgrade in `config_migrator.py`
-(v1 → … → 11). v9→v10 drops `api_server`/`api_auth`; v10→v11 drops `stockpile_types`.
+(v1 → … → 13). v9→v10 drops `api_server`/`api_auth`; v10→v11 drops
+`stockpile_types`; v11→v12 drops `notifications`; v12→v13 drops `gui.config_level`.
 
 ## Template database (HDF5) — owned by `fs_tools`
 
@@ -147,7 +145,7 @@ populated (no `x`/`y`); change-tracking keyed by `Stockpile.to_key()`.
 
 ## Key files
 1. `models/stockpile.py`, `models/stockpile_item.py`
-2. `core/settings/app_settings.py` + `config_migrator.py` (v11)
+2. `core/settings/app_settings.py` + `config_migrator.py` (v13)
 3. `core/settings/sections/scanner.py` — incl. `capture_key`
 4. `core/settings/sections/output/` — handler + format models
 5. `fs_tools/template_db/` — HDF5 access + matching

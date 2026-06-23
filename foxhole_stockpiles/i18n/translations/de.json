@@ -97,7 +97,6 @@
       "error_unexpected": "Ein unerwarteter Fehler ist aufgetreten:\n{error}",
       "unsaved_changes_title": "Ungespeicherte Änderungen",
       "unsaved_changes_message": "Es gibt ausstehende Änderungen. Möchten Sie diese speichern?",
-      "tabs_updated": "Konfiguration gespeichert. Registerkarten für {level}-Modus aktualisiert.",
       "saved_successfully": "Konfiguration erfolgreich gespeichert!"
     }
   },
@@ -193,14 +192,6 @@
     "remove_handler_message": "Sind Sie sicher dass Sie '{name}' entfernen möchten?"
   },
   "gui_tab": {
-    "config_level_group": "Konfigurationsstufe",
-    "level": "Stufe:",
-    "level_tooltip": "Steuert, welche Konfigurationsoptionen in der Oberfläche sichtbar sind.\n\nBasis: Nur wesentliche Einstellungen (empfohlen für die meisten)\nErweitert: Zusätzliche Optionen für erfahrene Benutzer\nEntwickler: Vollzugriff einschließlich OCR/Vorlagen-Einstellungen",
-    "level_basic": "Basis",
-    "level_advanced": "Erweitert",
-    "level_developer": "Entwickler",
-    "warning_advanced": "Der erweiterte Modus aktiviert zusätzliche Optionen, die die Scangenauigkeit beeinflussen.\nÄndern Sie diese Einstellungen nur, wenn Sie deren Auswirkungen verstehen.",
-    "warning_developer": "Der Entwicklermodus aktiviert kritische Einstellungen einschließlich OCR- und Vorlagen-Registerkarten.\nFalsche Konfiguration kann die Scanfunktionalität vollständig zerstören.\nVerwenden Sie dies nur, wenn Sie Entwickler oder erfahrener Benutzer sind, der die Risiken versteht.",
     "window_behavior_group": "Fensterverhalten",
     "minimize_to_tray": "In Systemleiste minimieren:",
     "minimize_checkbox": "Beim Schließen in Systemleiste minimieren",

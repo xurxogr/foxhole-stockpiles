@@ -26,7 +26,7 @@ export FS_LOGGING__LOG_FILE=/var/log/foxhole-scanner.log
 
 Create a file at `~/.fs_config` with JSON configuration:
 
-**Note on Config Versioning:** The configuration includes a `config_version` field (current: **11**). Old configs are automatically migrated when loaded via `ConfigMigrator` - no manual action required. V5 introduced the `output.handlers` array structure (multiple output destinations); later versions added the `sav_processing` section for Foxhole save-file processing; V10 removed the obsolete `api_server` and `api_auth` sections (the FastAPI server was removed in favor of local screenshot capture); V11 removed the `stockpile_types` section (type detection now happens inside the external `fs-ocr` engine, so the aliases had no effect).
+**Note on Config Versioning:** The configuration includes a `config_version` field (current: **13**). Old configs are automatically migrated when loaded via `ConfigMigrator` - no manual action required. V5 introduced the `output.handlers` array structure (multiple output destinations); later versions added the `sav_processing` section for Foxhole save-file processing; V10 removed the obsolete `api_server` and `api_auth` sections (the FastAPI server was removed in favor of local screenshot capture); V11 removed the `stockpile_types` section (type detection now happens inside the external `fs-ocr` engine, so the aliases had no effect); V12 removed the `notifications` section (the notifier stack was never wired into the scan flow); V13 removed `gui.config_level` (the basic/advanced/developer setting no longer gated anything after OCR/template settings moved to `fs-ocr`/`fs-tools`).
 
 ```json
 {
@@ -229,73 +229,17 @@ export FS_DATABASE_BUILDER__TARGET_RESOLUTIONS='["1080", "1440", "2160"]'
 export FS_DATABASE_BUILDER__WORKERS=4
 ```
 
-### Notifications (`notifications`)
-
-Settings for the notifications system (e.g., Discord webhooks).
-
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `enabled` | boolean | `false` | Enable or disable notifications |
-| `notifiers` | array | `[]` | List of notifier configurations |
-
-#### Discord Notifier Configuration (`notifications.notifiers[]`)
-
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `type` | string | `"discord"` | Notifier type (currently only `"discord"` supported) |
-| `name` | string | `"Discord"` | Human-readable name for this notifier |
-| `webhook_url` | string | Required | Discord webhook URL |
-| `username` | string\|null | `"Foxhole Stockpiles"` | Custom username for webhook messages |
-| `events` | array[string] | `["stockpile.scanned", "stockpile.scan_failed"]` | Event types to send |
-| `message_templates` | object | `{}` | Custom message templates per event type |
-
-**Available events:**
-- `stockpile.scanned` - Stockpile scan completed successfully
-- `stockpile.scan_failed` - Stockpile scan failed
-- `stockpile.scan_started` - Stockpile scan started
-
-**Message template placeholders:**
-`STOCKPILE_NAME`, `STOCKPILE_TYPE`, `SHARD`, `TIME`, `ITEM_COUNT`, `MATCHED_ITEMS`, `UNMATCHED_ITEMS`, `AVG_CONFIDENCE`, `DURATION`, `RESOLUTION`, `ERROR`
-
-**Example:**
-```json
-{
-  "notifications": {
-    "enabled": true,
-    "notifiers": [
-      {
-        "type": "discord",
-        "name": "Main Server",
-        "webhook_url": "https://discord.com/api/webhooks/123/abc",
-        "username": "Stockpile Bot",
-        "events": ["stockpile.scanned", "stockpile.scan_failed"],
-        "message_templates": {
-          "stockpile.scanned": "📦 STOCKPILE_NAME - ITEM_COUNT items (DURATION)"
-        }
-      }
-    ]
-  }
-}
-```
-
 ### GUI (`gui`)
 
 Settings for the graphical user interface.
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `config_level` | string | `"basic"` | Configuration level: `"basic"`, `"advanced"`, or `"developer"` |
 | `minimize_to_tray` | boolean | `false` | Minimize to system tray instead of quitting |
 | `language` | string | `"en"` | Language code for the GUI (e.g., `"en"`, `"es"`, `"de"`) |
 
-**Configuration levels:**
-- `basic` - Essential tabs only (recommended for most users)
-- `advanced` - Adds Stockpile Types, Notifications, and SAV Processing tabs plus extra fields
-- `developer` - Same tabs as advanced, unlocking the remaining advanced fields for fine-tuning
-
 **Example:**
 ```bash
-export FS_GUI__CONFIG_LEVEL=advanced
 export FS_GUI__MINIMIZE_TO_TRAY=true
 export FS_GUI__LANGUAGE=es
 ```
@@ -350,7 +294,6 @@ Or in your `.fs_config`:
 ```bash
 export FS_LOGGING__LOG_LEVEL=DEBUG
 export FS_LOGGING__LOG_FILE=/var/log/foxhole-scanner.log
-export FS_SCANNER__DEBUG_MODE=true
 ```
 
 ### Save Screenshots for Analysis
@@ -422,12 +365,7 @@ This example shows all available settings with their default values:
     "target_resolutions": null,
     "workers": null
   },
-  "notifications": {
-    "enabled": false,
-    "notifiers": []
-  },
   "gui": {
-    "config_level": "basic",
     "minimize_to_tray": false,
     "language": "en"
   },
@@ -460,8 +398,6 @@ This table lists all available environment variables with their default values:
 | `FS_SCANNER__CAPTURE_KEY` | string\|null | `null` | Hotkey to capture the Foxhole "War" window and scan it (e.g. `F9`); `null` disables capture |
 | `FS_SCANNER__EARLY_EXIT_THRESHOLD` | float | `0.0` | Early exit threshold (used by `fs-tools`) |
 | `FS_SCANNER__CONFIDENCE_GAP` | float | `0.0` | Confidence gap for alternative candidates |
-| `FS_SCANNER__DEBUG_MODE` | boolean | `false` | Enable debug image output |
-| `FS_SCANNER__EXTRACT_ICONS` | boolean | `false` | Extract icons to folder for debugging |
 | `FS_SCANNER__SCREENSHOTS_FOLDER` | string | `""` | Folder to save screenshots (empty to disable) |
 | **External Tools** | | | |
 | `FS_EXTERNAL_TOOLS__REPAK` | string\|null | `null` | Path to repak executable |
@@ -471,11 +407,7 @@ This table lists all available environment variables with their default values:
 | `FS_DATABASE_BUILDER__CATALOG_FILE` | string\|null | `null` | Path to catalog.json |
 | `FS_DATABASE_BUILDER__TARGET_RESOLUTIONS` | JSON array\|null | `null` | Resolutions to generate |
 | `FS_DATABASE_BUILDER__WORKERS` | integer\|null | `null` | Worker processes (null = auto) |
-| **Notifications** | | | |
-| `FS_NOTIFICATIONS__ENABLED` | boolean | `false` | Enable notifications |
-| `FS_NOTIFICATIONS__NOTIFIERS` | JSON array | `[]` | List of notifier configs |
 | **GUI** | | | |
-| `FS_GUI__CONFIG_LEVEL` | string | `"basic"` | Config level (basic/advanced/developer) |
 | `FS_GUI__MINIMIZE_TO_TRAY` | boolean | `false` | Minimize to tray on close |
 | `FS_GUI__LANGUAGE` | string | `"en"` | GUI language code |
 | **SAV Processing** | | | |

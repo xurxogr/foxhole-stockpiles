@@ -1,9 +1,9 @@
-<!-- Generated: 2026-06-21 | Branch: main | Source files: ~220 (.py) | Token estimate: ~900 -->
+<!-- Generated: 2026-06-23 | Branch: main | Source files: ~220 (.py) | Token estimate: ~900 -->
 
 # Foxhole Stockpiles — Codemap Index
 
-**Last Updated:** 2026-06-21
-**Version:** 0.4.0 | **Config schema:** v11 | **Python:** 3.12+
+**Last Updated:** 2026-06-23
+**Version:** 0.4.0 | **Config schema:** v13 | **Python:** 3.12+
 
 ## What it is
 
@@ -49,12 +49,11 @@ capture-and-scan. The HDF5 template DB code lives in `fs_tools/template_db/`.
 ## foxhole_stockpiles modules
 
 - **cli/** — Typer app (`app.py`); commands `scan`, `gui`, `sav`; `_settings.py` loads `AppSettings`, `_console.py` Rich output.
-- **services/** — `scanner.py` (**OCR seam → external `fs_ocr`**), `capture.py` (grab the Foxhole window), `local_scan.py` (`LocalScanService`: scan → outputs), `output_coordinator.py` (sink routing), `catalog_service.py`, `notification_service.py`, `memory_monitor.py`, `sav_parser.py`, `savefile_processor.py`.
-- **core/** — `settings/` (Pydantic `AppSettings` v11 + `config_migrator.py` + nested `sections/`), `events/bus.py` (EventBus), `logging.py`, `utils.py`, `version.py`.
-- **models/** — Pydantic v2: `stockpile.py` (`hex`/`coords`/`is_reserve`/`to_key()`), `stockpile_item.py` (`x`/`y`/`candidates`), `catalog_item.py`, `match_result.py`, `scan_result.py`, SAV/mod-import models, memory-stat models.
+- **services/** — `scanner.py` (**OCR seam → external `fs_ocr`**), `capture.py` (grab the Foxhole window), `local_scan.py` (`LocalScanService`: scan → outputs), `output_coordinator.py` (sink routing), `catalog_service.py`, `sav_parser.py`, `savefile_processor.py`.
+- **core/** — `settings/` (Pydantic `AppSettings` v13 + `config_migrator.py` + nested `sections/`), `logging.py`, `utils.py`, `version.py`.
+- **models/** — Pydantic v2: `stockpile.py` (`hex`/`coords`/`is_reserve`/`to_key()`), `stockpile_item.py` (`x`/`y`/`candidates`), `catalog_item.py`, `item_candidate.py`, `stockpile_coords.py`, memory-stat models.
 - **handlers/** — output sinks taking `list[Stockpile]`: `console.py`, `file.py`, `webhook.py`, `response.py` (return), **`sheets.py`** (Google Sheets); interface in `base_handler.py`.
-- **notifiers/** — `discord.py` (+ `base.py`).
-- **enums/** — StrEnums: stockpile_type (~28), item_faction, item_category, supported_language, supported_resolution, output_format/destination/handler_type, auth_type, event_type, config_level, notifier_type.
+- **enums/** — StrEnums: stockpile_type (~28), item_faction, item_category, supported_language, supported_resolution, output_format/destination/handler_type, auth_type, sav_mode.
 - **gui/** — PySide6 desktop app: `windows/` (main, config), `widgets/capture_panel.py` + `config_tabs/`, `utils/` (hotkey listener, capture+scan worker, SAV workers, log handler).
 - **connectors/**, **i18n/** — webhook connector, translations.
 
@@ -62,7 +61,7 @@ capture-and-scan. The HDF5 template DB code lives in `fs_tools/template_db/`.
 
 - `architecture.md` — package boundaries, capture & SAV data flow, patterns
 - `backend.md` — CLI commands, GUI capture flow, output routing
-- `data.md` — config schema (v11), Pydantic models, HDF5 template DB
+- `data.md` — config schema (v13), Pydantic models, HDF5 template DB
 - `dependencies.md` — libraries, external tools, Rust sibling packages
 
 ## Five files to read first
@@ -71,4 +70,4 @@ capture-and-scan. The HDF5 template DB code lives in `fs_tools/template_db/`.
 2. `services/capture.py` + `services/local_scan.py` — capture + local scan→output
 3. `gui/widgets/capture_panel.py` — hotkey capture panel (the main UI)
 4. `services/output_coordinator.py` — output sink fan-out
-5. `core/settings/app_settings.py` — configuration root (v11)
+5. `core/settings/app_settings.py` — configuration root (v13)

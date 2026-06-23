@@ -18,10 +18,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **OCR engine is now the external Rust package `fs-ocr`** (PyPI); the in-repo
   `fs_ocr` package was removed. The runtime talks to it through
   `services/scanner.py`. HDF5 template DB code moved to `fs_tools/template_db/`.
-- Config schema migrated to **v11**; the capture hotkey lives at
+- Config schema migrated to **v13**; the capture hotkey lives at
   `scanner.capture_key`.
 
 ### Removed
+- **The GUI configuration levels** (basic/advanced/developer) and the
+  `gui.config_level` setting (dropped in the v12→v13 migration): the levels only
+  guarded the OCR/template internals that moved to `fs-ocr`/`fs-tools`, so they
+  no longer gated anything. All settings tabs are now always visible.
+- **The `notifications` config section, its GUI tab, and the Discord notifier**
+  (dropped in the v11→v12 migration): the notifier stack was never wired into the
+  scan flow, so configured notifications were never sent. Send scans to Discord
+  via a webhook output handler instead.
+- **Dead `fs scan` flags** `--language` and `--output-format`: both were accepted
+  but had no effect (the engine auto-detects languages; output format is set per
+  handler). The hidden legacy command aliases (`scanner`, `process-sav`,
+  `ui`/`app`) were also removed.
 - **The `stockpile_types` config section and its GUI tab** (dropped in the
   v10→v11 migration): the alias list was no longer consumed — stockpile-type
   detection happens inside the external `fs-ocr` engine.

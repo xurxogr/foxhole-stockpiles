@@ -6,7 +6,7 @@ from typing import Any
 class ConfigMigrator:
     """Handles migration of configuration data between versions."""
 
-    CURRENT_VERSION = 12
+    CURRENT_VERSION = 13
 
     @classmethod
     def apply_migrations(cls, data: dict[str, Any]) -> dict[str, Any]:
@@ -81,6 +81,11 @@ class ConfigMigrator:
         if version == 11:
             data = cls._migrate_v11_to_v12(data)
             data["config_version"] = 12
+            version = 12
+
+        if version == 12:
+            data = cls._migrate_v12_to_v13(data)
+            data["config_version"] = 13
 
         return data
 
@@ -536,5 +541,27 @@ class ConfigMigrator:
             dict[str, Any]: V12 configuration data.
         """
         data.pop("notifications", None)
+
+        return data
+
+    @staticmethod
+    def _migrate_v12_to_v13(data: dict[str, Any]) -> dict[str, Any]:
+        """Migrate from v12 to v13 (drop the GUI ``config_level`` setting).
+
+        The basic/advanced/developer configuration-level system is removed: it
+        existed to hide the OCR/template internals that have since moved to the
+        external ``fs-ocr`` engine and the ``fs-tools`` package, so it no longer
+        guards anything. All settings tabs are now always visible. Any stored
+        ``gui.config_level`` value is dropped so it does not linger in
+        ``.fs_config`` (the settings models forbid unknown fields).
+
+        Args:
+            data (dict[str, Any]): V12 configuration data.
+
+        Returns:
+            dict[str, Any]: V13 configuration data.
+        """
+        if "gui" in data and isinstance(data["gui"], dict):
+            data["gui"].pop("config_level", None)
 
         return data

@@ -97,7 +97,6 @@
       "error_unexpected": "Ocurrió un error inesperado:\n{error}",
       "unsaved_changes_title": "Cambios sin guardar",
       "unsaved_changes_message": "Hay cambios pendientes. ¿Desea guardarlos?",
-      "tabs_updated": "Configuración guardada. Pestañas actualizadas para modo {level}.",
       "saved_successfully": "¡Configuración guardada correctamente!"
     }
   },
@@ -193,14 +192,6 @@
     "remove_handler_message": "¿Está seguro de que desea eliminar '{name}'?"
   },
   "gui_tab": {
-    "config_level_group": "Nivel de configuración",
-    "level": "Nivel:",
-    "level_tooltip": "Controla qué opciones de configuración son visibles en la interfaz.\n\nBásico: Solo configuraciones esenciales (recomendado para la mayoría)\nAvanzado: Opciones adicionales de ajuste para usuarios avanzados\nDesarrollador: Acceso completo incluyendo configuraciones OCR/Plantillas",
-    "level_basic": "Básico",
-    "level_advanced": "Avanzado",
-    "level_developer": "Desarrollador",
-    "warning_advanced": "El modo avanzado habilita opciones adicionales que afectan la precisión del escaneo.\nSolo modifique estas configuraciones si entiende su impacto.",
-    "warning_developer": "El modo desarrollador habilita configuraciones críticas incluyendo pestañas OCR y Plantillas.\nUna configuración incorrecta puede romper completamente la funcionalidad de escaneo.\nSolo use esto si es desarrollador o usuario avanzado que entiende los riesgos.",
     "window_behavior_group": "Comportamiento de ventana",
     "minimize_to_tray": "Minimizar a bandeja:",
     "minimize_checkbox": "Minimizar a bandeja al cerrar",

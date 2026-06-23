@@ -1,9 +1,9 @@
-<!-- Generated: 2026-06-21 | Branch: main | Token estimate: ~950 -->
+<!-- Generated: 2026-06-23 | Branch: main | Token estimate: ~950 -->
 
 # Architecture & Design Patterns
 
 **Type:** multi-package Python workspace (flat layout), **2 installable packages**.
-Config schema **v11**. Desktop app — **no REST server**.
+Config schema **v13**. Desktop app — **no REST server**.
 
 ## Package boundaries
 
@@ -78,31 +78,25 @@ SAV-sourced `Stockpile`s carry map metadata (`hex`, `coords`, `is_reserve`) and 
 
 ## Settings architecture
 
-`core/settings/app_settings.py` → `AppSettings(BaseSettings)`, schema **v11**.
+`core/settings/app_settings.py` → `AppSettings(BaseSettings)`, schema **v13**.
 Top-level sections: `external_tools`, `logging`, `output`, `scanner`,
-`database_builder`, `notifications`, `gui`, `sav_processing`.
+`database_builder`, `gui`, `sav_processing`.
 (The capture hotkey is `scanner.capture_key`. `TemplateSettings` is consumed by
 mod-import models, not a top-level field. Icon geometry is the single constant
 `fs_tools/constants.py:ICON_BOX_SCALE` (fs_tools-only) — the former `OCRSettings` model was removed.)
 
 Source priority (highest→lowest): env (`FS_<SECTION>__<KEY>`) → JSON file in
 platform config dir → defaults. Stepwise migration via `ConfigMigrator`
-(`CURRENT_VERSION = 11`; v9→v10 drops `api_server`/`api_auth`, v10→v11 drops `stockpile_types`).
+(`CURRENT_VERSION = 13`; v9→v10 drops `api_server`/`api_auth`, v10→v11 drops
+`stockpile_types`, v11→v12 drops `notifications`, v12→v13 drops `gui.config_level`).
 
 ## GUI structure
 
 `gui/windows/main_window.py` hosts `widgets/capture_panel.py` (central widget):
 Start/Stop capture toggle (binds the hotkey listener), "scan a file" action, SAV
 scan/monitor tools, and a live log table. Config dialog
-(`windows/config_window.py`) has tabs: Scanner (incl. capture hotkey), Output,
-Logging, GUI (+ Stockpile Types / Notifications / SAV at advanced level).
-
-## Event system
-
-`core/events/bus.py` — `EventBus.emit(EventType, data)` / `subscribe(...)`.
-Decouples NotificationService (Discord) and metrics from the pipeline. Active
-events: scan started/scanned/failed. (`SERVER_*` enum members remain but are
-unused after the server removal.)
+(`windows/config_window.py`) has five always-visible tabs: Scanner (incl.
+capture hotkey), Output, SAV Processing, Logging, GUI.
 
 ## Error handling
 
@@ -122,14 +116,10 @@ unused after the server removal.)
   read/write; the engine reads the DB itself at scan time.
 - **HDF5 over pickle:** structured, queryable, language-agnostic, no exec risk.
 
-> NOTE: CLAUDE.md still describes the 3-package / FastAPI layout and a future
-> "named pipelines" config — both stale on this branch (2 packages, no server,
-> flat sections at schema v11).
-
 ## Key files
 
 1. `services/scanner.py` — OCR seam over external `fs_ocr`
 2. `services/capture.py` + `services/local_scan.py` — capture + local scan→output
 3. `gui/widgets/capture_panel.py` — capture UI + hotkey
 4. `services/output_coordinator.py` — output routing (list-based)
-5. `core/settings/app_settings.py` — configuration (v11)
+5. `core/settings/app_settings.py` — configuration (v13)

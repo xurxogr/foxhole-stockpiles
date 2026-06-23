@@ -76,7 +76,8 @@ Scanner completes but finds 0 items in the screenshot.
 
 1. **Wrong resolution database**
    - Verify your screenshot resolution matches the database
-   - Check database resolutions: `fs-tools inspect --database templates.h5 --resolution 1080`
+   - Browse the database contents (resolutions, mods, templates) with the
+     visualizer: `fs-tools visualize --database templates.h5`
    - Rebuild database with correct resolution
 
 2. **Screenshot quality**
@@ -96,12 +97,13 @@ Scanner completes but finds 0 items in the screenshot.
 
 5. **Debug the detection**
    ```bash
-   export FS_SCANNER__DEBUG_MODE=true
-   export FS_SCANNER__EXTRACT_ICONS=true
-   export FS_LOGGING__LOG_LEVEL=DEBUG
-   fs scan --database templates.h5 --image screenshot.png
+   # Verbose scan logs (per-icon match details)
+   fs scan --database templates.h5 --image screenshot.png --verbose
+
+   # Or inspect detection visually against the database
+   fs-tools debug screenshot.png --database templates.h5
    ```
-   Debug images are written to the `icons/` folder for inspection.
+   The debug viewer shows the detected icon regions and their best matches.
 
 ### Some Items Not Detected
 
@@ -116,7 +118,8 @@ Scanner detects most items but misses some specific ones.
 
 2. **Verify the item exists in database**
    ```bash
-   fs-tools inspect --database templates.h5 --resolution 1080 --code ItemCode --print
+   # Browse templates by code / resolution / mod in the visualizer
+   fs-tools visualize --database templates.h5
    ```
 
 3. **Screenshot quality issues**
@@ -129,8 +132,8 @@ Scanner detects most items but misses some specific ones.
    - Supported resolutions: 720p, 1080p, 1440p, 2160p
    - Check what resolutions are in your database:
      ```bash
-     # List database info with any valid resolution
-     fs-tools inspect --database templates.h5 --resolution 1080
+     # The visualizer lists every resolution group and mod in the database
+     fs-tools visualize --database templates.h5
      ```
 
 **Note:** The pHash and NCC matching thresholds are fixed defaults as of config v10 and
@@ -173,24 +176,19 @@ An item becomes "Unknown" when:
    - Whether it's crated (True)
    - The best candidate found and its confidence score
 
-2. **Enable icon extraction for debugging**
+2. **Inspect the detection visually**
    ```bash
-   export FS_SCANNER__EXTRACT_ICONS=true
-   fs scan --image screenshot.png
+   fs-tools debug screenshot.png --database templates.h5
    ```
 
-   This saves detected icons to an `icons/` folder as `<index>_<code>.png` so you can visually inspect what was detected.
+   The debug viewer shows each detected icon region alongside its best database
+   matches and their confidence scores, so you can see what the failing icon
+   was compared against.
 
-3. **Use the candidate inspector**
+3. **Check if the item exists in the database**
    ```bash
-   fs-tools inspect --database templates.h5 --resolution 1080 --icon icons/64_Unknown.png --top 10
-   ```
-
-   This shows the top matching candidates with their confidence scores. Replace `1080` with your screenshot's vertical resolution.
-
-4. **Check if the item exists in the database**
-   ```bash
-   fs-tools inspect --database templates.h5 --resolution 1080 --code MGTW --print
+   # Browse templates by code / resolution / mod in the visualizer
+   fs-tools visualize --database templates.h5
    ```
 
    Verify the item exists with the correct crated status and mod.
@@ -210,8 +208,8 @@ An item becomes "Unknown" when:
 If the error shows a best match with decent confidence (e.g., 0.62) but the item is still Unknown:
 
 ```bash
-# Check matching candidates (use your screenshot's resolution)
-fs-tools inspect --database templates.h5 --resolution 1080 --icon icons/64_Unknown.png --top 5
+# Compare the detected icons against the database visually
+fs-tools debug screenshot.png --database templates.h5
 ```
 
 If the correct item appears only with low confidence, the screenshot likely doesn't match a
@@ -223,8 +221,8 @@ for the relevant mod rather than adjusting matching thresholds (which are fixed 
 If you're using a mod (e.g., clean-icons) and items show as Unknown:
 
 ```bash
-# Verify mod templates exist
-fs-tools inspect --database templates.h5 --resolution 1080 --code MGTW --mod clean-icons --print
+# Verify mod templates exist (filter by mod in the visualizer)
+fs-tools visualize --database templates.h5
 
 # If templates exist but don't match, rebuild with current mod files
 ./build_database.sh
@@ -248,7 +246,7 @@ Items detected but with low confidence scores.
 
 3. Check template quality:
    ```bash
-   fs-tools inspect --database templates.h5 --resolution 1080 --code ItemCode --print
+   fs-tools visualize --database templates.h5
    ```
 
 4. Rebuild database if using different mod versions

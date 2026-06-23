@@ -97,7 +97,6 @@
       "error_unexpected": "发生意外错误：\n{error}",
       "unsaved_changes_title": "未保存的更改",
       "unsaved_changes_message": "有待处理的更改。您想保存它们吗？",
-      "tabs_updated": "配置已保存。标签页已更新为 {level} 模式。",
       "saved_successfully": "配置保存成功！"
     }
   },
@@ -193,14 +192,6 @@
     "remove_handler_message": "您确定要移除 '{name}' 吗？"
   },
   "gui_tab": {
-    "config_level_group": "配置级别",
-    "level": "级别：",
-    "level_tooltip": "控制界面中可见的配置选项。\n\n基本：仅基本设置（推荐大多数用户使用）\n高级：为高级用户提供额外的调整选项\n开发者：完全访问，包括 OCR/模板设置",
-    "level_basic": "基本",
-    "level_advanced": "高级",
-    "level_developer": "开发者",
-    "warning_advanced": "高级模式启用了影响扫描精度的附加选项。\n只有在了解其影响的情况下才修改这些设置。",
-    "warning_developer": "开发者模式启用了关键设置，包括 OCR 和模板标签页。\n错误的配置可能完全破坏扫描功能。\n只有开发者或了解风险的高级用户才能使用此功能。",
     "window_behavior_group": "窗口行为",
     "minimize_to_tray": "最小化到托盘：",
     "minimize_checkbox": "关闭时最小化到托盘",

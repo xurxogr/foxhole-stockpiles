@@ -7,7 +7,6 @@ from unittest.mock import patch
 import pytest
 
 from foxhole_stockpiles.core.settings.sections.scanner import ScannerSettings
-from foxhole_stockpiles.enums.config_level import ConfigLevel
 from foxhole_stockpiles.gui.widgets.config_tabs.scanner_tab import ScannerTab
 
 
@@ -246,16 +245,3 @@ def test_scanner_tab_clear_capture_key(scanner_tab: ScannerTab) -> None:
     scanner_tab.set_values(ScannerSettings(capture_key="F9"))
     scanner_tab.clear_capture_key()
     assert scanner_tab.get_values().capture_key is None
-
-
-@pytest.mark.parametrize("level", [ConfigLevel.BASIC, ConfigLevel.ADVANCED, ConfigLevel.DEVELOPER])
-def test_scanner_tab_set_config_level_is_callable(
-    scanner_tab: ScannerTab, level: ConfigLevel
-) -> None:
-    """set_config_level is a no-op (all fields visible at every level).
-
-    Args:
-        scanner_tab: ScannerTab instance
-        level (ConfigLevel): The config level to apply.
-    """
-    scanner_tab.set_config_level(level)  # must not raise

@@ -29,12 +29,12 @@ What actually happened.
 **System Information:**
 - OS: [e.g., Windows 11, Ubuntu 22.04, macOS 14]
 - Python Version: [e.g., 3.12.0]
-- Installation Method: [pip, Docker, source]
+- Installation Method: [pip, source]
 - Package Version: [e.g., 0.1.0]
 
 **Dependency Versions (if relevant):**
 ```bash
-pip list | grep -E "(opencv|tesseract|pydantic|fastapi)"
+pip list | grep -E "(fs-ocr|fs-sav|pydantic|PySide6|pillow|numpy)"
 ```
 
 ## Error Output
