@@ -57,7 +57,7 @@ def test_parses_header_fields(code_map: ClipboardCodeMap) -> None:
     """Header maps to hex, type, name, and coords (town/city dropped)."""
     stockpile = parse_clipboard(SAMPLE, code_map)
     assert stockpile is not None
-    assert stockpile.hex == "Terminus"
+    assert stockpile.hex == "TerminusHex"
     assert stockpile.type == StockpileType.SEAPORT
     assert stockpile.name == "Public"
     assert stockpile.coords is not None
@@ -277,6 +277,29 @@ def test_faction_majority_disambiguates_localized_collision(
     codes = {item.code for item in stockpile.items}
     assert expected_uniform in codes
     assert majority_faction_code in codes
+
+
+def test_hex_display_name_converted_to_code(code_map: ClipboardCodeMap) -> None:
+    """A region display name (incl. curly apostrophe) resolves to its hex code."""
+    text = (
+        "Callahan’s Passage - Town - Seaport - Public - X: 0.1 Y: 0.2,"
+        "2026.06.23-16.30.38\n"
+        "Argenti r.II Rifle (Crate),5\n"
+    )
+    stockpile = parse_clipboard(text, code_map)
+    assert stockpile is not None
+    assert stockpile.hex == "CallahansPassageHex"
+
+
+def test_unknown_hex_keeps_display_name(code_map: ClipboardCodeMap) -> None:
+    """A region not in the enum keeps its display name instead of 'Undefined'."""
+    text = (
+        "Atlantis - Town - Seaport - Public - X: 0.1 Y: 0.2,2026.06.23-16.30.38\n"
+        "Argenti r.II Rifle (Crate),5\n"
+    )
+    stockpile = parse_clipboard(text, code_map)
+    assert stockpile is not None
+    assert stockpile.hex == "Atlantis"
 
 
 def test_infer_faction_majority() -> None:

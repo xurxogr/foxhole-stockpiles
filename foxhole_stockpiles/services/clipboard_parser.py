@@ -46,6 +46,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from foxhole_stockpiles.enums.hex import Hex
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.stockpile_type import StockpileType
 from foxhole_stockpiles.models.stockpile import Stockpile
@@ -603,10 +604,16 @@ def parse_clipboard(text: str | None, code_map: ClipboardCodeMap) -> Stockpile |
         faction,
     )
 
+    # Convert the localized region name from the export to its stable hex code;
+    # an unrecognized region (e.g. one added before the enum is updated) keeps
+    # its display name rather than collapsing to "Undefined".
+    resolved_hex = Hex.from_display(header.hex)
+    hex_name = header.hex if resolved_hex is Hex.UNDEFINED else resolved_hex.value
+
     fields: dict[str, Any] = {
         "name": header.name,
         "type": header.type,
-        "hex": header.hex,
+        "hex": hex_name,
         "coords": header.coords,
         "items": items,
     }
