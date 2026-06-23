@@ -27,7 +27,6 @@ def get_fs_hidden_imports() -> list[str]:
         "pydantic",
         "pydantic.json_schema",
         "pydantic_settings",
-        "pytesseract",
         "h5py",
         "httpx",
         "PIL",
@@ -174,6 +173,76 @@ def get_fs_tools_hidden_imports() -> list[str]:
     ]
 
 
+def get_unused_qt_modules() -> list[str]:
+    """Get PySide6 Qt modules to exclude from every build.
+
+    The GUIs use only ``QtCore``/``QtGui``/``QtWidgets``. These modules are
+    never imported and are not transitive dependencies of Widgets, so excluding
+    them is safe; it only saves space if PyInstaller's PySide6 hook would
+    otherwise over-collect them. Modules that Widgets/Gui *can* pull in
+    transitively (Svg, OpenGL, PrintSupport, Network, DBus, Xml) are
+    deliberately left in.
+
+    Returns:
+        list[str]: ``PySide6.*`` module names to pass to ``--exclude-module``.
+    """
+    return [
+        # Web engine (the 194 MB monster) and friends.
+        "PySide6.QtWebEngineCore",
+        "PySide6.QtWebEngineWidgets",
+        "PySide6.QtWebEngineQuick",
+        "PySide6.QtWebView",
+        "PySide6.QtWebChannel",
+        "PySide6.QtWebSockets",
+        # QML / Quick stack (we are a Widgets app).
+        "PySide6.QtQml",
+        "PySide6.QtQuick",
+        "PySide6.QtQuick3D",
+        "PySide6.QtQuickControls2",
+        "PySide6.QtQuickWidgets",
+        "PySide6.QtQuickTest",
+        # 3D.
+        "PySide6.Qt3DCore",
+        "PySide6.Qt3DAnimation",
+        "PySide6.Qt3DExtras",
+        "PySide6.Qt3DInput",
+        "PySide6.Qt3DLogic",
+        "PySide6.Qt3DRender",
+        # Multimedia (pulls in libavcodec).
+        "PySide6.QtMultimedia",
+        "PySide6.QtMultimediaWidgets",
+        "PySide6.QtSpatialAudio",
+        # Charts / data visualization / graphs.
+        "PySide6.QtCharts",
+        "PySide6.QtDataVisualization",
+        "PySide6.QtGraphs",
+        "PySide6.QtGraphsWidgets",
+        # PDF, designer, help, test tooling.
+        "PySide6.QtPdf",
+        "PySide6.QtPdfWidgets",
+        "PySide6.QtDesigner",
+        "PySide6.QtUiTools",
+        "PySide6.QtHelp",
+        "PySide6.QtTest",
+        # Connectivity / sensors / location.
+        "PySide6.QtBluetooth",
+        "PySide6.QtNfc",
+        "PySide6.QtSerialPort",
+        "PySide6.QtSerialBus",
+        "PySide6.QtPositioning",
+        "PySide6.QtSensors",
+        "PySide6.QtLocation",
+        # Misc unused subsystems.
+        "PySide6.QtSql",
+        "PySide6.QtScxml",
+        "PySide6.QtStateMachine",
+        "PySide6.QtRemoteObjects",
+        "PySide6.QtTextToSpeech",
+        "PySide6.QtHttpServer",
+        "PySide6.QtNetworkAuth",
+    ]
+
+
 @dataclass(frozen=True)
 class BuildSpec:
     """Definition of a single PyInstaller executable build.
@@ -183,6 +252,8 @@ class BuildSpec:
         entry_script (str): Path to the entry script, relative to project root.
         collect_packages (list[str]): Packages to ``--collect-submodules``.
         hidden_imports (list[str]): Modules to force-include via ``--hidden-import``.
+        exclude_modules (list[str]): Modules to drop via ``--exclude-module`` (on
+            top of the shared dev-tool excludes).
         data_dirs (list[tuple[str, str]]): ``(source, dest)`` data directory pairs,
             with ``source`` relative to project root.
         test_args (list[list[str]]): Argument lists to smoke-test the built exe.
@@ -192,8 +263,95 @@ class BuildSpec:
     entry_script: str
     collect_packages: list[str]
     hidden_imports: list[str]
+    exclude_modules: list[str] = field(default_factory=list)
     data_dirs: list[tuple[str, str]] = field(default_factory=list)
     test_args: list[list[str]] = field(default_factory=list)
+
+
+def render_spec(project_root: Path, spec: BuildSpec) -> str:
+    """Render a PyInstaller ``.spec`` file for a build spec.
+
+    A spec (rather than CLI flags) is required so we can filter the *binaries*
+    PyInstaller bundles: ``--exclude-module`` only drops Python wrappers, leaving
+    the Qt shared libraries (Qt6Qml/Quick/Pdf/ShaderTools, the QML plugin tree
+    and Qt's own translations) that a QWidgets app never uses. Those are stripped
+    here; platform/style/imageformat plugins and Qt6Core/Gui/Widgets are kept.
+
+    Args:
+        project_root (Path): Path to the project root directory.
+        spec (BuildSpec): The executable build definition.
+
+    Returns:
+        str: The contents of the ``.spec`` file.
+    """
+    entry = (project_root / spec.entry_script).as_posix()
+    datas = [((project_root / src).as_posix(), dst) for src, dst in spec.data_dirs]
+    excludes = ["pytest", "mypy", "ruff", "pre_commit", *spec.exclude_modules]
+    hidden = list(spec.hidden_imports)
+    collect = list(spec.collect_packages)
+
+    # chr(92) is a backslash; using it avoids backslash escaping inside this
+    # template while still normalising Windows TOC paths to forward slashes.
+    return f"""# -*- mode: python ; coding: utf-8 -*-
+# Auto-generated by build_fs.py. Do not edit by hand; regenerate via build_fs.py.
+from PyInstaller.utils.hooks import collect_submodules
+
+hiddenimports = {hidden!r}
+for _pkg in {collect!r}:
+    hiddenimports += collect_submodules(_pkg)
+
+a = Analysis(
+    [{entry!r}],
+    pathex=[],
+    binaries=[],
+    datas={datas!r},
+    hiddenimports=hiddenimports,
+    hookspath=[],
+    runtime_hooks=[],
+    excludes={excludes!r},
+    noarchive=False,
+)
+
+# Strip Qt subsystems a QWidgets app never uses (QML/Quick/Pdf/ShaderTools
+# shared libs, the QML plugin tree, the qmltooling plugins and Qt's bundled
+# translations). PyInstaller's PySide6 hook collects these regardless.
+_DROP_DLL = ("qt6qml", "qt6quick", "qt6pdf", "qt6shadertools")
+
+
+def _keep(entry):
+    dest = entry[0].lower().replace(chr(92), "/")
+    base = dest.rsplit("/", 1)[-1]
+    if base.startswith(_DROP_DLL):
+        return False
+    if "pyside6/qml/" in dest:
+        return False
+    if "plugins/qmltooling" in dest:
+        return False
+    if "pyside6/translations/" in dest:
+        return False
+    return True
+
+
+a.binaries = [e for e in a.binaries if _keep(e)]
+a.datas = [e for e in a.datas if _keep(e)]
+
+pyz = PYZ(a.pure)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    a.binaries,
+    a.datas,
+    [],
+    name={spec.name!r},
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=False,
+    runtime_tmpdir=None,
+    console=False,
+)
+"""
 
 
 def build_executable(project_root: Path, spec: BuildSpec) -> bool:
@@ -211,40 +369,13 @@ def build_executable(project_root: Path, spec: BuildSpec) -> bool:
     print("=" * 50)
     print()
 
-    # Use --windowed so no console appears on double-click; CLI commands attach
-    # to the parent console (or allocate one) when needed.
-    cmd = [
-        "pyinstaller",
-        "--onefile",
-        "--name",
-        spec.name,
-        "--windowed",
-    ]
+    spec_path = project_root / f"{spec.name}.spec"
+    spec_path.write_text(render_spec(project_root, spec), encoding="utf-8")
+    print(f"Wrote {spec_path.name} ({len(spec.hidden_imports)} hidden imports)")
 
-    # Add data directories (tessdata, translations, ...).
-    # Use os.pathsep for cross-platform compatibility (';' on Windows, ':' on Unix).
-    for src_rel, dst in spec.data_dirs:
-        src = project_root / src_rel
-        cmd.extend(["--add-data", f"{src}{os.pathsep}{dst}"])
-
-    # Recursively collect every submodule of the listed packages. PyInstaller's
-    # static analysis misses subpackages imported by name, so collect them all.
-    for package in spec.collect_packages:
-        cmd.extend(["--collect-submodules", package])
-
-    # Add hidden imports (third-party packages with dynamic imports).
-    for import_name in spec.hidden_imports:
-        cmd.extend(["--hidden-import", import_name])
-
-    # Exclude development dependencies.
-    exclude_modules = ["pytest", "mypy", "ruff", "pre_commit"]
-    for module in exclude_modules:
-        cmd.extend(["--exclude-module", module])
-
-    # Add the main script.
-    cmd.append(spec.entry_script)
-
-    print(f"Building with {len(spec.hidden_imports)} hidden imports...")
+    # Build from the generated spec. --clean drops stale caches; --noconfirm
+    # overwrites dist/ without prompting.
+    cmd = ["pyinstaller", "--noconfirm", "--clean", str(spec_path)]
 
     try:
         subprocess.run(cmd, cwd=project_root, check=True)
@@ -294,6 +425,7 @@ def get_build_specs() -> list[BuildSpec]:
             entry_script="foxhole_stockpiles/__main__.py",
             collect_packages=["foxhole_stockpiles"],
             hidden_imports=get_fs_hidden_imports(),
+            exclude_modules=get_unused_qt_modules(),
             data_dirs=[
                 ("tessdata", "tessdata"),
                 (
@@ -309,6 +441,21 @@ def get_build_specs() -> list[BuildSpec]:
             entry_script=os.path.join("fs_tools", "cli.py"),
             collect_packages=["fs_tools", "foxhole_stockpiles"],
             hidden_imports=get_fs_tools_hidden_imports(),
+            # The tooling reuses foxhole_stockpiles' settings/i18n/models, but
+            # --collect-submodules also drags in the runtime-only handlers and
+            # services (Google Sheets, screenshot capture, SAV parsing). The
+            # tooling never imports those, so drop their heavy dependencies.
+            exclude_modules=[
+                "google",
+                "google_auth_oauthlib",
+                "googleapiclient",
+                "pywinctl",
+                "pynput",
+                "fs_sav",
+                "httpx",
+                "pytesseract",
+                *get_unused_qt_modules(),
+            ],
             data_dirs=[
                 (
                     os.path.join("fs_tools", "i18n", "translations"),
