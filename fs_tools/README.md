@@ -19,7 +19,6 @@ fs-tools generate-templates --help
 fs-tools extract-assets --help
 fs-tools add-icon --database db.h5 --icon icon.png --code MyItem --faction n --category item --mod vanilla --resolution 1080
 fs-tools add-mod --help
-fs-tools inspect --help
 
 # GUI tools
 fs-tools visualize --database db.h5

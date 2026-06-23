@@ -47,15 +47,6 @@ class TestRootHelp:
         for command in ("scan", "sav", "gui"):
             assert command in output
 
-    def test_help_hides_aliases(self) -> None:
-        """Hidden alias commands do not appear in the help listing."""
-        result = runner.invoke(app, ["--help"])
-
-        assert result.exit_code == 0
-        output = strip_ansi(result.output)
-        for alias in ("scanner", "process-sav"):
-            assert alias not in output
-
 
 class TestVersion:
     """Test suite for the ``--version`` flag."""
@@ -78,17 +69,6 @@ class TestNoSubcommand:
 
             assert result.exit_code == 0
             mock_launch.assert_called_once()
-
-
-class TestAliases:
-    """Test suite for command alias resolution."""
-
-    def test_scanner_alias_resolves_to_scan(self) -> None:
-        """The ``scanner`` alias exposes the same options as ``scan``."""
-        result = runner.invoke(app, ["scanner", "--help"])
-
-        assert result.exit_code == 0
-        assert "--image" in strip_ansi(result.output)
 
 
 class TestMainEntryPoint:

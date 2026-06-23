@@ -14,7 +14,7 @@ from foxhole_stockpiles.cli._console import attach_console
 from foxhole_stockpiles.cli.commands import gui, sav, scan
 
 # Subcommand names that launch the GUI; the console is not attached for these.
-_GUI_COMMANDS = frozenset({"gui", "ui", "app"})
+_GUI_COMMANDS = frozenset({"gui"})
 
 app = typer.Typer(
     add_completion=False,
@@ -22,18 +22,9 @@ app = typer.Typer(
     help="Foxhole Stockpiles - capture, process, and emit Foxhole stockpile data.",
 )
 
-# scan (canonical) + scanner (alias)
 app.add_typer(scan.app, name="scan")
-app.add_typer(scan.app, name="scanner", hidden=True)
-
-# sav (canonical) + process-sav (alias)
 app.add_typer(sav.app, name="sav")
-app.add_typer(sav.app, name="process-sav", hidden=True)
-
-# gui (canonical) + ui, app (aliases)
 app.add_typer(gui.app, name="gui")
-app.add_typer(gui.app, name="ui", hidden=True)
-app.add_typer(gui.app, name="app", hidden=True)
 
 
 @app.callback(invoke_without_command=True)

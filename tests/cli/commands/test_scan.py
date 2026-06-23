@@ -206,57 +206,6 @@ class TestScanCommand:
         call_kwargs = coordinator.scan.call_args.kwargs
         assert call_kwargs["faction"] == ItemFaction.WARDENS
 
-    def test_language_filter(
-        self,
-        mock_setup_logging: MagicMock,
-        mock_output_coordinator: MagicMock,
-        mock_scanner_class: MagicMock,
-        mock_imread: MagicMock,
-        mock_stockpile: MagicMock,
-        tmp_path: Path,
-    ) -> None:
-        """The ``--language`` flag is forwarded as a single-language list.
-
-        Args:
-            mock_setup_logging (MagicMock): Mocked setup_logging.
-            mock_output_coordinator (MagicMock): Mocked OutputCoordinator.
-            mock_scanner_class (MagicMock): Mocked Scanner.
-            mock_imread (MagicMock): Mocked read_bgr.
-            mock_stockpile (MagicMock): Mock stockpile fixture.
-            tmp_path (Path): Temporary directory path from pytest fixture.
-        """
-        image_path = tmp_path / "shot.png"
-        image_path.touch()
-        database_path = tmp_path / "db.h5"
-        database_path.touch()
-
-        mock_imread.return_value = np.zeros((1080, 1920, 3), dtype=np.uint8)
-
-        coordinator = MagicMock()
-        coordinator.scan = AsyncMock(return_value=mock_stockpile)
-        mock_scanner_class.return_value = coordinator
-
-        handler = MagicMock()
-        handler.handle_output = AsyncMock(return_value=None)
-        mock_output_coordinator.return_value = handler
-
-        result = runner.invoke(
-            scan.app,
-            [
-                "--image",
-                str(image_path),
-                "--database",
-                str(database_path),
-                "--language",
-                "fr",
-            ],
-        )
-
-        # --language is accepted for backward compatibility but no longer forwarded
-        # to the engine (the external scanner auto-detects languages).
-        assert result.exit_code == 0
-        coordinator.scan.assert_awaited_once()
-
     def test_token_forwarded_to_output(
         self,
         mock_setup_logging: MagicMock,
@@ -435,28 +384,3 @@ class TestScanDatabaseValidation:
         )
 
         assert result.exit_code == 1
-
-    def test_invalid_language_exits_two(self, tmp_path: Path) -> None:
-        """An invalid ``--language`` value is rejected by Typer with code 2.
-
-        Args:
-            tmp_path (Path): Temporary directory path from pytest fixture.
-        """
-        image_path = tmp_path / "shot.png"
-        image_path.touch()
-        database_path = tmp_path / "db.h5"
-        database_path.touch()
-
-        result = runner.invoke(
-            scan.app,
-            [
-                "--image",
-                str(image_path),
-                "--database",
-                str(database_path),
-                "--language",
-                "invalid",
-            ],
-        )
-
-        assert result.exit_code == 2

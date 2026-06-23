@@ -16,7 +16,6 @@ the GUI capture flow, the OCR seam, and output routing.
 | `fs gui` | `cli/commands/gui.py` | launches PySide6 desktop app |
 | `fs sav` | `cli/commands/sav.py` | `SaveFileProcessor` (resolves `.sav` + map data) → `OutputCoordinator` |
 
-Aliases: `scanner`→`scan`, `process-sav`→`sav`, `ui`/`app`→`gui` (hidden).
 Asset/DB tooling lives in the separate `fs-tools` CLI.
 
 ## Screenshot capture (GUI)

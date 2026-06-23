@@ -21,8 +21,6 @@ from foxhole_stockpiles.core.settings.sections.output import (
 from foxhole_stockpiles.core.settings.sections.scanner import ScannerSettings
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.output_destination import OutputDestination
-from foxhole_stockpiles.enums.output_format import OutputFormat
-from foxhole_stockpiles.enums.supported_language import SupportedLanguage
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.services.output_coordinator import OutputCoordinator
 from foxhole_stockpiles.services.scanner import Scanner
@@ -72,7 +70,6 @@ async def _run(
     image: str,
     database: Path | None,
     faction: str | None,
-    language: SupportedLanguage | None,
     log_file: Path | None,
     verbose: bool,
     quiet: bool,
@@ -87,7 +84,6 @@ async def _run(
         image (str): Path to the input image file.
         database (Path | None): Template database path (falls back to config).
         faction (str | None): Faction filter string.
-        language (SupportedLanguage | None): Language for text detection.
         log_file (Path | None): Path to a log file.
         verbose (bool): Enable debug-level logging.
         quiet (bool): Suppress output except errors and warnings.
@@ -185,20 +181,12 @@ def scan(
         None, "--database", help="Path to the template database file."
     ),
     faction: str | None = typer.Option(None, "--faction", help=ItemFaction.get_cli_help_text()),
-    language: SupportedLanguage | None = typer.Option(
-        None,
-        "--language",
-        help="Language for text detection. If not specified, uses all supported languages.",
-    ),
     log_file: Path | None = typer.Option(
         None, "--log-file", help="Path to log file (default: console only)."
     ),
     verbose: bool = typer.Option(False, "--verbose", help="Enable verbose logging (debug level)."),
     quiet: bool = typer.Option(
         False, "--quiet", help="Suppress all output except errors and warnings."
-    ),
-    output_format: OutputFormat | None = typer.Option(
-        None, "--output-format", help="Data serialization format (default: json)."
     ),
     output_destination: OutputDestination | None = typer.Option(
         None, "--output-destination", help="Output destination (default: return)."
@@ -219,26 +207,19 @@ def scan(
         image (str): Path to the input image file.
         database (Path | None): Template database path (falls back to config).
         faction (str | None): Faction filter string.
-        language (SupportedLanguage | None): Language for text detection.
         log_file (Path | None): Path to a log file.
         verbose (bool): Enable debug-level logging.
         quiet (bool): Suppress output except errors and warnings.
-        output_format (OutputFormat | None): Serialization format.
         output_destination (OutputDestination | None): Single-destination override.
         output_file (Path | None): File path for file destination.
         config (str | None): Path to a configuration file.
         token (str | None): Override the webhook token from the config.
     """
-    # output_format is accepted for parity with the legacy CLI; JSON formatting is
-    # applied by the output handlers. Format unification is handled in a later phase.
-    del output_format
-
     result = asyncio.run(
         _run(
             image=image,
             database=database,
             faction=faction,
-            language=language,
             log_file=log_file,
             verbose=verbose,
             quiet=quiet,
