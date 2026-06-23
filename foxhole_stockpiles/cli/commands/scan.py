@@ -5,11 +5,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-import cv2
-import numpy as np
 import typer
 
 from foxhole_stockpiles.cli._settings import get_app_settings
+from foxhole_stockpiles.core.image_io import read_bgr
 from foxhole_stockpiles.core.logging import setup_logging
 from foxhole_stockpiles.core.settings.sections.output import (
     ConsoleHandlerSettings,
@@ -130,12 +129,10 @@ async def _run(
         raise typer.Exit(code=1)
 
     # Load and preprocess the image.
-    _image = await asyncio.to_thread(cv2.imread, image, cv2.IMREAD_COLOR)
-    if _image is None:
+    image_array = await asyncio.to_thread(read_bgr, image)
+    if image_array is None:
         typer.echo(f"Error: Could not load image from '{image}'", err=True)
         raise typer.Exit(code=1)
-
-    image_array = np.asarray(_image, dtype=np.uint8)
 
     # Determine output settings.
     if output_destination:

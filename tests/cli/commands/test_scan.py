@@ -105,7 +105,7 @@ class TestCreateHandlerConfig:
         assert config is not None
 
 
-@patch("foxhole_stockpiles.cli.commands.scan.cv2.imread")
+@patch("foxhole_stockpiles.cli.commands.scan.read_bgr")
 @patch("foxhole_stockpiles.cli.commands.scan.Scanner")
 @patch("foxhole_stockpiles.cli.commands.scan.OutputCoordinator")
 @patch("foxhole_stockpiles.cli.commands.scan.setup_logging")
@@ -127,7 +127,7 @@ class TestScanCommand:
             mock_setup_logging (MagicMock): Mocked setup_logging.
             mock_output_coordinator (MagicMock): Mocked OutputCoordinator.
             mock_scanner_class (MagicMock): Mocked Scanner.
-            mock_imread (MagicMock): Mocked cv2.imread.
+            mock_imread (MagicMock): Mocked read_bgr.
             mock_stockpile (MagicMock): Mock stockpile fixture.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
@@ -171,7 +171,7 @@ class TestScanCommand:
             mock_setup_logging (MagicMock): Mocked setup_logging.
             mock_output_coordinator (MagicMock): Mocked OutputCoordinator.
             mock_scanner_class (MagicMock): Mocked Scanner.
-            mock_imread (MagicMock): Mocked cv2.imread.
+            mock_imread (MagicMock): Mocked read_bgr.
             mock_stockpile (MagicMock): Mock stockpile fixture.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
@@ -221,7 +221,7 @@ class TestScanCommand:
             mock_setup_logging (MagicMock): Mocked setup_logging.
             mock_output_coordinator (MagicMock): Mocked OutputCoordinator.
             mock_scanner_class (MagicMock): Mocked Scanner.
-            mock_imread (MagicMock): Mocked cv2.imread.
+            mock_imread (MagicMock): Mocked read_bgr.
             mock_stockpile (MagicMock): Mock stockpile fixture.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
@@ -272,7 +272,7 @@ class TestScanCommand:
             mock_setup_logging (MagicMock): Mocked setup_logging.
             mock_output_coordinator (MagicMock): Mocked OutputCoordinator.
             mock_scanner_class (MagicMock): Mocked Scanner.
-            mock_imread (MagicMock): Mocked cv2.imread.
+            mock_imread (MagicMock): Mocked read_bgr.
             mock_stockpile (MagicMock): Mock stockpile fixture.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
@@ -321,7 +321,7 @@ class TestScanCommand:
             mock_setup_logging (MagicMock): Mocked setup_logging.
             mock_output_coordinator (MagicMock): Mocked OutputCoordinator.
             mock_scanner_class (MagicMock): Mocked Scanner.
-            mock_imread (MagicMock): Mocked cv2.imread.
+            mock_imread (MagicMock): Mocked read_bgr.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
         image_path = tmp_path / "shot.png"
@@ -352,7 +352,7 @@ class TestScanCommand:
             mock_setup_logging (MagicMock): Mocked setup_logging.
             mock_output_coordinator (MagicMock): Mocked OutputCoordinator.
             mock_scanner_class (MagicMock): Mocked Scanner.
-            mock_imread (MagicMock): Mocked cv2.imread.
+            mock_imread (MagicMock): Mocked read_bgr.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
         image_path = tmp_path / "shot.png"

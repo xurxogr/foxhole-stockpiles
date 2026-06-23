@@ -4,10 +4,9 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
-import numpy as np
 import pytest
 
-from fs_tools.core.utils import compute_icon_phash, load_catalog, validate_tool_path
+from fs_tools.core.utils import load_catalog, validate_tool_path
 
 
 class TestLoadCatalog:
@@ -155,105 +154,6 @@ class TestLoadCatalog:
         items = load_catalog(catalog_file)
 
         assert items == []
-
-
-class TestComputeIconPhash:
-    """Test suite for the compute_icon_phash function.
-
-    This class contains tests for perceptual hash computation of images,
-    including various image types, formats, and similarity scenarios.
-    """
-
-    def test_grayscale_image(self) -> None:
-        """Test phash computation with grayscale image.
-
-        Validates that grayscale images produce valid perceptual hashes.
-        """
-        # Create a simple 16x16 grayscale test image
-        image = np.zeros((16, 16), dtype=np.uint8)
-        image[0:8, 0:8] = 255  # Top-left quadrant white
-
-        phash = compute_icon_phash(image)
-
-        assert isinstance(phash, int)
-        assert phash >= 0
-
-    def test_color_image(self) -> None:
-        """Test phash computation with color image.
-
-        Validates that color images are properly converted and hashed.
-        """
-        # Create a simple 16x16 BGR test image
-        image = np.zeros((16, 16, 3), dtype=np.uint8)
-        image[0:8, 0:8] = [255, 255, 255]  # Top-left quadrant white
-
-        phash = compute_icon_phash(image)
-
-        assert isinstance(phash, int)
-        assert phash >= 0
-
-    def test_uniform_image(self) -> None:
-        """Test phash computation with uniform image.
-
-        Validates hash computation for images with uniform pixel values.
-        """
-        # Create a uniform gray image
-        image = np.full((16, 16), 128, dtype=np.uint8)
-
-        phash = compute_icon_phash(image)
-
-        # Uniform image should produce a specific pattern
-        assert isinstance(phash, int)
-
-    def test_identical_images_same_hash(self) -> None:
-        """Test that identical images produce the same hash.
-
-        Validates that the hash function is deterministic for identical inputs.
-        """
-        image1 = np.random.randint(0, 256, (32, 32), dtype=np.uint8)
-        image2 = image1.copy()
-
-        phash1 = compute_icon_phash(image1)
-        phash2 = compute_icon_phash(image2)
-
-        assert phash1 == phash2
-
-    def test_different_images_different_hash(self) -> None:
-        """Test that different images produce different hashes.
-
-        Validates that substantially different images produce different hashes.
-        """
-        # Create image with gradient pattern
-        image1 = np.zeros((16, 16), dtype=np.uint8)
-        image1[:8, :] = 100
-        image1[8:, :] = 200
-
-        # Create different pattern
-        image2 = np.zeros((16, 16), dtype=np.uint8)
-        image2[:, :8] = 100
-        image2[:, 8:] = 200
-
-        phash1 = compute_icon_phash(image1)
-        phash2 = compute_icon_phash(image2)
-
-        assert phash1 != phash2
-
-    def test_small_variation_similar_hash(self) -> None:
-        """Test that small variations produce similar hashes.
-
-        Validates that perceptual hashes are robust to small image changes.
-        """
-        image1 = np.random.randint(0, 256, (32, 32), dtype=np.uint8)
-        image2 = image1.copy()
-        # Modify a small region
-        image2[0:2, 0:2] = 255 - image2[0:2, 0:2]
-
-        phash1 = compute_icon_phash(image1)
-        phash2 = compute_icon_phash(image2)
-
-        # Hashes should be similar (small hamming distance)
-        distance = bin(phash1 ^ phash2).count("1")
-        assert distance < 20  # Threshold for similarity
 
 
 class TestValidateToolPath:

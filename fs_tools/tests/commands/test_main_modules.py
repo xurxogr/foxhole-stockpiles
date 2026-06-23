@@ -49,17 +49,6 @@ class TestMainModules:
         assert result.returncode == 0
         assert "usage" in result.stdout.lower() or "extract" in result.stdout.lower()
 
-    def test_candidate_inspector_main_module(self) -> None:
-        """Test that fs_tools.commands.candidate_inspector can be run as module."""
-        result = subprocess.run(
-            [sys.executable, "-m", "fs_tools.commands.candidate_inspector", "--help"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        assert result.returncode == 0
-        assert "usage" in result.stdout.lower() or "inspect" in result.stdout.lower()
-
     def test_add_icon_main_module(self) -> None:
         """Test that fs_tools.commands.add_icon can be run as module."""
         result = subprocess.run(
@@ -110,14 +99,6 @@ class TestMainModuleImports:
 
         assert hasattr(uasset_extractor_main, "main")
 
-    def test_candidate_inspector_main_import(self) -> None:
-        """Test importing candidate_inspector __main__ module."""
-        from fs_tools.commands.candidate_inspector import (
-            __main__ as candidate_inspector_main,
-        )
-
-        assert hasattr(candidate_inspector_main, "main")
-
     def test_add_icon_main_import(self) -> None:
         """Test importing add_icon __main__ module."""
         from fs_tools.commands.add_icon import __main__ as add_icon_main
@@ -138,7 +119,6 @@ class TestMainModuleFiles:
         "fs_tools/commands/database_builder/__main__.py",
         "fs_tools/commands/generate_templates/__main__.py",
         "fs_tools/commands/uasset_extractor/__main__.py",
-        "fs_tools/commands/candidate_inspector/__main__.py",
         "fs_tools/commands/add_icon/__main__.py",
         "fs_tools/commands/catalog_builder/__main__.py",
     ]

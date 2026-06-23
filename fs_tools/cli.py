@@ -34,7 +34,6 @@ _COMMAND_MODULES: dict[str, str] = {
     "extract-assets": "fs_tools.commands.uasset_extractor.uasset_extractor",
     "add-icon": "fs_tools.commands.add_icon.add_icon",
     "add-mod": "fs_tools.commands.add_mod.add_mod",
-    "inspect": "fs_tools.commands.candidate_inspector.candidate_inspector",
 }
 
 # Hand all arguments (including --help) to the wrapped argparse parser.
@@ -107,12 +106,6 @@ def add_icon(ctx: typer.Context) -> None:
 def add_mod(ctx: typer.Context) -> None:
     """Add mod content to a template database (full pipeline)."""
     _delegate("add-mod", ctx.args)
-
-
-@app.command("inspect", context_settings=_PASSTHROUGH)
-def inspect(ctx: typer.Context) -> None:
-    """Inspect and debug a template database."""
-    _delegate("inspect", ctx.args)
 
 
 @app.command()

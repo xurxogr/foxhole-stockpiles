@@ -6,12 +6,12 @@ import logging
 from copy import copy
 from pathlib import Path
 
-import cv2
 import numpy as np
 from numpy.typing import NDArray
 from PIL import Image
 from PIL.Image import Resampling
 
+from foxhole_stockpiles.core.image_io import write_bgr
 from foxhole_stockpiles.core.logging import setup_logging
 from foxhole_stockpiles.core.settings import get_settings
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
@@ -504,7 +504,7 @@ class TemplateGenerator:
                 # Save normal version
                 normal_filename = f"{mod_name}_{code_name}_{icon_size}.png"
                 normal_path = normal_output_dir / normal_filename
-                await asyncio.to_thread(cv2.imwrite, str(normal_path), base_icon)
+                await asyncio.to_thread(write_bgr, str(normal_path), base_icon)
                 success_count += 1
                 logger.debug("Saved: %s", normal_path)
 
@@ -520,7 +520,7 @@ class TemplateGenerator:
                     )
                     crated_filename = f"{mod_name}_{code_name}_crated_{icon_size}.png"
                     crated_path = crated_output_dir / crated_filename
-                    await asyncio.to_thread(cv2.imwrite, str(crated_path), crated_icon)
+                    await asyncio.to_thread(write_bgr, str(crated_path), crated_icon)
                     success_count += 1
                     logger.debug("Saved: %s", crated_path)
 

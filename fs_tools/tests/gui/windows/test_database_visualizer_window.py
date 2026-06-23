@@ -939,7 +939,7 @@ class TestDatabaseVisualizerWindowReplaceIcon:
                         return_value=np.zeros((32, 32, 3), dtype=np.uint8),
                     ):
                         with patch(
-                            "fs_tools.gui.windows.database_visualizer_window.cv2.cvtColor",
+                            "fs_tools.gui.windows.database_visualizer_window.swap_rb",
                             return_value=np.zeros((32, 32, 3), dtype=np.uint8),
                         ):
                             with patch(
@@ -1001,7 +1001,7 @@ class TestDatabaseVisualizerWindowReplaceIcon:
                             return_value=np.zeros((32, 32, 3), dtype=np.uint8),
                         ):
                             with patch(
-                                "fs_tools.gui.windows.database_visualizer_window.cv2.cvtColor",
+                                "fs_tools.gui.windows.database_visualizer_window.swap_rb",
                                 return_value=np.zeros((32, 32, 3), dtype=np.uint8),
                             ):
                                 with patch(
@@ -1059,7 +1059,7 @@ class TestDatabaseVisualizerWindowReplaceIcon:
                         return_value=np.zeros((32, 32, 3), dtype=np.uint8),
                     ):
                         with patch(
-                            "fs_tools.gui.windows.database_visualizer_window.cv2.cvtColor",
+                            "fs_tools.gui.windows.database_visualizer_window.swap_rb",
                             return_value=np.zeros((32, 32, 3), dtype=np.uint8),
                         ):
                             with patch(
@@ -1118,7 +1118,7 @@ class TestDatabaseVisualizerWindowReplaceIcon:
                         return_value=np.zeros((32, 32, 3), dtype=np.uint8),
                     ):
                         with patch(
-                            "fs_tools.gui.windows.database_visualizer_window.cv2.cvtColor",
+                            "fs_tools.gui.windows.database_visualizer_window.swap_rb",
                             return_value=np.zeros((32, 32, 3), dtype=np.uint8),
                         ):
                             with patch(
@@ -1172,7 +1172,7 @@ class TestDatabaseVisualizerWindowReplaceIcon:
                         return_value=np.zeros((32, 32, 3), dtype=np.uint8),
                     ):
                         with patch(
-                            "fs_tools.gui.windows.database_visualizer_window.cv2.cvtColor",
+                            "fs_tools.gui.windows.database_visualizer_window.swap_rb",
                             return_value=np.zeros((32, 32, 3), dtype=np.uint8),
                         ):
                             with patch(
@@ -1261,7 +1261,7 @@ class TestDatabaseVisualizerWindowSaveIcon:
             "fs_tools.gui.windows.database_visualizer_window.QFileDialog.getSaveFileName",
             return_value=("", ""),
         ):
-            with patch("fs_tools.gui.windows.database_visualizer_window.cv2.imwrite") as mock_write:
+            with patch("fs_tools.gui.windows.database_visualizer_window.write_bgr") as mock_write:
                 visualizer_window._on_save_icon()
                 mock_write.assert_not_called()
 
@@ -1282,7 +1282,7 @@ class TestDatabaseVisualizerWindowSaveIcon:
             "fs_tools.gui.windows.database_visualizer_window.QFileDialog.getSaveFileName",
             return_value=("/tmp/test.png", ""),
         ) as mock_dialog:
-            with patch("fs_tools.gui.windows.database_visualizer_window.cv2.imwrite") as mock_write:
+            with patch("fs_tools.gui.windows.database_visualizer_window.write_bgr") as mock_write:
                 with patch(
                     "fs_tools.gui.windows.database_visualizer_window.QMessageBox.information"
                 ) as mock_info:
@@ -1312,7 +1312,7 @@ class TestDatabaseVisualizerWindowSaveIcon:
             "fs_tools.gui.windows.database_visualizer_window.QFileDialog.getSaveFileName",
             return_value=("/tmp/test.png", ""),
         ) as mock_dialog:
-            with patch("fs_tools.gui.windows.database_visualizer_window.cv2.imwrite"):
+            with patch("fs_tools.gui.windows.database_visualizer_window.write_bgr"):
                 with patch(
                     "fs_tools.gui.windows.database_visualizer_window.QMessageBox.information"
                 ):
@@ -1339,7 +1339,7 @@ class TestDatabaseVisualizerWindowSaveIcon:
             return_value=("/tmp/test.png", ""),
         ):
             with patch(
-                "fs_tools.gui.windows.database_visualizer_window.cv2.imwrite",
+                "fs_tools.gui.windows.database_visualizer_window.write_bgr",
                 side_effect=Exception("Write failed"),
             ):
                 with patch(

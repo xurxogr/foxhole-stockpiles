@@ -6,9 +6,9 @@ import logging
 from copy import copy
 from pathlib import Path
 
-import cv2
 import numpy
 
+from foxhole_stockpiles.core.image_io import read_bgr, resize_bgr
 from foxhole_stockpiles.core.logging import setup_logging
 from foxhole_stockpiles.core.settings import get_settings
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
@@ -176,14 +176,14 @@ class DatabaseBuilder:
         icon_paths = self._find_icon_files(item_code=item_code, icon_size=icon_size)
 
         for icon_path in icon_paths:
-            # Load and process icon (cv2.imread is blocking, but fast enough for individual files)
-            icon_image = await asyncio.to_thread(cv2.imread, str(icon_path))
+            # Load and process icon (blocking I/O, but fast enough for individual files)
+            icon_image = await asyncio.to_thread(read_bgr, str(icon_path))
             if icon_image is None:
                 self._logger.warning("Failed to load icon: %s", icon_path)
                 continue
 
             # Resize to target size
-            icon_image = cv2.resize(icon_image, (icon_size, icon_size))
+            icon_image = resize_bgr(icon_image, icon_size, icon_size)
 
             # Determine if this is a crated variant
             is_crated = "crated" in icon_path.name.lower()

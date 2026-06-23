@@ -18,6 +18,7 @@ from fs_tools.gui.windows.debug_image_window import (
     DatabaseLoader,
     DebugImageWindow,
 )
+from fs_tools.models.debug_candidate import DebugCandidate
 from fs_tools.models.detected_icon_info import DetectedIconInfo
 from fs_tools.models.icon_template import IconTemplate
 from fs_tools.models.scan_result import ScanResult
@@ -703,6 +704,61 @@ class TestDebugImageWindowComparison:
         # Should have added widgets: detected icon + separator + template + stretch
         assert debug_window.comparison_layout.count() > 0
 
+    def test_update_comparison_filters_candidates_by_phash(
+        self,
+        debug_window: DebugImageWindow,
+        mock_scan_result: ScanResult,
+        mock_template: IconTemplate,
+    ) -> None:
+        """fs-ocr candidates beyond the pHash threshold are filtered; the rest render.
+
+        Args:
+            debug_window: Window fixture.
+            mock_scan_result: Mock scan result (resolution 1920x1080).
+            mock_template: Template the candidate maps back to (code 'TestItem',
+                mod 'vanilla', neutral, uncrated).
+        """
+        db = MagicMock(spec=TemplateDatabase)
+        db.templates = [mock_template]
+        debug_window.all_databases = {SupportedResolution.R_1080: db}
+        debug_window.scan_result = mock_scan_result
+
+        near = DebugCandidate(
+            code="TestItem",
+            mod="vanilla",
+            category="item",
+            crated=False,
+            faction="neutral",
+            confidence=0.97,
+            phash_distance=3,
+        )
+        far = DebugCandidate(
+            code="TestItem",
+            mod="vanilla",
+            category="item",
+            crated=False,
+            faction="neutral",
+            confidence=0.40,
+            phash_distance=40,
+        )
+        icon = DetectedIconInfo(
+            index=0,
+            code="TestItem",
+            quantity=1,
+            crated=False,
+            confidence=0.99,
+            icon_image=np.zeros((32, 32, 3), dtype=np.uint8),
+            position=(0, 0),
+            size=32,
+            candidates=[near, far],
+        )
+
+        debug_window._update_comparison(icon)
+
+        # Default pHash threshold is 15, so the distance-40 candidate is dropped;
+        # widgets = detected icon + settings + separator + 1 candidate + stretch.
+        assert debug_window.comparison_layout.count() == 5
+
     def test_update_comparison_with_multiple_resolutions(
         self,
         debug_window: DebugImageWindow,
@@ -846,53 +902,6 @@ class TestDebugImageWindowDisplayScreenshot:
         debug_window._display_screenshot(image, mock_detected_icon)
 
         assert not debug_window.screenshot_label.pixmap().isNull()
-
-
-class TestDebugImageWindowNCC:
-    """Tests for NCC calculation."""
-
-    def test_calculate_ncc_identical_images(self, debug_window: DebugImageWindow) -> None:
-        """Test NCC calculation with identical images.
-
-        Args:
-            debug_window: Window fixture.
-        """
-        image = np.random.randint(0, 255, (32, 32, 3), dtype=np.uint8)
-
-        ncc = debug_window._calculate_ncc(image, image.copy())
-
-        # Identical images should have NCC close to 1.0
-        assert ncc >= 0.99
-
-    def test_calculate_ncc_different_images(self, debug_window: DebugImageWindow) -> None:
-        """Test NCC calculation with different images.
-
-        Args:
-            debug_window: Window fixture.
-        """
-        # Use images with variation (not constant) to avoid undefined behavior
-        image1 = np.random.randint(0, 128, (32, 32, 3), dtype=np.uint8)
-        image2 = np.random.randint(128, 255, (32, 32, 3), dtype=np.uint8)
-
-        ncc = debug_window._calculate_ncc(image1, image2)
-
-        # Different random images should have lower NCC (can be negative with TM_CCOEFF_NORMED)
-        assert ncc < 0.9
-
-    def test_calculate_ncc_returns_bounded_value(self, debug_window: DebugImageWindow) -> None:
-        """Test NCC calculation returns value between -1 and 1.
-
-        cv2.matchTemplate with TM_CCOEFF_NORMED returns values in range [-1, 1].
-
-        Args:
-            debug_window: Window fixture.
-        """
-        image1 = np.random.randint(0, 255, (32, 32, 3), dtype=np.uint8)
-        image2 = np.random.randint(0, 255, (32, 32, 3), dtype=np.uint8)
-
-        ncc = debug_window._calculate_ncc(image1, image2)
-
-        assert -1.0 <= ncc <= 1.0
 
 
 class TestDebugImageWindowGetScreenshotResolution:
@@ -1272,7 +1281,7 @@ class TestDebugImageWindowSettings:
         Args:
             debug_window: Window fixture.
         """
-        from fs_tools.template_db.template_manager import (
+        from fs_tools.gui.windows.debug_image_window import (
             DEFAULT_MAX_NCC_CANDIDATES,
             DEFAULT_PHASH_THRESHOLD,
         )
@@ -1391,37 +1400,6 @@ class TestDebugImageWindowResize:
             debug_window.resizeEvent(event)
 
             mock_display.assert_not_called()
-
-
-class TestDebugImageWindowHammingDistance:
-    """Tests for Hamming distance calculation."""
-
-    def test_hamming_distance_identical(self, debug_window: DebugImageWindow) -> None:
-        """Test Hamming distance with identical hashes.
-
-        Args:
-            debug_window: Window fixture.
-        """
-        result = debug_window._hamming_distance(0xABCD1234, 0xABCD1234)
-        assert result == 0
-
-    def test_hamming_distance_one_bit(self, debug_window: DebugImageWindow) -> None:
-        """Test Hamming distance with one bit difference.
-
-        Args:
-            debug_window: Window fixture.
-        """
-        result = debug_window._hamming_distance(0b0001, 0b0000)
-        assert result == 1
-
-    def test_hamming_distance_multiple_bits(self, debug_window: DebugImageWindow) -> None:
-        """Test Hamming distance with multiple bit differences.
-
-        Args:
-            debug_window: Window fixture.
-        """
-        result = debug_window._hamming_distance(0b1111, 0b0000)
-        assert result == 4
 
 
 class TestDebugImageWindowCreateIconDisplay:

@@ -4,7 +4,6 @@ import asyncio
 import logging
 from pathlib import Path
 
-import cv2
 import numpy as np
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QFont, QImage, QPixmap
@@ -25,22 +24,50 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from foxhole_stockpiles.core.image_io import resize_bgr, swap_rb
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
-from fs_tools.core.utils import compute_icon_phash
 from fs_tools.gui.utils.image_scan_worker import ImageScanWorker
 from fs_tools.models.detected_icon_info import DetectedIconInfo
-from fs_tools.models.icon_template import IconTemplate
 from fs_tools.models.scan_result import ScanResult
 from fs_tools.template_db.template_database import TemplateDatabase
-from fs_tools.template_db.template_manager import (
-    DEFAULT_MAX_NCC_CANDIDATES,
-    DEFAULT_NCC_TIEBREAKER_THRESHOLD,
-    DEFAULT_PHASH_THRESHOLD,
-    TemplateManager,
-)
+from fs_tools.template_db.template_manager import TemplateManager
 
 logger = logging.getLogger(__name__)
+
+
+def _draw_box(
+    image: np.ndarray,
+    x: int,
+    y: int,
+    size: int,
+    color: tuple[int, int, int] = (0, 255, 0),
+    thickness: int = 3,
+) -> None:
+    """Draw a hollow rectangle outline on a BGR image, in place.
+
+    Args:
+        image (np.ndarray): BGR image to draw on (modified in place).
+        x (int): Left coordinate of the box.
+        y (int): Top coordinate of the box.
+        size (int): Box width/height in pixels.
+        color (tuple[int, int, int]): BGR color. Defaults to green.
+        thickness (int): Border thickness in pixels. Defaults to 3.
+    """
+    h, w = image.shape[:2]
+    x0, y0 = max(x, 0), max(y, 0)
+    x1, y1 = min(x + size, w), min(y + size, h)
+    if x1 <= x0 or y1 <= y0:
+        return
+    image[y0 : min(y0 + thickness, y1), x0:x1] = color
+    image[max(y1 - thickness, y0) : y1, x0:x1] = color
+    image[y0:y1, x0 : min(x0 + thickness, x1)] = color
+    image[y0:y1, max(x1 - thickness, x0) : x1] = color
+
+
+# Default tuning values for the debug viewer's match controls.
+DEFAULT_PHASH_THRESHOLD = 15
+DEFAULT_MAX_NCC_CANDIDATES = 50
 
 
 class DatabaseLoader(QThread):
@@ -364,16 +391,10 @@ class DebugImageWindow(QDialog):
         if highlight_icon:
             x, y = highlight_icon.position
             size = highlight_icon.size
-            cv2.rectangle(
-                display_image,
-                (x, y),
-                (x + size, y + size),
-                (0, 255, 0),
-                3,
-            )
+            _draw_box(display_image, x, y, size)
 
         # Convert BGR to RGB for Qt
-        rgb_image = cv2.cvtColor(display_image, cv2.COLOR_BGR2RGB)
+        rgb_image = swap_rb(display_image)
         h, w, ch = rgb_image.shape
         bytes_per_line = ch * w
 
@@ -447,68 +468,24 @@ class DebugImageWindow(QDialog):
         screenshot_db = self.all_databases[screenshot_res]
         target_size = screenshot_db.templates[0].image.shape[0] if screenshot_db.templates else 64
 
-        # Compute pHash for detected icon
-        icon_phash = compute_icon_phash(icon_info.icon_image)
+        # Look up each candidate's template image by identity, for display only.
+        template_by_key = {
+            (tmpl.code, tmpl.mod, tmpl.crated, str(tmpl.faction)): tmpl
+            for tmpl in screenshot_db.templates
+        }
 
-        # Find all templates that pass pHash threshold (any code, matching crated state)
-        candidates: list[tuple[float, int, IconTemplate]] = []
-        for template in screenshot_db.templates:
-            if template.crated == icon_info.crated:
-                phash_dist = self._hamming_distance(icon_phash, template.phash)
-                if phash_dist <= phash_threshold:
-                    detected_scaled = cv2.resize(
-                        icon_info.icon_image,
-                        (template.image.shape[1], template.image.shape[0]),
-                        interpolation=cv2.INTER_AREA,
-                    )
-                    ncc_score = self._calculate_ncc(detected_scaled, template.image)
-                    candidates.append((ncc_score, phash_dist, template))
-
-        # Sort by pHash distance first, take top max_ncc_candidates, then sort by NCC
-        candidates.sort(key=lambda x: x[1])  # Sort by pHash dist
+        # The engine (fs_ocr.scan_debug) already did the matching; we only filter
+        # its candidates by the user's controls (no re-scan needed since each
+        # candidate carries its own pHash distance): keep those within the pHash
+        # threshold, take the closest max_ncc by pHash distance, then rank by NCC.
+        candidates = [c for c in icon_info.candidates if c.phash_distance <= phash_threshold]
+        candidates.sort(key=lambda c: c.phash_distance)
         candidates = candidates[:max_ncc_candidates]
-        candidates.sort(key=lambda x: x[0], reverse=True)  # Sort by NCC (highest first)
+        candidates.sort(key=lambda c: c.confidence, reverse=True)
 
-        # Apply tiebreaker (same logic as scanner)
-        ncc_tiebreaker_threshold = DEFAULT_NCC_TIEBREAKER_THRESHOLD
-        matched_code = "Unknown"
-        if candidates:
-            best_ncc = candidates[0][0]
-            best_template = candidates[0][2]
+        matched_code = candidates[0].code if candidates else icon_info.code
 
-            # Find close matches within tiebreaker threshold
-            close_matches = [
-                (ncc, phash, template)
-                for ncc, phash, template in candidates
-                if best_ncc - ncc <= ncc_tiebreaker_threshold
-            ]
-
-            if len(close_matches) > 1:
-                # Compute pixel diff for close matches and select best
-                scored: list[tuple[float, float, IconTemplate]] = []
-                for ncc, _phash, template in close_matches:
-                    detected_scaled = cv2.resize(
-                        icon_info.icon_image,
-                        (template.image.shape[1], template.image.shape[0]),
-                        interpolation=cv2.INTER_AREA,
-                    )
-                    pixel_diff = float(
-                        np.mean(
-                            np.abs(
-                                detected_scaled.astype(np.float32)
-                                - template.image.astype(np.float32)
-                            )
-                        )
-                    )
-                    scored.append((pixel_diff, ncc, template))
-
-                # Sort by pixel diff (lower = better)
-                scored.sort(key=lambda x: x[0])
-                matched_code = scored[0][2].code
-            else:
-                matched_code = best_template.code
-
-        # Display detected icon with matched code
+        # Display detected icon with the engine's matched code
         detected_widget = self._create_icon_display(
             image=icon_info.icon_image,
             label=t("debug_viewer.detected"),
@@ -525,13 +502,19 @@ class DebugImageWindow(QDialog):
         # Add separator
         self._add_separator()
 
-        # Display all matching templates sorted by NCC score
-        for ncc_score, _phash_dist, template in candidates:
+        # Display candidate templates ranked by NCC (the engine's scores)
+        for candidate in candidates:
+            template = template_by_key.get(
+                (candidate.code, candidate.mod, candidate.crated, candidate.faction)
+            )
+            if template is None:
+                logger.debug("No template image for candidate %s/%s", candidate.mod, candidate.code)
+                continue
             template_widget = self._create_icon_display(
                 image=template.image,
-                label=template.mod,
-                sublabel=template.code,
-                ncc_score=ncc_score,
+                label=candidate.mod,
+                sublabel=candidate.code,
+                ncc_score=candidate.confidence,
                 target_size=target_size,
             )
             self.comparison_layout.addWidget(template_widget)
@@ -594,18 +577,6 @@ class DebugImageWindow(QDialog):
         # Re-run comparison with current settings
         self._update_comparison(self.selected_icon)
 
-    def _hamming_distance(self, hash1: int, hash2: int) -> int:
-        """Calculate Hamming distance between two pHash values.
-
-        Args:
-            hash1 (int): First pHash value.
-            hash2 (int): Second pHash value.
-
-        Returns:
-            int: Hamming distance (number of differing bits).
-        """
-        return bin(hash1 ^ hash2).count("1")
-
     def _get_screenshot_resolution(self) -> SupportedResolution | None:
         """Get the SupportedResolution matching the screenshot.
 
@@ -667,21 +638,13 @@ class DebugImageWindow(QDialog):
 
         # Resize image if needed to match target size first
         if image.shape[0] != target_size or image.shape[1] != target_size:
-            image = cv2.resize(
-                image,
-                (target_size, target_size),
-                interpolation=cv2.INTER_AREA,
-            )
+            image = resize_bgr(image, target_size, target_size, mode="area")
 
         # Scale up for display
-        display_image = cv2.resize(
-            image,
-            (scaled_size, scaled_size),
-            interpolation=cv2.INTER_NEAREST,
-        )
+        display_image = resize_bgr(image, scaled_size, scaled_size, mode="nearest")
 
         # Convert BGR to RGB for Qt
-        rgb_image = cv2.cvtColor(display_image, cv2.COLOR_BGR2RGB)
+        rgb_image = swap_rb(display_image)
         h, w, ch = rgb_image.shape
         bytes_per_line = ch * w
 
@@ -732,22 +695,6 @@ class DebugImageWindow(QDialog):
         layout.addWidget(score_label)
 
         return widget
-
-    def _calculate_ncc(self, image1: np.ndarray, image2: np.ndarray) -> float:
-        """Calculate Normalized Cross-Correlation between two images.
-
-        Uses cv2.matchTemplate with TM_CCOEFF_NORMED to match the scanner's algorithm.
-
-        Args:
-            image1 (np.ndarray): First image (BGR format) - the detected icon.
-            image2 (np.ndarray): Second image (BGR format) - the template.
-
-        Returns:
-            float: NCC score between -1 and 1.
-        """
-        result = cv2.matchTemplate(image1, image2, cv2.TM_CCOEFF_NORMED)
-        _, confidence, _, _ = cv2.minMaxLoc(result)
-        return float(confidence)
 
     def _clear_comparison(self) -> None:
         """Clear the comparison panel."""

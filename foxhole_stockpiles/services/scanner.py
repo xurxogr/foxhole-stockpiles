@@ -17,13 +17,14 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import cv2
 import fs_ocr
 import numpy as np
 
+from foxhole_stockpiles.core.image_io import decode_bgr, read_bgr
 from foxhole_stockpiles.core.settings.sections.scanner import ScannerSettings
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.stockpile_type import StockpileType
+from foxhole_stockpiles.models.item_candidate import ItemCandidate
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
 
@@ -71,19 +72,19 @@ def _coerce_image(image: bytes | str | Path | NDArray[np.uint8]) -> NDArray[np.u
         ValueError: If the image cannot be decoded or read.
     """
     if isinstance(image, bytes):
-        decoded = cv2.imdecode(np.frombuffer(image, np.uint8), cv2.IMREAD_COLOR)
+        decoded = decode_bgr(image)
         if decoded is None:
             raise ValueError("Failed to decode image bytes")
-        return np.asarray(decoded, dtype=np.uint8)
+        return decoded
     if isinstance(image, str | Path):
-        loaded = cv2.imread(str(image))
+        loaded = read_bgr(image)
         if loaded is None:
             raise ValueError(f"Failed to read image: {image}")
-        return np.asarray(loaded, dtype=np.uint8)
+        return loaded
     return np.asarray(image, dtype=np.uint8)
 
 
-def _to_runtime_stockpile(result: fs_ocr.Stockpile) -> Stockpile:
+def to_runtime_stockpile(result: fs_ocr.Stockpile) -> Stockpile:
     """Adapt an external ``fs_ocr.Stockpile`` to the runtime model.
 
     Args:
@@ -103,6 +104,11 @@ def _to_runtime_stockpile(result: fs_ocr.Stockpile) -> Stockpile:
             confidence=item.confidence,
             x=item.x,
             y=item.y,
+            candidates=(
+                [ItemCandidate(code=c.code, confidence=c.confidence) for c in item.candidates]
+                if item.candidates
+                else None
+            ),
         )
         for item in result.items
     ]
@@ -163,7 +169,7 @@ class Scanner:
         img = _coerce_image(image)
         ext_faction = _FACTION_TO_EXTERNAL.get(faction) if faction else None
         result = await asyncio.to_thread(self._scanner.scan, img, ext_faction)
-        return _to_runtime_stockpile(result)
+        return to_runtime_stockpile(result)
 
     def scan_sync(
         self,
@@ -181,7 +187,7 @@ class Scanner:
         """
         img = _coerce_image(image)
         ext_faction = _FACTION_TO_EXTERNAL.get(faction) if faction else None
-        return _to_runtime_stockpile(self._scanner.scan(img, ext_faction))
+        return to_runtime_stockpile(self._scanner.scan(img, ext_faction))
 
 
 def build_scanner(settings: ScannerSettings) -> Scanner:

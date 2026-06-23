@@ -4,7 +4,6 @@ import asyncio
 import logging
 from pathlib import Path
 
-import cv2
 import numpy as np
 from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
@@ -30,6 +29,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from foxhole_stockpiles.core.image_io import swap_rb, write_bgr
 from foxhole_stockpiles.enums.item_category import ItemCategory
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
@@ -690,7 +690,7 @@ class DatabaseVisualizerWindow(QDialog):
             return
 
         # Get dimensions
-        current_rgb = cv2.cvtColor(current_template.image, cv2.COLOR_BGR2RGB)
+        current_rgb = swap_rb(current_template.image)
         current_h, current_w, current_ch = current_rgb.shape
 
         # Display current resolution image (scaled to match target size)
@@ -706,7 +706,7 @@ class DatabaseVisualizerWindow(QDialog):
 
         # Calculate target size and scale based on highest resolution
         if highest_template:
-            highest_rgb = cv2.cvtColor(highest_template.image, cv2.COLOR_BGR2RGB)
+            highest_rgb = swap_rb(highest_template.image)
             highest_h, highest_w, highest_ch = highest_rgb.shape
 
             # Target size: highest resolution at 4x scale
@@ -826,7 +826,7 @@ class DatabaseVisualizerWindow(QDialog):
 
         # Convert to OpenCV format (BGR)
         rgb_array = np.array(pil_image)
-        bgr_array = cv2.cvtColor(rgb_array, cv2.COLOR_RGB2BGR)
+        bgr_array = swap_rb(rgb_array)
 
         # Replace the icon in the database
         try:
@@ -886,7 +886,7 @@ class DatabaseVisualizerWindow(QDialog):
 
         # Save the icon image
         try:
-            cv2.imwrite(file_path, template.image)
+            write_bgr(file_path, template.image)
         except Exception as e:
             logger.exception("Failed to save icon")
             QMessageBox.critical(

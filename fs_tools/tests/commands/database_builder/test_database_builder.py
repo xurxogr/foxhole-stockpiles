@@ -197,8 +197,8 @@ class TestDatabaseBuilderMethods:
         # Should find one icon (the largest size)
         assert len(found_icons) == 1
 
-    @patch("cv2.imread")
-    @patch("cv2.resize")
+    @patch("fs_tools.commands.database_builder.database_builder.read_bgr")
+    @patch("fs_tools.commands.database_builder.database_builder.resize_bgr")
     async def test_process_item_templates(
         self,
         mock_resize: Mock,
@@ -209,8 +209,8 @@ class TestDatabaseBuilderMethods:
         """Test processing templates for a single item.
 
         Args:
-            mock_resize (Mock): Mocked cv2.resize function.
-            mock_imread (Mock): Mocked cv2.imread function.
+            mock_resize (Mock): Mocked resize_bgr function.
+            mock_imread (Mock): Mocked read_bgr function.
             builder (DatabaseBuilder): DatabaseBuilder instance from fixture.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
@@ -364,14 +364,14 @@ class TestDatabaseBuilderMethods:
         # Verify file size is reasonable
         assert output_path.stat().st_size > 0
 
-    @patch("cv2.imread")
+    @patch("fs_tools.commands.database_builder.database_builder.read_bgr")
     async def test_process_item_templates_with_missing_code(
         self, mock_imread: Mock, builder: DatabaseBuilder
     ) -> None:
         """Test processing templates for item with missing code.
 
         Args:
-            mock_imread (Mock): Mocked cv2.imread function.
+            mock_imread (Mock): Mocked read_bgr function.
             builder (DatabaseBuilder): DatabaseBuilder instance from fixture.
         """
         # Create catalog item without code
@@ -391,16 +391,16 @@ class TestDatabaseBuilderMethods:
         # Should return empty list when code is missing
         assert templates == []
 
-    @patch("cv2.imread")
-    @patch("cv2.resize")
+    @patch("fs_tools.commands.database_builder.database_builder.read_bgr")
+    @patch("fs_tools.commands.database_builder.database_builder.resize_bgr")
     async def test_process_item_templates_with_failed_icon_load(
         self, mock_resize: Mock, mock_imread: Mock, builder: DatabaseBuilder, tmp_path: Path
     ) -> None:
         """Test processing templates when icon fails to load.
 
         Args:
-            mock_resize (Mock): Mocked cv2.resize function.
-            mock_imread (Mock): Mocked cv2.imread function.
+            mock_resize (Mock): Mocked resize_bgr function.
+            mock_imread (Mock): Mocked read_bgr function.
             builder (DatabaseBuilder): DatabaseBuilder instance from fixture.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
@@ -434,16 +434,16 @@ class TestDatabaseBuilderMethods:
         # Should return empty list when icon fails to load
         assert templates == []
 
-    @patch("cv2.imread")
-    @patch("cv2.resize")
+    @patch("fs_tools.commands.database_builder.database_builder.read_bgr")
+    @patch("fs_tools.commands.database_builder.database_builder.resize_bgr")
     async def test_process_item_templates_with_exception(
         self, mock_resize: Mock, mock_imread: Mock, builder: DatabaseBuilder, tmp_path: Path
     ) -> None:
         """Test processing templates when template creation raises exception.
 
         Args:
-            mock_resize (Mock): Mocked cv2.resize function.
-            mock_imread (Mock): Mocked cv2.imread function.
+            mock_resize (Mock): Mocked resize_bgr function.
+            mock_imread (Mock): Mocked read_bgr function.
             builder (DatabaseBuilder): DatabaseBuilder instance from fixture.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """

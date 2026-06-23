@@ -685,7 +685,7 @@ class TestTemplateGeneratorMethods:
 
         assert result is False
 
-    @patch("cv2.imwrite")
+    @patch("fs_tools.commands.generate_templates.generate_templates.write_bgr")
     async def test_generate_templates_with_subicon(
         self,
         mock_imwrite: Mock,
@@ -695,7 +695,7 @@ class TestTemplateGeneratorMethods:
         """Test generating templates with subicon.
 
         Args:
-            mock_imwrite (Mock): Mocked cv2.imwrite function.
+            mock_imwrite (Mock): Mocked write_bgr function.
             generator (TemplateGenerator): TemplateGenerator instance from fixture.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
@@ -737,7 +737,7 @@ class TestTemplateGeneratorMethods:
 
         assert result is True
 
-    @patch("cv2.imwrite")
+    @patch("fs_tools.commands.generate_templates.generate_templates.write_bgr")
     async def test_generate_templates_crate_icon_not_loaded(
         self,
         mock_imwrite: Mock,
@@ -747,7 +747,7 @@ class TestTemplateGeneratorMethods:
         """Test generating templates when crate icon is not loaded.
 
         Args:
-            mock_imwrite (Mock): Mocked cv2.imwrite function.
+            mock_imwrite (Mock): Mocked write_bgr function.
             generator (TemplateGenerator): TemplateGenerator instance from fixture.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
@@ -791,7 +791,7 @@ class TestTemplateGeneratorMethods:
         # Only crated templates fail, so success_count > 0
         assert result is True
 
-    @patch("cv2.imwrite")
+    @patch("fs_tools.commands.generate_templates.generate_templates.write_bgr")
     async def test_generate_templates_imwrite_exception(
         self,
         mock_imwrite: Mock,
@@ -801,7 +801,7 @@ class TestTemplateGeneratorMethods:
         """Test generating templates when imwrite raises exception.
 
         Args:
-            mock_imwrite (Mock): Mocked cv2.imwrite function.
+            mock_imwrite (Mock): Mocked write_bgr function.
             generator (TemplateGenerator): TemplateGenerator instance from fixture.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
@@ -843,7 +843,7 @@ class TestTemplateGeneratorMethods:
         # Should return False due to errors
         assert result is False
 
-    @patch("cv2.imwrite")
+    @patch("fs_tools.commands.generate_templates.generate_templates.write_bgr")
     async def test_generate_all_templates_success(
         self,
         mock_imwrite: Mock,
@@ -853,7 +853,7 @@ class TestTemplateGeneratorMethods:
         """Test generating all templates successfully.
 
         Args:
-            mock_imwrite (Mock): Mocked cv2.imwrite function.
+            mock_imwrite (Mock): Mocked write_bgr function.
             tmp_path (Path): Temporary directory path from pytest fixture.
             mock_catalog_file (Path): Mock catalog file from fixture.
         """
@@ -983,7 +983,7 @@ class TestTemplateGeneratorMethods:
 
         assert result is False
 
-    @patch("cv2.imwrite")
+    @patch("fs_tools.commands.generate_templates.generate_templates.write_bgr")
     async def test_generate_templates_for_item_and_mod(
         self,
         mock_imwrite: Mock,
@@ -993,7 +993,7 @@ class TestTemplateGeneratorMethods:
         """Test generating templates for a single item from a mod.
 
         Args:
-            mock_imwrite (Mock): Mocked cv2.imwrite function.
+            mock_imwrite (Mock): Mocked write_bgr function.
             generator (TemplateGenerator): TemplateGenerator instance from fixture.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
@@ -1042,7 +1042,7 @@ class TestTemplateGeneratorMethods:
         assert (generator.template_path / "TestRifle").exists()
         assert (generator.template_path / "TestRifle_crated").exists()
 
-    @patch("cv2.imwrite")
+    @patch("fs_tools.commands.generate_templates.generate_templates.write_bgr")
     async def test_generate_templates_skips_crated_for_non_cratable_items(
         self,
         mock_imwrite: Mock,
@@ -1052,7 +1052,7 @@ class TestTemplateGeneratorMethods:
         """Test that crated templates are not generated for non-cratable items.
 
         Args:
-            mock_imwrite (Mock): Mocked cv2.imwrite function.
+            mock_imwrite (Mock): Mocked write_bgr function.
             generator (TemplateGenerator): TemplateGenerator instance from fixture.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """

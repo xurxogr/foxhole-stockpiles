@@ -32,22 +32,47 @@ def _patch_scan(
     image: np.ndarray | None,
     stockpile: Stockpile | None,
 ) -> Iterator[MagicMock]:
-    """Patch cv2.imread and the Scanner seam used by the worker.
+    """Patch read_bgr and the fs-ocr ``scan_debug`` seam used by the worker.
+
+    The worker scans via ``fs_ocr.StockpileScanner.scan_debug`` and adapts the
+    raw result with ``to_runtime_stockpile``. To keep existing tests expressed in
+    terms of a runtime ``Stockpile``, this mirrors that stockpile's items as mock
+    fs-ocr items (carrying empty ``debug_candidates``) and makes the adapter
+    return the runtime stockpile unchanged.
 
     Args:
-        image (np.ndarray | None): Image returned by cv2.imread (None simulates a
+        image (np.ndarray | None): Image returned by read_bgr (None simulates a
             load failure).
-        stockpile (Stockpile | None): Stockpile returned by ``Scanner.scan_sync``.
+        stockpile (Stockpile | None): Runtime stockpile the scan should yield.
 
     Yields:
-        MagicMock: The mock Scanner instance.
+        MagicMock: The mock fs-ocr scanner instance.
     """
     module = "fs_tools.gui.utils.image_scan_worker"
+
+    fs_items: list[MagicMock] = []
+    if stockpile is not None:
+        for item in stockpile.items:
+            fs_item = MagicMock()
+            fs_item.code = item.code
+            fs_item.quantity = item.quantity
+            fs_item.crated = item.crated
+            fs_item.confidence = item.confidence
+            fs_item.x = item.x
+            fs_item.y = item.y
+            fs_item.debug_candidates = []
+            fs_items.append(fs_item)
+
+    fs_result = MagicMock()
+    fs_result.items = fs_items
     mock_scanner = MagicMock()
-    mock_scanner.scan_sync.return_value = stockpile
+    mock_scanner.scan_debug.return_value = fs_result
+
     with (
-        patch(f"{module}.cv2.imread", return_value=image),
-        patch(f"{module}.Scanner", return_value=mock_scanner),
+        patch(f"{module}.read_bgr", return_value=image),
+        patch(f"{module}.fs_ocr.StockpileScanner", return_value=mock_scanner),
+        patch(f"{module}.fs_ocr.ScanConfig"),
+        patch(f"{module}.to_runtime_stockpile", return_value=stockpile),
     ):
         yield mock_scanner
 
@@ -232,7 +257,7 @@ class TestImageScanWorkerRun:
         module = "fs_tools.gui.utils.image_scan_worker"
 
         with patch.object(worker, "error", mock_error):
-            with patch(f"{module}.cv2.imread", side_effect=Exception("Unexpected error")):
+            with patch(f"{module}.read_bgr", side_effect=Exception("Unexpected error")):
                 worker.run()
 
         mock_error.emit.assert_called_once()

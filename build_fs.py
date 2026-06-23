@@ -21,7 +21,6 @@ def get_fs_hidden_imports() -> list[str]:
     """
     return [
         # Core dependencies
-        "cv2",
         "numpy",
         "numpy.core._methods",
         "numpy.lib.format",
@@ -141,7 +140,6 @@ def get_fs_tools_hidden_imports() -> list[str]:
     """
     return [
         # Core dependencies
-        "cv2",
         "numpy",
         "numpy.core._methods",
         "numpy.lib.format",
@@ -173,7 +171,6 @@ def get_fs_tools_hidden_imports() -> list[str]:
         "fs_tools.commands.uasset_extractor.uasset_extractor",
         "fs_tools.commands.add_icon.add_icon",
         "fs_tools.commands.add_mod.add_mod",
-        "fs_tools.commands.candidate_inspector.candidate_inspector",
     ]
 
 

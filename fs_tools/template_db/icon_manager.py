@@ -4,9 +4,9 @@ import asyncio
 import logging
 from pathlib import Path
 
-import cv2
 import numpy
 
+from foxhole_stockpiles.core.image_io import read_bgr
 from foxhole_stockpiles.enums.item_category import ItemCategory
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
@@ -92,7 +92,7 @@ class IconManager:
 
         # Load icon image
         self._logger.debug("Loading icon from %s", icon_path)
-        icon_image = await asyncio.to_thread(cv2.imread, str(icon_path))
+        icon_image = await asyncio.to_thread(read_bgr, str(icon_path))
         if icon_image is None:
             raise ValueError(f"Failed to load icon image: {icon_path}")
 

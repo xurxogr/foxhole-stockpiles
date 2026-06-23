@@ -10,10 +10,6 @@ import logging
 import sys
 from pathlib import Path
 
-import cv2
-import numpy as np
-from numpy.typing import NDArray
-
 from foxhole_stockpiles.models.catalog_item import CatalogItem
 
 
@@ -86,27 +82,3 @@ def load_catalog(path: Path) -> list[CatalogItem]:
         )
 
     return valid_items
-
-
-def compute_icon_phash(icon_image: NDArray[np.uint8]) -> int:
-    """Compute perceptual hash for an icon image.
-
-    Args:
-        icon_image (NDArray[np.uint8]): Input icon image (BGR or grayscale)
-
-    Returns:
-        int: Perceptual hash as integer
-    """
-    # Convert to grayscale if needed
-    if len(icon_image.shape) == 3:
-        icon_gray = cv2.cvtColor(icon_image, cv2.COLOR_BGR2GRAY)
-    else:
-        icon_gray = icon_image
-
-    # Resize to 8x8 for standard pHash
-    img_resized = cv2.resize(icon_gray, (8, 8), interpolation=cv2.INTER_AREA)
-    avg = img_resized.mean()
-
-    # Create binary hash based on pixel values above/below average
-    bits = (img_resized > avg).astype(np.uint8)
-    return int("".join(str(b) for b in bits.flatten()), 2)

@@ -26,7 +26,6 @@ dependencies = [
     # Core image processing libraries
     "httpx>=0.28.1",
     "numpy>=2.4.5",
-    "opencv-python-headless>=4.13.0.90",
     "pillow>=12.2.0",
     "pydantic>=2.13.4",
     "pydantic_settings>=2.14.1",

@@ -9,10 +9,10 @@ import argparse
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
-import cv2
 import numpy as np
 import pytest
 
+from foxhole_stockpiles.core.image_io import write_bgr
 from foxhole_stockpiles.enums.item_category import ItemCategory
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
@@ -80,7 +80,7 @@ def sample_icon_file(tmp_path: Path) -> Path:
     test_image = np.zeros((32, 32, 3), dtype=np.uint8)
     test_image[8:24, 8:24] = [255, 128, 0]  # Orange square
 
-    cv2.imwrite(str(icon_path), test_image)
+    write_bgr(str(icon_path), test_image)
 
     return icon_path
 
@@ -259,14 +259,14 @@ class TestIconManagerMethods:
                 resolution=SupportedResolution.R_2160,  # Not in test database
             )
 
-    @patch("cv2.imread")
+    @patch("fs_tools.template_db.icon_manager.read_bgr")
     async def test_add_icon_with_failed_image_load(
         self, mock_imread: Mock, adder: IconManager, sample_icon_file: Path
     ) -> None:
         """Test adding icon when image fails to load.
 
         Args:
-            mock_imread (Mock): Mocked cv2.imread function.
+            mock_imread (Mock): Mocked read_bgr function.
             adder (IconManager): IconManager instance from fixture.
             sample_icon_file (Path): Sample icon file from fixture.
         """
@@ -353,7 +353,7 @@ class TestIconManagerMethods:
         # Create icon with wrong size (16x16 instead of 32x32 for 1080p)
         wrong_size_icon = tmp_path / "wrong_size.png"
         wrong_image = np.zeros((16, 16, 3), dtype=np.uint8)
-        cv2.imwrite(str(wrong_size_icon), wrong_image)
+        write_bgr(str(wrong_size_icon), wrong_image)
 
         with pytest.raises(ValueError, match="Icon has incorrect dimensions"):
             await adder.add_icon(
@@ -426,7 +426,7 @@ class TestIconManagerMethods:
         new_icon_file = tmp_path / "new_icon.png"
         new_image = np.zeros((32, 32, 3), dtype=np.uint8)
         new_image[8:24, 8:24] = [0, 255, 0]  # Green square
-        cv2.imwrite(str(new_icon_file), new_image)
+        write_bgr(str(new_icon_file), new_image)
 
         # Replace with new icon
         await adder.add_icon(

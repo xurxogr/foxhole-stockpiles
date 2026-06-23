@@ -1,6 +1,6 @@
 """Icon template model for template matching."""
 
-import cv2
+import fs_ocr
 import numpy as np
 from numpy.typing import NDArray
 from pydantic import BaseModel, ConfigDict, Field
@@ -42,34 +42,16 @@ class IconTemplate(BaseModel):
     )
 
     def model_post_init(self, _context: object) -> None:
-        """Automatically compute perceptual hash after model creation.
+        """Automatically compute the perceptual hash after model creation.
 
-        The perceptual hash (pHash) is used to quickly filter out dissimilar templates
-        before running the more expensive OpenCV template matching.
+        The pHash quickly filters dissimilar templates before NCC matching. It is
+        computed by the external ``fs-ocr`` engine so the stored value is exactly
+        what the engine compares against at scan time.
 
         Args:
             _context (object): Pydantic context (unused).
         """
-        # Convert to grayscale for hash computation
-        img_gray = np.asarray(cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY), dtype=np.uint8)
-
-        # Compute perceptual hash
-        self._compute_phash(img_gray)
-
-    def _compute_phash(self, img_gray: NDArray[np.uint8]) -> None:
-        """Compute perceptual hash efficiently using vectorized operations."""
-        # Resize to 8x8 for standard pHash - use INTER_AREA for better downsampling
-        img_8x8 = cv2.resize(img_gray, (8, 8), interpolation=cv2.INTER_AREA)
-
-        # Compute average once
-        avg = img_8x8.mean()
-
-        # Vectorized binary comparison and hash computation
-        bits = (img_8x8 > avg).astype(np.uint8)
-
-        # Efficient bit packing using numpy's dot product with powers of 2
-        powers = np.power(2, np.arange(63, -1, -1, dtype=np.uint64))
-        self.phash = int(np.dot(bits.flatten(), powers))
+        self.phash = fs_ocr.compute_phash(np.ascontiguousarray(self.image))
 
     def __str__(self) -> str:
         """String representation of the template."""
