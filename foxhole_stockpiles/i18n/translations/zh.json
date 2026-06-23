@@ -98,7 +98,9 @@
       "sav_processing": "SAV 处理",
       "logging": "日志",
       "gui": "界面",
-      "clipboard": "剪贴板"
+      "clipboard": "剪贴板",
+      "input": "输入",
+      "general": "常规"
     },
     "dialogs": {
       "error_loading_title": "加载配置时出错",

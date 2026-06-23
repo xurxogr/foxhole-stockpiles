@@ -100,14 +100,14 @@ def test_config_window_has_all_tabs(config_window: ConfigWindow) -> None:
 
 
 def test_config_window_shows_all_tabs(config_window: ConfigWindow) -> None:
-    """Test ConfigWindow always shows all six settings tabs.
+    """Test ConfigWindow shows the three grouped settings tabs.
 
     Args:
         config_window: ConfigWindow instance
     """
-    # scanner, output, sav_processing, clipboard, logging, gui
-    assert config_window.tab_widget.count() == 6
-    assert config_window.tab_widget.tabText(0) == t("config_window.tabs.scanner")
+    # input (scanner + sav + clipboard), output, general (gui + logging)
+    assert config_window.tab_widget.count() == 3
+    assert config_window.tab_widget.tabText(0) == t("config_window.tabs.input")
 
 
 def test_config_window_load_settings_populates_tabs(
@@ -330,22 +330,22 @@ def test_config_window_geometry(config_window: ConfigWindow) -> None:
 
 
 def test_config_window_gui_tab_exists(config_window: ConfigWindow) -> None:
-    """Test the GUI tab exists and is registered in the tab widget.
+    """Test the GUI sub-tab exists, grouped under the General tab.
 
     Args:
         config_window: ConfigWindow instance
     """
-    # GUI tab should exist
+    # GUI sub-tab should exist (now embedded in the General tab).
     assert config_window.gui_tab is not None
 
-    # GUI tab should be in the tab widget
-    gui_tab_index = -1
-    expected_text = t("config_window.tabs.gui")
+    # The General tab that contains it should be registered in the tab widget.
+    general_tab_index = -1
+    expected_text = t("config_window.tabs.general")
     for i in range(config_window.tab_widget.count()):
         if config_window.tab_widget.tabText(i) == expected_text:
-            gui_tab_index = i
+            general_tab_index = i
             break
-    assert gui_tab_index >= 0
+    assert general_tab_index >= 0
 
 
 class TestCloseEvent:

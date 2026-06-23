@@ -11,7 +11,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
-    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -36,14 +35,9 @@ class ScannerTab(QWidget):
 
     def init_ui(self) -> None:
         """Initialize the user interface."""
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll_content = QWidget()
-        self._form_layout = QFormLayout(scroll_content)
-        scroll.setWidget(scroll_content)
-
         main_layout = QVBoxLayout(self)
-        main_layout.addWidget(scroll)
+        self._form_layout = QFormLayout()
+        main_layout.addLayout(self._form_layout)
 
         # Database Path (required)
         self.db_label = QLabel()
@@ -102,6 +96,8 @@ class ScannerTab(QWidget):
         screenshots_layout.addWidget(self.screenshots_folder_input)
         screenshots_layout.addWidget(self.screenshots_browse)
         self._form_layout.addRow(self.screenshots_label, screenshots_layout_widget)
+
+        main_layout.addStretch()
 
         # Apply translations
         self.retranslate()

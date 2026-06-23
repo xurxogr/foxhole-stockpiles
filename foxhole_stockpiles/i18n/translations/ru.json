@@ -98,7 +98,9 @@
       "sav_processing": "Обработка SAV",
       "logging": "Логирование",
       "gui": "Интерфейс",
-      "clipboard": "Буфер обмена"
+      "clipboard": "Буфер обмена",
+      "input": "Ввод",
+      "general": "Общие"
     },
     "dialogs": {
       "error_loading_title": "Ошибка загрузки конфигурации",

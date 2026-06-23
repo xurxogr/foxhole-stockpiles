@@ -98,7 +98,9 @@
       "sav_processing": "SAV Processing",
       "logging": "Logging",
       "gui": "GUI",
-      "clipboard": "Clipboard"
+      "clipboard": "Clipboard",
+      "input": "Input",
+      "general": "General"
     },
     "dialogs": {
       "error_loading_title": "Error Loading Configuration",

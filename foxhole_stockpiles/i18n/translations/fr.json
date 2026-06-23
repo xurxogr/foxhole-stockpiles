@@ -98,7 +98,9 @@
       "sav_processing": "Traitement SAV",
       "logging": "Journaux",
       "gui": "Interface",
-      "clipboard": "Presse-papiers"
+      "clipboard": "Presse-papiers",
+      "input": "Entrée",
+      "general": "Général"
     },
     "dialogs": {
       "error_loading_title": "Erreur de chargement de la configuration",

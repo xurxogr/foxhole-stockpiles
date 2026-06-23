@@ -3,8 +3,9 @@
 import logging
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QCloseEvent, QKeyEvent
+from PySide6.QtGui import QCloseEvent, QKeyEvent, QShowEvent
 from PySide6.QtWidgets import (
+    QApplication,
     QDialogButtonBox,
     QHBoxLayout,
     QLabel,
@@ -21,7 +22,9 @@ from foxhole_stockpiles.core.settings import reload_settings
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.gui.utils.config_manager import ConfigManager
 from foxhole_stockpiles.gui.widgets.config_tabs.clipboard_tab import ClipboardTab
+from foxhole_stockpiles.gui.widgets.config_tabs.general_tab import GeneralTab
 from foxhole_stockpiles.gui.widgets.config_tabs.gui_tab import GUITab
+from foxhole_stockpiles.gui.widgets.config_tabs.input_tab import InputTab
 from foxhole_stockpiles.gui.widgets.config_tabs.logging_tab import LoggingTab
 from foxhole_stockpiles.gui.widgets.config_tabs.output_tab import OutputTab
 from foxhole_stockpiles.gui.widgets.config_tabs.sav_processing_tab import SavProcessingTab
@@ -52,6 +55,9 @@ class ConfigWindow(QMainWindow):
         super().__init__(parent)
         self.config_manager = ConfigManager()
         self.settings: AppSettings | None = None
+        # Height is fitted to the tallest tab the first time the window shows,
+        # so every option is visible without a scrollbar and no taller.
+        self._height_fitted = False
 
         self.init_ui()
         self.load_settings()
@@ -59,7 +65,8 @@ class ConfigWindow(QMainWindow):
     def init_ui(self) -> None:
         """Initialize the user interface."""
         self.setWindowTitle(t("config_window.title"))
-        self.setGeometry(100, 100, 760, 480)
+        # Width is fixed; the height is fitted to content on first show.
+        self.setGeometry(100, 100, 820, 640)
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -78,13 +85,19 @@ class ConfigWindow(QMainWindow):
         self.tab_widget = QTabWidget()
         layout.addWidget(self.tab_widget)
 
-        # Create configuration tabs
+        # Create the per-section sub-tabs. They keep their own set/get_values and
+        # settings sections; the visible tabs below group them by role.
         self.scanner_tab = ScannerTab()
         self.output_tab = OutputTab()
         self.logging_tab = LoggingTab()
         self.gui_tab = GUITab()
         self.sav_processing_tab = SavProcessingTab()
         self.clipboard_tab = ClipboardTab()
+
+        # Grouped tabs: Input (the three input sources) and General (interface +
+        # logging). Output stays on its own.
+        self.input_tab = InputTab(self.scanner_tab, self.sav_processing_tab, self.clipboard_tab)
+        self.general_tab = GeneralTab(self.gui_tab, self.logging_tab)
 
         # Track current language (for retranslation on save)
         self._current_language: str = get_translator().language
@@ -121,12 +134,9 @@ class ConfigWindow(QMainWindow):
         # Clear all tabs
         self.tab_widget.clear()
 
-        self.tab_widget.addTab(self.scanner_tab, t("config_window.tabs.scanner"))
+        self.tab_widget.addTab(self.input_tab, t("config_window.tabs.input"))
         self.tab_widget.addTab(self.output_tab, t("config_window.tabs.output"))
-        self.tab_widget.addTab(self.sav_processing_tab, t("config_window.tabs.sav_processing"))
-        self.tab_widget.addTab(self.clipboard_tab, t("config_window.tabs.clipboard"))
-        self.tab_widget.addTab(self.logging_tab, t("config_window.tabs.logging"))
-        self.tab_widget.addTab(self.gui_tab, t("config_window.tabs.gui"))
+        self.tab_widget.addTab(self.general_tab, t("config_window.tabs.general"))
 
         # Try to restore previous tab index
         if current_tab_index >= 0 and current_tab_index < self.tab_widget.count():
@@ -234,6 +244,44 @@ class ConfigWindow(QMainWindow):
 
         current_settings = self.collect_settings()
         return current_settings != self.settings
+
+    def showEvent(self, event: QShowEvent) -> None:
+        """Fit the window height to its content the first time it is shown.
+
+        Args:
+            event (QShowEvent): The show event.
+        """
+        super().showEvent(event)
+        if not self._height_fitted:
+            self._height_fitted = True
+            self._fit_height_to_content()
+
+    def _fit_height_to_content(self) -> None:
+        """Resize the height so the tallest tab fits without a scrollbar.
+
+        The non-page chrome (tab bar, hint, buttons, margins) is measured as
+        ``window height - page height`` and added to the tallest tab's content
+        height hint, so the window adapts to each platform's font/DPI metrics
+        and never ends up taller than the content needs.
+        """
+        page = self.tab_widget.currentWidget()
+        if page is None:
+            return
+
+        chrome = self.height() - page.height()
+        tab_heights = [
+            widget.sizeHint().height()
+            for i in range(self.tab_widget.count())
+            if (widget := self.tab_widget.widget(i)) is not None
+        ]
+        needed = chrome + max(tab_heights, default=0) + 8
+
+        # Never grow past the available screen height.
+        screen = self.screen() or QApplication.primaryScreen()
+        if screen is not None:
+            needed = min(needed, screen.availableGeometry().height() - 80)
+
+        self.resize(self.width(), needed)
 
     def keyPressEvent(self, event: QKeyEvent | None) -> None:
         """Handle key press events.

@@ -98,7 +98,9 @@
       "sav_processing": "SAV Verarbeitung",
       "logging": "Protokollierung",
       "gui": "Oberfläche",
-      "clipboard": "Zwischenablage"
+      "clipboard": "Zwischenablage",
+      "input": "Eingabe",
+      "general": "Allgemein"
     },
     "dialogs": {
       "error_loading_title": "Fehler beim Laden der Konfiguration",

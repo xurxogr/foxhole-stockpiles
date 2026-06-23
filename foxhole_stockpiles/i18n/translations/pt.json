@@ -98,7 +98,9 @@
       "sav_processing": "Processamento SAV",
       "logging": "Registos",
       "gui": "Interface",
-      "clipboard": "Área de transferência"
+      "clipboard": "Área de transferência",
+      "input": "Entrada",
+      "general": "Geral"
     },
     "dialogs": {
       "error_loading_title": "Erro ao carregar configuração",
