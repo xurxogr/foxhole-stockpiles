@@ -50,7 +50,6 @@
     "feature_server": "Servidor FastAPI para digitalização remota",
     "links_title": "Ligações:",
     "github_link": "Repositório GitHub",
-    "client_link": "Cliente FS (Ferramenta complementar)",
     "copyright": "Copyright © 2024 Xurxogr",
     "license": "Licenciado sob a Licença MIT",
     "feature_capture": "Capturar e digitalizar capturas de armazéns localmente"

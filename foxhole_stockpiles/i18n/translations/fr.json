@@ -50,7 +50,6 @@
     "feature_server": "Serveur FastAPI pour le scan à distance",
     "links_title": "Liens :",
     "github_link": "Dépôt GitHub",
-    "client_link": "Client FS (Outil complémentaire)",
     "copyright": "Copyright © 2024 Xurxogr",
     "license": "Sous licence MIT",
     "feature_capture": "Capturer et scanner les captures d'écran de stocks en local"

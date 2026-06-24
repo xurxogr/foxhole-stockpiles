@@ -50,7 +50,6 @@
     "feature_server": "FastAPI server for remote scanning",
     "links_title": "Links:",
     "github_link": "GitHub Repository",
-    "client_link": "FS Client (Complementary Tool)",
     "copyright": "Copyright © 2024 Xurxogr",
     "license": "Licensed under the MIT License",
     "feature_capture": "Capture and scan stockpile screenshots locally"

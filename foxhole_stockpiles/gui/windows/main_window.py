@@ -247,8 +247,6 @@ class MainWindow(QMainWindow):
             f"</ul>"
             f"<p><b>{t('about.links_title')}</b></p>"
             f"<p><a href='https://github.com/xurxogr/foxhole-stockpiles'>{t('about.github_link')}</a></p>"
-            f"<p><a href='https://github.com/xurxogr/foxhole-stockpiles-client'>"
-            f"{t('about.client_link')}</a></p>"
             f"<hr>"
             f"<p>{t('about.copyright')}</p>"
             f"<p>{t('about.license')}</p>",

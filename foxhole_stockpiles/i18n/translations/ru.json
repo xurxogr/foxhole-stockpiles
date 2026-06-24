@@ -50,7 +50,6 @@
     "feature_server": "FastAPI сервер для удалённого сканирования",
     "links_title": "Ссылки:",
     "github_link": "Репозиторий GitHub",
-    "client_link": "FS Client (дополнительный инструмент)",
     "copyright": "Copyright © 2024 Xurxogr",
     "license": "Лицензия MIT",
     "feature_capture": "Локальный захват и сканирование скриншотов складов"

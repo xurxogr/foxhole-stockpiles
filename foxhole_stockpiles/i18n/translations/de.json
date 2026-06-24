@@ -50,7 +50,6 @@
     "feature_server": "FastAPI-Server für Remote-Scannen",
     "links_title": "Links:",
     "github_link": "GitHub-Repository",
-    "client_link": "FS-Client (Ergänzungswerkzeug)",
     "copyright": "Copyright © 2024 Xurxogr",
     "license": "Lizenziert unter der MIT-Lizenz",
     "feature_capture": "Lager-Screenshots lokal aufnehmen und scannen"

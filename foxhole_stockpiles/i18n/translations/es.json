@@ -50,7 +50,6 @@
     "feature_server": "Servidor FastAPI para escaneo remoto",
     "links_title": "Enlaces:",
     "github_link": "Repositorio en GitHub",
-    "client_link": "Cliente FS (Herramienta complementaria)",
     "copyright": "Copyright © 2024 Xurxogr",
     "license": "Licenciado bajo la Licencia MIT",
     "feature_capture": "Capturar y escanear capturas de almacenes localmente"

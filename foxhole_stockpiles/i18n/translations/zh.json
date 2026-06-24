@@ -50,7 +50,6 @@
     "feature_server": "FastAPI 服务器用于远程扫描",
     "links_title": "链接：",
     "github_link": "GitHub 仓库",
-    "client_link": "FS 客户端（补充工具）",
     "copyright": "版权所有 © 2024 Xurxogr",
     "license": "根据 MIT 许可证授权",
     "feature_capture": "在本地捕获并扫描仓库截图"
