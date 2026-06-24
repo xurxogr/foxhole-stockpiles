@@ -93,6 +93,10 @@
     "output_group": "Sortie",
     "catalog_file": "Fichier catalogue :",
     "catalog_placeholder": "Chemin pour le catalog.json de sortie",
+    "variant_label": "Type de catalogue :",
+    "variant_full": "Catalogue complet",
+    "variant_fs": "Catalogue FS",
+    "variant_tooltip": "Complet conserve tous les champs ; FS ne conserve que ce dont l'application a besoin pour construire la base de données et convertir le presse-papiers (beaucoup plus petit).",
     "workers": "Workers :",
     "workers_tooltip": "Nombre de processus parallèles pour la conversion uasset.",
     "cores_detected": "({cores} cœurs détectés)",
@@ -111,7 +115,10 @@
     "select_pak": "Sélectionner le fichier PAK",
     "select_output": "Sélectionner le fichier catalogue de sortie",
     "pak_filter": "Fichiers PAK (*.pak);;Tous les fichiers (*)",
-    "json_filter": "Fichiers JSON (*.json);;Tous les fichiers (*)"
+    "json_filter": "Fichiers JSON (*.json);;Tous les fichiers (*)",
+    "edit_rules": "Modifier les règles…",
+    "rules_warning_title": "Champs requis manquants",
+    "rules_warning_message": "Ces champs requis seraient supprimés, ce qui peut casser l'application :\n{fields}\n\nConstruire quand même ?"
   },
   "catalog_builder_settings": {
     "title": "Paramètres du Constructeur de Catalogue",
@@ -267,5 +274,26 @@
     "summary_name": "Nom",
     "summary_shard": "Shard",
     "summary_time": "Heure"
+  },
+  "rules_dialog": {
+    "title": "Modifier les règles du catalogue",
+    "preset_label": "Préréglage :",
+    "preset_custom": "Personnalisé",
+    "col_action": "Action",
+    "col_pattern": "Motif (chemin du champ)",
+    "action_include": "inclure",
+    "action_exclude": "exclure",
+    "add": "Ajouter",
+    "remove": "Supprimer",
+    "move_up": "Monter",
+    "move_down": "Descendre",
+    "import_button": "Importer…",
+    "export_button": "Exporter…",
+    "warning": "Ces champs requis seraient supprimés : {fields}",
+    "import_title": "Importer un jeu de règles",
+    "export_title": "Exporter un jeu de règles",
+    "import_error": "Impossible d'importer le jeu de règles : {error}",
+    "replace_title": "Remplacer les règles actuelles ?",
+    "replace_message": "Passer à ce préréglage remplacera vos règles actuelles. Continuer ?"
   }
 }

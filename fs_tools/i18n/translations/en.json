@@ -93,6 +93,10 @@
     "output_group": "Output",
     "catalog_file": "Catalog File:",
     "catalog_placeholder": "Path for output catalog.json",
+    "variant_label": "Catalog Type:",
+    "variant_full": "Full Catalog",
+    "variant_fs": "FS Catalog",
+    "variant_tooltip": "Full keeps every field; FS keeps only what the app needs to build the database and convert clipboards (much smaller).",
     "workers": "Workers:",
     "workers_tooltip": "Number of parallel processes for uasset conversion.",
     "cores_detected": "({cores} cores detected)",
@@ -111,7 +115,10 @@
     "select_pak": "Select PAK File",
     "select_output": "Select Output Catalog File",
     "pak_filter": "PAK Files (*.pak);;All Files (*)",
-    "json_filter": "JSON Files (*.json);;All Files (*)"
+    "json_filter": "JSON Files (*.json);;All Files (*)",
+    "edit_rules": "Edit rules…",
+    "rules_warning_title": "Required fields missing",
+    "rules_warning_message": "These required fields would be dropped, which may break the app:\n{fields}\n\nBuild anyway?"
   },
   "catalog_builder_settings": {
     "title": "Catalog Builder Settings",
@@ -267,5 +274,26 @@
     "summary_name": "Name",
     "summary_shard": "Shard",
     "summary_time": "Time"
+  },
+  "rules_dialog": {
+    "title": "Edit Catalog Rules",
+    "preset_label": "Preset:",
+    "preset_custom": "Custom",
+    "col_action": "Action",
+    "col_pattern": "Pattern (field path)",
+    "action_include": "include",
+    "action_exclude": "exclude",
+    "add": "Add",
+    "remove": "Remove",
+    "move_up": "Move Up",
+    "move_down": "Move Down",
+    "import_button": "Import…",
+    "export_button": "Export…",
+    "warning": "These required fields would be dropped: {fields}",
+    "import_title": "Import Rule Set",
+    "export_title": "Export Rule Set",
+    "import_error": "Could not import rule set: {error}",
+    "replace_title": "Replace current rules?",
+    "replace_message": "Switching to this preset will replace your current rules. Continue?"
   }
 }

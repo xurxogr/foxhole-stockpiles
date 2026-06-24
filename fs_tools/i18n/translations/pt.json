@@ -93,6 +93,10 @@
     "output_group": "Saída",
     "catalog_file": "Ficheiro de catálogo:",
     "catalog_placeholder": "Caminho para catalog.json de saída",
+    "variant_label": "Tipo de catálogo:",
+    "variant_full": "Catálogo completo",
+    "variant_fs": "Catálogo FS",
+    "variant_tooltip": "Completo mantém todos os campos; FS mantém apenas o que o aplicativo precisa para construir o banco de dados e converter a área de transferência (muito menor).",
     "workers": "Workers:",
     "workers_tooltip": "Número de processos paralelos para conversão de uasset.",
     "cores_detected": "({cores} núcleos detetados)",
@@ -111,7 +115,10 @@
     "select_pak": "Selecionar ficheiro PAK",
     "select_output": "Selecionar ficheiro de catálogo de saída",
     "pak_filter": "Ficheiros PAK (*.pak);;Todos os ficheiros (*)",
-    "json_filter": "Ficheiros JSON (*.json);;Todos os ficheiros (*)"
+    "json_filter": "Ficheiros JSON (*.json);;Todos os ficheiros (*)",
+    "edit_rules": "Editar regras…",
+    "rules_warning_title": "Campos obrigatórios ausentes",
+    "rules_warning_message": "Estes campos obrigatórios seriam removidos, o que pode quebrar o aplicativo:\n{fields}\n\nConstruir mesmo assim?"
   },
   "catalog_builder_settings": {
     "title": "Configuração do construtor de catálogo",
@@ -267,5 +274,26 @@
     "summary_name": "Nome",
     "summary_shard": "Shard",
     "summary_time": "Hora"
+  },
+  "rules_dialog": {
+    "title": "Editar regras do catálogo",
+    "preset_label": "Predefinição:",
+    "preset_custom": "Personalizado",
+    "col_action": "Ação",
+    "col_pattern": "Padrão (caminho do campo)",
+    "action_include": "incluir",
+    "action_exclude": "excluir",
+    "add": "Adicionar",
+    "remove": "Remover",
+    "move_up": "Mover para cima",
+    "move_down": "Mover para baixo",
+    "import_button": "Importar…",
+    "export_button": "Exportar…",
+    "warning": "Estes campos obrigatórios seriam removidos: {fields}",
+    "import_title": "Importar conjunto de regras",
+    "export_title": "Exportar conjunto de regras",
+    "import_error": "Não foi possível importar o conjunto de regras: {error}",
+    "replace_title": "Substituir as regras atuais?",
+    "replace_message": "Mudar para esta predefinição substituirá as suas regras atuais. Continuar?"
   }
 }

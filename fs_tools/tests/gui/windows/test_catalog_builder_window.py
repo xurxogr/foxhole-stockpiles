@@ -12,6 +12,13 @@ from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.core.settings.sections.external_tools import ExternalToolsSettings
 from foxhole_stockpiles.i18n import t
 from fs_tools.gui.windows.catalog_builder_window import CatalogBuilderWindow
+from fs_tools.services.catalog_builder import (
+    CatalogPreset,
+    CatalogRule,
+    CatalogRuleSet,
+    RuleAction,
+    preset_ruleset,
+)
 
 
 # Prevent any GUI dialogs from appearing during test cleanup
@@ -248,6 +255,78 @@ def test_start_build_creates_worker(
         mock_worker_class.assert_called_once()
         mock_worker.start.assert_called_once()
         assert configured_window.start_button.isEnabled() is False
+
+
+def test_preset_combo_defaults_to_full(configured_window: CatalogBuilderWindow) -> None:
+    """The preset dropdown defaults to the FULL catalog (backwards compatible)."""
+    assert configured_window.variant_combo.currentData() == CatalogPreset.FULL
+    assert configured_window.ruleset == preset_ruleset(CatalogPreset.FULL)
+
+
+def test_selecting_fs_preset_updates_ruleset(configured_window: CatalogBuilderWindow) -> None:
+    """Selecting the FS preset seeds the window's rule set."""
+    fs_index = configured_window.variant_combo.findData(CatalogPreset.FS)
+    configured_window.variant_combo.setCurrentIndex(fs_index)
+    assert configured_window.ruleset == preset_ruleset(CatalogPreset.FS)
+
+
+def test_start_build_passes_ruleset(
+    configured_window: CatalogBuilderWindow, tmp_path: Path
+) -> None:
+    """start_build builds the worker with the window's current rule set."""
+    pak_file = tmp_path / "test.pak"
+    pak_file.touch()
+    configured_window.pak_file = str(pak_file)
+    configured_window.output_path_input.setText(str(tmp_path / "catalog.json"))
+    configured_window.ruleset = preset_ruleset(CatalogPreset.FS)
+
+    with patch(
+        "fs_tools.gui.windows.catalog_builder_window.CatalogBuilderWorker"
+    ) as mock_worker_class:
+        mock_worker_class.return_value = MagicMock()
+        configured_window.start_build()
+        _, kwargs = mock_worker_class.call_args
+        assert kwargs["ruleset"] == preset_ruleset(CatalogPreset.FS)
+
+
+def test_start_build_warns_when_required_missing(
+    configured_window: CatalogBuilderWindow, tmp_path: Path
+) -> None:
+    """A rule set missing required fields warns and aborts when declined."""
+    pak_file = tmp_path / "test.pak"
+    pak_file.touch()
+    configured_window.pak_file = str(pak_file)
+    configured_window.output_path_input.setText(str(tmp_path / "catalog.json"))
+    # Drops everything -> required minimum missing.
+    configured_window.ruleset = CatalogRuleSet(
+        rules=[CatalogRule(action=RuleAction.EXCLUDE, pattern="**")]
+    )
+
+    with (
+        patch(
+            "fs_tools.gui.windows.catalog_builder_window.QMessageBox.warning",
+            return_value=QMessageBox.StandardButton.No,
+        ) as mock_warning,
+        patch(
+            "fs_tools.gui.windows.catalog_builder_window.CatalogBuilderWorker"
+        ) as mock_worker_class,
+    ):
+        configured_window.start_build()
+        mock_warning.assert_called_once()
+        mock_worker_class.assert_not_called()
+
+
+def test_edit_rules_adopts_dialog_ruleset(configured_window: CatalogBuilderWindow) -> None:
+    """Accepting the rules dialog adopts its rule set."""
+    fs = preset_ruleset(CatalogPreset.FS)
+    with patch("fs_tools.gui.windows.catalog_builder_window.RulesDialog") as mock_dialog_class:
+        mock_dialog = MagicMock()
+        mock_dialog.exec.return_value = 1  # QDialog.DialogCode.Accepted
+        mock_dialog.ruleset = fs
+        mock_dialog_class.return_value = mock_dialog
+        configured_window._edit_rules()
+        assert configured_window.ruleset == fs
+        assert configured_window.variant_combo.currentData() == CatalogPreset.FS
 
 
 def test_cancel_build(configured_window: CatalogBuilderWindow) -> None:

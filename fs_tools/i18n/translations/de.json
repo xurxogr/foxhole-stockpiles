@@ -93,6 +93,10 @@
     "output_group": "Ausgabe",
     "catalog_file": "Katalogdatei:",
     "catalog_placeholder": "Pfad für Ausgabe catalog.json",
+    "variant_label": "Katalogtyp:",
+    "variant_full": "Vollständiger Katalog",
+    "variant_fs": "FS-Katalog",
+    "variant_tooltip": "Vollständig behält alle Felder; FS behält nur, was die App zum Erstellen der Datenbank und zum Konvertieren der Zwischenablage benötigt (deutlich kleiner).",
     "workers": "Workers:",
     "workers_tooltip": "Anzahl paralleler Prozesse für uasset-Konvertierung.",
     "cores_detected": "({cores} Kerne erkannt)",
@@ -111,7 +115,10 @@
     "select_pak": "PAK-Datei auswählen",
     "select_output": "Ausgabe-Katalogdatei auswählen",
     "pak_filter": "PAK-Dateien (*.pak);;Alle Dateien (*)",
-    "json_filter": "JSON-Dateien (*.json);;Alle Dateien (*)"
+    "json_filter": "JSON-Dateien (*.json);;Alle Dateien (*)",
+    "edit_rules": "Regeln bearbeiten…",
+    "rules_warning_title": "Erforderliche Felder fehlen",
+    "rules_warning_message": "Diese erforderlichen Felder würden entfernt, was die App beschädigen kann:\n{fields}\n\nTrotzdem erstellen?"
   },
   "catalog_builder_settings": {
     "title": "Katalog-Builder-Einstellungen",
@@ -267,5 +274,26 @@
     "summary_name": "Name",
     "summary_shard": "Shard",
     "summary_time": "Zeit"
+  },
+  "rules_dialog": {
+    "title": "Katalogregeln bearbeiten",
+    "preset_label": "Voreinstellung:",
+    "preset_custom": "Benutzerdefiniert",
+    "col_action": "Aktion",
+    "col_pattern": "Muster (Feldpfad)",
+    "action_include": "einschließen",
+    "action_exclude": "ausschließen",
+    "add": "Hinzufügen",
+    "remove": "Entfernen",
+    "move_up": "Nach oben",
+    "move_down": "Nach unten",
+    "import_button": "Importieren…",
+    "export_button": "Exportieren…",
+    "warning": "Diese erforderlichen Felder würden entfernt: {fields}",
+    "import_title": "Regelsatz importieren",
+    "export_title": "Regelsatz exportieren",
+    "import_error": "Regelsatz konnte nicht importiert werden: {error}",
+    "replace_title": "Aktuelle Regeln ersetzen?",
+    "replace_message": "Der Wechsel zu dieser Voreinstellung ersetzt Ihre aktuellen Regeln. Fortfahren?"
   }
 }

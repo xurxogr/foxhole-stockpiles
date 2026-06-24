@@ -71,6 +71,37 @@ Running `fs` with no subcommand launches the GUI. Run `fs <command> --help` for 
 - **`fs-tools add-mod`** — run the full extract → templates → merge pipeline for a mod's PAK file(s).
 - **`fs-tools-gui`** — the tooling GUI (catalog & database builder).
 
+## Catalog rules (output variants)
+
+The **catalog builder GUI** (`fs-tools-gui` → *Build Catalog*) can project the
+generated catalog through a **field rule set** before writing it, so you can
+produce a much smaller catalog that still drives the app. Pick a preset from the
+dropdown, or open **Edit rules…** to customise it:
+
+- **Full** — keep every field (the default; identical to the `build-catalog` CLI output).
+- **FS** — keep only the fields the app actually reads (clipboard conversion +
+  template-database build). This is roughly 9% of the full size and is
+  behaviourally identical for those two consumers.
+
+Rules are an ordered list of **include/exclude** entries over dotted field
+paths, evaluated **last-match-wins** (default: keep). Patterns support segment
+globs — `*` matches one path segment, `**` matches one or more — and an ancestor
+pattern keeps the whole subtree:
+
+```
+exclude **                                # drop everything, then re-add:
+include CodeName
+include DisplayNameLocales                # keeps the whole locales subtree
+include ItemProfileData.bIsCratable       # keeps just this nested field
+```
+
+Editing a preset flips it to **Custom**; switching back to a preset warns before
+discarding custom edits. Rule sets can be **imported/exported as JSON** (they are
+not stored in the app config). If a rule set would drop a field the app needs,
+the editor and the build step show a **warning** listing the missing fields.
+
+The CLI `build-catalog` always writes the Full catalog; rules are a GUI feature.
+
 ## Building a custom OCR database (mods or game updates)
 
 > **Recommended: use the GUI.** The **fs-tools GUI** (`fs-tools-gui`, or the GUI from `fs-tools.exe`) has a **Database Builder** that runs the whole pipeline — extract → generate templates → build — with validation, progress, and sensible defaults. It is much easier and less error-prone than chaining the CLI commands by hand.

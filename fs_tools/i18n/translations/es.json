@@ -93,6 +93,10 @@
     "output_group": "Salida",
     "catalog_file": "Archivo de catálogo:",
     "catalog_placeholder": "Ruta para catalog.json de salida",
+    "variant_label": "Tipo de catálogo:",
+    "variant_full": "Catálogo completo",
+    "variant_fs": "Catálogo FS",
+    "variant_tooltip": "Completo conserva todos los campos; FS conserva solo lo que la aplicación necesita para construir la base de datos y convertir el portapapeles (mucho más pequeño).",
     "workers": "Workers:",
     "workers_tooltip": "Número de procesos paralelos para conversión de uasset.",
     "cores_detected": "({cores} núcleos detectados)",
@@ -111,7 +115,10 @@
     "select_pak": "Seleccionar archivo PAK",
     "select_output": "Seleccionar archivo de catálogo de salida",
     "pak_filter": "Archivos PAK (*.pak);;Todos los archivos (*)",
-    "json_filter": "Archivos JSON (*.json);;Todos los archivos (*)"
+    "json_filter": "Archivos JSON (*.json);;Todos los archivos (*)",
+    "edit_rules": "Editar reglas…",
+    "rules_warning_title": "Faltan campos requeridos",
+    "rules_warning_message": "Estos campos requeridos se eliminarían, lo que puede romper la aplicación:\n{fields}\n\n¿Construir de todos modos?"
   },
   "catalog_builder_settings": {
     "title": "Configuración del constructor de catálogo",
@@ -267,5 +274,26 @@
     "summary_name": "Nombre",
     "summary_shard": "Shard",
     "summary_time": "Hora"
+  },
+  "rules_dialog": {
+    "title": "Editar reglas del catálogo",
+    "preset_label": "Preajuste:",
+    "preset_custom": "Personalizado",
+    "col_action": "Acción",
+    "col_pattern": "Patrón (ruta de campo)",
+    "action_include": "incluir",
+    "action_exclude": "excluir",
+    "add": "Añadir",
+    "remove": "Eliminar",
+    "move_up": "Subir",
+    "move_down": "Bajar",
+    "import_button": "Importar…",
+    "export_button": "Exportar…",
+    "warning": "Estos campos requeridos se eliminarían: {fields}",
+    "import_title": "Importar conjunto de reglas",
+    "export_title": "Exportar conjunto de reglas",
+    "import_error": "No se pudo importar el conjunto de reglas: {error}",
+    "replace_title": "¿Reemplazar las reglas actuales?",
+    "replace_message": "Cambiar a este preajuste reemplazará tus reglas actuales. ¿Continuar?"
   }
 }

@@ -93,6 +93,10 @@
     "output_group": "Вывод",
     "catalog_file": "Файл каталога:",
     "catalog_placeholder": "Путь для выходного catalog.json",
+    "variant_label": "Тип каталога:",
+    "variant_full": "Полный каталог",
+    "variant_fs": "Каталог FS",
+    "variant_tooltip": "Полный сохраняет все поля; FS сохраняет только то, что нужно приложению для построения базы данных и преобразования буфера обмена (намного меньше).",
     "workers": "Воркеры:",
     "workers_tooltip": "Количество параллельных процессов для конвертации uasset.",
     "cores_detected": "(обнаружено {cores} ядер)",
@@ -111,7 +115,10 @@
     "select_pak": "Выберите PAK файл",
     "select_output": "Выберите выходной файл каталога",
     "pak_filter": "PAK файлы (*.pak);;Все файлы (*)",
-    "json_filter": "JSON файлы (*.json);;Все файлы (*)"
+    "json_filter": "JSON файлы (*.json);;Все файлы (*)",
+    "edit_rules": "Изменить правила…",
+    "rules_warning_title": "Отсутствуют обязательные поля",
+    "rules_warning_message": "Эти обязательные поля будут удалены, что может нарушить работу приложения:\n{fields}\n\nВсё равно собрать?"
   },
   "catalog_builder_settings": {
     "title": "Настройки сборщика каталога",
@@ -267,5 +274,26 @@
     "summary_name": "Название",
     "summary_shard": "Шард",
     "summary_time": "Время"
+  },
+  "rules_dialog": {
+    "title": "Изменить правила каталога",
+    "preset_label": "Пресет:",
+    "preset_custom": "Пользовательский",
+    "col_action": "Действие",
+    "col_pattern": "Шаблон (путь поля)",
+    "action_include": "включить",
+    "action_exclude": "исключить",
+    "add": "Добавить",
+    "remove": "Удалить",
+    "move_up": "Вверх",
+    "move_down": "Вниз",
+    "import_button": "Импорт…",
+    "export_button": "Экспорт…",
+    "warning": "Эти обязательные поля будут удалены: {fields}",
+    "import_title": "Импорт набора правил",
+    "export_title": "Экспорт набора правил",
+    "import_error": "Не удалось импортировать набор правил: {error}",
+    "replace_title": "Заменить текущие правила?",
+    "replace_message": "Переход к этому пресету заменит текущие правила. Продолжить?"
   }
 }

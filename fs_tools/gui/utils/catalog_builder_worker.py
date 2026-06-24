@@ -8,7 +8,14 @@ from pathlib import Path
 
 from PySide6.QtCore import QThread, Signal
 
-from fs_tools.services.catalog_builder import BlueprintExtractor, CatalogAssembler
+from fs_tools.services.catalog_builder import (
+    BlueprintExtractor,
+    CatalogAssembler,
+    CatalogPreset,
+    CatalogRuleSet,
+    apply_rules,
+    preset_ruleset,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +41,7 @@ class CatalogBuilderWorker(QThread):
         extractor_tool: Path,
         converter_tool: Path,
         workers: int = 4,
+        ruleset: CatalogRuleSet | None = None,
     ) -> None:
         """Initialize the catalog builder worker.
 
@@ -43,6 +51,8 @@ class CatalogBuilderWorker(QThread):
             extractor_tool (Path): Path to repak executable
             converter_tool (Path): Path to UAssetGUI executable
             workers (int): Number of parallel workers for conversion
+            ruleset (CatalogRuleSet | None): Field rules to project the catalog
+                through. Defaults to the FULL preset (keep everything).
         """
         super().__init__()
         self.pak_file = pak_file
@@ -50,6 +60,7 @@ class CatalogBuilderWorker(QThread):
         self.extractor_tool = extractor_tool
         self.converter_tool = converter_tool
         self.workers = workers
+        self.ruleset = ruleset if ruleset is not None else preset_ruleset(CatalogPreset.FULL)
         self._should_stop = False
 
         logger.debug(
@@ -137,6 +148,13 @@ class CatalogBuilderWorker(QThread):
                 stats["errors"],
             )
             self.progress.emit(f"Built catalog: {stats['stockpilable']} stockpilable items")
+
+            # Project the catalog through the selected field rules (an empty rule
+            # set is identity; the FS preset deep-prunes each item).
+            catalog = apply_rules(catalog, self.ruleset)
+            logger.info(
+                "Applied %d catalog rule(s): %d items", len(self.ruleset.rules), len(catalog)
+            )
 
             # Step 3: Write output
             self.progress.emit(f"Writing catalog to {self.output_path}...")

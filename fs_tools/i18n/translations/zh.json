@@ -93,6 +93,10 @@
     "output_group": "输出",
     "catalog_file": "目录文件：",
     "catalog_placeholder": "输出 catalog.json 的路径",
+    "variant_label": "目录类型：",
+    "variant_full": "完整目录",
+    "variant_fs": "FS 目录",
+    "variant_tooltip": "完整保留所有字段；FS 仅保留应用构建数据库和转换剪贴板所需的内容（小得多）。",
     "workers": "工作进程：",
     "workers_tooltip": "uasset 转换的并行进程数。",
     "cores_detected": "（检测到 {cores} 个核心）",
@@ -111,7 +115,10 @@
     "select_pak": "选择 PAK 文件",
     "select_output": "选择输出目录文件",
     "pak_filter": "PAK 文件 (*.pak);;所有文件 (*)",
-    "json_filter": "JSON 文件 (*.json);;所有文件 (*)"
+    "json_filter": "JSON 文件 (*.json);;所有文件 (*)",
+    "edit_rules": "编辑规则…",
+    "rules_warning_title": "缺少必需字段",
+    "rules_warning_message": "这些必需字段将被删除，可能导致应用无法正常工作：\n{fields}\n\n仍要构建吗？"
   },
   "catalog_builder_settings": {
     "title": "目录构建器设置",
@@ -267,5 +274,26 @@
     "summary_name": "名称",
     "summary_shard": "分片",
     "summary_time": "时间"
+  },
+  "rules_dialog": {
+    "title": "编辑目录规则",
+    "preset_label": "预设：",
+    "preset_custom": "自定义",
+    "col_action": "操作",
+    "col_pattern": "模式（字段路径）",
+    "action_include": "包含",
+    "action_exclude": "排除",
+    "add": "添加",
+    "remove": "删除",
+    "move_up": "上移",
+    "move_down": "下移",
+    "import_button": "导入…",
+    "export_button": "导出…",
+    "warning": "这些必需字段将被删除：{fields}",
+    "import_title": "导入规则集",
+    "export_title": "导出规则集",
+    "import_error": "无法导入规则集：{error}",
+    "replace_title": "替换当前规则？",
+    "replace_message": "切换到此预设将替换您当前的规则。是否继续？"
   }
 }
