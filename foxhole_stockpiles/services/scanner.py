@@ -116,7 +116,7 @@ def to_runtime_stockpile(result: fs_ocr.Stockpile) -> Stockpile:
 
     return Stockpile(
         name=result.name or "",
-        type=_EXTERNAL_TYPE_BY_NAME.get(type_name, StockpileType.UNDEFINED),
+        type=_EXTERNAL_TYPE_BY_NAME.get(type_name, type_name),
         is_reserve=result.is_reserve,
         items=items,
         shard=result.shard,

@@ -140,10 +140,10 @@ class TestToRuntimeStockpile:
         assert sp.shard == "ABLE"
         assert sp.resolution == "1920x1080"
 
-    def test_unknown_type_falls_back_to_undefined(self) -> None:
-        """An unknown external type name becomes UNDEFINED."""
+    def test_unknown_type_passes_through(self) -> None:
+        """An unknown external type name is preserved verbatim, not collapsed."""
         sp = _convert(FakeExternalStockpile(type_name="Atlantis"))
-        assert sp.type == StockpileType.UNDEFINED
+        assert sp.type == "Atlantis"
 
     def test_items_with_candidates(self) -> None:
         """Item candidates are adapted to runtime ItemCandidate objects."""

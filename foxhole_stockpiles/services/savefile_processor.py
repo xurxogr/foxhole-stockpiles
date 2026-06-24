@@ -2,7 +2,6 @@
 
 import asyncio
 import logging
-from collections import defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -79,28 +78,12 @@ class SaveFileProcessor:
             timestamp = timestamp.replace(tzinfo=UTC)
         return timestamp.astimezone(UTC).isoformat()
 
-    def _group_by_location(self, stockpiles: list[Stockpile]) -> dict[str, list[Stockpile]]:
-        """Group stockpiles by their location (coords).
-
-        Args:
-            stockpiles (list[Stockpile]): List of stockpiles to group.
-
-        Returns:
-            dict[str, list[Stockpile]]: Stockpiles grouped by location key.
-        """
-        groups: dict[str, list[Stockpile]] = defaultdict(list)
-        for stockpile in stockpiles:
-            # Use coords as location key (hex:coords)
-            coords_key = stockpile.coords.to_key() if stockpile.coords else "0,0"
-            location_key = f"{stockpile.hex}:{coords_key}"
-            groups[location_key].append(stockpile)
-        return dict(groups)
-
     async def _output_results(self, stockpiles: list[Stockpile]) -> None:
-        """Output stockpiles through the handler pipeline, one call per location.
+        """Output stockpiles through the handler pipeline in a single call.
 
-        Stockpiles are grouped by their coordinates. Each location (public + reserves)
-        triggers a separate handler call.
+        The full list is handed to the output coordinator at once; each handler
+        decides how to treat the batch (e.g. the webhook handler may group by
+        location internally).
 
         Args:
             stockpiles (list[Stockpile]): List of stockpiles to output.
@@ -108,10 +91,8 @@ class SaveFileProcessor:
         if not stockpiles:
             return
 
-        # Group by location and output each group separately
-        location_groups = self._group_by_location(stockpiles)
-        for location_stockpiles in location_groups.values():
-            await self._output_coordinator.handle_output(location_stockpiles)
+        logger.info("Sending %d stockpile(s) to output handlers", len(stockpiles))
+        await self._output_coordinator.handle_output(stockpiles)
 
     def _detect_changes(
         self, stockpiles: list[Stockpile]

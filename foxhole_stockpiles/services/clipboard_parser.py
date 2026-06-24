@@ -364,25 +364,29 @@ class _Header:
     """Parsed header line fields (town/city intentionally dropped)."""
 
     hex: str
-    type: StockpileType
+    type: str
     name: str
     coords: StockpileCoords
     timestamp: datetime | None
 
 
-def _type_from_display(display: str) -> StockpileType:
+def _type_from_display(display: str) -> str:
     """Map an exported stockpile type display name (any language) to a type.
+
+    Known display names normalize to their canonical type; an unrecognized one
+    (e.g. a type added before the alias table is updated) keeps its display name
+    rather than collapsing to "Undefined".
 
     Args:
         display (str): The type field from the header (e.g. "Seaport").
 
     Returns:
-        StockpileType: The matching type, or UNDEFINED when unknown.
+        str: The matching canonical type, or the raw display name when unknown.
     """
     stockpile_type = _TYPE_BY_DISPLAY.get(_normalize(display).lower())
     if stockpile_type is None:
         logger.debug("Unknown stockpile type in clipboard header: %r", display)
-        return StockpileType.UNDEFINED
+        return display
     return stockpile_type
 
 

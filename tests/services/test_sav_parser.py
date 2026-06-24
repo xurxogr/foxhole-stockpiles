@@ -122,8 +122,8 @@ class TestConvertToStockpile:
         assert result.is_reserve is True
         assert result.coords is None
 
-    def test_convert_unknown_stockpile_type(self) -> None:
-        """Test converting with unknown stockpile type."""
+    def test_convert_unknown_stockpile_type_passes_through(self) -> None:
+        """An unrecognized type from fs-sav is preserved verbatim."""
         data: dict[str, Any] = {
             "name": "",
             "type": "UnknownType",
@@ -136,7 +136,7 @@ class TestConvertToStockpile:
 
         result = _convert_to_stockpile(data)
 
-        assert result.type == StockpileType.UNDEFINED
+        assert result.type == "UnknownType"
 
 
 class TestParseSave:

@@ -11,7 +11,6 @@ from typing import Any
 
 import fs_sav
 
-from foxhole_stockpiles.enums.stockpile_type import StockpileType
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_coords import StockpileCoords
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
@@ -120,13 +119,9 @@ def _convert_to_stockpile(data: dict[str, Any]) -> Stockpile:
     Returns:
         Stockpile: Converted stockpile model.
     """
-    # Parse stockpile type
-    type_str = data.get("type", "Undefined")
-    try:
-        stockpile_type = StockpileType(type_str)
-    except ValueError:
-        stockpile_type = StockpileType.UNDEFINED
-        logger.warning("Unknown stockpile type: %s", type_str)
+    # fs-sav emits canonical in-game CodeNames; pass them through verbatim so a
+    # newly-added type is preserved instead of collapsing to "Undefined".
+    stockpile_type = data.get("type", "Undefined")
 
     # Parse coordinates
     coords_data = data.get("coords")

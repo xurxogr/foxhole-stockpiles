@@ -14,7 +14,7 @@ class Stockpile(BaseModel):
     """Stockpile model."""
 
     name: str = Field(description="Name of the stockpile", default="")
-    type: StockpileType = Field(description="Type of stockpile", default=StockpileType.UNDEFINED)
+    type: str = Field(description="Type of stockpile", default=StockpileType.UNDEFINED)
     hex: str | None = Field(description="Hex region name", default=None)
     coords: StockpileCoords | None = Field(description="Map coordinates", default=None)
     is_reserve: bool = Field(description="Whether this is a reserve stockpile", default=False)
@@ -42,9 +42,7 @@ class Stockpile(BaseModel):
             str: Unique key for this stockpile.
         """
         coords_key = self.coords.to_key() if self.coords else "0,0"
-        # Handle both enum and string (use_enum_values=True converts to string)
-        type_value = self.type.value if hasattr(self.type, "value") else self.type
-        return f"{type_value}:{self.hex}:{coords_key}:{self.name}"
+        return f"{self.type}:{self.hex}:{coords_key}:{self.name}"
 
     @field_serializer("timestamp")
     def serialize_timestamp(self, value: datetime) -> str:
@@ -53,7 +51,6 @@ class Stockpile(BaseModel):
 
     model_config = ConfigDict(
         extra="forbid",
-        use_enum_values=True,
         json_schema_extra={
             "example": {
                 "name": "Logi",

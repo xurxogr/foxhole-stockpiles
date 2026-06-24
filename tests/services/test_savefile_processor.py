@@ -1,8 +1,8 @@
 """Tests for the SaveFileProcessor service.
 
 The real ``.sav`` parsing (``parse_save``) is patched out so these tests cover
-the processor's own logic: change detection, location grouping, output fan-out,
-one-shot processing, and watch-mode polling.
+the processor's own logic: change detection, output fan-out, one-shot
+processing, and watch-mode polling.
 """
 
 from __future__ import annotations
@@ -103,34 +103,6 @@ class TestTimestampKey:
         assert proc._timestamp_key(aware) == proc._timestamp_key(naive_utc)
 
 
-class TestGroupByLocation:
-    """Grouping stockpiles by hex:coords."""
-
-    def test_same_location_grouped(self, tmp_path: Path) -> None:
-        """Same hex + coords land in one group."""
-        proc, _ = make_processor(tmp_path)
-        a = make_stockpile(name="Public")
-        b = make_stockpile(name="Reserve")
-        groups = proc._group_by_location([a, b])
-        assert len(groups) == 1
-        assert len(next(iter(groups.values()))) == 2
-
-    def test_different_locations_separated(self, tmp_path: Path) -> None:
-        """Different coords produce separate groups."""
-        proc, _ = make_processor(tmp_path)
-        a = make_stockpile(x=0.1, y=0.2)
-        b = make_stockpile(x=0.9, y=0.8)
-        groups = proc._group_by_location([a, b])
-        assert len(groups) == 2
-
-    def test_missing_coords_uses_default_key(self, tmp_path: Path) -> None:
-        """A stockpile without coords falls back to the '0,0' location key."""
-        proc, _ = make_processor(tmp_path)
-        sp = Stockpile(name="X", type=StockpileType.SEAPORT, hex="H", coords=None)
-        groups = proc._group_by_location([sp])
-        assert "H:0,0" in groups
-
-
 class TestDetectChanges:
     """Change detection against the internal cache."""
 
@@ -172,7 +144,7 @@ class TestDetectChanges:
 
 
 class TestOutputResults:
-    """Fan-out of results, one handler call per location."""
+    """Fan-out of results: the full batch goes to the handler in one call."""
 
     async def test_empty_no_call(self, tmp_path: Path) -> None:
         """No stockpiles → no handler call."""
@@ -180,11 +152,13 @@ class TestOutputResults:
         await proc._output_results([])
         assert coord.calls == []
 
-    async def test_one_call_per_location(self, tmp_path: Path) -> None:
-        """Two locations → two handler calls."""
+    async def test_all_stockpiles_in_single_call(self, tmp_path: Path) -> None:
+        """Every stockpile is sent to the handler in one batched call."""
         proc, coord = make_processor(tmp_path)
-        await proc._output_results([make_stockpile(x=0.1, y=0.2), make_stockpile(x=0.9, y=0.8)])
-        assert len(coord.calls) == 2
+        stockpiles = [make_stockpile(x=0.1, y=0.2), make_stockpile(x=0.9, y=0.8)]
+        await proc._output_results(stockpiles)
+        assert len(coord.calls) == 1
+        assert coord.calls[0] == stockpiles
 
 
 class TestRunOnce:
