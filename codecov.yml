@@ -8,6 +8,10 @@ coverage:
       default:
         target: auto
 
+# GUI code is excluded from coverage: its tests need a display/Qt event loop and
+# are skipped in CI (`--ignore=.../tests/gui`), so measuring the GUI source would
+# report it as 0%-covered and sink the overall number. The GUI tests do run and
+# pass locally.
 ignore:
   - "foxhole_stockpiles/gui/**"
-  - "foxhole_stockpiles/commands/gui/**"
+  - "fs_tools/gui/**"
