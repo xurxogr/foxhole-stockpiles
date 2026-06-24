@@ -1,13 +1,48 @@
 """Tests for the ``fs sav`` command (``foxhole_stockpiles.cli.commands.sav``)."""
 
+import os
+import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+import typer
 from typer.testing import CliRunner
 
 from foxhole_stockpiles.cli.commands import sav
 
 runner = CliRunner()
+
+
+class TestGetDefaultSavefilePath:
+    """Test suite for the ``_get_default_savefile_path`` helper."""
+
+    def test_win32_with_localappdata(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """On Windows the path is built from LOCALAPPDATA."""
+        monkeypatch.setattr(sys, "platform", "win32")
+        monkeypatch.setattr(os, "environ", {"LOCALAPPDATA": "/x/Local"})
+        result = sav._get_default_savefile_path()
+        assert result == Path("/x/Local") / "Foxhole" / "Saved" / "SaveGames"
+
+    def test_win32_without_localappdata(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Missing LOCALAPPDATA yields None."""
+        monkeypatch.setattr(sys, "platform", "win32")
+        monkeypatch.setattr(os, "environ", {})
+        assert sav._get_default_savefile_path() is None
+
+    def test_linux_nothing_found(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """On Linux with no WSL/Proton paths present, returns None."""
+        monkeypatch.setattr(sys, "platform", "linux")
+        with (
+            patch("pathlib.Path.exists", return_value=False),
+            patch("pathlib.Path.home", return_value=Path("/home/u")),
+        ):
+            assert sav._get_default_savefile_path() is None
+
+    def test_other_platform(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """An unsupported platform yields None."""
+        monkeypatch.setattr(sys, "platform", "darwin")
+        assert sav._get_default_savefile_path() is None
 
 
 class TestFindMapdataFile:
@@ -57,6 +92,21 @@ class TestResolveSaveFile:
         save_file.touch()
 
         assert sav._resolve_save_file(None, tmp_path) == save_file
+
+    def test_falls_back_to_default_dir(self, tmp_path: Path) -> None:
+        """With no file/dir given, the OS default directory is searched."""
+        save_file = tmp_path / "World_MapData.sav"
+        save_file.touch()
+        with patch.object(sav, "_get_default_savefile_path", return_value=tmp_path):
+            assert sav._resolve_save_file(None, None) == save_file
+
+    def test_no_default_found_exits(self) -> None:
+        """No file/dir and no default path exits with an error."""
+        with (
+            patch.object(sav, "_get_default_savefile_path", return_value=None),
+            pytest.raises(typer.Exit),
+        ):
+            sav._resolve_save_file(None, None)
 
 
 class TestSavCommand:
@@ -111,3 +161,87 @@ class TestSavCommand:
 
         assert result.exit_code == 0
         processor.run_once.assert_awaited_once()
+
+    @patch("foxhole_stockpiles.cli.commands.sav.SaveFileProcessor")
+    @patch("foxhole_stockpiles.cli.commands.sav.OutputCoordinator")
+    @patch("foxhole_stockpiles.cli.commands.sav.setup_logging")
+    def test_watch_mode_runs(
+        self,
+        mock_setup_logging: MagicMock,
+        mock_output_coordinator: MagicMock,
+        mock_processor_class: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Without ``--once`` the processor runs in watch mode."""
+        save_file = tmp_path / "World_MapData.sav"
+        save_file.touch()
+        processor = MagicMock()
+        processor.run = AsyncMock(return_value=None)
+        mock_processor_class.return_value = processor
+
+        result = runner.invoke(sav.app, ["--file", str(save_file)])
+
+        assert result.exit_code == 0
+        processor.run.assert_awaited_once()
+
+    @patch("foxhole_stockpiles.cli.commands.sav.SaveFileProcessor")
+    @patch("foxhole_stockpiles.cli.commands.sav.OutputCoordinator")
+    @patch("foxhole_stockpiles.cli.commands.sav.setup_logging")
+    def test_keyboard_interrupt_stops_processor(
+        self,
+        mock_setup_logging: MagicMock,
+        mock_output_coordinator: MagicMock,
+        mock_processor_class: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """A KeyboardInterrupt during watch mode stops the processor cleanly."""
+        save_file = tmp_path / "World_MapData.sav"
+        save_file.touch()
+        processor = MagicMock()
+        processor.run = AsyncMock(side_effect=KeyboardInterrupt)
+        mock_processor_class.return_value = processor
+
+        result = runner.invoke(sav.app, ["--file", str(save_file)])
+
+        assert result.exit_code == 0
+        processor.stop.assert_called_once()
+
+    @patch("foxhole_stockpiles.cli.commands.sav.SaveFileProcessor")
+    @patch("foxhole_stockpiles.cli.commands.sav.OutputCoordinator")
+    @patch("foxhole_stockpiles.cli.commands.sav.setup_logging")
+    def test_output_option_overrides_handlers(
+        self,
+        mock_setup_logging: MagicMock,
+        mock_output_coordinator: MagicMock,
+        mock_processor_class: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """``--output`` builds a file handler overriding configured handlers."""
+        save_file = tmp_path / "World_MapData.sav"
+        save_file.touch()
+        processor = MagicMock()
+        processor.run_once = AsyncMock(return_value=None)
+        mock_processor_class.return_value = processor
+
+        result = runner.invoke(
+            sav.app,
+            ["--file", str(save_file), "--once", "--output", str(tmp_path / "out.json")],
+        )
+
+        assert result.exit_code == 0
+        mock_output_coordinator.assert_called_once()
+
+    @patch(
+        "foxhole_stockpiles.cli.commands.sav.get_app_settings",
+        side_effect=FileNotFoundError("missing config"),
+    )
+    def test_config_error_exits_two(self, mock_get_settings: MagicMock, tmp_path: Path) -> None:
+        """A bad ``--config`` surfaces as exit code 2."""
+        save_file = tmp_path / "World_MapData.sav"
+        save_file.touch()
+
+        result = runner.invoke(
+            sav.app, ["--file", str(save_file), "--once", "--config", "nope.json"]
+        )
+
+        assert result.exit_code == 2

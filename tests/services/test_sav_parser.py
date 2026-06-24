@@ -1,8 +1,11 @@
 """Tests for services.sav_parser module."""
 
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
+
+import pytest
 
 from foxhole_stockpiles.enums.stockpile_type import StockpileType
 from foxhole_stockpiles.models.stockpile import Stockpile
@@ -10,7 +13,50 @@ from foxhole_stockpiles.services.sav_parser import (
     _convert_to_stockpile,
     info,
     parse_save,
+    parse_save_bytes,
 )
+
+
+class TestParseSaveErrors:
+    """Error and bytes paths for the fs-sav wrapper."""
+
+    def test_parse_save_non_list_raises(self) -> None:
+        """A non-list result from fs_sav.parse_save raises RuntimeError."""
+        with patch("foxhole_stockpiles.services.sav_parser.fs_sav") as mock_fs_sav:
+            mock_fs_sav.parse_save.return_value = {"not": "a list"}
+            with pytest.raises(RuntimeError, match="unexpected type"):
+                parse_save("x.sav")
+
+    def test_parse_save_bytes_converts(self) -> None:
+        """parse_save_bytes converts each raw stockpile dict."""
+        raw = [{"type": "Seaport", "name": "P", "items": []}]
+        with patch("foxhole_stockpiles.services.sav_parser.fs_sav") as mock_fs_sav:
+            mock_fs_sav.parse_save_bytes.return_value = raw
+            result = parse_save_bytes(b"data", public=True, hex_filter="H")
+        assert len(result) == 1
+        assert result[0].type == StockpileType.SEAPORT
+        mock_fs_sav.parse_save_bytes.assert_called_once()
+
+    def test_parse_save_bytes_non_list_raises(self) -> None:
+        """A non-list result from fs_sav.parse_save_bytes raises RuntimeError."""
+        with patch("foxhole_stockpiles.services.sav_parser.fs_sav") as mock_fs_sav:
+            mock_fs_sav.parse_save_bytes.return_value = None
+            with pytest.raises(RuntimeError, match="unexpected type"):
+                parse_save_bytes(b"data")
+
+
+class TestConvertTimestampFallback:
+    """Timestamp parsing fallback."""
+
+    def test_invalid_timestamp_falls_back_to_now(self) -> None:
+        """An unparseable timestamp falls back to the current time."""
+        stockpile = _convert_to_stockpile({"type": "Seaport", "timestamp": "not-a-date"})
+        assert isinstance(stockpile.timestamp, datetime)
+
+    def test_non_string_timestamp_falls_back_to_now(self) -> None:
+        """A non-string timestamp (no .replace) falls back to the current time."""
+        stockpile = _convert_to_stockpile({"type": "Seaport", "timestamp": 12345})
+        assert isinstance(stockpile.timestamp, datetime)
 
 
 class TestInfo:

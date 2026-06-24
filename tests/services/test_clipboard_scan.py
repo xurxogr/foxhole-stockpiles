@@ -1,11 +1,20 @@
 """Tests for the clipboard scan service (the GUI/CLI shared seam)."""
 
 import asyncio
+from pathlib import Path
 from typing import Any
 
+import pytest
+
+from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.services.clipboard_parser import build_code_map
-from foxhole_stockpiles.services.clipboard_scan import ClipboardScanService
+from foxhole_stockpiles.services.clipboard_scan import (
+    ClipboardScanService,
+    build_clipboard_scan_service,
+)
+
+CATALOG_PATH = Path(__file__).resolve().parents[2] / "data" / "catalog.json"
 
 CATALOG: list[dict[str, Any]] = [
     {
@@ -109,3 +118,19 @@ def test_prime_suppresses_existing_clipboard() -> None:
     source.value = EXPORT_B
     assert asyncio.run(service.poll()) is not None
     assert len(coordinator.calls) == 1
+
+
+def test_build_service_requires_catalog_file() -> None:
+    """Building without a configured catalog file raises ValueError."""
+    settings = AppSettings()
+    settings.database_builder.catalog_file = None
+    with pytest.raises(ValueError, match="catalog_file"):
+        build_clipboard_scan_service(settings)
+
+
+def test_build_service_from_settings() -> None:
+    """A configured catalog file yields a ready service."""
+    settings = AppSettings()
+    settings.database_builder.catalog_file = CATALOG_PATH
+    service = build_clipboard_scan_service(settings)
+    assert isinstance(service, ClipboardScanService)

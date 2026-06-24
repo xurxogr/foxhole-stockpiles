@@ -50,7 +50,6 @@ class TestTemplateManagerInitialization:
         manager = TemplateManager(db_path)
 
         assert manager.database_path == db_path
-        assert manager.active_database is None
         assert manager.current_resolution is None
 
     def test_init_creates_empty_cache(self, tmp_path: Path) -> None:
@@ -62,7 +61,6 @@ class TestTemplateManagerInitialization:
         db_path = tmp_path / "test.h5"
         manager = TemplateManager(db_path)
 
-        assert manager.active_database is None
         assert manager.current_resolution is None
 
 
@@ -191,144 +189,6 @@ class TestLoadDatabase:
             await manager.load_database(SupportedResolution.R_1080)
 
         assert "version 999 does not match" in str(exc_info.value)
-
-
-class TestSetActiveResolution:
-    """Test suite for TemplateManager.set_active_resolution method.
-
-    This class contains tests for switching between resolutions based on
-    screenshot dimensions and database caching behavior.
-    """
-
-    async def test_set_active_resolution_first_time(self, tmp_path: Path) -> None:
-        """Test setting active resolution for the first time.
-
-        Args:
-            tmp_path (Path): Temporary directory path from pytest fixture.
-        """
-        db_path = tmp_path / "test.h5"
-
-        # Create a real database
-        real_db = TemplateDatabase(SupportedResolution.R_1080)
-        databases = {SupportedResolution.R_1080: real_db}
-        create_hdf5_database(db_path=db_path, databases=databases)
-
-        manager = TemplateManager(db_path)
-
-        # Set resolution for 1080p screenshot
-        resolution = await manager.set_active_resolution(1080)
-
-        assert resolution == SupportedResolution.R_1080
-        assert manager.current_resolution == SupportedResolution.R_1080
-        assert manager.active_database is not None
-
-    async def test_set_active_resolution_switch(self, tmp_path: Path) -> None:
-        """Test switching between different resolutions.
-
-        Args:
-            tmp_path (Path): Temporary directory path from pytest fixture.
-        """
-        db_path = tmp_path / "test.h5"
-
-        # Create databases for multiple resolutions
-        db_1080 = TemplateDatabase(SupportedResolution.R_1080)
-        db_720 = TemplateDatabase(SupportedResolution.R_720)
-        databases = {
-            SupportedResolution.R_1080: db_1080,
-            SupportedResolution.R_720: db_720,
-        }
-        create_hdf5_database(db_path=db_path, databases=databases)
-
-        manager = TemplateManager(db_path)
-
-        # Set resolution for 1080p
-        resolution1 = await manager.set_active_resolution(1080)
-        assert resolution1 == SupportedResolution.R_1080
-
-        # Switch to 720p
-        resolution2 = await manager.set_active_resolution(720)
-        assert resolution2 == SupportedResolution.R_720
-        assert manager.current_resolution == SupportedResolution.R_720
-
-    async def test_set_active_resolution_no_switch(self, tmp_path: Path) -> None:
-        """Test that setting same resolution doesn't reload database.
-
-        Args:
-            tmp_path (Path): Temporary directory path from pytest fixture.
-        """
-        db_path = tmp_path / "test.h5"
-
-        # Create a real database
-        real_db = TemplateDatabase(SupportedResolution.R_1080)
-        databases = {SupportedResolution.R_1080: real_db}
-        create_hdf5_database(db_path=db_path, databases=databases)
-
-        manager = TemplateManager(db_path)
-
-        # Set resolution for 1080p
-        await manager.set_active_resolution(1080)
-        db_reference = manager.active_database
-
-        # Set same resolution again
-        await manager.set_active_resolution(1080)
-
-        # Should be the same database reference (not reloaded)
-        assert manager.active_database is db_reference
-
-
-class TestFindBestResolution:
-    """Test suite for TemplateManager._find_best_resolution method.
-
-    This class contains tests for finding the best matching resolution
-    for various screenshot heights.
-    """
-
-    def test_find_best_resolution_exact_match(self, tmp_path: Path) -> None:
-        """Test finding exact resolution match.
-
-        Args:
-            tmp_path (Path): Temporary directory path from pytest fixture.
-        """
-        db_path = tmp_path / "test.h5"
-        manager = TemplateManager(db_path)
-
-        # Test exact matches
-        assert manager._find_best_resolution(1080) == SupportedResolution.R_1080
-        assert manager._find_best_resolution(720) == SupportedResolution.R_720
-        assert manager._find_best_resolution(1440) == SupportedResolution.R_1440
-
-    def test_find_best_resolution_closest_match(self, tmp_path: Path) -> None:
-        """Test finding closest resolution when no exact match.
-
-        Args:
-            tmp_path (Path): Temporary directory path from pytest fixture.
-        """
-        db_path = tmp_path / "test.h5"
-        manager = TemplateManager(db_path)
-
-        # Test closest matches - 992 is closest to 1000
-        assert manager._find_best_resolution(1000) == SupportedResolution.R_992
-        assert manager._find_best_resolution(800) == SupportedResolution.R_800
-        assert manager._find_best_resolution(1200) == SupportedResolution.R_1200
-        # 1500 is closer to 1536 (36 away) than to 1440 (60 away)
-        assert manager._find_best_resolution(1500) == SupportedResolution.R_1536
-
-    def test_find_best_resolution_edge_cases(self, tmp_path: Path) -> None:
-        """Test edge cases for resolution finding.
-
-        Args:
-            tmp_path (Path): Temporary directory path from pytest fixture.
-        """
-        db_path = tmp_path / "test.h5"
-        manager = TemplateManager(db_path)
-
-        # Very low resolution - 664 is closest to 480
-        result = manager._find_best_resolution(480)
-        assert result == SupportedResolution.R_664
-
-        # Very high resolution - exact match
-        result = manager._find_best_resolution(2160)
-        assert result == SupportedResolution.R_2160
 
 
 class TestTemplateManagerRepr:

@@ -99,7 +99,6 @@ class DatabaseVisualizerWindow(QDialog):
         self.all_templates: list[tuple[int, IconTemplate]] = []
         self.loader_thread: DatabaseLoader | None = None
         self.selected_template: tuple[int, IconTemplate] | None = None
-        self._pending_filter_state: dict[str, object] | None = None
 
         self.init_ui()
 
@@ -506,15 +505,8 @@ class DatabaseVisualizerWindow(QDialog):
         for resolution in available_resolutions:
             self.resolution_filter.addItem(f"{resolution.value}p", resolution)
 
-        # Check if we have a pending filter state to restore
-        pending_state = getattr(self, "_pending_filter_state", None)
-
-        if pending_state:
-            # Restore filter state
-            self._restore_filter_state(pending_state)
-            self._pending_filter_state = None
-        elif available_resolutions:
-            # Select first resolution by default
+        # Select first resolution by default
+        if available_resolutions:
             self.resolution_filter.setCurrentIndex(0)
             # This will trigger _on_resolution_changed
 
@@ -976,78 +968,6 @@ class DatabaseVisualizerWindow(QDialog):
         if self.database:
             self.all_templates = list(enumerate(self.database.templates))
             self._apply_filters()
-
-    def _get_current_filter_state(self) -> dict[str, object]:
-        """Get the current state of all filters.
-
-        Returns:
-            dict[str, object]: Dictionary containing current filter values.
-        """
-        return {
-            "resolution": self.resolution_filter.currentData(),
-            "code": self.code_filter.text(),
-            "faction": self.faction_filter.currentData(),
-            "category": self.category_filter.currentData(),
-            "mod": self.mod_filter.currentData(),
-            "crated_all": self.crated_all.isChecked(),
-            "crated_normal": self.crated_normal.isChecked(),
-            "crated_crated": self.crated_crated.isChecked(),
-        }
-
-    def _restore_filter_state(self, state: dict[str, object]) -> None:
-        """Restore filter state after database reload.
-
-        Args:
-            state (dict[str, object]): Dictionary containing filter values to restore.
-        """
-        # Restore resolution
-        if state["resolution"]:
-            index = self.resolution_filter.findData(state["resolution"])
-            if index >= 0:
-                self.resolution_filter.setCurrentIndex(index)
-
-        # Restore code filter
-        self.code_filter.setText(str(state["code"]) if state["code"] else "")
-
-        # Restore faction filter
-        if state["faction"]:
-            index = self.faction_filter.findData(state["faction"])
-            if index >= 0:
-                self.faction_filter.setCurrentIndex(index)
-
-        # Restore category filter
-        if state["category"]:
-            index = self.category_filter.findData(state["category"])
-            if index >= 0:
-                self.category_filter.setCurrentIndex(index)
-
-        # Restore mod filter (handled in _on_resolution_changed, but set if available)
-        if state["mod"]:
-            index = self.mod_filter.findData(state["mod"])
-            if index >= 0:
-                self.mod_filter.setCurrentIndex(index)
-
-        # Restore crated checkboxes
-        self.crated_all.setChecked(bool(state["crated_all"]))
-        self.crated_normal.setChecked(bool(state["crated_normal"]))
-        self.crated_crated.setChecked(bool(state["crated_crated"]))
-
-    def _reload_preserving_filters(self) -> None:
-        """Reload databases while preserving current filter state."""
-        # Save current filter state
-        filter_state = self._get_current_filter_state()
-
-        # Clear selection and disable buttons
-        self.selected_template = None
-        self.save_button.setEnabled(False)
-        self.replace_button.setEnabled(False)
-        self.delete_button.setEnabled(False)
-
-        # Store filter state to restore after load completes
-        self._pending_filter_state = filter_state
-
-        # Reload databases
-        self.load_databases()
 
     def _show_replace_error(self, error: str) -> None:
         """Show error message for failed icon replacement.

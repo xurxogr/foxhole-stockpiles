@@ -78,26 +78,6 @@ class CatalogService:
         entry = self._catalog.get(code)
         return entry.display_name if entry else code
 
-    def get_entry(self, code: str) -> CatalogEntry | None:
-        """Get full catalog entry for an item code.
-
-        Args:
-            code: The item code to look up.
-
-        Returns:
-            The CatalogEntry if found, otherwise None.
-        """
-        self._load()
-        return self._catalog.get(code)
-
-    def is_loaded(self) -> bool:
-        """Check if the catalog has been loaded.
-
-        Returns:
-            True if catalog has been loaded (even if empty).
-        """
-        return self._loaded
-
     @property
     def item_count(self) -> int:
         """Get the number of items in the catalog.

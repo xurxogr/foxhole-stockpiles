@@ -269,8 +269,3 @@ class SaveFileProcessor:
     def stop(self) -> None:
         """Stop the monitor."""
         self._running = False
-
-    def clear_cache(self) -> None:
-        """Clear the stockpile cache."""
-        self._stockpile_cache.clear()
-        self._last_mtime = None

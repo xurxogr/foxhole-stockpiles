@@ -688,3 +688,26 @@ class TestRetranslate:
             config_window.retranslate()
 
             mock_build.assert_called_once()
+
+
+class TestConfigWindowSizing:
+    """Tests for showEvent / height-fitting and the None key event."""
+
+    def test_show_event_fits_height_once(self, config_window: ConfigWindow) -> None:
+        """The first show fits the height; subsequent shows do not re-fit."""
+        from PySide6.QtGui import QShowEvent
+
+        assert config_window._height_fitted is False
+        config_window.showEvent(QShowEvent())
+        assert config_window._height_fitted is True
+        # A second show is a no-op for height fitting (must not raise).
+        config_window.showEvent(QShowEvent())
+
+    def test_fit_height_no_current_page(self, config_window: ConfigWindow) -> None:
+        """With no current page, height fitting returns early."""
+        with patch.object(config_window.tab_widget, "currentWidget", return_value=None):
+            config_window._fit_height_to_content()
+
+    def test_key_press_none_event(self, config_window: ConfigWindow) -> None:
+        """A None key event is a no-op."""
+        config_window.keyPressEvent(None)

@@ -188,7 +188,6 @@ class TemplateManager:
                 If None, uses the class-level default (16). Set to 0 to disable caching.
         """
         self.database_path = database_path
-        self.active_database: TemplateDatabase | None = None
         self.current_resolution: SupportedResolution | None = None
 
         # Store instance-level cache size (for this instance's operations)
@@ -502,48 +501,6 @@ class TemplateManager:
         )
 
         return all_databases
-
-    async def set_active_resolution(self, screenshot_height: int) -> SupportedResolution:
-        """Set active resolution based on screenshot dimensions.
-
-        Args:
-            screenshot_height (int): Height of the screenshot in pixels
-
-        Returns:
-            SupportedResolution: Selected resolution for processing
-        """
-        # Find exact or closest resolution
-        target_resolution = self._find_best_resolution(height=screenshot_height)
-
-        if self.current_resolution != target_resolution:
-            logger.debug(
-                "Switching to resolution %s for screenshot height %d",
-                target_resolution,
-                screenshot_height,
-            )
-            self.active_database = await self.load_database(resolution=target_resolution)
-            self.current_resolution = target_resolution
-
-        return target_resolution
-
-    def _find_best_resolution(self, height: int) -> SupportedResolution:
-        """Find the best matching resolution for given height.
-
-        Args:
-            height (int): Screenshot height in pixels
-
-        Returns:
-            SupportedResolution: Best matching resolution
-        """
-        resolutions = [int(r.value) for r in SupportedResolution]
-
-        # Find exact match first
-        if str(height) in [r.value for r in SupportedResolution]:
-            return SupportedResolution(str(height))
-
-        # Find closest resolution
-        closest = min(resolutions, key=lambda x: abs(x - height))
-        return SupportedResolution(str(closest))
 
     @staticmethod
     def save_databases_to_hdf5(

@@ -256,6 +256,107 @@ class TestScanCommand:
         call_kwargs = handler.handle_output.call_args.kwargs
         assert call_kwargs.get("token") == "abc123"
 
+    def test_output_destination_override(
+        self,
+        mock_setup_logging: MagicMock,
+        mock_output_coordinator: MagicMock,
+        mock_scanner_class: MagicMock,
+        mock_imread: MagicMock,
+        mock_stockpile: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """``--output-destination`` builds a single-destination handler."""
+        image_path = tmp_path / "shot.png"
+        image_path.touch()
+        database_path = tmp_path / "db.h5"
+        database_path.touch()
+        mock_imread.return_value = np.zeros((1080, 1920, 3), dtype=np.uint8)
+        coordinator = MagicMock()
+        coordinator.scan = AsyncMock(return_value=mock_stockpile)
+        mock_scanner_class.return_value = coordinator
+        handler = MagicMock()
+        handler.handle_output = AsyncMock(return_value=None)
+        mock_output_coordinator.return_value = handler
+
+        result = runner.invoke(
+            scan.app,
+            [
+                "--image",
+                str(image_path),
+                "--database",
+                str(database_path),
+                "--output-destination",
+                "console",
+            ],
+        )
+
+        assert result.exit_code == 0
+
+    def test_output_file_override(
+        self,
+        mock_setup_logging: MagicMock,
+        mock_output_coordinator: MagicMock,
+        mock_scanner_class: MagicMock,
+        mock_imread: MagicMock,
+        mock_stockpile: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """``--output-file`` alone builds a file destination handler."""
+        image_path = tmp_path / "shot.png"
+        image_path.touch()
+        database_path = tmp_path / "db.h5"
+        database_path.touch()
+        mock_imread.return_value = np.zeros((1080, 1920, 3), dtype=np.uint8)
+        coordinator = MagicMock()
+        coordinator.scan = AsyncMock(return_value=mock_stockpile)
+        mock_scanner_class.return_value = coordinator
+        handler = MagicMock()
+        handler.handle_output = AsyncMock(return_value=None)
+        mock_output_coordinator.return_value = handler
+
+        result = runner.invoke(
+            scan.app,
+            [
+                "--image",
+                str(image_path),
+                "--database",
+                str(database_path),
+                "--output-file",
+                str(tmp_path / "out.json"),
+            ],
+        )
+
+        assert result.exit_code == 0
+
+    def test_unexpected_error_exits_one(
+        self,
+        mock_setup_logging: MagicMock,
+        mock_output_coordinator: MagicMock,
+        mock_scanner_class: MagicMock,
+        mock_imread: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """A non-ValueError pipeline failure is caught and exits with code 1."""
+        image_path = tmp_path / "shot.png"
+        image_path.touch()
+        database_path = tmp_path / "db.h5"
+        database_path.touch()
+        mock_imread.return_value = np.zeros((1080, 1920, 3), dtype=np.uint8)
+        coordinator = MagicMock()
+
+        async def boom(*args: Any, **kwargs: Any) -> None:
+            raise RuntimeError("unexpected")
+
+        coordinator.scan = boom
+        mock_scanner_class.return_value = coordinator
+
+        result = runner.invoke(
+            scan.app,
+            ["--image", str(image_path), "--database", str(database_path)],
+        )
+
+        assert result.exit_code == 1
+
     def test_image_load_failure(
         self,
         mock_setup_logging: MagicMock,
@@ -363,6 +464,30 @@ class TestScanDatabaseValidation:
         result = runner.invoke(
             scan.app,
             ["--image", str(image_path), "--database", str(database_path)],
+        )
+
+        assert result.exit_code == 1
+
+    def test_config_error_exits_two(self, tmp_path: Path) -> None:
+        """A missing ``--config`` file exits with code 2 before any scanning."""
+        image_path = tmp_path / "shot.png"
+        image_path.touch()
+
+        result = runner.invoke(
+            scan.app,
+            ["--image", str(image_path), "--config", str(tmp_path / "nope.json")],
+        )
+
+        assert result.exit_code == 2
+
+    def test_image_not_found_exits_one(self, tmp_path: Path) -> None:
+        """A non-existent image (with a valid database) exits with code 1."""
+        database_path = tmp_path / "db.h5"
+        database_path.touch()
+
+        result = runner.invoke(
+            scan.app,
+            ["--image", str(tmp_path / "missing.png"), "--database", str(database_path)],
         )
 
         assert result.exit_code == 1

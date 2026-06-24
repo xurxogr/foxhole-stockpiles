@@ -94,9 +94,9 @@ class TestCatalogService:
         service = CatalogService(catalog_path=catalog_path)
 
         # First call loads
-        assert service.is_loaded() is False
+        assert service._loaded is False
         _ = service.get_display_name("Item1")
-        assert service.is_loaded() is True
+        assert service._loaded is True
 
         # Modify file (shouldn't affect loaded data)
         catalog_data[0]["DisplayName"] = "Modified"
@@ -104,43 +104,6 @@ class TestCatalogService:
 
         # Should still return original value
         assert service.get_display_name("Item1") == "First Item"
-
-    def test_get_entry_returns_catalog_entry(self, tmp_path: Path) -> None:
-        """Test get_entry returns CatalogEntry object."""
-        catalog_path = tmp_path / "catalog.json"
-        catalog_data = [{"CodeName": "Item1", "DisplayName": "First Item"}]
-        catalog_path.write_text(json.dumps(catalog_data))
-
-        service = CatalogService(catalog_path=catalog_path)
-
-        entry = service.get_entry("Item1")
-
-        assert entry is not None
-        assert isinstance(entry, CatalogEntry)
-        assert entry.code == "Item1"
-        assert entry.display_name == "First Item"
-
-    def test_get_entry_returns_none_for_missing(self, tmp_path: Path) -> None:
-        """Test get_entry returns None for missing codes."""
-        catalog_path = tmp_path / "catalog.json"
-        catalog_data = [{"CodeName": "Item1", "DisplayName": "First Item"}]
-        catalog_path.write_text(json.dumps(catalog_data))
-
-        service = CatalogService(catalog_path=catalog_path)
-
-        entry = service.get_entry("NonExistent")
-
-        assert entry is None
-
-    def test_is_loaded_before_and_after(self) -> None:
-        """Test is_loaded returns correct state."""
-        service = CatalogService(catalog_path=None)
-
-        assert service.is_loaded() is False
-
-        _ = service.get_display_name("test")
-
-        assert service.is_loaded() is True
 
     def test_item_count(self, tmp_path: Path) -> None:
         """Test item_count returns correct count."""
@@ -177,5 +140,5 @@ class TestCatalogService:
 
         # Only items with non-empty CodeName should be loaded
         assert service.item_count == 2
-        assert service.get_entry("Item1") is not None
-        assert service.get_entry("Item2") is not None
+        assert service.get_display_name("Item1") == "First Item"
+        assert service.get_display_name("Item2") == "Second Item"

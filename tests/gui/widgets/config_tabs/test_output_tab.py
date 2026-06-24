@@ -7,13 +7,16 @@ import pytest
 from PySide6.QtWidgets import QDialog, QLineEdit, QMessageBox
 
 from foxhole_stockpiles.core.settings.sections.output import (
+    CsvFormatSettings,
     FileHandlerSettings,
     JsonFormatSettings,
     OutputHandlerConfig,
     OutputSettings,
+    SheetsHandlerSettings,
     WebhookHandlerSettings,
 )
 from foxhole_stockpiles.enums.auth_type import AuthType
+from foxhole_stockpiles.enums.output_format import OutputFormat
 from foxhole_stockpiles.enums.output_handler_type import OutputHandlerType
 from foxhole_stockpiles.gui.widgets.config_tabs.output_tab import (
     OutputHandlerDialog,
@@ -861,3 +864,147 @@ class TestOutputHandlerDialog:
         qtbot.addWidget(dialog)
 
         assert dialog.webhook_token_input.echoMode() == QLineEdit.EchoMode.Password
+
+
+def _sheets_dialog(qtbot: Any, tmp_path: Any) -> OutputHandlerDialog:
+    """Build a Google Sheets dialog pre-filled with valid values."""
+    dialog = OutputHandlerDialog()
+    qtbot.addWidget(dialog)
+    dialog.handler_type_input.setCurrentText("google sheets")
+    creds = tmp_path / "creds.json"
+    creds.write_text("{}")
+    dialog.creds_path_input.setText(str(creds))
+    dialog.spreadsheet_url_input.setText("https://docs.google.com/spreadsheets/d/ABC123XYZ/edit")
+    dialog.sheet_id_input.setText("0")
+    dialog.start_cell_input.setText("A1")
+    dialog.row_format_input.setText("{code},{quantity}")
+    return dialog
+
+
+class TestOutputHandlerDialogSheets:
+    """Google Sheets handler load/validate/build coverage."""
+
+    def test_load_handler_sheets(self, qtbot: Any) -> None:
+        """Loading a sheets config populates the sheets fields."""
+        config = OutputHandlerConfig(
+            name="Sheets",
+            format=JsonFormatSettings(),
+            handler=SheetsHandlerSettings(
+                creds_path="/creds.json",
+                spreadsheet_url="https://docs.google.com/spreadsheets/d/ID/edit",
+                sheet_id="0",
+                start_cell="A1",
+                row_format="{code}",
+            ),
+        )
+        dialog = OutputHandlerDialog()
+        qtbot.addWidget(dialog)
+        dialog.load_handler(config)
+        assert dialog.creds_path_input.text() == "/creds.json"
+        assert dialog.sheet_id_input.text() == "0"
+
+    def test_valid_sheets_accepts(self, qtbot: Any, tmp_path: Any) -> None:
+        """A fully-valid sheets config accepts the dialog."""
+        dialog = _sheets_dialog(qtbot, tmp_path)
+        with patch.object(OutputHandlerDialog, "accept") as accept:
+            dialog._validate_and_accept()
+        accept.assert_called_once()
+
+    def test_missing_creds_warns(self, qtbot: Any, tmp_path: Any) -> None:
+        """An empty credentials path is rejected."""
+        dialog = _sheets_dialog(qtbot, tmp_path)
+        dialog.creds_path_input.setText("")
+        with patch.object(QMessageBox, "warning") as warn:
+            dialog._validate_and_accept()
+        warn.assert_called_once()
+
+    def test_missing_spreadsheet_warns(self, qtbot: Any, tmp_path: Any) -> None:
+        """An empty spreadsheet URL is rejected."""
+        dialog = _sheets_dialog(qtbot, tmp_path)
+        dialog.spreadsheet_url_input.setText("")
+        with patch.object(QMessageBox, "warning") as warn:
+            dialog._validate_and_accept()
+        warn.assert_called_once()
+
+    def test_missing_sheet_id_warns(self, qtbot: Any, tmp_path: Any) -> None:
+        """An empty sheet id is rejected."""
+        dialog = _sheets_dialog(qtbot, tmp_path)
+        dialog.sheet_id_input.setText("")
+        with patch.object(QMessageBox, "warning") as warn:
+            dialog._validate_and_accept()
+        warn.assert_called_once()
+
+    def test_creds_not_existing_warns(self, qtbot: Any, tmp_path: Any) -> None:
+        """A credentials path that does not exist is rejected."""
+        dialog = _sheets_dialog(qtbot, tmp_path)
+        dialog.creds_path_input.setText(str(tmp_path / "missing.json"))
+        with patch.object(QMessageBox, "warning") as warn:
+            dialog._validate_and_accept()
+        warn.assert_called_once()
+
+    def test_invalid_spreadsheet_url_warns(self, qtbot: Any, tmp_path: Any) -> None:
+        """A malformed spreadsheet URL is rejected."""
+        dialog = _sheets_dialog(qtbot, tmp_path)
+        dialog.spreadsheet_url_input.setText("https://example.com/not-a-sheet")
+        with patch.object(QMessageBox, "warning") as warn:
+            dialog._validate_and_accept()
+        warn.assert_called_once()
+
+    def test_invalid_start_cell_warns(self, qtbot: Any, tmp_path: Any) -> None:
+        """A start cell without a row number is rejected."""
+        dialog = _sheets_dialog(qtbot, tmp_path)
+        dialog.start_cell_input.setText("ABC")
+        with patch.object(QMessageBox, "warning") as warn:
+            dialog._validate_and_accept()
+        warn.assert_called_once()
+
+    def test_empty_row_format_warns(self, qtbot: Any, tmp_path: Any) -> None:
+        """An empty row format is rejected."""
+        dialog = _sheets_dialog(qtbot, tmp_path)
+        dialog.row_format_input.setText("")
+        with patch.object(QMessageBox, "warning") as warn:
+            dialog._validate_and_accept()
+        warn.assert_called_once()
+
+    def test_get_handler_config_sheets(self, qtbot: Any, tmp_path: Any) -> None:
+        """Building a sheets config returns SheetsHandlerSettings."""
+        dialog = _sheets_dialog(qtbot, tmp_path)
+        config = dialog.get_handler_config()
+        assert isinstance(config.handler, SheetsHandlerSettings)
+        assert config.handler.sheet_id == "0"
+        assert config.name == "Append rows (Google Sheets)"
+
+    def test_browse_credentials(self, qtbot: Any) -> None:
+        """browse_credentials sets the chosen file into the creds input."""
+        dialog = OutputHandlerDialog()
+        qtbot.addWidget(dialog)
+        with patch(
+            "foxhole_stockpiles.gui.widgets.config_tabs.output_tab.QFileDialog.getOpenFileName",
+            return_value=("/picked/creds.json", ""),
+        ):
+            dialog.browse_credentials()
+        assert dialog.creds_path_input.text() == "/picked/creds.json"
+
+
+class TestOutputHandlerDialogFormats:
+    """Format selection coverage."""
+
+    def test_csv_format(self, qtbot: Any) -> None:
+        """Selecting csv builds a CSV format settings object."""
+        dialog = OutputHandlerDialog()
+        qtbot.addWidget(dialog)
+        dialog.handler_type_input.setCurrentText("file")
+        dialog.format_input.setCurrentText("csv")
+        config = dialog.get_handler_config()
+        assert isinstance(config.format, CsvFormatSettings)
+        assert config.format.type == OutputFormat.CSV
+
+    def test_tsv_format(self, qtbot: Any) -> None:
+        """Selecting tsv builds a TSV format settings object."""
+        dialog = OutputHandlerDialog()
+        qtbot.addWidget(dialog)
+        dialog.handler_type_input.setCurrentText("file")
+        dialog.format_input.setCurrentText("tsv")
+        config = dialog.get_handler_config()
+        assert isinstance(config.format, CsvFormatSettings)
+        assert config.format.type == OutputFormat.TSV

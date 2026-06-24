@@ -11,54 +11,11 @@ from unittest.mock import patch
 from foxhole_stockpiles.core.utils import (
     auto_detect_savefile,
     find_mapdata_file,
-    force_memory_release,
     get_bundled_resource_path,
     get_default_savefile_dir,
     get_subprocess_kwargs,
     is_frozen,
-    malloc_trim,
 )
-
-
-class TestMallocTrim:
-    """Test suite for the malloc_trim function."""
-
-    def test_malloc_trim_success(self) -> None:
-        """Test malloc_trim when libc is available."""
-        result = malloc_trim()
-        assert isinstance(result, int)
-        assert result in (-1, 0, 1)
-
-    def test_malloc_trim_with_pad(self) -> None:
-        """Test malloc_trim with custom pad value."""
-        result = malloc_trim(pad=1024)
-        assert isinstance(result, int)
-
-    def test_malloc_trim_handles_unavailable_libc(self) -> None:
-        """Test malloc_trim when libc is not available."""
-        with patch("foxhole_stockpiles.core.utils.ctypes.CDLL") as mock_cdll:
-            mock_cdll.side_effect = OSError("libc not found")
-            result = malloc_trim()
-            assert result == -1
-
-
-class TestForceMemoryRelease:
-    """Test suite for the force_memory_release function."""
-
-    def test_force_memory_release_returns_stats(self) -> None:
-        """Test that force_memory_release returns statistics."""
-        result = force_memory_release()
-        assert isinstance(result, dict)
-        assert "gc_collected" in result
-        assert "malloc_trimmed" in result
-
-    def test_force_memory_release_calls_gc_collect(self) -> None:
-        """Test that force_memory_release calls gc.collect."""
-        with patch("foxhole_stockpiles.core.utils.gc.collect") as mock_collect:
-            mock_collect.return_value = 42
-            result = force_memory_release()
-            mock_collect.assert_called_once()
-            assert result["gc_collected"] == 42
 
 
 class TestGetSubprocessKwargs:

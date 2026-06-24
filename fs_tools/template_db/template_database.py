@@ -4,7 +4,6 @@ import logging
 from typing import Any, cast
 
 import h5py
-import numpy as np
 
 from foxhole_stockpiles.enums.item_category import ItemCategory
 from foxhole_stockpiles.enums.item_faction import ItemFaction
@@ -38,9 +37,6 @@ class TemplateDatabase:
         self.mod_lookup: dict[str, set[int]] = {}
         self.category_lookup: dict[str, set[int]] = {}
 
-        # Vectorized phash array for fast distance computation
-        self._phash_array: np.ndarray | None = None
-
     def add_template(self, template: IconTemplate) -> None:
         """Add template and update lookup tables.
 
@@ -64,94 +60,6 @@ class TemplateDatabase:
         if template.category.value not in self.category_lookup:
             self.category_lookup[template.category.value] = set()
         self.category_lookup[template.category.value].add(idx)
-
-    def get_candidates(
-        self,
-        faction: ItemFaction | None = None,
-        mod: str | None = None,
-        category: ItemCategory | None = None,
-        crated: bool | None = None,
-        code: str | None = None,
-        excluded_codes: list[str] | None = None,
-    ) -> list[int]:
-        """Get candidate template indices using faction, mod, category, and crated filters.
-
-        Args:
-            faction (ItemFaction | None): Optional faction filter
-            mod (str | None): Optional mod filter
-            category (ItemCategory | None): Optional category filter
-            crated (bool | None): Optional crated filter (True for crated only,
-                False for normal only, None for both)
-            code (str | None): Optional item code filter
-            excluded_codes (list[str] | None): Optional list of item codes to exclude from results
-
-        Returns:
-            list[int]: Candidate template indices for matching
-        """
-        candidates = set(range(len(self.templates)))
-
-        if code:
-            # Filter by item code if specified
-            candidates = {i for i in candidates if code in self.templates[i].code}
-
-        # Apply category filter if specified
-        if category and category != ItemCategory.Invalid:
-            category_candidates = self.category_lookup.get(category.value, set())
-            candidates = candidates & category_candidates
-
-        # Apply mod filter if specified
-        if mod:
-            mod_candidates = self.mod_lookup.get(mod, set())
-            candidates = candidates & mod_candidates
-
-        # Apply faction filter if specified
-        if faction and faction != ItemFaction.NEUTRAL:
-            faction_candidates = self.faction_lookup.get(faction.value, set())
-            # Also include neutral items
-            neutral_candidates = self.faction_lookup.get(ItemFaction.NEUTRAL.value, set())
-            candidates = candidates & (faction_candidates | neutral_candidates)
-
-        # Apply crated filter if specified
-        if crated is not None:
-            crated_candidates = []
-            for idx in candidates:
-                template = self.templates[idx]
-                if template.crated == crated:
-                    crated_candidates.append(idx)
-            candidates = set(crated_candidates)
-
-        # Apply excluded_codes filter if specified
-        if excluded_codes:
-            excluded_candidates = []
-            for idx in candidates:
-                template = self.templates[idx]
-                if template.code not in excluded_codes:
-                    excluded_candidates.append(idx)
-            candidates = set(excluded_candidates)
-
-        logger.debug(
-            (
-                "Candidate filtering: faction=%s, mod=%s, category=%s, crated=%s, "
-                "candidates=%d, code=%s, excluded_codes=%s"
-            ),
-            faction.value if faction else "any",
-            mod or "any",
-            category.value if category else "any",
-            crated if crated is not None else "any",
-            len(candidates),
-            code or "any",
-            excluded_codes or "none",
-        )
-
-        return list(candidates)
-
-    def get_available_mods(self) -> set[str]:
-        """Get all mods available in this database.
-
-        Returns:
-            set[str]: Set of mod names present in the database
-        """
-        return set(self.mod_lookup.keys())
 
     @classmethod
     def load_from_hdf5_group(
@@ -222,9 +130,6 @@ class TemplateDatabase:
 
             db.add_template(template)
 
-        # Store phash array for vectorized distance computation
-        db._phash_array = phashes.astype(np.uint64)
-
         logger.debug("Loaded %d templates from HDF5 group %s", n_templates, group.name)
         return db
 
@@ -240,36 +145,3 @@ class TemplateDatabase:
             f"factions={len(self.faction_lookup)}, "
             f"mods={len(self.mod_lookup)})"
         )
-
-    def get_phash_distances(
-        self,
-        icon_phash: int,
-        candidate_indices: list[int],
-    ) -> np.ndarray:
-        """Compute hamming distances between icon phash and candidate templates.
-
-        Uses vectorized NumPy operations for fast computation.
-
-        Args:
-            icon_phash (int): Perceptual hash of the icon to match.
-            candidate_indices (list[int]): Indices of candidate templates to compare.
-
-        Returns:
-            np.ndarray: Array of hamming distances for each candidate.
-        """
-        if self._phash_array is None:
-            # Fallback: build array from templates (shouldn't happen normally)
-            self._phash_array = np.array([t.phash for t in self.templates], dtype=np.uint64)
-
-        # Get phashes for candidates only
-        candidate_phashes = self._phash_array[candidate_indices]
-
-        # Vectorized XOR
-        xor_result = np.bitwise_xor(candidate_phashes, np.uint64(icon_phash))
-
-        # Vectorized popcount using unpackbits
-        # Convert uint64 to bytes, unpack bits, sum
-        xor_bytes = xor_result.view(np.uint8).reshape(-1, 8)
-        bit_counts: np.ndarray = np.unpackbits(xor_bytes, axis=1).sum(axis=1)
-
-        return bit_counts

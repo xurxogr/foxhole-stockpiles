@@ -1,8 +1,5 @@
 """Utility functions for the stockpile system."""
 
-import ctypes
-import gc
-import logging
 import os
 import subprocess
 import sys
@@ -57,65 +54,6 @@ def get_bundled_resource_path(relative_path: str) -> Path:
         base_path = Path.cwd()
 
     return base_path / relative_path
-
-
-def malloc_trim(pad: int = 0) -> int:
-    """Force glibc to return free memory to the operating system.
-
-    This calls the glibc malloc_trim() function which releases free memory from the heap
-    back to the system. This is useful after processing large data structures to prevent
-    memory fragmentation from keeping process RSS high.
-
-    On Linux with glibc, this can significantly reduce memory usage after freeing large
-    allocations (numpy arrays, images, etc.) that would otherwise stay in malloc's
-    internal pools.
-
-    Args:
-        pad (int): Amount of free space to leave untrimmed in bytes (default: 0)
-
-    Returns:
-        int: 1 if memory was released, 0 if not, -1 if malloc_trim is unavailable
-
-    Note:
-        - Only works on Linux with glibc
-        - Has no effect on other platforms (returns -1)
-        - Should be called after gc.collect() for best results
-    """
-    logger = logging.getLogger(__name__)
-    try:
-        libc = ctypes.CDLL("libc.so.6")
-        result = libc.malloc_trim(pad)
-        logger.debug("malloc_trim() returned: %d", result)
-        return int(result)
-    except (OSError, AttributeError) as e:
-        logger.debug("malloc_trim() not available: %s", e)
-        return -1
-
-
-def force_memory_release() -> dict[str, Any]:
-    """Force Python garbage collection and system memory release.
-
-    This performs a full garbage collection cycle and then attempts to release
-    freed memory back to the operating system via malloc_trim().
-
-    Returns:
-        dict[str, Any]: Statistics about the memory release operation
-            - gc_collected: Number of objects collected by garbage collector
-            - malloc_trimmed: 1 if memory was released, 0 if not, -1 if unavailable
-    """
-    logger = logging.getLogger(__name__)
-
-    # Force full garbage collection
-    collected = gc.collect()
-    logger.debug("Garbage collector freed %d objects", collected)
-
-    # Attempt to release memory to OS
-    trimmed = malloc_trim()
-
-    return {
-        "gc_collected": collected,
-        "malloc_trimmed": trimmed,
-    }
 
 
 # ==================== Savefile Locator Utilities ====================

@@ -214,3 +214,37 @@ def test_save_and_accept_exception_shows_status(qtbot: Any) -> None:
 
             assert "Test error" in dialog.status_label.text()
             assert not dialog.status_label.isHidden()
+
+
+def test_show_event_fits_height_once(dialog: SettingsDialog) -> None:
+    """The first show fits the dialog height; later shows do not re-fit."""
+    from PySide6.QtGui import QShowEvent
+
+    assert dialog._height_fitted is False
+    dialog.showEvent(QShowEvent())
+    assert dialog._height_fitted is True
+    dialog.showEvent(QShowEvent())  # second show is a no-op for fitting
+
+
+_FILE_DIALOG = "fs_tools.gui.windows.settings_dialog.QFileDialog.getOpenFileName"
+
+
+def test_browse_database_sets_path(dialog: SettingsDialog) -> None:
+    """Browsing selects a database file into the path input."""
+    with patch(_FILE_DIALOG, return_value=("/db/templates.h5", "")):
+        dialog._browse_database()
+    assert dialog.database_path_input.text() == "/db/templates.h5"
+
+
+def test_browse_database_cancelled(dialog: SettingsDialog) -> None:
+    """Cancelling the browse dialog leaves the path unchanged."""
+    dialog.database_path_input.setText("keep.h5")
+    with patch(_FILE_DIALOG, return_value=("", "")):
+        dialog._browse_database()
+    assert dialog.database_path_input.text() == "keep.h5"
+
+
+def test_language_change_retranslates(dialog: SettingsDialog) -> None:
+    """A language change re-applies the dialog's translatable strings."""
+    dialog._on_language_changed("en")
+    assert dialog.language_label.text() != ""
