@@ -11,20 +11,27 @@ repos:
 
 - repo: local
   hooks:
+  # Lint the whole tree (matches the CI `ruff check foxhole_stockpiles/ fs_tools/`
+  # command) so preview-rule violations in unstaged files are caught locally
+  # instead of only on CI. pass_filenames=false keeps the fixed CI paths.
   - id: ruff-check
-    name: ruff check
-    entry: ruff check
+    name: ruff check (full tree, matches CI)
+    entry: ruff check foxhole_stockpiles/ fs_tools/
     language: system
     types: [python]
+    pass_filenames: false
     args: [--fix, --exit-non-zero-on-fix]
   - id: ruff-format
     name: ruff format
     entry: ruff format
     language: system
     types: [python]
+  # Type-check the whole package (matches CI). mypy needs the full package for
+  # correct results, so it never runs on just the staged files.
   - id: mypy
-    name: mypy
-    entry: mypy
+    name: mypy (full tree, matches CI)
+    entry: mypy foxhole_stockpiles/ fs_tools/
     language: system
     types: [python]
+    pass_filenames: false
     require_serial: true
