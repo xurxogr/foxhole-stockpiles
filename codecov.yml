@@ -15,3 +15,8 @@ coverage:
 ignore:
   - "foxhole_stockpiles/gui/**"
   - "fs_tools/gui/**"
+  # Test code is not itself a coverage target. Measuring the test files would
+  # report any not-run test line (e.g. the CI-skipped GUI tests) as uncovered
+  # and drag the overall number down.
+  - "tests/**"
+  - "fs_tools/tests/**"
