@@ -2,6 +2,7 @@
   "language_name": "中文",
   "language_code": "zh",
   "common": {
+    "download": "下载",
     "save": "保存",
     "close": "关闭",
     "browse": "浏览...",
@@ -253,6 +254,10 @@
     "sav_hotkey_change": "更改"
   },
   "clipboard_tab": {
+    "catalog_label": "物品目录：",
+    "catalog_tooltip": "catalog.json 的路径，用于将复制的物品名称映射到物品代码。剪贴板扫描需要此文件。",
+    "catalog_placeholder": "未设置目录文件",
+    "select_catalog": "选择物品目录",
     "mode_tooltip": "剪贴板控制的工作方式：通过快捷键读取一次（手动）或自动轮询剪贴板以获取新的导出（监控）。",
     "clip_hotkey": "剪贴板快捷键：",
     "clip_hotkey_tooltip": "读取剪贴板一次的全局快捷键。",

@@ -2,6 +2,7 @@
   "language_name": "中文",
   "language_code": "zh",
   "common": {
+    "download": "下载",
     "cancel": "取消",
     "close": "关闭",
     "browse": "浏览...",

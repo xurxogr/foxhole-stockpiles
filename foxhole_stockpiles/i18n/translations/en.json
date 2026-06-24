@@ -2,6 +2,7 @@
   "language_name": "English",
   "language_code": "en",
   "common": {
+    "download": "Download",
     "save": "Save",
     "close": "Close",
     "browse": "Browse...",
@@ -273,6 +274,10 @@
     "sav_hotkey_change": "Change"
   },
   "clipboard_tab": {
+    "catalog_label": "Item catalog:",
+    "catalog_tooltip": "Path to catalog.json, used to map copied item names to item codes. Required for clipboard scanning.",
+    "catalog_placeholder": "No catalog file set",
+    "select_catalog": "Select Item Catalog",
     "mode_tooltip": "How the clipboard control works: read once via hotkey (manual) or auto-poll the clipboard for new exports (monitor).",
     "clip_hotkey": "Clipboard hotkey:",
     "clip_hotkey_tooltip": "Global hotkey that reads the clipboard once.",

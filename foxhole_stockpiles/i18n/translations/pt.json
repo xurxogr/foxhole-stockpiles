@@ -2,6 +2,7 @@
   "language_name": "Português",
   "language_code": "pt",
   "common": {
+    "download": "Descarregar",
     "save": "Guardar",
     "close": "Fechar",
     "browse": "Procurar...",
@@ -253,6 +254,10 @@
     "sav_hotkey_change": "Alterar"
   },
   "clipboard_tab": {
+    "catalog_label": "Catálogo de itens:",
+    "catalog_tooltip": "Caminho para o catalog.json, usado para mapear nomes de itens copiados para os seus códigos. Necessário para a leitura da área de transferência.",
+    "catalog_placeholder": "Nenhum ficheiro de catálogo definido",
+    "select_catalog": "Selecionar catálogo de itens",
     "mode_tooltip": "Como o controle da área de transferência funciona: ler uma vez com um atalho (manual) ou consultar automaticamente a área de transferência por novas exportações (monitor).",
     "clip_hotkey": "Atalho da área de transferência:",
     "clip_hotkey_tooltip": "Atalho global que lê a área de transferência uma vez.",

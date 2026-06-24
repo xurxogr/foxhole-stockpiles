@@ -2,6 +2,7 @@
   "language_name": "Français",
   "language_code": "fr",
   "common": {
+    "download": "Télécharger",
     "save": "Enregistrer",
     "close": "Fermer",
     "browse": "Parcourir...",
@@ -253,6 +254,10 @@
     "sav_hotkey_change": "Modifier"
   },
   "clipboard_tab": {
+    "catalog_label": "Catalogue d'objets :",
+    "catalog_tooltip": "Chemin vers catalog.json, utilisé pour associer les noms d'objets copiés à leurs codes. Requis pour l'analyse du presse-papiers.",
+    "catalog_placeholder": "Aucun fichier de catalogue défini",
+    "select_catalog": "Sélectionner le catalogue d'objets",
     "mode_tooltip": "Fonctionnement du contrôle du presse-papiers : lire une fois via un raccourci (manuel) ou interroger automatiquement le presse-papiers pour de nouvelles exportations (surveillance).",
     "clip_hotkey": "Raccourci du presse-papiers :",
     "clip_hotkey_tooltip": "Raccourci global qui lit le presse-papiers une fois.",

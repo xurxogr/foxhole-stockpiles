@@ -58,6 +58,21 @@ def test_scanner_tab_default_values(scanner_tab: ScannerTab) -> None:
     assert scanner_tab.confidence_gap_input.value() == 0.0
 
 
+def test_scanner_tab_download_button_visible_only_when_db_unset(
+    scanner_tab: ScannerTab,
+) -> None:
+    """The DB download button shows when no database path is set and hides when one is.
+
+    Args:
+        scanner_tab: ScannerTab instance
+    """
+    scanner_tab.set_values(ScannerSettings(database_path=None))
+    assert not scanner_tab.db_download.isHidden()
+
+    scanner_tab.set_values(ScannerSettings(database_path=Path("/tmp/db.h5")))
+    assert scanner_tab.db_download.isHidden()
+
+
 def test_scanner_tab_confidence_gap_range(scanner_tab: ScannerTab) -> None:
     """Test confidence gap has correct range.
 

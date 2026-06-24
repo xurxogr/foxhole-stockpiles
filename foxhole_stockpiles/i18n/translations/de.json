@@ -2,6 +2,7 @@
   "language_name": "Deutsch",
   "language_code": "de",
   "common": {
+    "download": "Herunterladen",
     "save": "Speichern",
     "close": "Schließen",
     "browse": "Durchsuchen...",
@@ -253,6 +254,10 @@
     "sav_hotkey_change": "Ändern"
   },
   "clipboard_tab": {
+    "catalog_label": "Gegenstandskatalog:",
+    "catalog_tooltip": "Pfad zur catalog.json, die kopierte Gegenstandsnamen den Item-Codes zuordnet. Erforderlich für das Scannen aus der Zwischenablage.",
+    "catalog_placeholder": "Keine Katalogdatei festgelegt",
+    "select_catalog": "Gegenstandskatalog auswählen",
     "mode_tooltip": "Wie die Zwischenablage-Steuerung funktioniert: einmal per Tastenkürzel lesen (manuell) oder die Zwischenablage automatisch auf neue Exporte abfragen (Überwachung).",
     "clip_hotkey": "Zwischenablage-Tastenkürzel:",
     "clip_hotkey_tooltip": "Globales Tastenkürzel, das die Zwischenablage einmal liest.",

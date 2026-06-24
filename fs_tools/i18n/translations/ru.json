@@ -2,6 +2,7 @@
   "language_name": "Русский",
   "language_code": "ru",
   "common": {
+    "download": "Скачать",
     "cancel": "Отмена",
     "close": "Закрыть",
     "browse": "Обзор...",

@@ -1,5 +1,6 @@
 """Tests for ClipboardTab."""
 
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -77,6 +78,39 @@ def test_clear_hotkey_yields_none(clipboard_tab: ClipboardTab) -> None:
     clipboard_tab._clear_clip_key()
 
     assert clipboard_tab.get_values().clip_capture_key is None
+
+
+def test_catalog_file_roundtrip(clipboard_tab: ClipboardTab) -> None:
+    """The catalog path round-trips through set/get_catalog_file.
+
+    Args:
+        clipboard_tab: ClipboardTab instance.
+    """
+    clipboard_tab.set_catalog_file(Path("/tmp/catalog.json"))
+    assert clipboard_tab.get_catalog_file() == Path("/tmp/catalog.json")
+
+
+def test_catalog_file_none_yields_none(clipboard_tab: ClipboardTab) -> None:
+    """An unset catalog path returns None.
+
+    Args:
+        clipboard_tab: ClipboardTab instance.
+    """
+    clipboard_tab.set_catalog_file(None)
+    assert clipboard_tab.get_catalog_file() is None
+
+
+def test_download_button_visible_only_when_catalog_unset(clipboard_tab: ClipboardTab) -> None:
+    """The download button shows when no catalog is set and hides when one is.
+
+    Args:
+        clipboard_tab: ClipboardTab instance.
+    """
+    clipboard_tab.set_catalog_file(None)
+    assert not clipboard_tab.catalog_download.isHidden()
+
+    clipboard_tab.set_catalog_file(Path("/tmp/catalog.json"))
+    assert clipboard_tab.catalog_download.isHidden()
 
 
 def test_has_retranslate_method(clipboard_tab: ClipboardTab) -> None:

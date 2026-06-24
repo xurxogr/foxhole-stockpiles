@@ -2,6 +2,7 @@
   "language_name": "Español",
   "language_code": "es",
   "common": {
+    "download": "Descargar",
     "save": "Guardar",
     "close": "Cerrar",
     "browse": "Examinar...",
@@ -253,6 +254,10 @@
     "sav_hotkey_change": "Cambiar"
   },
   "clipboard_tab": {
+    "catalog_label": "Catálogo de objetos:",
+    "catalog_tooltip": "Ruta al catalog.json, usado para asignar los nombres de objetos copiados a sus códigos. Necesario para el escaneo desde el portapapeles.",
+    "catalog_placeholder": "Ningún archivo de catálogo configurado",
+    "select_catalog": "Seleccionar catálogo de objetos",
     "mode_tooltip": "Cómo funciona el control del portapapeles: leer una vez con un atajo (manual) o sondear automáticamente el portapapeles en busca de nuevas exportaciones (monitor).",
     "clip_hotkey": "Atajo del portapapeles:",
     "clip_hotkey_tooltip": "Atajo global que lee el portapapeles una vez.",

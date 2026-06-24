@@ -41,6 +41,19 @@ def test_dialog_initialization(dialog: SettingsDialog) -> None:
     assert dialog.config_manager is not None
 
 
+def test_database_download_button_visible_only_when_db_unset(dialog: SettingsDialog) -> None:
+    """The DB download button shows when no database path is set and hides when one is.
+
+    Args:
+        dialog (SettingsDialog): Dialog instance.
+    """
+    dialog.database_path_input.setText("")
+    assert not dialog.database_download_btn.isHidden()
+
+    dialog.database_path_input.setText("/tmp/db.h5")
+    assert dialog.database_download_btn.isHidden()
+
+
 def test_load_current_settings_populates_database_path(qtbot: Any) -> None:
     """The configured database path is loaded into the input.
 

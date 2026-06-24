@@ -1,9 +1,14 @@
 """Clipboard Processing settings tab."""
 
+from pathlib import Path
+
+from PySide6.QtCore import QUrl
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QDoubleSpinBox,
+    QFileDialog,
     QFormLayout,
     QHBoxLayout,
     QLabel,
@@ -13,6 +18,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from foxhole_stockpiles.core.constants import DATA_DOWNLOAD_URL
 from foxhole_stockpiles.core.settings.sections.clipboard import ClipboardSettings
 from foxhole_stockpiles.enums.clip_mode import ClipMode
 from foxhole_stockpiles.gui.widgets.capture_key_dialog import CaptureKeyDialog
@@ -37,6 +43,26 @@ class ClipboardTab(QWidget):
         layout = QVBoxLayout(self)
 
         form_layout = QFormLayout()
+
+        # Item catalog path. Stored in database_builder.catalog_file (shared with
+        # fs-tools) but surfaced here because clipboard scanning needs it.
+        self.catalog_label = QLabel()
+        catalog_layout_widget = QWidget()
+        catalog_layout = QHBoxLayout(catalog_layout_widget)
+        catalog_layout.setContentsMargins(0, 0, 0, 0)
+        self.catalog_path_input = QLineEdit()
+        self.catalog_path_input.textChanged.connect(self._update_catalog_download_visibility)
+        # Download button (shown only while the field is empty), mirroring the
+        # fs-tools External Tools tab convention.
+        self.catalog_download = QPushButton()
+        self.catalog_download.setMaximumWidth(80)
+        self.catalog_download.clicked.connect(self._open_data_url)
+        self.catalog_browse = QPushButton()
+        self.catalog_browse.clicked.connect(self.browse_catalog)
+        catalog_layout.addWidget(self.catalog_path_input)
+        catalog_layout.addWidget(self.catalog_download)
+        catalog_layout.addWidget(self.catalog_browse)
+        form_layout.addRow(self.catalog_label, catalog_layout_widget)
 
         # Clipboard mode (manual hotkey read vs. auto-monitor)
         self.mode_label = QLabel()
@@ -74,6 +100,7 @@ class ClipboardTab(QWidget):
         layout.addStretch()
 
         self.retranslate()
+        self._update_catalog_download_visibility()
 
         # Connect to language change signal with cleanup
         self._language_callback = self._on_language_changed
@@ -86,6 +113,12 @@ class ClipboardTab(QWidget):
 
     def retranslate(self) -> None:
         """Update all translatable strings."""
+        self.catalog_label.setText(t("clipboard_tab.catalog_label"))
+        self.catalog_label.setToolTip(t("clipboard_tab.catalog_tooltip"))
+        self.catalog_path_input.setPlaceholderText(t("clipboard_tab.catalog_placeholder"))
+        self.catalog_download.setText(t("common.download"))
+        self.catalog_browse.setText(t("common.browse"))
+
         self.mode_label.setText(t("clipboard_tab.mode_label"))
         self.mode_label.setToolTip(t("clipboard_tab.mode_tooltip"))
         self.mode_combo.setItemText(0, t("clipboard_tab.mode_manual"))
@@ -99,6 +132,25 @@ class ClipboardTab(QWidget):
 
         self.poll_interval_label.setText(t("clipboard_tab.poll_interval_label"))
         self.poll_interval_label.setToolTip(t("clipboard_tab.poll_interval_tooltip"))
+
+    def _update_catalog_download_visibility(self) -> None:
+        """Show the download button only while no catalog file is set."""
+        self.catalog_download.setVisible(not self.catalog_path_input.text().strip())
+
+    def _open_data_url(self) -> None:
+        """Open the repository data folder in the default browser."""
+        QDesktopServices.openUrl(QUrl(DATA_DOWNLOAD_URL))
+
+    def browse_catalog(self) -> None:
+        """Open a file dialog to choose the catalog file."""
+        filepath, _ = QFileDialog.getOpenFileName(
+            self,
+            t("clipboard_tab.select_catalog"),
+            "",
+            "JSON Files (*.json);;All Files (*)",
+        )
+        if filepath:
+            self.catalog_path_input.setText(filepath)
 
     def _change_clip_key(self) -> None:
         """Open the key-capture dialog and store the chosen clipboard hotkey."""
@@ -137,3 +189,21 @@ class ClipboardTab(QWidget):
             clip_capture_key=self._clip_capture_key_value or None,
             poll_interval=self.poll_interval_input.value(),
         )
+
+    def set_catalog_file(self, catalog_file: Path | None) -> None:
+        """Set the catalog path field from ``database_builder.catalog_file``.
+
+        Args:
+            catalog_file (Path | None): The configured catalog path, if any.
+        """
+        self.catalog_path_input.setText(str(catalog_file) if catalog_file else "")
+        self._update_catalog_download_visibility()
+
+    def get_catalog_file(self) -> Path | None:
+        """Get the configured catalog path.
+
+        Returns:
+            Path | None: The catalog path, or None when the field is empty.
+        """
+        text = self.catalog_path_input.text().strip()
+        return Path(text) if text else None

@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+from PySide6.QtCore import QUrl
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QDialog,
     QDoubleSpinBox,
@@ -15,6 +17,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from foxhole_stockpiles.core.constants import DATA_DOWNLOAD_URL
 from foxhole_stockpiles.core.settings.sections.scanner import ScannerSettings
 from foxhole_stockpiles.gui.widgets.capture_key_dialog import CaptureKeyDialog
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
@@ -45,9 +48,16 @@ class ScannerTab(QWidget):
         db_layout = QHBoxLayout(db_layout_widget)
         db_layout.setContentsMargins(0, 0, 0, 0)
         self.database_path_input = QLineEdit()
+        self.database_path_input.textChanged.connect(self._update_db_download_visibility)
+        # Download button (shown only while the field is empty), mirroring the
+        # fs-tools External Tools tab convention.
+        self.db_download = QPushButton()
+        self.db_download.setMaximumWidth(80)
+        self.db_download.clicked.connect(self._open_data_url)
         self.db_browse = QPushButton()
         self.db_browse.clicked.connect(self.browse_database)
         db_layout.addWidget(self.database_path_input)
+        db_layout.addWidget(self.db_download)
         db_layout.addWidget(self.db_browse)
         self._form_layout.addRow(self.db_label, db_layout_widget)
 
@@ -101,6 +111,7 @@ class ScannerTab(QWidget):
 
         # Apply translations
         self.retranslate()
+        self._update_db_download_visibility()
 
         # Connect to language change signal with cleanup
         self._language_callback = self._on_language_changed
@@ -117,6 +128,7 @@ class ScannerTab(QWidget):
         self.db_label.setText(t("scanner_tab.database_path"))
         self.db_label.setToolTip(t("scanner_tab.database_path_tooltip"))
         self.database_path_input.setPlaceholderText(t("scanner_tab.database_path_placeholder"))
+        self.db_download.setText(t("common.download"))
         self.db_browse.setText(t("common.browse"))
 
         # Capture Hotkey
@@ -153,6 +165,14 @@ class ScannerTab(QWidget):
         """Clear the configured capture hotkey."""
         self._capture_key_value = None
         self.capture_key_display.clear()
+
+    def _update_db_download_visibility(self) -> None:
+        """Show the download button only while no database path is set."""
+        self.db_download.setVisible(not self.database_path_input.text().strip())
+
+    def _open_data_url(self) -> None:
+        """Open the repository data folder in the default browser."""
+        QDesktopServices.openUrl(QUrl(DATA_DOWNLOAD_URL))
 
     def browse_database(self) -> None:
         """Open file dialog for database path."""

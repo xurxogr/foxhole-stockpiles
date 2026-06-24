@@ -3,7 +3,8 @@
 import logging
 from pathlib import Path
 
-from PySide6.QtGui import QShowEvent
+from PySide6.QtCore import QUrl
+from PySide6.QtGui import QDesktopServices, QShowEvent
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -21,6 +22,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from foxhole_stockpiles.core.constants import DATA_DOWNLOAD_URL
 from foxhole_stockpiles.core.settings import get_settings
 from foxhole_stockpiles.gui.utils.config_manager import ConfigManager
 from foxhole_stockpiles.i18n import (
@@ -105,7 +107,14 @@ class SettingsDialog(QDialog):
         self.database_label = QLabel()
         database_path_layout = QHBoxLayout()
         self.database_path_input = QLineEdit()
+        self.database_path_input.textChanged.connect(self._update_db_download_visibility)
         database_path_layout.addWidget(self.database_path_input)
+        # Download button (shown only while the field is empty), mirroring the
+        # External Tools tab convention.
+        self.database_download_btn = QPushButton()
+        self.database_download_btn.setMaximumWidth(80)
+        self.database_download_btn.clicked.connect(self._open_data_url)
+        database_path_layout.addWidget(self.database_download_btn)
         self.database_browse_btn = QPushButton()
         self.database_browse_btn.clicked.connect(self._browse_database)
         database_path_layout.addWidget(self.database_browse_btn)
@@ -158,6 +167,7 @@ class SettingsDialog(QDialog):
 
         # Apply translations
         self.retranslate()
+        self._update_db_download_visibility()
 
         # Connect to language change signal with cleanup
         self._language_callback = self._on_language_changed
@@ -215,7 +225,16 @@ class SettingsDialog(QDialog):
         self.database_label.setText(t("settings_dialog.database_path"))
         self.database_label.setToolTip(t("settings_dialog.database_tooltip"))
         self.database_path_input.setPlaceholderText(t("settings_dialog.database_placeholder"))
+        self.database_download_btn.setText(t("common.download"))
         self.database_browse_btn.setText(t("common.browse"))
+
+    def _update_db_download_visibility(self) -> None:
+        """Show the download button only while no database path is set."""
+        self.database_download_btn.setVisible(not self.database_path_input.text().strip())
+
+    def _open_data_url(self) -> None:
+        """Open the repository data folder in the default browser."""
+        QDesktopServices.openUrl(QUrl(DATA_DOWNLOAD_URL))
 
     def _browse_database(self) -> None:
         """Open file dialog to select the template database file."""

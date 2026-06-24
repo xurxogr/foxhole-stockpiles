@@ -2,6 +2,7 @@
   "language_name": "Español",
   "language_code": "es",
   "common": {
+    "download": "Descargar",
     "cancel": "Cancelar",
     "close": "Cerrar",
     "browse": "Examinar...",
