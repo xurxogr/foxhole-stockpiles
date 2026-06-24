@@ -42,12 +42,12 @@ class SaveFileProcessor:
 
     @property
     def file_path(self) -> Path:
-        """Get the monitored file path."""
+        """The monitored file path."""
         return self._file_path
 
     @property
     def poll_interval(self) -> float:
-        """Get the polling interval."""
+        """The polling interval."""
         return self._poll_interval
 
     @poll_interval.setter

@@ -215,7 +215,7 @@ class ClipboardCodeMap:
 
     @property
     def locales(self) -> list[str]:
-        """Return the available locales, English first then the rest sorted.
+        """The available locales, English first then the rest sorted.
 
         Returns:
             list[str]: Locale codes, biased so English wins detection ties.

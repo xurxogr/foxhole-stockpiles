@@ -83,7 +83,7 @@ class Hex(StrEnum):
 
     @property
     def display_name(self) -> str:
-        """Return the human-readable region name.
+        """The human-readable region name.
 
         Returns:
             str: The display name, or the raw code when not mapped.

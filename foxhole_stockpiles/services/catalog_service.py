@@ -80,7 +80,7 @@ class CatalogService:
 
     @property
     def item_count(self) -> int:
-        """Get the number of items in the catalog.
+        """The number of items in the catalog.
 
         Returns:
             Number of catalog entries loaded.
