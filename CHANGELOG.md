@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2026-06-24
 
 ### Added
 - **Local screenshot capture**: a configurable global hotkey (`scanner.capture_key`,
@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scans it in-process, routing the result to the configured output handlers.
   New dependencies: `pywinctl`, `pynput` (with Pillow `ImageGrab`).
 - **Google Sheets output handler** (`sheets`).
+- **Clipboard stockpile scanning**: parses a stockpile list copied from the
+  in-game UI (the localized export text) into structured stockpiles and routes
+  them to the configured outputs, available from the GUI and the `fs clip`
+  command. Item codes are resolved from the catalog and the stockpile faction is
+  inferred from the items. Implemented in pure Python (no Rust dependency).
+- **Faction on `Stockpile` output** (`faction`): populated only when the source
+  provides it — read from `fs-sav` and `fs-ocr`, and inferred by item majority
+  vote for clipboard scans. Omitted from output when unknown.
 
 ### Changed
 - **OCR engine is now the external Rust package `fs-ocr`** (PyPI); the in-repo
@@ -20,6 +28,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `services/scanner.py`. HDF5 template DB code moved to `fs_tools/template_db/`.
 - Config schema migrated to **v13**; the capture hotkey lives at
   `scanner.capture_key`.
+- **`Stockpile.type` is now a free-form string** instead of a fixed enum. Each
+  source's value is normalized to a canonical name when recognized and otherwise
+  passed through verbatim, so stockpile types added in new game updates are
+  preserved instead of collapsing to `Undefined`. The `StockpileType` enum is
+  retained only as the normalization target.
+- **SAV processing sends every stockpile to the output handlers in a single
+  call** (previously one call per map location). With a static file path this
+  fixes the output being overwritten down to a single stockpile; each handler now
+  decides its own per-location grouping.
+- **Upgraded `fs-sav` to 0.3.0**, which fixes stockpile-type detection and adds
+  the controlling faction to its output.
+- **Merged the configurable input sections into a single GUI tab.**
+
+### Fixed
+- **Clipboard parsing uses the stockpile hex code** instead of the localized
+  display name, so the `hex` field is stable across languages.
+- **Faction parsing from `.sav` files** now recognizes the singular `Colonial`/
+  `Warden` values emitted by `fs-sav` 0.3.0 (previously every stockpile came back
+  as neutral).
 
 ### Removed
 - **The GUI configuration levels** (basic/advanced/developer) and the

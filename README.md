@@ -75,6 +75,9 @@ Analyzes Foxhole stockpile screenshots to detect items and quantities using the 
 #### fs sav
 Processes Foxhole `.sav` world files (via the `fs-sav` Rust parser) into structured stockpile data.
 
+#### fs clip
+Reads a stockpile list copied from the in-game UI (clipboard text) and routes the parsed stockpiles to the configured outputs. Supports one-shot (`--once`) or continuous clipboard monitoring.
+
 #### fs gui / fs-gui
 Launches the PySide6 graphical user interface for managing configurations, running scans, and capturing the live game window. Provides a user-friendly interface for non-technical users.
 
@@ -321,17 +324,21 @@ fs scan \
 
 ## Packages & Core Dependencies
 
-The repository ships two installable packages:
+The repository ships two installable packages, each exposing a command-line tool:
 
-- **`foxhole_stockpiles`** - the desktop runtime: CLI, PySide6 GUI, screenshot capture, and SAV processing.
-- **`fs_tools`** - build-time asset and template-database tooling.
+- **`foxhole_stockpiles`** (the **`fs`** command) - the desktop runtime: CLI, PySide6 GUI, screenshot capture, and SAV processing.
+- **`fs_tools`** (the **`fs-tools`** command) - build-time asset and template-database tooling.
 
-OCR is provided by the external PyPI package **`fs-ocr`** (a Rust engine), and `.sav` parsing by the external **`fs-sav`** (Rust) package.
+The heavy lifting is delegated to two external Rust libraries maintained alongside this project and published to PyPI:
+
+- **[`fs-ocr`](https://github.com/xurxogr/fs-ocr)** - the OCR and template-matching engine that scans screenshots.
+- **[`fs-sav`](https://github.com/xurxogr/fs-sav)** - the parser for Foxhole `.sav` world files.
 
 Core dependencies:
 
 - **Image Handling**: NumPy, Pillow
-- **OCR & Matching**: `fs-ocr` (external Rust engine); Tesseract powers quantity detection inside it
+- **OCR & Matching**: [`fs-ocr`](https://github.com/xurxogr/fs-ocr) (external Rust engine); Tesseract powers quantity detection inside it
+- **SAV Parsing**: [`fs-sav`](https://github.com/xurxogr/fs-sav) (external Rust parser)
 - **Screenshot Capture**: `pywinctl` (window detection), `pynput` (global hotkey), Pillow (`ImageGrab`)
 - **GUI**: PySide6
 - **Data Handling**: Pydantic v2 for validation
