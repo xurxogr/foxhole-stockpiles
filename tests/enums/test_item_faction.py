@@ -88,6 +88,14 @@ class TestFromString:
         result = ItemFaction.from_string("c")
         assert result == ItemFaction.COLONIALS
 
+    def test_from_string_colonial_singular(self) -> None:
+        """The singular 'Colonial' (as emitted by fs-sav) returns COLONIALS."""
+        assert ItemFaction.from_string("Colonial") == ItemFaction.COLONIALS
+
+    def test_from_string_warden_singular(self) -> None:
+        """The singular 'Warden' (as emitted by fs-sav) returns WARDENS."""
+        assert ItemFaction.from_string("Warden") == ItemFaction.WARDENS
+
     def test_from_string_colonials_efactionid(self) -> None:
         """Test from_string with EFactionId format.
 

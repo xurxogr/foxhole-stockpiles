@@ -26,10 +26,10 @@ class ItemFaction(StrEnum):
         # Normalize input for comparison
         normalized = value.strip().lower()
 
-        if normalized in ["efactionid::colonials", "colonials", "c"]:
+        if normalized in ["efactionid::colonials", "colonials", "colonial", "c"]:
             return cls.COLONIALS
 
-        if normalized in ["efactionid::wardens", "wardens", "w"]:
+        if normalized in ["efactionid::wardens", "wardens", "warden", "w"]:
             return cls.WARDENS
 
         # Default to NEUTRAL for any invalid input
