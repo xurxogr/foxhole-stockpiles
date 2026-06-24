@@ -614,9 +614,15 @@ def parse_clipboard(text: str | None, code_map: ClipboardCodeMap) -> Stockpile |
     resolved_hex = Hex.from_display(header.hex)
     hex_name = header.hex if resolved_hex is Hex.UNDEFINED else resolved_hex.value
 
+    # The faction is inferred by majority vote of the items; only a definite
+    # side is reported. A NEUTRAL inference means we could not determine it, so
+    # the faction is left unset rather than reported as neutral.
+    inferred_faction = faction if faction in (ItemFaction.WARDENS, ItemFaction.COLONIALS) else None
+
     fields: dict[str, Any] = {
         "name": header.name,
         "type": header.type,
+        "faction": inferred_faction,
         "hex": hex_name,
         "coords": header.coords,
         "items": items,

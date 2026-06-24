@@ -11,6 +11,7 @@ from typing import Any
 
 import fs_sav
 
+from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_coords import StockpileCoords
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
@@ -153,6 +154,7 @@ def _convert_to_stockpile(data: dict[str, Any]) -> Stockpile:
     return Stockpile(
         name=data.get("name", ""),
         type=stockpile_type,
+        faction=ItemFaction.parse_optional(data.get("faction")),
         hex=data.get("hex"),
         coords=coords,
         is_reserve=data.get("is_reserve", False),

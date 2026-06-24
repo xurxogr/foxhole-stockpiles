@@ -35,6 +35,25 @@ class ItemFaction(StrEnum):
         # Default to NEUTRAL for any invalid input
         return cls.NEUTRAL
 
+    @classmethod
+    def parse_optional(cls, value: str | None) -> "ItemFaction | None":
+        """Parse a faction string, preserving "not provided" as None.
+
+        Unlike ``from_string`` (which defaults to ``NEUTRAL``), this returns
+        None when the source omits the faction, so it can be excluded from
+        output rather than reported as neutral.
+
+        Args:
+            value (str | None): The raw faction value from a source, if any.
+
+        Returns:
+            ItemFaction | None: The normalized faction, or None when no value
+                was provided.
+        """
+        if not value or not value.strip():
+            return None
+        return cls.from_string(value)
+
     @staticmethod
     def get_cli_help_text() -> str:
         """Get formatted help text for CLI faction parameter.

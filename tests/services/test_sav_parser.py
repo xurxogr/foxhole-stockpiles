@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
+from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.stockpile_type import StockpileType
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.services.sav_parser import (
@@ -102,6 +103,16 @@ class TestConvertToStockpile:
         assert result.items[0].quantity == 100
         assert result.items[0].crated is False
         assert result.items[1].crated is True
+
+    def test_convert_faction_normalized(self) -> None:
+        """A faction from fs-sav is normalized onto the stockpile."""
+        data: dict[str, Any] = {"type": "Seaport", "faction": "EFactionId::Wardens"}
+        assert _convert_to_stockpile(data).faction == ItemFaction.WARDENS
+
+    def test_convert_faction_none_when_absent(self) -> None:
+        """A missing faction key leaves the field None (omitted from output)."""
+        data: dict[str, Any] = {"type": "Seaport"}
+        assert _convert_to_stockpile(data).faction is None
 
     def test_convert_reserve_stockpile(self) -> None:
         """Test converting a reserve stockpile."""

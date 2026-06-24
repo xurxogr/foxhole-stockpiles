@@ -279,6 +279,41 @@ def test_faction_majority_disambiguates_localized_collision(
     assert majority_faction_code in codes
 
 
+def test_inferred_faction_surfaced_on_stockpile() -> None:
+    """A clear item-faction majority is reported as the stockpile faction."""
+    catalog: list[dict[str, Any]] = [
+        {
+            "CodeName": "RifleC",
+            "DisplayNameLocales": {"en": "Argenti r.II Rifle"},
+            "FactionVariant": "EFactionId::Colonials",
+        },
+    ]
+    code_map = build_code_map(catalog)
+    text = (
+        "Hex - Town - Seaport - Public - X: 0.1 Y: 0.2,2026.06.23-16.30.38\n"
+        "Argenti r.II Rifle (Crate),5\n"
+    )
+    stockpile = parse_clipboard(text, code_map)
+    assert stockpile is not None
+    assert stockpile.faction == ItemFaction.COLONIALS
+
+
+def test_neutral_inference_leaves_faction_none() -> None:
+    """Only neutral items → faction cannot be determined → None (omitted)."""
+    catalog: list[dict[str, Any]] = [
+        {
+            "CodeName": "RifleAmmo",
+            "DisplayNameLocales": {"en": "7.62mm"},
+            "FactionVariant": None,
+        },
+    ]
+    code_map = build_code_map(catalog)
+    text = "Hex - Town - Seaport - Public - X: 0.1 Y: 0.2,2026.06.23-16.30.38\n7.62mm (Crate),60\n"
+    stockpile = parse_clipboard(text, code_map)
+    assert stockpile is not None
+    assert stockpile.faction is None
+
+
 def test_hex_display_name_converted_to_code(code_map: ClipboardCodeMap) -> None:
     """A region display name (incl. curly apostrophe) resolves to its hex code."""
     text = (

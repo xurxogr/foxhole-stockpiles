@@ -73,9 +73,11 @@ class FakeExternalStockpile:
         name: str = "Public",
         items: list[FakeItem] | None = None,
         errors: list[str] | None = None,
+        faction: str | None = None,
     ) -> None:
         """Store the fake stockpile fields."""
         self._type_name = type_name
+        self._faction = faction
         self.name = name
         self.is_reserve = False
         self.items = items if items is not None else [FakeItem()]
@@ -85,8 +87,11 @@ class FakeExternalStockpile:
         self.resolution = "1920x1080"
 
     def to_json(self) -> str:
-        """Return JSON carrying only the ``type`` field the adapter reads."""
-        return json.dumps({"type": self._type_name})
+        """Return JSON carrying the ``type`` and optional ``faction`` fields."""
+        payload: dict[str, Any] = {"type": self._type_name}
+        if self._faction is not None:
+            payload["faction"] = self._faction
+        return json.dumps(payload)
 
 
 class TestCoerceImage:
@@ -144,6 +149,16 @@ class TestToRuntimeStockpile:
         """An unknown external type name is preserved verbatim, not collapsed."""
         sp = _convert(FakeExternalStockpile(type_name="Atlantis"))
         assert sp.type == "Atlantis"
+
+    def test_faction_normalized_when_present(self) -> None:
+        """A faction in the payload is normalized onto the stockpile."""
+        sp = _convert(FakeExternalStockpile(faction="EFactionId::Colonials"))
+        assert sp.faction == ItemFaction.COLONIALS
+
+    def test_faction_none_when_absent(self) -> None:
+        """No faction in the payload leaves the field None."""
+        sp = _convert(FakeExternalStockpile())
+        assert sp.faction is None
 
     def test_items_with_candidates(self) -> None:
         """Item candidates are adapted to runtime ItemCandidate objects."""

@@ -5,6 +5,7 @@ from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
+from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.stockpile_type import StockpileType
 from foxhole_stockpiles.models.stockpile_coords import StockpileCoords
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
@@ -15,6 +16,9 @@ class Stockpile(BaseModel):
 
     name: str = Field(description="Name of the stockpile", default="")
     type: str = Field(description="Type of stockpile", default=StockpileType.UNDEFINED)
+    faction: ItemFaction | None = Field(
+        description="Controlling faction, if provided by the source", default=None
+    )
     hex: str | None = Field(description="Hex region name", default=None)
     coords: StockpileCoords | None = Field(description="Map coordinates", default=None)
     is_reserve: bool = Field(description="Whether this is a reserve stockpile", default=False)
