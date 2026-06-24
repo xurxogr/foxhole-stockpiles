@@ -2,6 +2,10 @@
 
 Thank you for your interest in contributing to Foxhole Stockpiles! This document provides guidelines for contributing to the project.
 
+> For *running* the tool — installing from source on macOS/Linux, the
+> command-line interface, building custom OCR databases, and configuration — see
+> [docs/advanced.md](docs/advanced.md).
+
 ## Ways to Contribute
 
 - **Report Bugs**: Open an issue describing the problem, steps to reproduce, and your environment
@@ -32,11 +36,13 @@ When reporting bugs, please include:
 
 ### Development Setup
 
-1. **Fork and clone the repository**:
+1. **Fork the repository on GitHub, then clone your fork** (replace `<your-username>` with your own GitHub username):
    ```bash
-   git clone https://github.com/your-username/foxhole-stockpiles.git
+   git clone https://github.com/<your-username>/foxhole-stockpiles.git
    cd foxhole-stockpiles
    ```
+   > Just want to run the tool, not contribute changes? Clone the original repo
+   > directly instead — see [docs/advanced.md](docs/advanced.md#install-and-run-from-source).
 
 2. **Create a virtual environment**:
    ```bash
@@ -123,16 +129,22 @@ pytest --cov=foxhole_stockpiles --cov-report=html
 
 ### Commit Message Guidelines
 
-- Use clear, descriptive commit messages
-- Start with a verb (Add, Fix, Update, Remove, etc.)
-- Keep the first line under 72 characters
-- Reference issue numbers when applicable
+This project follows [Conventional Commits](https://www.conventionalcommits.org/):
+a `<type>(<optional scope>): <description>` first line.
 
-Examples:
+- **type** (lowercase) — one of: `feat`, `fix`, `refactor`, `perf`, `docs`,
+  `test`, `chore`, `ci`, or `delete` (used here for removals).
+- **scope** (optional) — the area touched, e.g. `feat(output):`, `chore(deps):`.
+- Keep the first line under 72 characters.
+- Reference issue numbers when applicable, e.g. `(#28)`.
+
+Examples (from this repo's history):
 ```
-Add support for custom resolution templates
-Fix OCR detection for low-contrast screenshots
-Add a new output handler format
+feat: Add clipboard stockpile scanning
+fix: use hex code instead of display name in the clipboard parsing
+feat(output): add Google Sheets export destination (#28)
+refactor: drop OpenCV and delegate all OCR/matching to fs-ocr
+chore(deps): bump actions/checkout from 6 to 7
 ```
 
 ## Code Style Guidelines
@@ -177,6 +189,31 @@ class TestStockpileScanner:
 - Update relevant documentation in `docs/` for architectural changes
 - Add docstrings to all public functions and classes
 - Include examples in docstrings when helpful
+
+## Building the Windows Executable
+
+```bash
+pip install pyinstaller
+python build_fs.py
+```
+
+This produces `fs.exe` and `fs-tools.exe` in `dist/` (~50–80 MB each), bundling
+all Python dependencies. External tools (`repak.exe`, `umodel.exe`) are still
+provided separately. The CI/release workflow runs this automatically on
+`vX.Y.Z` tags and publishes the executables as GitHub Release assets.
+
+## Translations
+
+Translation files live in `foxhole_stockpiles/i18n/translations/`, one JSON per
+language (e.g. `en.json`, `es.json`). To add or improve a language:
+
+1. Copy `en.json` as a template.
+2. Translate the string values (keep the keys unchanged).
+3. Update `language_name` and `language_code` at the top of the file.
+4. Open a pull request.
+
+(End users can override translations next to the packaged executable without
+rebuilding — see [Languages](README.md#languages) in the main README.)
 
 ## License
 
