@@ -1,6 +1,28 @@
 {
   "language_name": "Deutsch",
   "language_code": "de",
+  "activity": {
+    "capture_started": "Screenshot-Aufnahme startet — {hotkey} drücken",
+    "capture_stopped": "Screenshot-Aufnahme gestoppt",
+    "clip_capture_started": "Zwischenablage-Aufnahme startet — {hotkey} drücken",
+    "clip_capture_stopped": "Zwischenablage-Aufnahme gestoppt",
+    "clip_monitor_started": "Zwischenablage wird auf Stockpiles überwacht",
+    "clip_monitor_stopped": "Überwachung der Zwischenablage gestoppt",
+    "sav_capture_started": "SAV-Aufnahme startet — {hotkey} drücken",
+    "sav_capture_stopped": "SAV-Aufnahme gestoppt",
+    "sav_monitor_started": "SAV-Datei wird auf Änderungen überwacht",
+    "sav_monitor_stopped": "Überwachung der SAV-Datei gestoppt",
+    "ocr_result": "OCR: {line}",
+    "clip_result": "Zwischenablage: {line}",
+    "clip_empty": "Zwischenablage: kein Stockpile gefunden",
+    "sav_summary": "SAV: {count} Strukturen gescannt",
+    "item_count": "{count} Objekte",
+    "scan_error": "⚠ Scan fehlgeschlagen: {error}",
+    "sav_error": "⚠ SAV-Fehler: {error}",
+    "clip_error": "⚠ Zwischenablage-Fehler: {error}",
+    "get_started": "Noch keine Methode eingerichtet — öffne Einstellungen → Eingabe, um Screenshot, Zwischenablage oder SAV einzurichten.",
+    "feed_placeholder": "Aktivität erscheint hier…"
+  },
   "common": {
     "download": "Herunterladen",
     "save": "Speichern",

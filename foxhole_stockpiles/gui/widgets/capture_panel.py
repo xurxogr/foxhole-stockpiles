@@ -7,22 +7,19 @@ the configured output handlers.
 """
 
 import logging
+from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import Signal
-from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (
-    QAbstractItemView,
     QFileDialog,
     QGroupBox,
     QHBoxLayout,
-    QHeaderView,
     QLabel,
     QMessageBox,
+    QPlainTextEdit,
     QPushButton,
     QSizePolicy,
-    QTableWidget,
-    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -37,7 +34,6 @@ from foxhole_stockpiles.gui.utils.clipboard_workers import (
     ClipboardScanWorker,
 )
 from foxhole_stockpiles.gui.utils.hotkey_listener import HotkeyListener, global_hotkeys_supported
-from foxhole_stockpiles.gui.utils.qt_log_handler import QtLogHandler
 from foxhole_stockpiles.gui.utils.sav_workers import SavMonitorWorker, SavScanWorker
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
 from foxhole_stockpiles.models.stockpile import Stockpile
@@ -91,10 +87,9 @@ class CapturePanel(QWidget):
         self._clip_monitor_worker: ClipboardMonitorWorker | None = None
         self._clip_monitoring = False
 
-        # Setup log handler and attach to root logger immediately
-        self.log_handler = QtLogHandler()
-        self.log_handler.log_message.connect(self.append_log)
-        self._attach_log_handler()
+        # Tracks whether the "no method configured" hint has been shown so it is
+        # not repeated on every settings refresh while still unconfigured.
+        self._get_started_shown = False
 
         self.init_ui()
 
@@ -114,6 +109,9 @@ class CapturePanel(QWidget):
         self._language_callback = self._on_language_changed
         on_language_changed(self._language_callback)
         self.destroyed.connect(self._cleanup)
+
+        # On first run nothing is configured yet; point the user at Settings.
+        self._maybe_prompt_setup()
 
     def _cleanup(self) -> None:
         """Clean up resources when widget is destroyed."""
@@ -218,35 +216,23 @@ class CapturePanel(QWidget):
 
         layout.addLayout(top_layout)
 
-        # Logs Group (always shown; fills the space under the fixed-height groups)
+        # Activity feed (always shown; fills the space under the fixed-height
+        # groups). A plain, read-only text view of friendly, user-facing
+        # messages — not the technical log, which still flows through `logging`
+        # to wherever the user configured it.
         self.logs_group = QGroupBox("")
         logs_layout = QVBoxLayout()
         self.logs_group.setLayout(logs_layout)
 
-        self.log_display = QTableWidget()
-        self.log_display.setColumnCount(4)
-        self.log_display.setHorizontalHeaderLabels(["Time", "Level", "Module", "Message"])
-        self.log_display.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.log_display.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        vertical_header = self.log_display.verticalHeader()
-        if vertical_header:
-            vertical_header.setVisible(False)
-        self.log_display.setStyleSheet(
-            "QTableWidget { background-color: #1E1E1E; gridline-color: #3E3E3E; }"
+        self.activity_feed = QPlainTextEdit()
+        self.activity_feed.setReadOnly(True)
+        # Cap the buffer so a long-running session does not grow unbounded.
+        self.activity_feed.setMaximumBlockCount(1000)
+        self.activity_feed.setStyleSheet(
+            "QPlainTextEdit { background-color: #1E1E1E; color: #DDDDDD; }"
         )
 
-        header = self.log_display.horizontalHeader()
-        if header:
-            header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-            header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-            header.setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)
-            header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
-
-        self.log_display.setColumnWidth(0, 150)
-        self.log_display.setColumnWidth(1, 80)
-        self.log_display.setColumnWidth(2, 250)
-
-        logs_layout.addWidget(self.log_display)
+        logs_layout.addWidget(self.activity_feed)
 
         log_controls = QHBoxLayout()
         self.clear_logs_button = QPushButton("")
@@ -268,6 +254,7 @@ class CapturePanel(QWidget):
         self._clip_service = None
         self._apply_sav_mode()
         self._apply_clip_mode()
+        self._maybe_prompt_setup()
 
     def _update_button_states(self) -> None:
         """Enable each capture button only when its required settings are present.
@@ -364,13 +351,114 @@ class CapturePanel(QWidget):
             return None
         return self._scan_service
 
-    def _attach_log_handler(self) -> None:
-        """Attach the Qt log handler to root logger if not already attached."""
-        root_logger = logging.getLogger()
-        for handler in root_logger.handlers:
-            if getattr(handler, "name", None) == QtLogHandler.HANDLER_NAME:
-                return
-        root_logger.addHandler(self.log_handler)
+    # ==================== Activity feed ====================
+
+    def _feed(self, message: str) -> None:
+        """Append a timestamped, user-facing line to the activity feed.
+
+        Args:
+            message (str): The friendly message to show.
+        """
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        self.activity_feed.appendPlainText(f"[{timestamp}] {message}")
+
+    def _feed_detail(self, message: str) -> None:
+        """Append an indented detail line (e.g. one scanned structure).
+
+        Args:
+            message (str): The detail line to show, indented under a summary.
+        """
+        self.activity_feed.appendPlainText(f"    {message}")
+
+    def _ocr_summary(self, stockpile: Stockpile) -> str:
+        """Build a one-line OCR result summary: ``type | name | N items``.
+
+        Args:
+            stockpile (Stockpile): The scanned stockpile.
+
+        Returns:
+            str: The summary line, omitting the name when absent.
+        """
+        parts: list[str] = [str(stockpile.type)]
+        if stockpile.name:
+            parts.append(stockpile.name)
+        parts.append(t("activity.item_count", count=len(stockpile.items)))
+        return " | ".join(parts)
+
+    def _stockpile_summary(self, stockpile: Stockpile) -> str:
+        """Build a one-line summary: ``type | name | hex | x, y | N items``.
+
+        Args:
+            stockpile (Stockpile): The stockpile to summarize.
+
+        Returns:
+            str: The summary line, dropping any field that is absent.
+        """
+        parts: list[str] = [str(stockpile.type)]
+        if stockpile.name:
+            parts.append(stockpile.name)
+        if stockpile.hex:
+            parts.append(stockpile.hex)
+        if stockpile.coords is not None:
+            parts.append(f"{stockpile.coords.x:.2f}, {stockpile.coords.y:.2f}")
+        parts.append(t("activity.item_count", count=len(stockpile.items)))
+        return " | ".join(parts)
+
+    def _any_method_usable(self, settings: AppSettings) -> bool:
+        """Return whether at least one input method is ready to run.
+
+        Mirrors the per-button readiness checks in `_update_button_states`.
+
+        Args:
+            settings (AppSettings): The settings to evaluate.
+
+        Returns:
+            bool: True if screenshot, SAV, or clipboard capture can run.
+        """
+        db_path = settings.scanner.database_path
+        db_valid = db_path is not None and db_path.exists()
+        capture_ok = db_valid and bool(settings.scanner.capture_key) and self._hotkeys_available
+
+        if self._sav_mode == SavMode.MONITOR:
+            sav_ok = self._sav_file_available(settings)
+        else:
+            sav_ok = bool(settings.sav_processing.sav_capture_key) and self._hotkeys_available
+
+        catalog_ok = self._catalog_available(settings)
+        if self._clip_mode == ClipMode.MONITOR:
+            clip_ok = catalog_ok
+        else:
+            clip_ok = (
+                catalog_ok and bool(settings.clipboard.clip_capture_key) and self._hotkeys_available
+            )
+
+        return capture_ok or sav_ok or clip_ok
+
+    def _maybe_prompt_setup(self) -> None:
+        """Show a one-time 'no method configured' hint when nothing is usable.
+
+        When the user goes from *nothing configured* to *a method configured*,
+        the feed is cleared so the now-stale get-started hint (and any earlier
+        "not ready" noise) does not linger and confuse them. Changing settings
+        that were already usable leaves the feed untouched.
+        """
+        try:
+            settings = AppSettings()
+        except Exception:  # noqa: BLE001 - if settings can't load, stay quiet
+            return
+
+        if self._any_method_usable(settings):
+            # Only wipe on the unconfigured -> configured transition, i.e. when
+            # the get-started hint had been shown. Edits to an already-usable
+            # setup keep their activity history.
+            if self._get_started_shown:
+                self.clear_logs()
+                self._get_started_shown = False
+            return
+
+        if not self._get_started_shown:
+            self._feed(t("activity.get_started"))
+            self._get_started_shown = True
 
     # ==================== Capture ====================
 
@@ -414,6 +502,7 @@ class CapturePanel(QWidget):
         self.capturing = True
         self.start_stop_button.setText(t("server_panel.stop_capture"))
         logger.info("Capture started (hotkey: %s)", key)
+        self._feed(t("activity.capture_started", hotkey=key))
 
     def stop_capture(self) -> None:
         """Stop listening for the capture hotkey."""
@@ -424,6 +513,7 @@ class CapturePanel(QWidget):
         self.capturing = False
         self.start_stop_button.setText(t("server_panel.start_capture"))
         logger.info("Capture stopped")
+        self._feed(t("activity.capture_stopped"))
 
     def _on_capture_triggered(self) -> None:
         """Capture the Foxhole window and scan it (runs on the GUI thread)."""
@@ -502,6 +592,7 @@ class CapturePanel(QWidget):
             len(stockpile.items),
             stockpile.type,
         )
+        self._feed(t("activity.ocr_result", line=self._ocr_summary(stockpile)))
 
     def _on_scan_error(self, message: str) -> None:
         """Log a scan failure.
@@ -510,39 +601,11 @@ class CapturePanel(QWidget):
             message (str): The error message.
         """
         logger.error("Scan failed: %s", message)
-
-    def append_log(self, log_data: dict[str, str]) -> None:
-        """Append a log entry to the log display.
-
-        Args:
-            log_data (dict[str, str]): Dictionary with timestamp, level, module,
-                message, and color.
-        """
-        row_position = self.log_display.rowCount()
-        self.log_display.insertRow(row_position)
-
-        color = QColor(log_data["color"])
-        brush = QBrush(color)
-
-        time_item = QTableWidgetItem(log_data["timestamp"])
-        time_item.setForeground(brush)
-        level_item = QTableWidgetItem(log_data["level"])
-        level_item.setForeground(brush)
-        module_item = QTableWidgetItem(log_data["module"])
-        module_item.setForeground(brush)
-        message_item = QTableWidgetItem(log_data["message"])
-        message_item.setForeground(brush)
-
-        self.log_display.setItem(row_position, 0, time_item)
-        self.log_display.setItem(row_position, 1, level_item)
-        self.log_display.setItem(row_position, 2, module_item)
-        self.log_display.setItem(row_position, 3, message_item)
-
-        self.log_display.scrollToBottom()
+        self._feed(t("activity.scan_error", error=message))
 
     def clear_logs(self) -> None:
-        """Clear the log display."""
-        self.log_display.setRowCount(0)
+        """Clear the activity feed."""
+        self.activity_feed.clear()
 
     def retranslate(self) -> None:
         """Update all translatable strings."""
@@ -558,15 +621,7 @@ class CapturePanel(QWidget):
         self._update_sav_button_text()
         self._update_clip_button_text()
 
-        self.log_display.setHorizontalHeaderLabels(
-            [
-                t("common.log_columns.time"),
-                t("common.log_columns.level"),
-                t("common.log_columns.module"),
-                t("common.log_columns.message"),
-            ]
-        )
-
+        self.activity_feed.setPlaceholderText(t("activity.feed_placeholder"))
         self.clear_logs_button.setText(t("common.clear_logs"))
 
     # ==================== SAV Processing ====================
@@ -633,6 +688,7 @@ class CapturePanel(QWidget):
         logger.info("Starting SAV scan: %s", sav_path)
         self._sav_scan_worker = SavScanWorker(sav_path, output_coordinator)
         self._sav_scan_worker.error.connect(self._on_sav_error)
+        self._sav_scan_worker.stockpiles_found.connect(self._on_sav_stockpiles)
         self._sav_scan_worker.finished.connect(self._on_sav_scan_finished)
         self._sav_scan_worker.start()
 
@@ -713,6 +769,7 @@ class CapturePanel(QWidget):
         self._sav_listening = True
         self._update_sav_button_text()
         logger.info("SAV hotkey listening started (hotkey: %s)", key)
+        self._feed(t("activity.sav_capture_started", hotkey=key))
 
     def stop_sav_listen(self) -> None:
         """Stop listening for the SAV hotkey."""
@@ -723,6 +780,7 @@ class CapturePanel(QWidget):
         self._sav_listening = False
         self._update_sav_button_text()
         logger.info("SAV hotkey listening stopped")
+        self._feed(t("activity.sav_capture_stopped"))
 
     def toggle_sav_monitor(self) -> None:
         """Toggle SAV file monitoring on/off (monitor mode)."""
@@ -759,9 +817,11 @@ class CapturePanel(QWidget):
         logger.info("Starting SAV monitor: %s (poll: %ss)", sav_path, poll_interval)
         self._sav_monitoring = True
         self._update_sav_button_text()
+        self._feed(t("activity.sav_monitor_started"))
 
         self._sav_monitor_worker = SavMonitorWorker(sav_path, output_coordinator, poll_interval)
         self._sav_monitor_worker.error.connect(self._on_sav_error)
+        self._sav_monitor_worker.stockpiles_changed.connect(self._on_sav_stockpiles)
         self._sav_monitor_worker.finished.connect(self._on_sav_monitor_finished)
         self._sav_monitor_worker.start()
 
@@ -773,6 +833,7 @@ class CapturePanel(QWidget):
 
         self._sav_monitoring = False
         self._update_sav_button_text()
+        self._feed(t("activity.sav_monitor_stopped"))
 
     def _on_sav_monitor_finished(self, success: bool) -> None:
         """Handle the SAV monitor worker finishing.
@@ -792,6 +853,19 @@ class CapturePanel(QWidget):
             error_msg (str): Error message.
         """
         logger.error(f"[SAV] {error_msg}")
+        self._feed(t("activity.sav_error", error=error_msg))
+
+    def _on_sav_stockpiles(self, stockpiles: list[Stockpile]) -> None:
+        """Show a SAV scan summary plus one feed line per scanned structure.
+
+        Args:
+            stockpiles (list[Stockpile]): The structures scanned (or changed).
+        """
+        if not stockpiles:
+            return
+        self._feed(t("activity.sav_summary", count=len(stockpiles)))
+        for stockpile in stockpiles:
+            self._feed_detail(self._stockpile_summary(stockpile))
 
     def _on_sav_scan_finished(self, success: bool) -> None:
         """Handle SAV scan finished.
@@ -905,6 +979,7 @@ class CapturePanel(QWidget):
         self._clip_listening = True
         self._update_clip_button_text()
         logger.info("Clipboard hotkey listening started (hotkey: %s)", key)
+        self._feed(t("activity.clip_capture_started", hotkey=key))
 
     def stop_clip_listen(self) -> None:
         """Stop listening for the clipboard hotkey."""
@@ -915,6 +990,7 @@ class CapturePanel(QWidget):
         self._clip_listening = False
         self._update_clip_button_text()
         logger.info("Clipboard hotkey listening stopped")
+        self._feed(t("activity.clip_capture_stopped"))
 
     def _on_clip_capture_triggered(self) -> None:
         """Read and scan the clipboard once when the hotkey fires (GUI thread)."""
@@ -968,6 +1044,7 @@ class CapturePanel(QWidget):
         logger.info("Starting clipboard monitor (poll: %ss)", poll_interval)
         self._clip_monitoring = True
         self._update_clip_button_text()
+        self._feed(t("activity.clip_monitor_started"))
 
         self._clip_monitor_worker = ClipboardMonitorWorker(service, poll_interval)
         self._clip_monitor_worker.error.connect(self._on_clip_error)
@@ -983,6 +1060,7 @@ class CapturePanel(QWidget):
 
         self._clip_monitoring = False
         self._update_clip_button_text()
+        self._feed(t("activity.clip_monitor_stopped"))
 
     def _on_clip_monitor_finished(self, success: bool) -> None:
         """Handle the clipboard monitor worker finishing.
@@ -1004,12 +1082,14 @@ class CapturePanel(QWidget):
         """
         if stockpile is None:
             logger.info("No stockpile data found in clipboard")
+            self._feed(t("activity.clip_empty"))
             return
         logger.info(
             "Clipboard scan complete: %d item(s) (%s)",
             len(stockpile.items),
             stockpile.type,
         )
+        self._feed(t("activity.clip_result", line=self._stockpile_summary(stockpile)))
 
     def _on_clip_error(self, error_msg: str) -> None:
         """Handle a clipboard processing error.
@@ -1018,6 +1098,7 @@ class CapturePanel(QWidget):
             error_msg (str): Error message.
         """
         logger.error("[Clipboard] %s", error_msg)
+        self._feed(t("activity.clip_error", error=error_msg))
 
     def _on_clip_scan_finished(self) -> None:
         """Handle a one-shot clipboard scan finishing."""

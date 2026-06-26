@@ -1,6 +1,28 @@
 {
   "language_name": "中文",
   "language_code": "zh",
+  "activity": {
+    "capture_started": "开始截图捕获 — 按 {hotkey}",
+    "capture_stopped": "已停止截图捕获",
+    "clip_capture_started": "开始剪贴板捕获 — 按 {hotkey}",
+    "clip_capture_stopped": "已停止剪贴板捕获",
+    "clip_monitor_started": "正在监视剪贴板中的库存",
+    "clip_monitor_stopped": "已停止监视剪贴板",
+    "sav_capture_started": "开始 SAV 捕获 — 按 {hotkey}",
+    "sav_capture_stopped": "已停止 SAV 捕获",
+    "sav_monitor_started": "正在监视 SAV 文件的更改",
+    "sav_monitor_stopped": "已停止监视 SAV 文件",
+    "ocr_result": "OCR：{line}",
+    "clip_result": "剪贴板：{line}",
+    "clip_empty": "剪贴板：未找到库存",
+    "sav_summary": "SAV：已扫描 {count} 个结构",
+    "item_count": "{count} 个物品",
+    "scan_error": "⚠ 扫描失败：{error}",
+    "sav_error": "⚠ SAV 错误：{error}",
+    "clip_error": "⚠ 剪贴板错误：{error}",
+    "get_started": "尚未设置任何方法 — 打开 设置 → 输入 来设置 截图、剪贴板 或 SAV。",
+    "feed_placeholder": "活动将显示在此处…"
+  },
   "common": {
     "download": "下载",
     "save": "保存",

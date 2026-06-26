@@ -1,6 +1,28 @@
 {
   "language_name": "Português",
   "language_code": "pt",
+  "activity": {
+    "capture_started": "A iniciar captura de ecrã — prime {hotkey}",
+    "capture_stopped": "Captura de ecrã parada",
+    "clip_capture_started": "A iniciar captura da área de transferência — prime {hotkey}",
+    "clip_capture_stopped": "Captura da área de transferência parada",
+    "clip_monitor_started": "A vigiar a área de transferência por stockpiles",
+    "clip_monitor_stopped": "Vigilância da área de transferência parada",
+    "sav_capture_started": "A iniciar captura SAV — prime {hotkey}",
+    "sav_capture_stopped": "Captura SAV parada",
+    "sav_monitor_started": "A vigiar alterações no ficheiro SAV",
+    "sav_monitor_stopped": "Vigilância do ficheiro SAV parada",
+    "ocr_result": "OCR: {line}",
+    "clip_result": "Área de transferência: {line}",
+    "clip_empty": "Área de transferência: nenhum stockpile encontrado",
+    "sav_summary": "SAV: {count} estruturas analisadas",
+    "item_count": "{count} objetos",
+    "scan_error": "⚠ Falha na análise: {error}",
+    "sav_error": "⚠ Erro de SAV: {error}",
+    "clip_error": "⚠ Erro da área de transferência: {error}",
+    "get_started": "Ainda não há nenhum método configurado — abre Definições → Entrada para configurar Captura, Área de transferência ou SAV.",
+    "feed_placeholder": "A atividade aparecerá aqui…"
+  },
   "common": {
     "download": "Descarregar",
     "save": "Guardar",

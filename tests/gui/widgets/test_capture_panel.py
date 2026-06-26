@@ -110,7 +110,7 @@ class TestConstruction:
         assert panel.sav_button is not None
         assert panel.clip_button is not None
         assert panel.start_stop_button is not None
-        assert panel.log_display is not None
+        assert panel.activity_feed is not None
 
     def test_starts_idle(self, panel: cp.CapturePanel) -> None:
         """The panel starts in an idle state."""
@@ -129,35 +129,20 @@ class TestConstruction:
 
 
 class TestLogs:
-    """Log table behavior."""
+    """Activity feed behavior."""
 
-    def test_append_log_adds_row(self, panel: cp.CapturePanel) -> None:
-        """append_log inserts a row into the table."""
-        before = panel.log_display.rowCount()
-        panel.append_log(
-            {
-                "timestamp": "12:00",
-                "level": "INFO",
-                "module": "m",
-                "message": "hi",
-                "color": "#ffffff",
-            }
-        )
-        assert panel.log_display.rowCount() == before + 1
+    def test_feed_appends_line(self, panel: cp.CapturePanel) -> None:
+        """_feed appends a timestamped line to the activity feed."""
+        panel.clear_logs()
+        panel._feed("hello")
+        text = panel.activity_feed.toPlainText()
+        assert "hello" in text
 
     def test_clear_logs(self, panel: cp.CapturePanel) -> None:
-        """clear_logs empties the table."""
-        panel.append_log(
-            {
-                "timestamp": "1",
-                "level": "INFO",
-                "module": "m",
-                "message": "x",
-                "color": "#fff",
-            }
-        )
+        """clear_logs empties the activity feed."""
+        panel._feed("something")
         panel.clear_logs()
-        assert panel.log_display.rowCount() == 0
+        assert panel.activity_feed.toPlainText() == ""
 
     def test_retranslate_sets_button_text(self, panel: cp.CapturePanel) -> None:
         """Retranslate populates translatable labels."""
@@ -212,6 +197,44 @@ class TestButtonStatesAndRefresh:
         panel.refresh_db_info()
         assert panel._scan_service is None
         assert panel._clip_service is None
+
+
+class TestSetupPrompt:
+    """The 'no method configured' hint and feed-clearing transition."""
+
+    def test_shows_hint_when_unconfigured(
+        self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """With nothing usable, the get-started hint is written once."""
+        panel.clear_logs()
+        panel._get_started_shown = False
+        _use_settings(monkeypatch, AppSettings())
+        panel._maybe_prompt_setup()
+        assert panel._get_started_shown is True
+        assert panel.activity_feed.toPlainText() != ""
+
+    def test_clears_feed_on_first_configure(
+        self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """Going from unconfigured to configured wipes the stale hint."""
+        # Simulate the unconfigured state that has shown the hint.
+        panel._get_started_shown = True
+        panel._feed("old hint")
+        _use_settings(monkeypatch, _configured(tmp_path))
+        panel._maybe_prompt_setup()
+        assert panel.activity_feed.toPlainText() == ""
+        assert panel._get_started_shown is False
+
+    def test_keeps_feed_when_already_configured(
+        self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """Editing an already-usable setup leaves the activity history intact."""
+        panel._get_started_shown = False
+        panel.clear_logs()
+        panel._feed("scan result")
+        _use_settings(monkeypatch, _configured(tmp_path))
+        panel._maybe_prompt_setup()
+        assert "scan result" in panel.activity_feed.toPlainText()
 
 
 class TestCapture:
@@ -609,10 +632,6 @@ class TestRemainingBranches:
         cached = MagicMock()
         panel._scan_service = cached
         assert panel._get_scan_service() is cached
-
-    def test_attach_log_handler_idempotent(self, panel: cp.CapturePanel) -> None:
-        """Re-attaching the log handler is a no-op (already attached)."""
-        panel._attach_log_handler()  # already attached in __init__
 
     def test_get_clip_service_cached(self, panel: cp.CapturePanel) -> None:
         """A cached clipboard service is returned without rebuilding."""

@@ -1,6 +1,28 @@
 {
   "language_name": "Français",
   "language_code": "fr",
+  "activity": {
+    "capture_started": "Démarrage de la capture d'écran — appuyez sur {hotkey}",
+    "capture_stopped": "Capture d'écran arrêtée",
+    "clip_capture_started": "Démarrage de la capture du presse-papiers — appuyez sur {hotkey}",
+    "clip_capture_stopped": "Capture du presse-papiers arrêtée",
+    "clip_monitor_started": "Surveillance du presse-papiers pour les stockpiles",
+    "clip_monitor_stopped": "Surveillance du presse-papiers arrêtée",
+    "sav_capture_started": "Démarrage de la capture SAV — appuyez sur {hotkey}",
+    "sav_capture_stopped": "Capture SAV arrêtée",
+    "sav_monitor_started": "Surveillance des modifications du fichier SAV",
+    "sav_monitor_stopped": "Surveillance du fichier SAV arrêtée",
+    "ocr_result": "OCR : {line}",
+    "clip_result": "Presse-papiers : {line}",
+    "clip_empty": "Presse-papiers : aucun stockpile trouvé",
+    "sav_summary": "SAV : {count} structures scannées",
+    "item_count": "{count} objets",
+    "scan_error": "⚠ Échec du scan : {error}",
+    "sav_error": "⚠ Erreur SAV : {error}",
+    "clip_error": "⚠ Erreur du presse-papiers : {error}",
+    "get_started": "Aucune méthode configurée — ouvrez Paramètres → Entrée pour configurer Capture, Presse-papiers ou SAV.",
+    "feed_placeholder": "L'activité apparaîtra ici…"
+  },
   "common": {
     "download": "Télécharger",
     "save": "Enregistrer",

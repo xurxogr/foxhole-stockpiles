@@ -1,6 +1,28 @@
 {
   "language_name": "English",
   "language_code": "en",
+  "activity": {
+    "capture_started": "Starting screenshot capture — press {hotkey}",
+    "capture_stopped": "Stopped screenshot capture",
+    "clip_capture_started": "Starting clipboard capture — press {hotkey}",
+    "clip_capture_stopped": "Stopped clipboard capture",
+    "clip_monitor_started": "Watching the clipboard for stockpiles",
+    "clip_monitor_stopped": "Stopped watching the clipboard",
+    "sav_capture_started": "Starting SAV capture — press {hotkey}",
+    "sav_capture_stopped": "Stopped SAV capture",
+    "sav_monitor_started": "Watching the SAV file for changes",
+    "sav_monitor_stopped": "Stopped watching the SAV file",
+    "ocr_result": "OCR: {line}",
+    "clip_result": "Clipboard: {line}",
+    "clip_empty": "Clipboard: no stockpile found",
+    "sav_summary": "SAV: scanned {count} structures",
+    "item_count": "{count} items",
+    "scan_error": "⚠ Scan failed: {error}",
+    "sav_error": "⚠ SAV error: {error}",
+    "clip_error": "⚠ Clipboard error: {error}",
+    "get_started": "No method set up yet — open Settings → Input to set up Screenshot, Clipboard, or SAV.",
+    "feed_placeholder": "Activity will appear here…"
+  },
   "common": {
     "download": "Download",
     "save": "Save",

@@ -1,6 +1,28 @@
 {
   "language_name": "Español",
   "language_code": "es",
+  "activity": {
+    "capture_started": "Iniciando captura de pantalla — pulsa {hotkey}",
+    "capture_stopped": "Captura de pantalla detenida",
+    "clip_capture_started": "Iniciando captura del portapapeles — pulsa {hotkey}",
+    "clip_capture_stopped": "Captura del portapapeles detenida",
+    "clip_monitor_started": "Vigilando el portapapeles en busca de stockpiles",
+    "clip_monitor_stopped": "Vigilancia del portapapeles detenida",
+    "sav_capture_started": "Iniciando captura SAV — pulsa {hotkey}",
+    "sav_capture_stopped": "Captura SAV detenida",
+    "sav_monitor_started": "Vigilando cambios en el archivo SAV",
+    "sav_monitor_stopped": "Vigilancia del archivo SAV detenida",
+    "ocr_result": "OCR: {line}",
+    "clip_result": "Portapapeles: {line}",
+    "clip_empty": "Portapapeles: no se encontró ningún stockpile",
+    "sav_summary": "SAV: {count} estructuras escaneadas",
+    "item_count": "{count} objetos",
+    "scan_error": "⚠ Fallo al escanear: {error}",
+    "sav_error": "⚠ Error de SAV: {error}",
+    "clip_error": "⚠ Error del portapapeles: {error}",
+    "get_started": "Aún no hay ningún método configurado — abre Ajustes → Entrada para configurar Captura, Portapapeles o SAV.",
+    "feed_placeholder": "La actividad aparecerá aquí…"
+  },
   "common": {
     "download": "Descargar",
     "save": "Guardar",

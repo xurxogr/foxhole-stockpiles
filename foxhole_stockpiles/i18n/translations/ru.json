@@ -1,6 +1,28 @@
 {
   "language_name": "Русский",
   "language_code": "ru",
+  "activity": {
+    "capture_started": "Запуск захвата скриншота — нажмите {hotkey}",
+    "capture_stopped": "Захват скриншота остановлен",
+    "clip_capture_started": "Запуск захвата буфера обмена — нажмите {hotkey}",
+    "clip_capture_stopped": "Захват буфера обмена остановлен",
+    "clip_monitor_started": "Отслеживание буфера обмена на наличие складов",
+    "clip_monitor_stopped": "Отслеживание буфера обмена остановлено",
+    "sav_capture_started": "Запуск захвата SAV — нажмите {hotkey}",
+    "sav_capture_stopped": "Захват SAV остановлен",
+    "sav_monitor_started": "Отслеживание изменений файла SAV",
+    "sav_monitor_stopped": "Отслеживание файла SAV остановлено",
+    "ocr_result": "OCR: {line}",
+    "clip_result": "Буфер обмена: {line}",
+    "clip_empty": "Буфер обмена: склад не найден",
+    "sav_summary": "SAV: просканировано структур: {count}",
+    "item_count": "{count} предметов",
+    "scan_error": "⚠ Ошибка сканирования: {error}",
+    "sav_error": "⚠ Ошибка SAV: {error}",
+    "clip_error": "⚠ Ошибка буфера обмена: {error}",
+    "get_started": "Ни один метод ещё не настроен — откройте Настройки → Ввод, чтобы настроить Скриншот, Буфер обмена или SAV.",
+    "feed_placeholder": "Здесь будет отображаться активность…"
+  },
   "common": {
     "download": "Скачать",
     "save": "Сохранить",
