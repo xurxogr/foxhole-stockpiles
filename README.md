@@ -5,7 +5,7 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Read your Foxhole stockpiles into clean, structured data — by screenshot (OCR), by clipboard, or straight from `.sav` files — and send the results wherever you want.**
+**Get your Foxhole stockpiles out of the game and into tidy data files — by screenshot, by clipboard, or straight from your `.sav` save files — then send the results wherever you want.**
 
 > This README is for everyday use. For running with more control — installing
 > from source, the command line, custom OCR databases, and configuration — see
@@ -14,13 +14,13 @@
 
 ## What it does
 
-Foxhole Stockpiles is a desktop app that turns a stockpile into machine-readable data (JSON / CSV / TSV) using **any of the three methods the game gives you**, all behind one app and one set of outputs:
+Foxhole Stockpiles is a desktop app that turns a stockpile into a clean data file — JSON, CSV, or TSV, so you can open it in a spreadsheet, hand it to a Discord bot, or just keep a record — using **any of the three methods the game gives you**, all from one app:
 
-- **OCR** — press a global hotkey to capture the live game window, or scan a screenshot file.
-- **Clipboard** — copy a stockpile list from the in-game UI and it's parsed automatically.
-- **SAV** — read stockpiles directly from Foxhole `.sav` world files.
+- **OCR (reading screenshots)** — press a hotkey to snap the live game window, or load a screenshot you already have, and the app reads the items off the picture.
+- **Clipboard** — use the game's **Copy to Clipboard** button on a stockpile and the app reads it automatically the moment you copy.
+- **SAV (save files)** — read the stockpiles you've **pinned in game** straight from Foxhole's `.sav` save file.
 
-Every method produces the same result, sent to your configured outputs: the console, a file, a webhook (e.g. Discord), or Google Sheets.
+Every method gives you the same result, sent wherever you choose: the console, a file, a webhook (e.g. Discord), or Google Sheets.
 
 ## Quick start (Windows)
 
@@ -40,8 +40,8 @@ You always need `fs.exe`. Some methods also need a data file (download links bel
 | Method | What it needs |
 |---|---|
 | **SAV** (`.sav` files) | Nothing extra — works out of the box. |
-| **Clipboard** | [`data/catalog.json`](https://github.com/xurxogr/foxhole-stockpiles/blob/main/data/catalog.json) — maps in-game item names to item codes. |
-| **OCR** (screenshots / live capture) | [`data/fs_vanilla.h5`](https://github.com/xurxogr/foxhole-stockpiles/blob/main/data/fs_vanilla.h5) — the template database used to recognise icons. |
+| **Clipboard** | [`data/catalog.json`](https://github.com/xurxogr/foxhole-stockpiles/blob/main/data/catalog.json) — the item list the app uses to recognise what you copied. |
+| **OCR** (screenshots / live capture) | [`data/fs_vanilla.h5`](https://github.com/xurxogr/foxhole-stockpiles/blob/main/data/fs_vanilla.h5) — the icon reference the app matches your screenshots against. |
 
 **These data files are not bundled in the release** — it contains only `fs.exe` and `fs-tools.exe`. Download the ones you need straight from the repository's [`data/` folder](https://github.com/xurxogr/foxhole-stockpiles/tree/main/data) (links above) and place them in a `data/` folder next to `fs.exe`.
 
@@ -63,13 +63,13 @@ Needs **`data/fs_vanilla.h5`**.
 
 Needs **`data/catalog.json`**.
 
-- Enable clipboard scanning in **Settings → Input**, then in game copy a stockpile's contents. The app parses it the moment you copy and routes the result.
+- Enable clipboard scanning in **Settings → Input**, then in game press the **Copy to Clipboard** button on a stockpile. The app reads what the game copied the moment you do it, and routes the result.
 
 ### SAV — `.sav` world files
 
 No extra files needed.
 
-- Point the app at your Foxhole `MapData.sav` file in **Settings → Input**. You can scan it once or have it watch the file and re-scan when it changes.
+- The `.sav` file holds the stockpiles you've **pinned in game**, so pin the ones you want first. Then point the app at your Foxhole `MapData.sav` save file in **Settings → Input**. You can scan it once or have it watch the file and re-scan whenever it changes.
 
 ## Where results go
 
@@ -77,14 +77,14 @@ A scan is sent to whichever outputs you enable in **Settings → Output**:
 
 - **Console** — prints the result.
 - **File** — writes JSON, CSV, or TSV to disk.
-- **Webhook** — HTTP POST to a URL. **Sending to Discord?** Point a webhook at a Discord webhook URL.
+- **Webhook** — sends each result to a web address you choose. **Want it in Discord?** Paste your Discord channel's webhook URL here and results post straight to the channel.
 - **Google Sheets** — appends rows to a sheet.
 
 ## Languages
 
 The interface is available in English, German, Spanish, French, Portuguese, Russian, and Chinese. Change it in **Settings → General**.
 
-You can also override individual translations next to the executable without rebuilding: create an `i18n/translations/<lang>.json` file beside `fs.exe` containing just the keys you want to change — they're merged over the bundled ones.
+You can also change any of the wording yourself, no reinstall needed: drop an `i18n/translations/<lang>.json` file next to `fs.exe` with just the bits you want to change, and the app uses your version over the built-in one.
 
 ```
 fs.exe
@@ -95,7 +95,7 @@ i18n/translations/en.json   # e.g. {"common": {"cancel": "My Custom Text"}}
 
 ## Performance & accuracy (OCR only)
 
-These figures apply to the **OCR** method — screenshot recognition by the `fs-ocr` engine. The clipboard and `.sav` methods read exact game data, so they aren't subject to recognition accuracy.
+These figures apply to the **OCR** method — reading items from a screenshot. The clipboard and `.sav` methods read exact game data, so accuracy isn't a factor there.
 
 Based on 1,000+ production OCR scans:
 
