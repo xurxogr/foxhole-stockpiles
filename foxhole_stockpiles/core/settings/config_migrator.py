@@ -6,7 +6,7 @@ from typing import Any
 class ConfigMigrator:
     """Handles migration of configuration data between versions."""
 
-    CURRENT_VERSION = 13
+    CURRENT_VERSION = 14
 
     @classmethod
     def apply_migrations(cls, data: dict[str, Any]) -> dict[str, Any]:
@@ -86,6 +86,11 @@ class ConfigMigrator:
         if version == 12:
             data = cls._migrate_v12_to_v13(data)
             data["config_version"] = 13
+            version = 13
+
+        if version == 13:
+            data = cls._migrate_v13_to_v14(data)
+            data["config_version"] = 14
 
         return data
 
@@ -563,5 +568,50 @@ class ConfigMigrator:
         """
         if "gui" in data and isinstance(data["gui"], dict):
             data["gui"].pop("config_level", None)
+
+        return data
+
+    @staticmethod
+    def _migrate_v13_to_v14(data: dict[str, Any]) -> dict[str, Any]:
+        """Migrate from v13 to v14 (rework webhook 'forward' auth into 'header').
+
+        The webhook ``forward`` auth type was a leftover from the removed REST
+        server, where it forwarded an inbound client's ``Authorization`` header
+        to the webhook. With no server, the new ``header`` auth type simply
+        places the configured token in a user-chosen header. Each webhook
+        handler is updated in place:
+
+        * ``auth_type: "forward"`` becomes ``auth_type: "header"``.
+        * the ``client_auth_header`` field is renamed to ``auth_header``.
+
+        Any stored ``client_auth_header`` value is moved so it does not linger in
+        ``.fs_config`` (the settings models forbid unknown fields).
+
+        Args:
+            data (dict[str, Any]): V13 configuration data.
+
+        Returns:
+            dict[str, Any]: V14 configuration data.
+        """
+        output = data.get("output")
+        if not isinstance(output, dict):
+            return data
+
+        handlers = output.get("handlers")
+        if not isinstance(handlers, list):
+            return data
+
+        for handler_config in handlers:
+            if not isinstance(handler_config, dict):
+                continue
+            handler = handler_config.get("handler")
+            if not isinstance(handler, dict) or handler.get("type") != "webhook":
+                continue
+
+            if handler.get("auth_type") == "forward":
+                handler["auth_type"] = "header"
+
+            if "client_auth_header" in handler:
+                handler["auth_header"] = handler.pop("client_auth_header")
 
         return data

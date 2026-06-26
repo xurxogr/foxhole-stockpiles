@@ -127,19 +127,31 @@ class TestWebhookHandlerSettings:
         assert settings.auth_type == AuthType.BEARER
         assert settings.token == "token"
 
-    def test_webhook_auth_forward_validation(self) -> None:
-        """Test forward auth validation."""
-        # Should fail when forward auth_type is provided without client header
+    def test_webhook_auth_header_validation(self) -> None:
+        """Test custom-header auth validation."""
+        # Should fail when header auth_type is provided without a token
         with pytest.raises(ValidationError) as exc_info:
-            WebhookHandlerSettings(url="https://example.com", auth_type=AuthType.FORWARD)
-        assert "client_auth_header must be set when auth_type is 'forward'" in str(exc_info.value)
+            WebhookHandlerSettings(
+                url="https://example.com", auth_type=AuthType.HEADER, auth_header="X-Auth"
+            )
+        assert "token must be set when auth_type is 'header'" in str(exc_info.value)
 
-        # Should pass when forward and client_auth_header are provided
+        # Should fail when header auth_type is provided without a header name
+        with pytest.raises(ValidationError) as exc_info:
+            WebhookHandlerSettings(
+                url="https://example.com", auth_type=AuthType.HEADER, token="secret"
+            )
+        assert "auth_header must be set when auth_type is 'header'" in str(exc_info.value)
+
+        # Should pass when header, token and auth_header are all provided
         settings = WebhookHandlerSettings(
-            url="https://example.com", auth_type=AuthType.FORWARD, client_auth_header="X-Auth"
+            url="https://example.com",
+            auth_type=AuthType.HEADER,
+            token="secret",
+            auth_header="X-Auth",
         )
-        assert settings.auth_type == AuthType.FORWARD
-        assert settings.client_auth_header == "X-Auth"
+        assert settings.auth_type == AuthType.HEADER
+        assert settings.auth_header == "X-Auth"
 
 
 class TestOutputSettings:
@@ -241,8 +253,8 @@ class TestConfigMigration:
         # Apply migrations
         migrated = ConfigMigrator.apply_migrations(v1_config)
 
-        # Verify migration occurred (v1 -> ... -> v8)
-        assert migrated["config_version"] == 13
+        # Verify migration occurred (v1 -> ... -> v14)
+        assert migrated["config_version"] == 14
         assert "output_format" not in migrated
         assert "output" in migrated
         assert len(migrated["output"]["handlers"]) == 1
@@ -252,11 +264,13 @@ class TestConfigMigration:
         assert handler_config["handler"]["url"] == "https://example.com/webhook"
         assert handler_config["handler"]["auth_type"] == "bearer"
         assert handler_config["handler"]["token"] == "secret123"
-        assert handler_config["handler"]["client_auth_header"] == "X-API-TOKEN"
+        # client_auth_header was renamed to auth_header in the v13 -> v14 migration
+        assert "client_auth_header" not in handler_config["handler"]
+        assert handler_config["handler"]["auth_header"] == "X-API-TOKEN"
 
         # Verify the migrated config can be loaded
         settings = AppSettings(**migrated)
-        assert settings.config_version == 13
+        assert settings.config_version == 14
         assert len(settings.output.handlers) == 1
         handler = settings.output.handlers[0].handler
         assert isinstance(handler, WebhookHandlerSettings)
@@ -279,7 +293,7 @@ class TestConfigMigration:
         migrated = ConfigMigrator.apply_migrations(v2_config)
 
         # Should migrate to v7 (v2 -> ... -> v8)
-        assert migrated["config_version"] == 13
+        assert migrated["config_version"] == 14
         assert len(migrated["output"]["handlers"]) == 1
         handler_config = migrated["output"]["handlers"][0]
         assert handler_config["handler"]["type"] == "file"
@@ -287,7 +301,7 @@ class TestConfigMigration:
 
         # Verify the migrated config can be loaded
         settings = AppSettings(**migrated)
-        assert settings.config_version == 13
+        assert settings.config_version == 14
         assert len(settings.output.handlers) == 1
         handler = settings.output.handlers[0].handler
         assert isinstance(handler, FileHandlerSettings)
@@ -296,7 +310,7 @@ class TestConfigMigration:
     def test_default_config_is_v7(self) -> None:
         """Test that default config is version 7."""
         settings = AppSettings()
-        assert settings.config_version == 13
+        assert settings.config_version == 14
 
     def test_migrate_v1_to_v2_with_scanner_fields_cleanup(self) -> None:
         """Test migration removes deprecated scanner fields."""
@@ -318,7 +332,7 @@ class TestConfigMigration:
         migrated = ConfigMigrator.apply_migrations(v1_config)
 
         # Verify migration occurred (v1 -> ... -> v8)
-        assert migrated["config_version"] == 13
+        assert migrated["config_version"] == 14
         # Verify deprecated fields are removed
         assert "confidence_threshold" not in migrated["scanner"]
         assert "confidence_by_resolution" not in migrated["scanner"]
@@ -327,7 +341,7 @@ class TestConfigMigration:
 
         # Verify the migrated config can be loaded
         settings = AppSettings(**migrated)
-        assert settings.config_version == 13
+        assert settings.config_version == 14
         assert settings.scanner.early_exit_threshold == 0.95
 
     def test_migrate_config_with_non_dict_data(self) -> None:
@@ -353,11 +367,11 @@ class TestConfigMigration:
         }
 
         migrated = ConfigMigrator.apply_migrations(v3_config)
-        assert migrated["config_version"] == 13
+        assert migrated["config_version"] == 14
         assert "stockpile_types" not in migrated
 
         settings = AppSettings(**v3_config)  # type: ignore[arg-type]
-        assert settings.config_version == 13
+        assert settings.config_version == 14
         assert not hasattr(settings, "stockpile_types")
 
     def test_migrate_v11_to_v12_drops_notifications(self) -> None:
@@ -375,11 +389,11 @@ class TestConfigMigration:
         }
 
         migrated = ConfigMigrator.apply_migrations(v11_config)
-        assert migrated["config_version"] == 13
+        assert migrated["config_version"] == 14
         assert "notifications" not in migrated
 
         settings = AppSettings(**v11_config)  # type: ignore[arg-type]
-        assert settings.config_version == 13
+        assert settings.config_version == 14
         assert not hasattr(settings, "notifications")
 
     def test_migrate_v12_to_v13_drops_config_level(self) -> None:
@@ -399,12 +413,12 @@ class TestConfigMigration:
         }
 
         migrated = ConfigMigrator.apply_migrations(v12_config)
-        assert migrated["config_version"] == 13
+        assert migrated["config_version"] == 14
         assert "config_level" not in migrated["gui"]
         assert migrated["gui"]["minimize_to_tray"] is True
 
         settings = AppSettings(**v12_config)  # type: ignore[arg-type]
-        assert settings.config_version == 13
+        assert settings.config_version == 14
         assert not hasattr(settings.gui, "config_level")
 
     def test_migrate_v6_to_v7_removes_uesave(self) -> None:
@@ -421,7 +435,7 @@ class TestConfigMigration:
 
         migrated = ConfigMigrator.apply_migrations(v6_config)
 
-        assert migrated["config_version"] == 13
+        assert migrated["config_version"] == 14
         assert "uesave" not in migrated["external_tools"]
         assert migrated["external_tools"]["repak"] == "/path/to/repak"
         assert migrated["external_tools"]["umodel"] == "/path/to/umodel"
@@ -429,7 +443,7 @@ class TestConfigMigration:
 
         # Verify the migrated config can be loaded
         settings = AppSettings(**migrated)
-        assert settings.config_version == 13
+        assert settings.config_version == 14
         assert not hasattr(settings.external_tools, "uesave")
 
     def test_migrate_v6_to_v7_no_external_tools(self) -> None:
@@ -440,10 +454,10 @@ class TestConfigMigration:
 
         migrated = ConfigMigrator.apply_migrations(v6_config)
 
-        assert migrated["config_version"] == 13
+        assert migrated["config_version"] == 14
         # Should work without error
         settings = AppSettings(**migrated)
-        assert settings.config_version == 13
+        assert settings.config_version == 14
 
     def test_migrate_v7_to_v8_drops_ocr_and_template_sections(self) -> None:
         """Test migration from v7 removes ocr/templates sections and scanner extras."""
@@ -464,7 +478,7 @@ class TestConfigMigration:
 
         migrated = ConfigMigrator.apply_migrations(v7_config)
 
-        assert migrated["config_version"] == 13
+        assert migrated["config_version"] == 14
         # Top-level sections removed
         assert "ocr" not in migrated
         assert "templates" not in migrated
@@ -478,7 +492,7 @@ class TestConfigMigration:
 
         # Verify the migrated config can be loaded
         settings = AppSettings(**migrated)
-        assert settings.config_version == 13
+        assert settings.config_version == 14
         assert not hasattr(settings, "ocr")
         assert not hasattr(settings, "templates")
         assert settings.scanner.early_exit_threshold == 0.95
@@ -492,10 +506,10 @@ class TestConfigMigration:
 
         migrated = ConfigMigrator.apply_migrations(v7_config)
 
-        assert migrated["config_version"] == 13
+        assert migrated["config_version"] == 14
         assert "ocr" not in migrated
         settings = AppSettings(**migrated)
-        assert settings.config_version == 13
+        assert settings.config_version == 14
 
     def test_migrate_v8_to_v9_drops_web_icon_mod(self) -> None:
         """Test migration from v8 removes api_server.web_icon_mod."""
@@ -512,13 +526,13 @@ class TestConfigMigration:
 
         # The full migration chain ends at v10, which drops the api_server
         # section entirely (the runtime no longer hosts a REST server).
-        assert migrated["config_version"] == 13
+        assert migrated["config_version"] == 14
         assert "api_server" not in migrated
         assert "api_auth" not in migrated
 
         # Verify the migrated config can be loaded (model forbids extra fields)
         settings = AppSettings(**migrated)
-        assert settings.config_version == 13
+        assert settings.config_version == 14
         assert not hasattr(settings, "api_server")
 
     def test_migrate_v9_to_v10_drops_api_sections(self) -> None:
@@ -532,13 +546,13 @@ class TestConfigMigration:
 
         migrated = ConfigMigrator.apply_migrations(v9_config)
 
-        assert migrated["config_version"] == 13
+        assert migrated["config_version"] == 14
         assert "api_server" not in migrated
         assert "api_auth" not in migrated
         assert migrated["scanner"]["database_path"] == "db.h5"
 
         settings = AppSettings(**migrated)
-        assert settings.config_version == 13
+        assert settings.config_version == 14
         assert settings.scanner.capture_key is None
 
     def test_migrate_v8_to_v9_no_api_server_section(self) -> None:
@@ -547,9 +561,9 @@ class TestConfigMigration:
 
         migrated = ConfigMigrator.apply_migrations(v8_config)
 
-        assert migrated["config_version"] == 13
+        assert migrated["config_version"] == 14
         settings = AppSettings(**migrated)
-        assert settings.config_version == 13
+        assert settings.config_version == 14
 
     def test_migrate_v10_to_v11_drops_stockpile_types_and_dead_scanner_fields(self) -> None:
         """Test migration from v10 removes stockpile_types and dead scanner knobs."""
@@ -569,7 +583,7 @@ class TestConfigMigration:
 
         migrated = ConfigMigrator.apply_migrations(v10_config)
 
-        assert migrated["config_version"] == 13
+        assert migrated["config_version"] == 14
         assert "stockpile_types" not in migrated
         # Live scanner fields preserved (early_exit_threshold -> fs_tools;
         # screenshots_folder -> capture saving).
@@ -582,11 +596,64 @@ class TestConfigMigration:
             assert dead not in migrated["scanner"]
 
         settings = AppSettings(**migrated)
-        assert settings.config_version == 13
+        assert settings.config_version == 14
         assert not hasattr(settings, "stockpile_types")
         assert settings.scanner.confidence_gap == 0.2
         assert settings.scanner.early_exit_threshold == 0.95
         assert settings.scanner.screenshots_folder == "shots"
+
+    def test_migrate_v13_to_v14_reworks_forward_auth(self) -> None:
+        """Test migration from v13 renames forward auth and client_auth_header."""
+        v13_config = {
+            "config_version": 13,
+            "output": {
+                "handlers": [
+                    {
+                        "name": "Webhook",
+                        "format": {"type": "json"},
+                        "handler": {
+                            "type": "webhook",
+                            "url": "https://example.com/webhook",
+                            "auth_type": "forward",
+                            "token": "secret",
+                            "client_auth_header": "X-API-Key",
+                        },
+                    }
+                ]
+            },
+        }
+
+        migrated = ConfigMigrator.apply_migrations(v13_config)
+
+        assert migrated["config_version"] == 14
+        handler = migrated["output"]["handlers"][0]["handler"]
+        assert handler["auth_type"] == "header"
+        assert "client_auth_header" not in handler
+        assert handler["auth_header"] == "X-API-Key"
+
+        # The migrated config must load cleanly under the new schema.
+        settings = AppSettings(**migrated)
+        assert settings.config_version == 14
+
+    def test_migrate_v13_to_v14_no_webhook_handlers(self) -> None:
+        """Test v13->v14 migration is a no-op when there are no webhook handlers."""
+        v13_config = {
+            "config_version": 13,
+            "output": {
+                "handlers": [
+                    {
+                        "name": "File",
+                        "format": {"type": "json"},
+                        "handler": {"type": "file", "path": "output.json"},
+                    }
+                ]
+            },
+        }
+
+        migrated = ConfigMigrator.apply_migrations(v13_config)
+
+        assert migrated["config_version"] == 14
+        assert migrated["output"]["handlers"][0]["handler"]["type"] == "file"
 
 
 class TestAppSettings:

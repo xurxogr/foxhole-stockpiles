@@ -16,7 +16,7 @@ class WebhookHandlerSettings(BaseModel):
     auth_type: AuthType | None = Field(
         description=(
             "Authentication type to use when sending to webhook. "
-            "Supported types: 'basic', 'bearer', or 'forward'."
+            "Supported types: 'basic', 'bearer', or 'header'."
         ),
         default=None,
     )
@@ -24,14 +24,13 @@ class WebhookHandlerSettings(BaseModel):
         description=(
             "Token to use for authentication when sending to webhook. "
             "For 'basic' auth_type, this should be base64 encoded 'username:password'. "
-            "Required when auth_type is 'basic' or 'bearer'."
+            "Required when auth_type is 'basic', 'bearer', or 'header'."
         ),
         default=None,
     )
-    client_auth_header: str | None = Field(
+    auth_header: str | None = Field(
         description=(
-            "Client header name to pass through from API client to webhook. "
-            "Required when auth_type is 'forward'."
+            "Name of the header to place the token in. Required when auth_type is 'header'."
         ),
         default=None,
     )
@@ -52,7 +51,9 @@ class WebhookHandlerSettings(BaseModel):
         if auth in (AuthType.BASIC, AuthType.BEARER):
             if not self.token:
                 raise ValueError(f"token must be set when auth_type is '{auth}'")
-        elif auth == AuthType.FORWARD:
-            if not self.client_auth_header:
-                raise ValueError("client_auth_header must be set when auth_type is 'forward'")
+        elif auth == AuthType.HEADER:
+            if not self.token:
+                raise ValueError("token must be set when auth_type is 'header'")
+            if not self.auth_header:
+                raise ValueError("auth_header must be set when auth_type is 'header'")
         return self

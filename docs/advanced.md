@@ -161,7 +161,7 @@ A scan produces one stockpile result, fanned out to the handlers configured unde
 
 - **console** — prints the result to stdout
 - **file** — writes JSON, CSV, or TSV to disk
-- **webhook** — HTTP POST to a URL (basic, bearer, and forward auth; "forward" passes a client-provided header through)
+- **webhook** — HTTP POST to a URL (basic, bearer, and header auth; "header" puts the token in a user-chosen header)
 - **return** — returns the result to the caller in-process
 - **sheets** — appends rows to a Google Sheet
 

@@ -120,9 +120,10 @@ class WebhookConnector:
                 token_to_use = token or self._output_settings.token
                 if token_to_use:
                     headers["Authorization"] = f"Bearer {token_to_use}"
-            case AuthType.FORWARD:
-                if token and self._output_settings.client_auth_header:
-                    headers[self._output_settings.client_auth_header] = token
+            case AuthType.HEADER:
+                # The configured token is placed verbatim in a user-chosen header.
+                if self._output_settings.auth_header and self._output_settings.token:
+                    headers[self._output_settings.auth_header] = self._output_settings.token
 
         return headers
 

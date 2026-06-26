@@ -8,4 +8,4 @@ class AuthType(StrEnum):
 
     BASIC = "basic"
     BEARER = "bearer"
-    FORWARD = "forward"
+    HEADER = "header"

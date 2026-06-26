@@ -60,10 +60,19 @@ The `token` must be the base64 encoding of `username:password`
 ```
 Sends: `Authorization: Basic dXNlcjpwYXNz`
 
-> **Advanced:** `auth_type: "forward"` with `client_auth_header` forwards a
-> per-call token as the named header. It exists for embedding the scan pipeline
-> in a larger app that supplies that token programmatically; in normal local
-> capture/scan there is no request to source it from, so use `bearer`/`basic`.
+#### Custom header authentication
+Use `auth_type: "header"` to send the configured `token` as the value of a
+header you choose via `auth_header` (e.g. an `X-API-Key`).
+```json
+"handler": {
+  "type": "webhook",
+  "url": "https://api.example.com/stockpiles",
+  "auth_type": "header",
+  "auth_header": "X-API-Key",
+  "token": "your-webhook-token"
+}
+```
+Sends: `X-API-Key: your-webhook-token`
 
 ## Webhook payload
 

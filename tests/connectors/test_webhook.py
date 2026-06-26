@@ -115,20 +115,38 @@ class TestWebhookConnector:
 
         assert headers == {"Authorization": "Basic dGVzdDpwYXNzd29yZA=="}
 
-    def test_build_auth_headers_forward(self, output_settings: WebhookHandlerSettings) -> None:
-        """Test building forward auth headers.
+    def test_build_auth_headers_header(self, output_settings: WebhookHandlerSettings) -> None:
+        """Test building custom-header auth headers.
 
         Args:
             output_settings (WebhookHandlerSettings): Output settings fixture.
         """
-        output_settings.auth_type = AuthType.FORWARD
-        output_settings.client_auth_header = "X-API-Key"
+        output_settings.auth_type = AuthType.HEADER
+        output_settings.auth_header = "X-API-Key"
+        output_settings.token = "secret_api_key"
 
         connector = WebhookConnector(output_settings)
-        # Forward auth passes the token through with the custom header name
-        headers = connector._build_auth_headers(token="secret_api_key")
+        # Header auth places the configured token in the chosen header.
+        headers = connector._build_auth_headers()
 
         assert headers == {"X-API-Key": "secret_api_key"}
+
+    def test_build_auth_headers_header_ignores_runtime_token(
+        self, output_settings: WebhookHandlerSettings
+    ) -> None:
+        """Header auth uses the configured token, ignoring any runtime token.
+
+        Args:
+            output_settings (WebhookHandlerSettings): Output settings fixture.
+        """
+        output_settings.auth_type = AuthType.HEADER
+        output_settings.auth_header = "X-API-Key"
+        output_settings.token = "configured_key"
+
+        connector = WebhookConnector(output_settings)
+        headers = connector._build_auth_headers(token="runtime_key")
+
+        assert headers == {"X-API-Key": "configured_key"}
 
     def test_build_auth_headers_no_auth(self, output_settings: WebhookHandlerSettings) -> None:
         """Test building headers with no auth configured.

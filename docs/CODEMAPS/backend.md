@@ -84,11 +84,11 @@ async def handle_output(stockpiles: list[Stockpile], **kwargs) -> dict | None:
 
 Handlers (`handlers/`), all `handle(stockpiles: list[Stockpile])`:
 `console.py`, `file.py` (JSON/CSV/TSV), `webhook.py` (HTTP POST, supports
-basic/bearer/**forward** auth), `response.py` (`ReturnOutputHandler` → returns
+basic/bearer/**header** auth), `response.py` (`ReturnOutputHandler` → returns
 the dict), **`sheets.py`** (Google Sheets append). Interface: `base_handler.py`.
 
-Webhook **forward auth**: `WebhookHandlerSettings.auth_type="forward"` +
-`client_auth_header` — the per-call `token` kwarg is forwarded as that header.
+Webhook **header auth**: `WebhookHandlerSettings.auth_type="header"` +
+`auth_header` — the configured `token` is sent as the value of that header.
 
 ## GUI capture panel (`gui/widgets/capture_panel.py`)
 

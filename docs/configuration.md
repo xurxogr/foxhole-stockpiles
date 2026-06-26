@@ -130,9 +130,9 @@ Example: `{timestamp}_{stockpile_type}_{stockpile_name}_{resolution}.json` → `
 |---------|------|----------|-------------|
 | `type` | string | Yes | Must be `"webhook"` |
 | `url` | string | Yes | Webhook URL |
-| `auth_type` | string\|null | No | Auth method: `"basic"`, `"bearer"`, `"forward"`, or `null` |
-| `token` | string\|null | No | Auth token (required for `"basic"` or `"bearer"`) |
-| `client_auth_header` | string\|null | No | Header to forward (required for `"forward"`) |
+| `auth_type` | string\|null | No | Auth method: `"basic"`, `"bearer"`, `"header"`, or `null` |
+| `token` | string\|null | No | Auth token (required for `"basic"`, `"bearer"`, or `"header"`) |
+| `auth_header` | string\|null | No | Header name to place the token in (required for `"header"`) |
 
 **Console Handler** - Prints results to console:
 ```json

@@ -632,11 +632,11 @@ class TestOutputHandlerDialog:
 
         assert dialog.auth_token_label.isVisible()
         assert dialog.webhook_token_input.isVisible()
-        assert not dialog.client_auth_label.isVisible()
-        assert not dialog.webhook_client_auth_input.isVisible()
+        assert not dialog.auth_header_label.isVisible()
+        assert not dialog.webhook_auth_header_input.isVisible()
 
-    def test_dialog_webhook_auth_forward_shows_client_auth(self, qtbot: Any) -> None:
-        """Test forward auth type shows client auth field.
+    def test_dialog_webhook_auth_header_shows_auth_header(self, qtbot: Any) -> None:
+        """Test header auth type shows token and custom header fields.
 
         Args:
             qtbot: PyQt test fixture
@@ -646,16 +646,16 @@ class TestOutputHandlerDialog:
         dialog.show()
         dialog.webhook_group.show()
 
-        dialog.webhook_auth_type_input.setCurrentText("forward")
+        dialog.webhook_auth_type_input.setCurrentText("header")
         dialog._on_webhook_auth_changed()
 
-        assert not dialog.auth_token_label.isVisible()
-        assert not dialog.webhook_token_input.isVisible()
-        assert dialog.client_auth_label.isVisible()
-        assert dialog.webhook_client_auth_input.isVisible()
+        assert dialog.auth_token_label.isVisible()
+        assert dialog.webhook_token_input.isVisible()
+        assert dialog.auth_header_label.isVisible()
+        assert dialog.webhook_auth_header_input.isVisible()
 
     def test_dialog_webhook_auth_null_hides_fields(self, qtbot: Any) -> None:
-        """Test null auth type hides token and client auth fields.
+        """Test null auth type hides token and custom header fields.
 
         Args:
             qtbot: PyQt test fixture
@@ -668,8 +668,8 @@ class TestOutputHandlerDialog:
 
         assert not dialog.auth_token_label.isVisible()
         assert not dialog.webhook_token_input.isVisible()
-        assert not dialog.client_auth_label.isVisible()
-        assert not dialog.webhook_client_auth_input.isVisible()
+        assert not dialog.auth_header_label.isVisible()
+        assert not dialog.webhook_auth_header_input.isVisible()
 
     def test_dialog_get_handler_config_return(self, qtbot: Any) -> None:
         """Test getting return handler config from dialog.

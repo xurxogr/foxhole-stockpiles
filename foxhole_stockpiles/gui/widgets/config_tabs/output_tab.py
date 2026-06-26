@@ -113,7 +113,7 @@ class OutputHandlerDialog(QDialog):
 
         self.auth_type_label = QLabel()
         self.webhook_auth_type_input = QComboBox()
-        self.webhook_auth_type_input.addItems(["null", "basic", "bearer", "forward"])
+        self.webhook_auth_type_input.addItems(["null", "basic", "bearer", "header"])
         self.webhook_auth_type_input.currentTextChanged.connect(self._on_webhook_auth_changed)
         webhook_layout.addRow(self.auth_type_label, self.webhook_auth_type_input)
 
@@ -122,9 +122,9 @@ class OutputHandlerDialog(QDialog):
         self.webhook_token_input.setEchoMode(QLineEdit.EchoMode.Password)
         webhook_layout.addRow(self.auth_token_label, self.webhook_token_input)
 
-        self.client_auth_label = QLabel()
-        self.webhook_client_auth_input = QLineEdit()
-        webhook_layout.addRow(self.client_auth_label, self.webhook_client_auth_input)
+        self.auth_header_label = QLabel()
+        self.webhook_auth_header_input = QLineEdit()
+        webhook_layout.addRow(self.auth_header_label, self.webhook_auth_header_input)
 
         layout.addWidget(self.webhook_group)
 
@@ -228,10 +228,10 @@ class OutputHandlerDialog(QDialog):
         self.webhook_token_input.setPlaceholderText(
             t("output_tab.handler_dialog.auth_token_placeholder")
         )
-        self.client_auth_label.setText(t("output_tab.handler_dialog.client_auth_header"))
-        self.client_auth_label.setToolTip(t("output_tab.handler_dialog.client_auth_tooltip"))
-        self.webhook_client_auth_input.setPlaceholderText(
-            t("output_tab.handler_dialog.client_auth_placeholder")
+        self.auth_header_label.setText(t("output_tab.handler_dialog.auth_header"))
+        self.auth_header_label.setToolTip(t("output_tab.handler_dialog.auth_header_tooltip"))
+        self.webhook_auth_header_input.setPlaceholderText(
+            t("output_tab.handler_dialog.auth_header_placeholder")
         )
 
         # Sheets Settings
@@ -276,15 +276,15 @@ class OutputHandlerDialog(QDialog):
         """Handle webhook auth type change to show/hide relevant fields."""
         auth_type = self.webhook_auth_type_input.currentText()
 
-        # Show token fields for basic/bearer, hide for forward/null
-        show_token = auth_type in ("basic", "bearer")
+        # Show token fields for basic/bearer/header, hide for null
+        show_token = auth_type in ("basic", "bearer", "header")
         self.auth_token_label.setVisible(show_token)
         self.webhook_token_input.setVisible(show_token)
 
-        # Show client auth header field only for forward
-        show_client_auth = auth_type == "forward"
-        self.client_auth_label.setVisible(show_client_auth)
-        self.webhook_client_auth_input.setVisible(show_client_auth)
+        # Show the custom header-name field only for header auth
+        show_auth_header = auth_type == "header"
+        self.auth_header_label.setVisible(show_auth_header)
+        self.webhook_auth_header_input.setVisible(show_auth_header)
 
     def _browse_file(self) -> None:
         """Open file dialog for output file path."""
@@ -320,7 +320,7 @@ class OutputHandlerDialog(QDialog):
             self.webhook_url_input.setText(handler.url or "")
             self.webhook_auth_type_input.setCurrentText(handler.auth_type or "null")
             self.webhook_token_input.setText(handler.token or "")
-            self.webhook_client_auth_input.setText(handler.client_auth_header or "")
+            self.webhook_auth_header_input.setText(handler.auth_header or "")
         elif isinstance(handler, SheetsHandlerSettings):
             self.creds_path_input.setText(handler.creds_path or "")
             self.spreadsheet_url_input.setText(handler.spreadsheet_url or "")
@@ -474,7 +474,7 @@ class OutputHandlerDialog(QDialog):
                 url=self.webhook_url_input.text() or "https://example.com/webhook",
                 auth_type=webhook_auth_type,
                 token=self.webhook_token_input.text() or None,
-                client_auth_header=self.webhook_client_auth_input.text() or None,
+                auth_header=self.webhook_auth_header_input.text() or None,
             )
             if not name:
                 name = "Webhook"

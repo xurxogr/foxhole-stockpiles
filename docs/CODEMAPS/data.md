@@ -65,7 +65,7 @@ The external `fs-ocr` exposes `StockpileScanner`, `ScanConfig`,
 | `OutputFormat` | JSON, CSV, TSV |
 | `OutputDestination` | return, file, webhook, console, **sheets** |
 | `OutputHandlerType` | return, file, webhook, console, **google sheets** |
-| `AuthType` | basic, bearer, forward — now only for the **webhook output handler** (forward = pass a client header through) |
+| `AuthType` | basic, bearer, header — now only for the **webhook output handler** (header = put the configured token in a user-chosen header) |
 | `SavMode` | manual (hotkey scans once), monitor (poll `.sav` + emit changes) |
 
 ## Configuration (`core/settings/`)
@@ -99,7 +99,7 @@ the `fs_tools` candidate inspector, not the runtime.
 ### OutputSettings (`sections/output/`)
 `OutputSettings.handlers: list[OutputHandlerConfig]`; per-handler models:
 `console_handler.py`, `file_handler.py`, `webhook_handler.py` (`auth_type` +
-`token`/`client_auth_header`), `return_handler.py`, **`sheets_handler.py`**
+`token`/`auth_header`), `return_handler.py`, **`sheets_handler.py`**
 (`creds_path`, `spreadsheet_url`, `sheet_id`, `start_cell`, `row_format`), plus
 format models `json_format.py`, `csv_format.py`. `handler_config.py` is the
 discriminated-union wrapper.
