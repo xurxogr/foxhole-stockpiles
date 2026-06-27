@@ -7,6 +7,7 @@ the configured output handlers.
 """
 
 import logging
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 
@@ -62,18 +63,19 @@ class CapturePanel(QWidget):
         """
         super().__init__(parent)
         self.capturing = False
-        self._hotkey_listener: HotkeyListener | None = None
         self._scan_service: LocalScanService | None = None
         self._capture_busy = False
         self._scan_workers: list[LocalScanWorker] = []
+        # One listener dispatches every configured hotkey method (OCR / manual
+        # SAV / manual clipboard) — a single OS keyboard hook, not one per method.
+        self._hotkey_listener: HotkeyListener | None = None
         # Global hotkeys don't work in every environment (e.g. WSL); when
-        # unavailable, the hotkey-driven capture buttons are disabled.
+        # unavailable, the hotkey-driven methods are disabled.
         self._hotkeys_available = global_hotkeys_supported()
 
         # SAV processing state
         self._sav_mode: SavMode = SavMode.MANUAL
         self._sav_scan_worker: SavScanWorker | None = None
-        self._sav_hotkey_listener: HotkeyListener | None = None
         self._sav_listening = False
         self._sav_monitor_worker: SavMonitorWorker | None = None
         self._sav_monitoring = False
@@ -82,7 +84,6 @@ class CapturePanel(QWidget):
         self._clip_mode: ClipMode = ClipMode.MANUAL
         self._clip_service: ClipboardScanService | None = None
         self._clip_scan_worker: ClipboardScanWorker | None = None
-        self._clip_hotkey_listener: HotkeyListener | None = None
         self._clip_listening = False
         self._clip_monitor_worker: ClipboardMonitorWorker | None = None
         self._clip_monitoring = False
@@ -119,18 +120,13 @@ class CapturePanel(QWidget):
         self._stop_all_workers()
 
     def _stop_all_workers(self) -> None:
-        """Stop capture, hotkey listener and SAV workers; wait for completion."""
+        """Stop the hotkey listener and all SAV/clipboard workers; wait for them."""
         if self._hotkey_listener is not None:
             self._hotkey_listener.stop()
             self._hotkey_listener = None
-
-        if self._sav_hotkey_listener is not None:
-            self._sav_hotkey_listener.stop()
-            self._sav_hotkey_listener = None
-
-        if self._clip_hotkey_listener is not None:
-            self._clip_hotkey_listener.stop()
-            self._clip_hotkey_listener = None
+        self.capturing = False
+        self._sav_listening = False
+        self._clip_listening = False
 
         for worker in list(self._scan_workers):
             if worker.isRunning():
@@ -162,57 +158,44 @@ class CapturePanel(QWidget):
         """Initialize the user interface."""
         layout = QVBoxLayout(self)
 
-        # Top section: two fixed-height columns (SAV | Capture). Each shows a
-        # single row of controls; the capture column adds a DB-info line.
+        # Top section: a single control that enables/disables every configured
+        # input method at once, plus one read-only status group per method
+        # (OCR / SAV / Clipboard) showing its key, "monitoring", or that it is
+        # not configured.
         top_layout = QHBoxLayout()
 
-        # === Left side: SAV (hotkey-driven, mirrors the capture column) ===
-        self.sav_group = QGroupBox("")
-        self.sav_group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-        sav_layout = QVBoxLayout(self.sav_group)
+        # === Controls: the one button that governs all configured methods ===
+        self.controls_group = QGroupBox("")
+        self.controls_group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        controls_layout = QVBoxLayout(self.controls_group)
+        self.start_stop_button = QPushButton("")
+        self.start_stop_button.clicked.connect(self.toggle_all)
+        controls_layout.addWidget(self.start_stop_button)
+        top_layout.addWidget(self.controls_group, 1)
 
-        sav_buttons_layout = QHBoxLayout()
-        self.sav_button = QPushButton("")
-        self.sav_button.clicked.connect(self._on_sav_button_clicked)
-        sav_buttons_layout.addWidget(self.sav_button)
-        sav_buttons_layout.addStretch()
-        sav_layout.addLayout(sav_buttons_layout)
-
-        top_layout.addWidget(self.sav_group, 1)
-
-        # === Middle: Clipboard (hotkey-driven, mirrors the SAV column) ===
-        self.clip_group = QGroupBox("")
-        self.clip_group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-        clip_layout = QVBoxLayout(self.clip_group)
-
-        clip_buttons_layout = QHBoxLayout()
-        self.clip_button = QPushButton("")
-        self.clip_button.clicked.connect(self._on_clip_button_clicked)
-        clip_buttons_layout.addWidget(self.clip_button)
-        clip_buttons_layout.addStretch()
-        clip_layout.addLayout(clip_buttons_layout)
-
-        top_layout.addWidget(self.clip_group, 1)
-
-        # === Right side: Capture ===
+        # === OCR (screenshot) status ===
         self.capture_group = QGroupBox("")
         self.capture_group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         capture_layout = QVBoxLayout(self.capture_group)
-
-        capture_control_layout = QHBoxLayout()
-        self.start_stop_button = QPushButton("")
-        self.start_stop_button.clicked.connect(self.toggle_capture)
-        capture_control_layout.addWidget(self.start_stop_button)
-        capture_control_layout.addStretch()
-
-        # DB info on the same row as the capture button (right-aligned).
-        self.db_info_text = QLabel("")
-        self.db_info_text.setStyleSheet("QLabel { font-size: 11px; color: #888; }")
-        capture_control_layout.addWidget(self.db_info_text)
-
-        capture_layout.addLayout(capture_control_layout)
-
+        self.ocr_status = QLabel("")
+        capture_layout.addWidget(self.ocr_status)
         top_layout.addWidget(self.capture_group, 1)
+
+        # === SAV status ===
+        self.sav_group = QGroupBox("")
+        self.sav_group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        sav_layout = QVBoxLayout(self.sav_group)
+        self.sav_status = QLabel("")
+        sav_layout.addWidget(self.sav_status)
+        top_layout.addWidget(self.sav_group, 1)
+
+        # === Clipboard status ===
+        self.clip_group = QGroupBox("")
+        self.clip_group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        clip_layout = QVBoxLayout(self.clip_group)
+        self.clip_status = QLabel("")
+        clip_layout.addWidget(self.clip_status)
+        top_layout.addWidget(self.clip_group, 1)
 
         layout.addLayout(top_layout)
 
@@ -256,57 +239,199 @@ class CapturePanel(QWidget):
         self._apply_clip_mode()
         self._maybe_prompt_setup()
 
-    def _update_button_states(self) -> None:
-        """Enable each capture button only when its required settings are present.
+    def _is_active(self) -> bool:
+        """Return whether any input method is currently running.
 
-        Screenshot capture needs a valid template database and a capture
-        hotkey; SAV needs a hotkey (manual mode) or an available .sav file
-        (monitor mode). A button stays enabled while its action is running so
-        it can still be stopped. The DB-in-use label shows the configured
-        database when valid, and is blank otherwise.
+        Returns:
+            bool: True if a hotkey listener or monitor is active.
+        """
+        return (
+            self.capturing
+            or self._sav_listening
+            or self._sav_monitoring
+            or self._clip_listening
+            or self._clip_monitoring
+        )
+
+    def _ocr_status_text(self, settings: AppSettings) -> str:
+        """Return the OCR (screenshot) status: its key, unavailable, or unset.
+
+        Args:
+            settings (AppSettings): The settings to read the OCR config from.
+
+        Returns:
+            str: The hotkey, an "unavailable" notice, or "not configured".
+        """
+        db_path = settings.scanner.database_path
+        db_valid = db_path is not None and db_path.exists()
+        if db_valid and settings.scanner.capture_key:
+            if self._hotkeys_available:
+                return settings.scanner.capture_key
+            return t("server_panel.status_unavailable")
+        return t("server_panel.status_not_configured")
+
+    def _sav_status_text(self, settings: AppSettings) -> str:
+        """Return the SAV status: "monitoring", its key, unavailable, or unset.
+
+        Args:
+            settings (AppSettings): The settings to read the SAV config from.
+
+        Returns:
+            str: The configured-state descriptor for the SAV method.
+        """
+        if self._sav_mode == SavMode.MONITOR:
+            if self._sav_file_available(settings):
+                return t("server_panel.status_monitoring")
+            return t("server_panel.status_not_configured")
+        key = settings.sav_processing.sav_capture_key
+        if key:
+            return key if self._hotkeys_available else t("server_panel.status_unavailable")
+        return t("server_panel.status_not_configured")
+
+    def _clip_status_text(self, settings: AppSettings) -> str:
+        """Return the clipboard status: "monitoring", its key, unavailable, or unset.
+
+        Args:
+            settings (AppSettings): The settings to read the clipboard config from.
+
+        Returns:
+            str: The configured-state descriptor for the clipboard method.
+        """
+        if not self._catalog_available(settings):
+            return t("server_panel.status_not_configured")
+        if self._clip_mode == ClipMode.MONITOR:
+            return t("server_panel.status_monitoring")
+        key = settings.clipboard.clip_capture_key
+        if key:
+            return key if self._hotkeys_available else t("server_panel.status_unavailable")
+        return t("server_panel.status_not_configured")
+
+    def _refresh_controls(self) -> None:
+        """Refresh the per-method status labels and the single Start/Stop button.
+
+        The button is labelled for its next action (start vs stop) and enabled
+        when at least one method is usable or something is already running.
         """
         try:
+            settings: AppSettings | None = AppSettings()
+        except Exception:  # noqa: BLE001 - keep the UI responsive if settings fail
+            settings = None
+
+        if settings is not None:
+            self.ocr_status.setText(self._ocr_status_text(settings))
+            self.sav_status.setText(self._sav_status_text(settings))
+            self.clip_status.setText(self._clip_status_text(settings))
+            any_usable = self._any_method_usable(settings)
+        else:
+            unset = t("server_panel.status_not_configured")
+            self.ocr_status.setText(unset)
+            self.sav_status.setText(unset)
+            self.clip_status.setText(unset)
+            any_usable = False
+
+        active = self._is_active()
+        self.start_stop_button.setText(
+            t("server_panel.stop_all") if active else t("server_panel.start_all")
+        )
+        self.start_stop_button.setEnabled(any_usable or active)
+
+    def toggle_all(self) -> None:
+        """Enable or disable every configured input method with one action."""
+        if self._is_active():
+            self._stop_all()
+        else:
+            self._start_all()
+
+    def _start_all(self) -> None:
+        """Arm one hotkey listener for all key methods, then start any monitors."""
+        try:
             settings = AppSettings()
-        except Exception:
-            self.db_info_text.setText("")
-            self.start_stop_button.setEnabled(self.capturing)
-            self.sav_button.setEnabled(self._sav_listening or self._sav_monitoring)
-            self.clip_button.setEnabled(self._clip_listening or self._clip_monitoring)
+        except Exception as e:  # noqa: BLE001 - surface config errors in the log
+            logger.error("Cannot read settings to start capture: %s", e)
             return
+
+        # Collect the bindings for every configured key-driven method into one
+        # listener (a single OS hook), noting what to announce once it starts.
+        bindings: dict[str, Callable[[], None]] = {}
+        announce: list[tuple[str, str]] = []
 
         db_path = settings.scanner.database_path
         db_valid = db_path is not None and db_path.exists()
-        if db_valid and db_path is not None:
-            try:
-                display_path = str(db_path.relative_to(Path.cwd()))
-            except ValueError:
-                display_path = db_path.name
-            self.db_info_text.setText(f"Database: {display_path}")
-        else:
-            self.db_info_text.setText("")
+        if db_valid and settings.scanner.capture_key and self._hotkeys_available:
+            bindings[settings.scanner.capture_key] = self.capture_triggered.emit
+            announce.append(("ocr", settings.scanner.capture_key))
 
-        # Screenshot capture is hotkey-driven, so it also needs working hotkeys.
-        can_capture = db_valid and bool(settings.scanner.capture_key) and self._hotkeys_available
-        self.start_stop_button.setEnabled(can_capture or self.capturing)
+        if (
+            self._sav_mode == SavMode.MANUAL
+            and settings.sav_processing.sav_capture_key
+            and self._hotkeys_available
+        ):
+            bindings[settings.sav_processing.sav_capture_key] = self.sav_capture_triggered.emit
+            announce.append(("sav", settings.sav_processing.sav_capture_key))
 
-        if self._sav_mode == SavMode.MONITOR:
-            # Monitor auto-polls; it does not use a hotkey.
-            sav_ready = self._sav_file_available(settings)
-        else:
-            # Manual SAV scanning is hotkey-driven.
-            sav_ready = bool(settings.sav_processing.sav_capture_key) and self._hotkeys_available
-        self.sav_button.setEnabled(sav_ready or self._sav_listening or self._sav_monitoring)
-
-        # Clipboard scanning needs a catalog; monitor auto-polls, manual is
-        # hotkey-driven.
         catalog_ok = self._catalog_available(settings)
-        if self._clip_mode == ClipMode.MONITOR:
-            clip_ready = catalog_ok
-        else:
-            clip_ready = (
-                catalog_ok and bool(settings.clipboard.clip_capture_key) and self._hotkeys_available
-            )
-        self.clip_button.setEnabled(clip_ready or self._clip_listening or self._clip_monitoring)
+        if (
+            self._clip_mode == ClipMode.MANUAL
+            and catalog_ok
+            and settings.clipboard.clip_capture_key
+            and self._hotkeys_available
+        ):
+            bindings[settings.clipboard.clip_capture_key] = self.clip_capture_triggered.emit
+            announce.append(("clip", settings.clipboard.clip_capture_key))
+
+        if bindings:
+            try:
+                self._hotkey_listener = HotkeyListener(bindings)
+                self._hotkey_listener.start()
+            except (RuntimeError, ValueError) as e:
+                logger.error("Could not start hotkey listener: %s", e)
+                self._hotkey_listener = None
+                announce = []
+
+        for kind, key in announce:
+            if kind == "ocr":
+                self.capturing = True
+                logger.info("Capture armed (hotkey: %s)", key)
+                self._feed(t("activity.capture_started", hotkey=key))
+            elif kind == "sav":
+                self._sav_listening = True
+                logger.info("SAV hotkey armed (hotkey: %s)", key)
+                self._feed(t("activity.sav_capture_started", hotkey=key))
+            else:
+                self._clip_listening = True
+                logger.info("Clipboard hotkey armed (hotkey: %s)", key)
+                self._feed(t("activity.clip_capture_started", hotkey=key))
+
+        # Monitors are independent pollers, not hotkey listeners.
+        if self._sav_mode == SavMode.MONITOR and self._sav_file_available(settings):
+            self.start_sav_monitor()
+        if self._clip_mode == ClipMode.MONITOR and catalog_ok:
+            self.start_clip_monitor()
+
+        self._refresh_controls()
+
+    def _stop_all(self) -> None:
+        """Stop the shared hotkey listener and any running monitors."""
+        if self._hotkey_listener is not None:
+            self._hotkey_listener.stop()
+            self._hotkey_listener = None
+
+        if self.capturing:
+            self.capturing = False
+            self._feed(t("activity.capture_stopped"))
+        if self._sav_listening:
+            self._sav_listening = False
+            self._feed(t("activity.sav_capture_stopped"))
+        if self._clip_listening:
+            self._clip_listening = False
+            self._feed(t("activity.clip_capture_stopped"))
+
+        if self._sav_monitoring:
+            self.stop_sav_monitor()
+        if self._clip_monitoring:
+            self.stop_clip_monitor()
+
+        self._refresh_controls()
 
     @staticmethod
     def _catalog_available(settings: AppSettings) -> bool:
@@ -407,7 +532,7 @@ class CapturePanel(QWidget):
     def _any_method_usable(self, settings: AppSettings) -> bool:
         """Return whether at least one input method is ready to run.
 
-        Mirrors the per-button readiness checks in `_update_button_states`.
+        Mirrors the per-method readiness checks used for the status labels.
 
         Args:
             settings (AppSettings): The settings to evaluate.
@@ -461,59 +586,6 @@ class CapturePanel(QWidget):
             self._get_started_shown = True
 
     # ==================== Capture ====================
-
-    def toggle_capture(self) -> None:
-        """Toggle screenshot capture on/off."""
-        if self.capturing:
-            self.stop_capture()
-        else:
-            self.start_capture()
-
-    def start_capture(self) -> None:
-        """Start listening for the capture hotkey."""
-        settings = AppSettings()
-        key = settings.scanner.capture_key
-        if not key:
-            QMessageBox.warning(
-                self,
-                t("server_panel.capture_group_title"),
-                t("server_panel.capture_no_key"),
-            )
-            return
-
-        # Ensure the scanner can be built before we start listening.
-        if self._get_scan_service() is None:
-            QMessageBox.warning(
-                self,
-                t("server_panel.capture_group_title"),
-                t("server_panel.errors.cannot_scan"),
-            )
-            return
-
-        try:
-            self._hotkey_listener = HotkeyListener(key, self.capture_triggered.emit)
-            self._hotkey_listener.start()
-        except (RuntimeError, ValueError) as e:
-            logger.error("Could not start capture: %s", e)
-            QMessageBox.warning(self, t("server_panel.capture_group_title"), str(e))
-            self._hotkey_listener = None
-            return
-
-        self.capturing = True
-        self.start_stop_button.setText(t("server_panel.stop_capture"))
-        logger.info("Capture started (hotkey: %s)", key)
-        self._feed(t("activity.capture_started", hotkey=key))
-
-    def stop_capture(self) -> None:
-        """Stop listening for the capture hotkey."""
-        if self._hotkey_listener is not None:
-            self._hotkey_listener.stop()
-            self._hotkey_listener = None
-
-        self.capturing = False
-        self.start_stop_button.setText(t("server_panel.start_capture"))
-        logger.info("Capture stopped")
-        self._feed(t("activity.capture_stopped"))
 
     def _on_capture_triggered(self) -> None:
         """Capture the Foxhole window and scan it (runs on the GUI thread)."""
@@ -609,17 +681,13 @@ class CapturePanel(QWidget):
 
     def retranslate(self) -> None:
         """Update all translatable strings."""
+        self.controls_group.setTitle(t("server_panel.controls_group_title"))
+        self.capture_group.setTitle(t("server_panel.capture_group_title"))
         self.sav_group.setTitle(t("server_panel.sav_group_title"))
         self.clip_group.setTitle(t("server_panel.clip_group_title"))
-        self.capture_group.setTitle(t("server_panel.capture_group_title"))
 
-        if self.capturing:
-            self.start_stop_button.setText(t("server_panel.stop_capture"))
-        else:
-            self.start_stop_button.setText(t("server_panel.start_capture"))
-
-        self._update_sav_button_text()
-        self._update_clip_button_text()
+        # The button label and per-method status strings are translatable.
+        self._refresh_controls()
 
         self.activity_feed.setPlaceholderText(t("activity.feed_placeholder"))
         self.clear_logs_button.setText(t("common.clear_logs"))
@@ -692,22 +760,6 @@ class CapturePanel(QWidget):
         self._sav_scan_worker.finished.connect(self._on_sav_scan_finished)
         self._sav_scan_worker.start()
 
-    def _update_sav_button_text(self) -> None:
-        """Set the SAV button label based on the mode and active state."""
-        if self._sav_mode == SavMode.MONITOR:
-            key = (
-                "server_panel.stop_sav_monitor"
-                if self._sav_monitoring
-                else ("server_panel.start_sav_monitor")
-            )
-        else:
-            key = (
-                "server_panel.stop_sav_capture"
-                if self._sav_listening
-                else ("server_panel.start_sav_capture")
-            )
-        self.sav_button.setText(t(key))
-
     def _apply_sav_mode(self) -> None:
         """Read the configured SAV mode and reconfigure the SAV control.
 
@@ -721,66 +773,12 @@ class CapturePanel(QWidget):
             mode = SavMode.MANUAL
 
         if mode != self._sav_mode:
-            # Stop whatever the previous mode had running before switching.
-            if self._sav_listening:
-                self.stop_sav_listen()
-            if self._sav_monitoring:
-                self.stop_sav_monitor()
+            # Stop everything before switching so no stale pipeline lingers.
+            if self._is_active():
+                self._stop_all()
             self._sav_mode = mode
 
-        self._update_sav_button_text()
-        self._update_button_states()
-
-    def _on_sav_button_clicked(self) -> None:
-        """Dispatch the SAV button to the action for the current mode."""
-        if self._sav_mode == SavMode.MONITOR:
-            self.toggle_sav_monitor()
-        else:
-            self.toggle_sav_listen()
-
-    def toggle_sav_listen(self) -> None:
-        """Toggle listening for the SAV hotkey on/off (manual mode)."""
-        if self._sav_listening:
-            self.stop_sav_listen()
-        else:
-            self.start_sav_listen()
-
-    def start_sav_listen(self) -> None:
-        """Start listening for the SAV hotkey (presses scan the .sav once)."""
-        settings = AppSettings()
-        key = settings.sav_processing.sav_capture_key
-        if not key:
-            QMessageBox.warning(
-                self,
-                t("server_panel.sav.error_title"),
-                t("server_panel.sav_no_key"),
-            )
-            return
-
-        try:
-            self._sav_hotkey_listener = HotkeyListener(key, self.sav_capture_triggered.emit)
-            self._sav_hotkey_listener.start()
-        except (RuntimeError, ValueError) as e:
-            logger.error("Could not start SAV listening: %s", e)
-            QMessageBox.warning(self, t("server_panel.sav.error_title"), str(e))
-            self._sav_hotkey_listener = None
-            return
-
-        self._sav_listening = True
-        self._update_sav_button_text()
-        logger.info("SAV hotkey listening started (hotkey: %s)", key)
-        self._feed(t("activity.sav_capture_started", hotkey=key))
-
-    def stop_sav_listen(self) -> None:
-        """Stop listening for the SAV hotkey."""
-        if self._sav_hotkey_listener is not None:
-            self._sav_hotkey_listener.stop()
-            self._sav_hotkey_listener = None
-
-        self._sav_listening = False
-        self._update_sav_button_text()
-        logger.info("SAV hotkey listening stopped")
-        self._feed(t("activity.sav_capture_stopped"))
+        self._refresh_controls()
 
     def toggle_sav_monitor(self) -> None:
         """Toggle SAV file monitoring on/off (monitor mode)."""
@@ -816,7 +814,7 @@ class CapturePanel(QWidget):
 
         logger.info("Starting SAV monitor: %s (poll: %ss)", sav_path, poll_interval)
         self._sav_monitoring = True
-        self._update_sav_button_text()
+        self._refresh_controls()
         self._feed(t("activity.sav_monitor_started"))
 
         self._sav_monitor_worker = SavMonitorWorker(sav_path, output_coordinator, poll_interval)
@@ -832,7 +830,7 @@ class CapturePanel(QWidget):
             self._sav_monitor_worker.stop()
 
         self._sav_monitoring = False
-        self._update_sav_button_text()
+        self._refresh_controls()
         self._feed(t("activity.sav_monitor_stopped"))
 
     def _on_sav_monitor_finished(self, success: bool) -> None:
@@ -843,7 +841,7 @@ class CapturePanel(QWidget):
         """
         if self.sender() is self._sav_monitor_worker:
             self._sav_monitoring = False
-            self._update_sav_button_text()
+            self._refresh_controls()
             self._sav_monitor_worker = None
 
     def _on_sav_error(self, error_msg: str) -> None:
@@ -894,22 +892,6 @@ class CapturePanel(QWidget):
             return None
         return self._clip_service
 
-    def _update_clip_button_text(self) -> None:
-        """Set the clipboard button label based on the mode and active state."""
-        if self._clip_mode == ClipMode.MONITOR:
-            key = (
-                "server_panel.stop_clip_monitor"
-                if self._clip_monitoring
-                else "server_panel.start_clip_monitor"
-            )
-        else:
-            key = (
-                "server_panel.stop_clip_capture"
-                if self._clip_listening
-                else "server_panel.start_clip_capture"
-            )
-        self.clip_button.setText(t(key))
-
     def _apply_clip_mode(self) -> None:
         """Read the configured clipboard mode and reconfigure the control.
 
@@ -923,74 +905,12 @@ class CapturePanel(QWidget):
             mode = ClipMode.MANUAL
 
         if mode != self._clip_mode:
-            if self._clip_listening:
-                self.stop_clip_listen()
-            if self._clip_monitoring:
-                self.stop_clip_monitor()
+            # Stop everything before switching so no stale pipeline lingers.
+            if self._is_active():
+                self._stop_all()
             self._clip_mode = mode
 
-        self._update_clip_button_text()
-        self._update_button_states()
-
-    def _on_clip_button_clicked(self) -> None:
-        """Dispatch the clipboard button to the action for the current mode."""
-        if self._clip_mode == ClipMode.MONITOR:
-            self.toggle_clip_monitor()
-        else:
-            self.toggle_clip_listen()
-
-    def toggle_clip_listen(self) -> None:
-        """Toggle listening for the clipboard hotkey on/off (manual mode)."""
-        if self._clip_listening:
-            self.stop_clip_listen()
-        else:
-            self.start_clip_listen()
-
-    def start_clip_listen(self) -> None:
-        """Start listening for the clipboard hotkey (presses read the clipboard)."""
-        settings = AppSettings()
-        key = settings.clipboard.clip_capture_key
-        if not key:
-            QMessageBox.warning(
-                self,
-                t("server_panel.clip.error_title"),
-                t("server_panel.clip_no_key"),
-            )
-            return
-
-        # Ensure the clipboard scanner can be built before we start listening.
-        if self._get_clip_service() is None:
-            QMessageBox.warning(
-                self,
-                t("server_panel.clip.error_title"),
-                t("server_panel.clip.error_no_catalog"),
-            )
-            return
-
-        try:
-            self._clip_hotkey_listener = HotkeyListener(key, self.clip_capture_triggered.emit)
-            self._clip_hotkey_listener.start()
-        except (RuntimeError, ValueError) as e:
-            logger.error("Could not start clipboard listening: %s", e)
-            QMessageBox.warning(self, t("server_panel.clip.error_title"), str(e))
-            self._clip_hotkey_listener = None
-            return
-
-        self._clip_listening = True
-        self._update_clip_button_text()
-        logger.info("Clipboard hotkey listening started (hotkey: %s)", key)
-        self._feed(t("activity.clip_capture_started", hotkey=key))
-
-    def stop_clip_listen(self) -> None:
-        """Stop listening for the clipboard hotkey."""
-        if self._clip_hotkey_listener is not None:
-            self._clip_hotkey_listener.stop()
-            self._clip_hotkey_listener = None
-
-        self._clip_listening = False
-        self._update_clip_button_text()
-        logger.info("Clipboard hotkey listening stopped")
-        self._feed(t("activity.clip_capture_stopped"))
+        self._refresh_controls()
 
     def _on_clip_capture_triggered(self) -> None:
         """Read and scan the clipboard once when the hotkey fires (GUI thread)."""
@@ -1043,7 +963,7 @@ class CapturePanel(QWidget):
 
         logger.info("Starting clipboard monitor (poll: %ss)", poll_interval)
         self._clip_monitoring = True
-        self._update_clip_button_text()
+        self._refresh_controls()
         self._feed(t("activity.clip_monitor_started"))
 
         self._clip_monitor_worker = ClipboardMonitorWorker(service, poll_interval)
@@ -1059,7 +979,7 @@ class CapturePanel(QWidget):
             self._clip_monitor_worker.stop()
 
         self._clip_monitoring = False
-        self._update_clip_button_text()
+        self._refresh_controls()
         self._feed(t("activity.clip_monitor_stopped"))
 
     def _on_clip_monitor_finished(self, success: bool) -> None:
@@ -1070,7 +990,7 @@ class CapturePanel(QWidget):
         """
         if self.sender() is self._clip_monitor_worker:
             self._clip_monitoring = False
-            self._update_clip_button_text()
+            self._refresh_controls()
             self._clip_monitor_worker = None
 
     def _on_clip_stockpile_found(self, stockpile: Stockpile | None) -> None:

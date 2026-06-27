@@ -78,6 +78,12 @@
     "feature_capture": "Capturar y escanear capturas de almacenes localmente"
   },
   "server_panel": {
+    "controls_group_title": "Controles",
+    "start_all": "Iniciar captura y monitorización",
+    "stop_all": "Detener captura y monitorización",
+    "status_not_configured": "no configurado",
+    "status_monitoring": "monitorizando",
+    "status_unavailable": "sin atajos globales",
     "sav_group_title": "Procesamiento SAV",
     "select_screenshot": "Seleccionar captura para escanear",
     "errors": {
@@ -91,19 +97,9 @@
       "error_output": "Error al crear coordinador de salida: {error}"
     },
     "capture_group_title": "Captura",
-    "start_capture": "Iniciar captura de pantalla",
-    "stop_capture": "Detener captura de pantalla",
     "capture_no_key": "Configure primero una tecla de captura en los Ajustes.",
     "sav_no_key": "Configure primero una tecla de SAV en los Ajustes.",
-    "start_sav_capture": "Iniciar captura SAV",
-    "stop_sav_capture": "Detener captura SAV",
-    "start_sav_monitor": "Iniciar monitor SAV",
-    "stop_sav_monitor": "Detener monitor SAV",
     "clip_group_title": "Portapapeles",
-    "start_clip_capture": "Iniciar captura del portapapeles",
-    "stop_clip_capture": "Detener captura del portapapeles",
-    "start_clip_monitor": "Iniciar monitor del portapapeles",
-    "stop_clip_monitor": "Detener monitor del portapapeles",
     "clip_no_key": "Configura primero un atajo del portapapeles en Ajustes.",
     "clip": {
       "error_title": "Error de procesamiento del portapapeles",
@@ -176,7 +172,6 @@
     "capture_hotkey_tooltip": "Tecla global que captura la ventana de Foxhole y la escanea.",
     "capture_hotkey_placeholder": "Sin tecla asignada",
     "capture_change": "Cambiar",
-    "capture_clear": "Borrar",
     "press_key_title": "Pulse una tecla",
     "press_key_prompt": "Pulse la tecla que se usará para la captura (Esc para cancelar).",
     "early_exit": "Umbral de salida temprana:",

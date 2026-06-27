@@ -78,6 +78,12 @@
     "feature_capture": "Capture and scan stockpile screenshots locally"
   },
   "server_panel": {
+    "controls_group_title": "Controls",
+    "start_all": "Start capture & monitoring",
+    "stop_all": "Stop capture & monitoring",
+    "status_not_configured": "not configured",
+    "status_monitoring": "monitoring",
+    "status_unavailable": "no global hotkeys",
     "sav_group_title": "SAV Processing",
     "select_screenshot": "Select Screenshot to Scan",
     "errors": {
@@ -91,19 +97,9 @@
       "error_output": "Failed to create output coordinator: {error}"
     },
     "capture_group_title": "Capture",
-    "start_capture": "Start Screenshot Capture",
-    "stop_capture": "Stop Screenshot Capture",
     "capture_no_key": "Configure a capture hotkey in Settings first.",
     "sav_no_key": "Configure a SAV hotkey in Settings first.",
-    "start_sav_capture": "Start SAV Capture",
-    "stop_sav_capture": "Stop SAV Capture",
-    "start_sav_monitor": "Start SAV Monitor",
-    "stop_sav_monitor": "Stop SAV Monitor",
     "clip_group_title": "Clipboard",
-    "start_clip_capture": "Start Clipboard Capture",
-    "stop_clip_capture": "Stop Clipboard Capture",
-    "start_clip_monitor": "Start Clipboard Monitor",
-    "stop_clip_monitor": "Stop Clipboard Monitor",
     "clip_no_key": "Configure a clipboard hotkey in Settings first.",
     "clip": {
       "error_title": "Clipboard Processing Error",
@@ -176,7 +172,6 @@
     "capture_hotkey_tooltip": "Global hotkey that captures the Foxhole window and scans it.",
     "capture_hotkey_placeholder": "No key set",
     "capture_change": "Change",
-    "capture_clear": "Clear",
     "press_key_title": "Press a key",
     "press_key_prompt": "Press the key to use for capture (Esc to cancel).",
     "early_exit": "Early Exit Threshold:",

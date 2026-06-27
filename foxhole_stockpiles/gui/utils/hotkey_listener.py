@@ -75,22 +75,33 @@ def to_global_hotkey(key: str) -> str:
 
 
 class HotkeyListener:
-    """Start and stop a single global hotkey binding."""
+    """Start and stop one global listener that dispatches several hotkeys.
 
-    def __init__(self, key: str, callback: Callable[[], None]) -> None:
-        """Initialize the listener.
+    A single ``pynput.keyboard.GlobalHotKeys`` instance registers every binding
+    and routes each key press to its own callback, so the application needs just
+    one OS-level keyboard hook regardless of how many methods use a hotkey.
+    """
+
+    def __init__(self, bindings: dict[str, Callable[[], None]]) -> None:
+        """Initialize the listener from a mapping of key specs to callbacks.
 
         Args:
-            key (str): The configured key spec (e.g. ``"F9"``).
-            callback (Callable[[], None]): Called (from the listener thread) when
-                the hotkey fires.
+            bindings (dict[str, Callable[[], None]]): Maps each key spec (e.g.
+                ``"F9"``) to the callback invoked (from the listener thread) when
+                that hotkey fires.
+
+        Raises:
+            ValueError: If ``bindings`` is empty or a key spec is empty.
         """
-        self._hotkey = to_global_hotkey(key)
-        self._callback = callback
+        if not bindings:
+            raise ValueError("At least one hotkey binding is required")
+        self._bindings: dict[str, Callable[[], None]] = {
+            to_global_hotkey(key): callback for key, callback in bindings.items()
+        }
         self._listener: Any = None
 
     def start(self) -> None:
-        """Begin listening for the hotkey.
+        """Begin listening for all bound hotkeys.
 
         Raises:
             RuntimeError: If the ``pynput`` backend cannot be loaded.
@@ -100,12 +111,12 @@ class HotkeyListener:
         except Exception as exc:  # ImportError or platform load failure
             raise RuntimeError("Global hotkeys are not available on this platform.") from exc
 
-        self._listener = keyboard.GlobalHotKeys({self._hotkey: self._callback})
+        self._listener = keyboard.GlobalHotKeys(self._bindings)
         self._listener.start()
-        logger.debug("Hotkey listener started for %s", self._hotkey)
+        logger.debug("Hotkey listener started for %s", ", ".join(self._bindings))
 
     def stop(self) -> None:
-        """Stop listening for the hotkey (no-op if not started)."""
+        """Stop listening for the hotkeys (no-op if not started)."""
         if self._listener is not None:
             self._listener.stop()
             self._listener = None

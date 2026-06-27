@@ -78,6 +78,12 @@
     "feature_capture": "Capturer et scanner les captures d'écran de stocks en local"
   },
   "server_panel": {
+    "controls_group_title": "Contrôles",
+    "start_all": "Démarrer capture et surveillance",
+    "stop_all": "Arrêter capture et surveillance",
+    "status_not_configured": "non configuré",
+    "status_monitoring": "surveillance",
+    "status_unavailable": "pas de raccourcis globaux",
     "sav_group_title": "Traitement SAV",
     "select_screenshot": "Sélectionner une capture à scanner",
     "errors": {
@@ -91,19 +97,9 @@
       "error_output": "Échec de la création du coordinateur de sortie : {error}"
     },
     "capture_group_title": "Capture",
-    "start_capture": "Démarrer la capture d'écran",
-    "stop_capture": "Arrêter la capture d'écran",
     "capture_no_key": "Configurez d'abord un raccourci de capture dans les Paramètres.",
     "sav_no_key": "Configurez d'abord un raccourci SAV dans les Paramètres.",
-    "start_sav_capture": "Démarrer la capture SAV",
-    "stop_sav_capture": "Arrêter la capture SAV",
-    "start_sav_monitor": "Démarrer la surveillance SAV",
-    "stop_sav_monitor": "Arrêter la surveillance SAV",
     "clip_group_title": "Presse-papiers",
-    "start_clip_capture": "Démarrer la capture du presse-papiers",
-    "stop_clip_capture": "Arrêter la capture du presse-papiers",
-    "start_clip_monitor": "Démarrer la surveillance du presse-papiers",
-    "stop_clip_monitor": "Arrêter la surveillance du presse-papiers",
     "clip_no_key": "Configurez d'abord un raccourci du presse-papiers dans les Paramètres.",
     "clip": {
       "error_title": "Erreur de traitement du presse-papiers",
@@ -176,7 +172,6 @@
     "capture_hotkey_tooltip": "Raccourci clavier global qui capture la fenêtre de Foxhole et la scanne.",
     "capture_hotkey_placeholder": "Aucune touche définie",
     "capture_change": "Modifier",
-    "capture_clear": "Effacer",
     "press_key_title": "Appuyez sur une touche",
     "press_key_prompt": "Appuyez sur la touche à utiliser pour la capture (Échap pour annuler).",
     "early_exit": "Seuil sortie anticipée :",

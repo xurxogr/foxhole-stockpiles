@@ -136,7 +136,7 @@ class ScannerTab(QWidget):
         self.capture_key_label.setToolTip(t("scanner_tab.capture_hotkey_tooltip"))
         self.capture_key_display.setPlaceholderText(t("scanner_tab.capture_hotkey_placeholder"))
         self.capture_key_change.setText(t("scanner_tab.capture_change"))
-        self.capture_key_clear.setText(t("scanner_tab.capture_clear"))
+        self.capture_key_clear.setText(t("common.clear"))
 
         # Early Exit Threshold
         self.early_exit_label.setText(t("scanner_tab.early_exit"))

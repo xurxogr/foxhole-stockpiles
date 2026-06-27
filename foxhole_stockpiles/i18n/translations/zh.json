@@ -78,6 +78,12 @@
     "feature_capture": "在本地捕获并扫描仓库截图"
   },
   "server_panel": {
+    "controls_group_title": "控制",
+    "start_all": "开始捕获和监视",
+    "stop_all": "停止捕获和监视",
+    "status_not_configured": "未配置",
+    "status_monitoring": "监视中",
+    "status_unavailable": "无全局热键",
     "sav_group_title": "SAV 处理",
     "select_screenshot": "选择要扫描的截图",
     "errors": {
@@ -91,19 +97,9 @@
       "error_output": "创建输出协调器失败：{error}"
     },
     "capture_group_title": "捕获",
-    "start_capture": "开始截图捕获",
-    "stop_capture": "停止截图捕获",
     "capture_no_key": "请先在设置中配置捕获快捷键。",
     "sav_no_key": "请先在设置中配置 SAV 快捷键。",
-    "start_sav_capture": "开始 SAV 捕获",
-    "stop_sav_capture": "停止 SAV 捕获",
-    "start_sav_monitor": "开始 SAV 监控",
-    "stop_sav_monitor": "停止 SAV 监控",
     "clip_group_title": "剪贴板",
-    "start_clip_capture": "开始剪贴板捕获",
-    "stop_clip_capture": "停止剪贴板捕获",
-    "start_clip_monitor": "开始剪贴板监控",
-    "stop_clip_monitor": "停止剪贴板监控",
     "clip_no_key": "请先在设置中配置剪贴板快捷键。",
     "clip": {
       "error_title": "剪贴板处理错误",
@@ -176,7 +172,6 @@
     "capture_hotkey_tooltip": "捕获 Foxhole 窗口并进行扫描的全局快捷键。",
     "capture_hotkey_placeholder": "未设置按键",
     "capture_change": "更改",
-    "capture_clear": "清除",
     "press_key_title": "按下一个键",
     "press_key_prompt": "按下用于捕获的键（按 Esc 取消）。",
     "early_exit": "提前退出阈值：",

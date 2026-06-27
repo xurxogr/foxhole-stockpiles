@@ -78,6 +78,12 @@
     "feature_capture": "Capturar e digitalizar capturas de armazéns localmente"
   },
   "server_panel": {
+    "controls_group_title": "Controlos",
+    "start_all": "Iniciar captura e monitorização",
+    "stop_all": "Parar captura e monitorização",
+    "status_not_configured": "não configurado",
+    "status_monitoring": "a monitorizar",
+    "status_unavailable": "sem atalhos globais",
     "sav_group_title": "Processamento SAV",
     "select_screenshot": "Selecionar captura para digitalizar",
     "errors": {
@@ -91,19 +97,9 @@
       "error_output": "Erro ao criar coordenador de saída: {error}"
     },
     "capture_group_title": "Captura",
-    "start_capture": "Iniciar captura de ecrã",
-    "stop_capture": "Parar captura de ecrã",
     "capture_no_key": "Configure primeiro uma tecla de captura nas Definições.",
     "sav_no_key": "Configure primeiro uma tecla de SAV nas Definições.",
-    "start_sav_capture": "Iniciar captura SAV",
-    "stop_sav_capture": "Parar captura SAV",
-    "start_sav_monitor": "Iniciar monitorização SAV",
-    "stop_sav_monitor": "Parar monitorização SAV",
     "clip_group_title": "Área de transferência",
-    "start_clip_capture": "Iniciar captura da área de transferência",
-    "stop_clip_capture": "Parar captura da área de transferência",
-    "start_clip_monitor": "Iniciar monitor da área de transferência",
-    "stop_clip_monitor": "Parar monitor da área de transferência",
     "clip_no_key": "Configure primeiro um atalho da área de transferência nas Configurações.",
     "clip": {
       "error_title": "Erro de processamento da área de transferência",
@@ -176,7 +172,6 @@
     "capture_hotkey_tooltip": "Tecla de atalho global que captura a janela do Foxhole e a digitaliza.",
     "capture_hotkey_placeholder": "Nenhuma tecla definida",
     "capture_change": "Alterar",
-    "capture_clear": "Limpar",
     "press_key_title": "Prima uma tecla",
     "press_key_prompt": "Prima a tecla a usar para a captura (Esc para cancelar).",
     "early_exit": "Limiar de saída antecipada:",

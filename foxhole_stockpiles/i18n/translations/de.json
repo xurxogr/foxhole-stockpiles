@@ -78,6 +78,12 @@
     "feature_capture": "Lager-Screenshots lokal aufnehmen und scannen"
   },
   "server_panel": {
+    "controls_group_title": "Steuerung",
+    "start_all": "Aufnahme & Überwachung starten",
+    "stop_all": "Aufnahme & Überwachung stoppen",
+    "status_not_configured": "nicht konfiguriert",
+    "status_monitoring": "Überwachung",
+    "status_unavailable": "keine globalen Tastenkürzel",
     "sav_group_title": "SAV Verarbeitung",
     "select_screenshot": "Screenshot zum Scannen auswählen",
     "errors": {
@@ -91,19 +97,9 @@
       "error_output": "Fehler beim Erstellen des Ausgabekoordinators: {error}"
     },
     "capture_group_title": "Aufnahme",
-    "start_capture": "Screenshot-Aufnahme starten",
-    "stop_capture": "Screenshot-Aufnahme stoppen",
     "capture_no_key": "Konfigurieren Sie zuerst ein Aufnahme-Tastenkürzel in den Einstellungen.",
     "sav_no_key": "Konfigurieren Sie zuerst ein SAV-Tastenkürzel in den Einstellungen.",
-    "start_sav_capture": "SAV-Aufnahme starten",
-    "stop_sav_capture": "SAV-Aufnahme stoppen",
-    "start_sav_monitor": "SAV-Überwachung starten",
-    "stop_sav_monitor": "SAV-Überwachung stoppen",
     "clip_group_title": "Zwischenablage",
-    "start_clip_capture": "Zwischenablage-Aufnahme starten",
-    "stop_clip_capture": "Zwischenablage-Aufnahme stoppen",
-    "start_clip_monitor": "Zwischenablage-Überwachung starten",
-    "stop_clip_monitor": "Zwischenablage-Überwachung stoppen",
     "clip_no_key": "Konfigurieren Sie zuerst ein Zwischenablage-Tastenkürzel in den Einstellungen.",
     "clip": {
       "error_title": "Fehler bei der Zwischenablage-Verarbeitung",
@@ -176,7 +172,6 @@
     "capture_hotkey_tooltip": "Globales Tastenkürzel, das das Foxhole-Fenster aufnimmt und scannt.",
     "capture_hotkey_placeholder": "Keine Taste festgelegt",
     "capture_change": "Ändern",
-    "capture_clear": "Löschen",
     "press_key_title": "Taste drücken",
     "press_key_prompt": "Drücken Sie die Taste für die Aufnahme (Esc zum Abbrechen).",
     "early_exit": "Vorzeitiger Abbruchschwellwert:",

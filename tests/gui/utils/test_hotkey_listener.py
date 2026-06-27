@@ -55,30 +55,38 @@ class TestGlobalHotkeysSupported:
 class TestHotkeyListener:
     """Listener lifecycle (start/stop) over a mocked pynput backend."""
 
-    def test_init_converts_key(self) -> None:
-        """The listener stores the converted hotkey spec."""
-        listener = HotkeyListener("ctrl+s", lambda: None)
-        assert listener._hotkey == "<ctrl>+s"
+    def test_init_converts_keys(self) -> None:
+        """The listener stores every converted hotkey spec."""
+        listener = HotkeyListener({"ctrl+s": lambda: None, "F9": lambda: None})
+        assert "<ctrl>+s" in listener._bindings
+        assert "<f9>" in listener._bindings
 
-    def test_start_registers_hotkey(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """start() registers the hotkey with the backend and starts it."""
+    def test_init_empty_raises(self) -> None:
+        """An empty bindings mapping raises ValueError."""
+        with pytest.raises(ValueError):
+            HotkeyListener({})
+
+    def test_start_registers_hotkeys(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """start() registers all bindings with the backend and starts it."""
         keyboard = _fake_pynput(monkeypatch)
-        listener = HotkeyListener("F9", lambda: None)
+        listener = HotkeyListener({"F9": lambda: None, "ctrl+v": lambda: None})
         listener.start()
         keyboard.GlobalHotKeys.assert_called_once()
+        registered = keyboard.GlobalHotKeys.call_args.args[0]
+        assert set(registered) == {"<f9>", "<ctrl>+v"}
         keyboard.GlobalHotKeys.return_value.start.assert_called_once()
 
     def test_start_raises_without_backend(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """start() raises RuntimeError when pynput cannot be loaded."""
         monkeypatch.setitem(sys.modules, "pynput", None)
-        listener = HotkeyListener("F9", lambda: None)
+        listener = HotkeyListener({"F9": lambda: None})
         with pytest.raises(RuntimeError):
             listener.start()
 
     def test_stop_after_start(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """stop() stops the backend listener and clears it."""
         keyboard = _fake_pynput(monkeypatch)
-        listener = HotkeyListener("F9", lambda: None)
+        listener = HotkeyListener({"F9": lambda: None})
         listener.start()
         listener.stop()
         keyboard.GlobalHotKeys.return_value.stop.assert_called_once()
@@ -86,7 +94,7 @@ class TestHotkeyListener:
 
     def test_stop_without_start_is_noop(self) -> None:
         """stop() is a no-op when never started."""
-        HotkeyListener("F9", lambda: None).stop()
+        HotkeyListener({"F9": lambda: None}).stop()
 
 
 def test_function_key() -> None:

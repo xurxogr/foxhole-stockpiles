@@ -358,7 +358,7 @@ def test_close_event_minimize_to_tray_enabled_no_tray_icon(qtbot: Any) -> None:
 
 
 def test_quit_application_stops_server(qtbot: Any, window: MainWindow) -> None:
-    """Test quit application stops running server.
+    """Test quit application stops the shared hotkey listener and workers.
 
     Args:
         qtbot: PyQt test fixture
@@ -369,7 +369,7 @@ def test_quit_application_stops_server(qtbot: Any, window: MainWindow) -> None:
     # Simulate running capture
     window.capture_panel.capturing = True
 
-    with patch.object(window.capture_panel, "stop_capture") as mock_stop:
+    with patch.object(window.capture_panel, "_stop_all_workers") as mock_stop:
         with patch.object(QApplication, "quit"):
             window.quit_application()
 

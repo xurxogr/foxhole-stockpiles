@@ -78,6 +78,12 @@
     "feature_capture": "Локальный захват и сканирование скриншотов складов"
   },
   "server_panel": {
+    "controls_group_title": "Управление",
+    "start_all": "Запустить захват и мониторинг",
+    "stop_all": "Остановить захват и мониторинг",
+    "status_not_configured": "не настроено",
+    "status_monitoring": "мониторинг",
+    "status_unavailable": "нет глобальных горячих клавиш",
     "sav_group_title": "Обработка SAV",
     "select_screenshot": "Выберите скриншот для сканирования",
     "errors": {
@@ -91,19 +97,9 @@
       "error_output": "Ошибка создания координатора вывода: {error}"
     },
     "capture_group_title": "Захват",
-    "start_capture": "Начать захват экрана",
-    "stop_capture": "Остановить захват экрана",
     "capture_no_key": "Сначала задайте горячую клавишу захвата в настройках.",
     "sav_no_key": "Сначала задайте горячую клавишу SAV в настройках.",
-    "start_sav_capture": "Начать захват SAV",
-    "stop_sav_capture": "Остановить захват SAV",
-    "start_sav_monitor": "Начать мониторинг SAV",
-    "stop_sav_monitor": "Остановить мониторинг SAV",
     "clip_group_title": "Буфер обмена",
-    "start_clip_capture": "Запустить захват буфера обмена",
-    "stop_clip_capture": "Остановить захват буфера обмена",
-    "start_clip_monitor": "Запустить мониторинг буфера обмена",
-    "stop_clip_monitor": "Остановить мониторинг буфера обмена",
     "clip_no_key": "Сначала настройте горячую клавишу буфера обмена в настройках.",
     "clip": {
       "error_title": "Ошибка обработки буфера обмена",
@@ -176,7 +172,6 @@
     "capture_hotkey_tooltip": "Глобальная горячая клавиша, которая захватывает окно Foxhole и сканирует его.",
     "capture_hotkey_placeholder": "Клавиша не задана",
     "capture_change": "Изменить",
-    "capture_clear": "Очистить",
     "press_key_title": "Нажмите клавишу",
     "press_key_prompt": "Нажмите клавишу для захвата (Esc для отмены).",
     "early_exit": "Порог раннего выхода:",

@@ -289,12 +289,7 @@ class MainWindow(QMainWindow):
         """Quit the application with proper cleanup."""
         logger.info("Quitting application")
 
-        # Stop capture if running
-        if hasattr(self, "capture_panel") and self.capture_panel.capturing:
-            logger.info("Stopping capture before quit")
-            self.capture_panel.stop_capture()
-
-        # Stop SAV / scan workers if running
+        # Stop the shared hotkey listener and any SAV/clipboard workers.
         if hasattr(self, "capture_panel"):
             self.capture_panel._stop_all_workers()
 

@@ -106,10 +106,11 @@ class TestConstruction:
     """Widget construction and basic UI."""
 
     def test_builds_widgets(self, panel: cp.CapturePanel) -> None:
-        """The panel builds its main controls."""
-        assert panel.sav_button is not None
-        assert panel.clip_button is not None
+        """The panel builds its single control button and status labels."""
         assert panel.start_stop_button is not None
+        assert panel.ocr_status is not None
+        assert panel.sav_status is not None
+        assert panel.clip_status is not None
         assert panel.activity_feed is not None
 
     def test_starts_idle(self, panel: cp.CapturePanel) -> None:
@@ -174,21 +175,35 @@ class TestAvailabilityHelpers:
 
 
 class TestButtonStatesAndRefresh:
-    """Button enablement and settings refresh."""
+    """Single-button enablement, status labels, and settings refresh."""
 
-    def test_update_button_states_defaults(self, panel: cp.CapturePanel) -> None:
-        """With default settings the helper runs and clears the DB label."""
-        panel._update_button_states()
-        assert panel.db_info_text.text() == ""
+    def test_refresh_controls_unconfigured(
+        self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """With nothing configured, statuses are non-empty and the button is off."""
+        _use_settings(monkeypatch, AppSettings())
+        panel._refresh_controls()
+        assert panel.ocr_status.text() != ""
+        # Nothing usable and not running -> the single button is disabled.
+        assert panel.start_stop_button.isEnabled() is False
 
-    def test_update_button_states_configured(
+    def test_refresh_controls_configured(
         self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        """A valid database is shown in the DB-info label."""
-        _use_settings(monkeypatch, _configured(tmp_path))
-        panel._update_button_states()
-        assert "Database" in panel.db_info_text.text()
+        """A configured setup enables the button and shows the OCR key."""
+        settings = _configured(tmp_path)
+        _use_settings(monkeypatch, settings)
+        panel._refresh_controls()
         assert panel.start_stop_button.isEnabled()
+        assert panel.ocr_status.text() == settings.scanner.capture_key
+
+    def test_refresh_db_info_resets_services(self, panel: cp.CapturePanel) -> None:
+        """refresh_db_info drops cached services."""
+        panel._scan_service = MagicMock()
+        panel._clip_service = MagicMock()
+        panel.refresh_db_info()
+        assert panel._scan_service is None
+        assert panel._clip_service is None
 
     def test_refresh_db_info_resets_services(self, panel: cp.CapturePanel) -> None:
         """refresh_db_info drops cached services."""
@@ -240,40 +255,26 @@ class TestSetupPrompt:
 class TestCapture:
     """Screenshot capture flow."""
 
-    def test_start_capture_without_key_warns(self, panel: cp.CapturePanel) -> None:
-        """No capture key shows a warning and does not start."""
-        panel.start_capture()
+    def test_toggle_all_unconfigured_noop(
+        self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """With nothing configured, toggling stays idle and arms nothing."""
+        _use_settings(monkeypatch, AppSettings())
+        panel.toggle_all()
         assert panel.capturing is False
-        _m("QMessageBox").warning.assert_called()
+        assert panel._is_active() is False
 
-    def test_start_and_stop_capture(
+    def test_toggle_all_starts_and_stops_capture(
         self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        """A configured capture starts and then stops."""
+        """A configured OCR key is armed and disarmed by the single button."""
         _use_settings(monkeypatch, _configured(tmp_path))
-        panel.start_capture()
+        panel.toggle_all()
         assert panel.capturing is True
-        panel.stop_capture()
+        assert panel._hotkey_listener is not None
+        panel.toggle_all()
         assert panel.capturing is False
-
-    def test_toggle_capture(
-        self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
-        """toggle_capture flips capturing on then off."""
-        _use_settings(monkeypatch, _configured(tmp_path))
-        panel.toggle_capture()
-        assert panel.capturing is True
-        panel.toggle_capture()
-        assert panel.capturing is False
-
-    def test_start_capture_service_failure_warns(
-        self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
-        """A failed scan-service build warns and does not start."""
-        _use_settings(monkeypatch, _configured(tmp_path))
-        _m("LocalScanService").side_effect = RuntimeError("no db")
-        panel.start_capture()
-        assert panel.capturing is False
+        assert panel._hotkey_listener is None
 
     def test_on_capture_triggered_busy_guard(self, panel: cp.CapturePanel) -> None:
         """A busy capture ignores re-entry."""
@@ -347,28 +348,13 @@ class TestSav:
         _path, error = panel._validate_sav_config()
         assert error is not None
 
-    def test_start_sav_listen_without_key_warns(self, panel: cp.CapturePanel) -> None:
-        """No SAV key warns and does not listen."""
-        panel.start_sav_listen()
-        assert panel._sav_listening is False
-
-    def test_start_and_stop_sav_listen(
+    def test_toggle_all_starts_sav_manual(
         self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        """A configured SAV key starts and stops listening."""
-        _use_settings(monkeypatch, _configured(tmp_path))
-        panel.start_sav_listen()
-        assert panel._sav_listening is True
-        panel.stop_sav_listen()
-        assert panel._sav_listening is False
-
-    def test_sav_button_dispatch_manual(
-        self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
-        """In manual mode the SAV button toggles listening."""
+        """The single button starts SAV listening in manual mode."""
         _use_settings(monkeypatch, _configured(tmp_path))
         panel._sav_mode = SavMode.MANUAL
-        panel._on_sav_button_clicked()
+        panel.toggle_all()
         assert panel._sav_listening is True
 
     def test_start_and_stop_sav_monitor(
@@ -414,28 +400,13 @@ class TestSav:
 class TestClip:
     """Clipboard processing flow."""
 
-    def test_start_clip_listen_without_key_warns(self, panel: cp.CapturePanel) -> None:
-        """No clipboard key warns and does not listen."""
-        panel.start_clip_listen()
-        assert panel._clip_listening is False
-
-    def test_start_and_stop_clip_listen(
+    def test_toggle_all_starts_clip_manual(
         self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        """A configured clipboard key starts and stops listening."""
-        _use_settings(monkeypatch, _configured(tmp_path))
-        panel.start_clip_listen()
-        assert panel._clip_listening is True
-        panel.stop_clip_listen()
-        assert panel._clip_listening is False
-
-    def test_clip_button_dispatch_manual(
-        self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
-        """In manual mode the clipboard button toggles listening."""
+        """The single button starts clipboard listening in manual mode."""
         _use_settings(monkeypatch, _configured(tmp_path))
         panel._clip_mode = ClipMode.MANUAL
-        panel._on_clip_button_clicked()
+        panel.toggle_all()
         assert panel._clip_listening is True
 
     def test_start_and_stop_clip_monitor(
@@ -507,33 +478,17 @@ class TestEdgeCases:
         scan_worker.wait.assert_called()
         panel._sav_monitor_worker.stop.assert_called_once()
 
-    def test_start_capture_listener_error(
+    def test_toggle_all_listener_error_leaves_idle(
         self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        """A listener that fails to start leaves capture off."""
+        """A shared listener that fails to start arms no hotkey method."""
         _use_settings(monkeypatch, _configured(tmp_path))
         _m("HotkeyListener").side_effect = RuntimeError("no backend")
-        panel.start_capture()
+        panel.toggle_all()
         assert panel.capturing is False
-        assert panel._hotkey_listener is None
-
-    def test_start_sav_listen_listener_error(
-        self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
-        """A SAV listener start failure leaves listening off."""
-        _use_settings(monkeypatch, _configured(tmp_path))
-        _m("HotkeyListener").side_effect = RuntimeError("no backend")
-        panel.start_sav_listen()
         assert panel._sav_listening is False
-
-    def test_start_clip_listen_listener_error(
-        self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
-        """A clipboard listener start failure leaves listening off."""
-        _use_settings(monkeypatch, _configured(tmp_path))
-        _m("HotkeyListener").side_effect = RuntimeError("no backend")
-        panel.start_clip_listen()
         assert panel._clip_listening is False
+        assert panel._hotkey_listener is None
 
     def test_run_sav_scan_already_running(self, panel: cp.CapturePanel) -> None:
         """A SAV scan already in progress is not restarted."""
@@ -742,20 +697,24 @@ class TestRemainingBranches:
         panel._apply_sav_mode()
         assert panel._sav_monitoring is False
 
-    def test_sav_button_dispatch_monitor(
+    def test_toggle_all_starts_sav_monitor(
         self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        """In monitor mode the SAV button toggles monitoring."""
+        """The single button starts SAV monitoring in monitor mode."""
         _use_settings(monkeypatch, _configured(tmp_path))
         panel._sav_mode = SavMode.MONITOR
-        panel._on_sav_button_clicked()
+        panel.toggle_all()
         assert panel._sav_monitoring is True
 
-    def test_toggle_sav_listen_stop(self, panel: cp.CapturePanel) -> None:
-        """Toggling while listening stops the SAV listener."""
-        panel._sav_listening = True
-        panel.toggle_sav_listen()
-        assert panel._sav_listening is False
+    def test_toggle_all_stops_everything(
+        self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """A second toggle stops all running methods."""
+        _use_settings(monkeypatch, _configured(tmp_path))
+        panel.toggle_all()
+        assert panel._is_active() is True
+        panel.toggle_all()
+        assert panel._is_active() is False
 
     def test_toggle_sav_monitor_stop(self, panel: cp.CapturePanel) -> None:
         """Toggling while monitoring stops the SAV monitor."""
@@ -806,41 +765,20 @@ class TestRemainingBranches:
         panel._apply_clip_mode()
         assert panel._clip_monitoring is False
 
-    def test_clip_button_dispatch_monitor(
+    def test_toggle_all_starts_clip_monitor(
         self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        """In monitor mode the clipboard button toggles monitoring."""
+        """The single button starts clipboard monitoring in monitor mode."""
         _use_settings(monkeypatch, _configured(tmp_path))
         panel._clip_mode = ClipMode.MONITOR
-        panel._on_clip_button_clicked()
+        panel.toggle_all()
         assert panel._clip_monitoring is True
-
-    def test_toggle_clip_listen_stop(self, panel: cp.CapturePanel) -> None:
-        """Toggling while listening stops the clipboard listener."""
-        panel._clip_listening = True
-        panel.toggle_clip_listen()
-        assert panel._clip_listening is False
 
     def test_toggle_clip_monitor_stop(self, panel: cp.CapturePanel) -> None:
         """Toggling while monitoring stops the clipboard monitor."""
         panel._clip_monitoring = True
         panel.toggle_clip_monitor()
         assert panel._clip_monitoring is False
-
-    def test_start_clip_listen_no_service(
-        self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
-        """A clipboard listen aborts when the service cannot be built."""
-        _use_settings(monkeypatch, _configured(tmp_path))
-        _m("build_clipboard_scan_service").side_effect = RuntimeError("no catalog")
-        panel.start_clip_listen()
-        assert panel._clip_listening is False
-
-    def test_stop_clip_listen_no_listener(self, panel: cp.CapturePanel) -> None:
-        """Stopping with no clipboard listener just resets the flag."""
-        panel._clip_hotkey_listener = None
-        panel.stop_clip_listen()
-        assert panel._clip_listening is False
 
     def test_on_clip_capture_triggered_no_service(self, panel: cp.CapturePanel) -> None:
         """A clipboard hotkey with no service does nothing."""
