@@ -127,10 +127,34 @@ class WebhookConnector:
 
         return headers
 
+    @staticmethod
+    def _extract_response_messages(res_data: Any) -> list[str]:
+        """Extract the human-readable message(s) from a webhook JSON response.
+
+        The endpoint may answer with a single object or a list of them (e.g. one
+        entry per stockpile). Each entry yields its ``error`` field when present,
+        otherwise its ``message`` field; an entry with neither yields its raw
+        stringified form so no information is lost.
+
+        Args:
+            res_data (Any): The decoded JSON response (dict, list, or other).
+
+        Returns:
+            list[str]: One message per response entry — a dict yields a
+                single-element list; a list yields one entry per item.
+        """
+        items = res_data if isinstance(res_data, list) else [res_data]
+        messages: list[str] = []
+        for item in items:
+            if isinstance(item, dict):
+                value = item.get("error", item.get("message"))
+                messages.append(str(value) if value is not None else str(item))
+            else:
+                messages.append(str(item))
+        return messages
+
     @async_retry_on_connect_timeout(max_retries=3, delay=2)
-    async def send_stockpile(
-        self, payload: dict[str, Any], token: str | None = None
-    ) -> dict[str, str]:
+    async def send_stockpile(self, payload: dict[str, Any], token: str | None = None) -> list[str]:
         """Send stockpile data to the configured webhook endpoint.
 
         Args:
@@ -138,20 +162,22 @@ class WebhookConnector:
             token (str | None): Optional token to override the configured webhook token
 
         Returns:
-            dict[str, str]: Response dictionary from the webhook or error message
+            list[str]: The webhook response message(s), or a single-element list
+                describing why nothing was sent (empty payload, missing URL, or an
+                HTTP/transport error).
 
         Raises:
             ConnectTimeout: If the connection times out after maximum retry attempts
         """
         if not payload:
-            return {"message": self.DEFAULT_MESSAGE_EMPTY}
+            return [self.DEFAULT_MESSAGE_EMPTY]
 
         if not self._output_settings.url:
             self._logger.info("Webhook URL is not configured")
-            return {"message": self.DEFAULT_MESSAGE_NO_URL}
+            return [self.DEFAULT_MESSAGE_NO_URL]
 
         headers = self._build_auth_headers(token)
-        return_data: dict[str, str] = {}
+        return_data: list[str] = []
 
         try:
             response = await self._client.post(
@@ -161,17 +187,17 @@ class WebhookConnector:
             try:
                 response.raise_for_status()
                 res_data = response.json()
-                return_data = res_data.get("error", res_data.get("message", res_data))
+                return_data = self._extract_response_messages(res_data)
             except httpx.HTTPStatusError as e:
-                return {"message": f"HTTP {e.response.status_code} error from server"}
+                return [f"HTTP {e.response.status_code} error from server"]
             except ValueError:
-                return {"message": f"HTTP {response.status_code}: {response.text}"}
+                return [f"HTTP {response.status_code}: {response.text}"]
         except ConnectTimeout:
             raise
         except Exception as e:
             error_message = f"{self.DEFAULT_ERROR_PREFIX}: ({type(e).__name__}, {str(e)})"
             self._logger.error(error_message)
-            return_data = {"message": error_message}
+            return_data = [error_message]
 
         return return_data
 

@@ -187,7 +187,7 @@ class TestWebhookConnector:
         """
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {"status": "success", "id": "12345"}
+        mock_response.json.return_value = {"message": "Stockpile received"}
         mock_response.raise_for_status.return_value = None
 
         with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
@@ -195,12 +195,55 @@ class TestWebhookConnector:
 
             result = await webhook_connector.send_stockpile(sample_payload)
 
-            assert result == {"status": "success", "id": "12345"}
+            assert result == ["Stockpile received"]
             mock_post.assert_called_once_with(
                 url="https://example.com/webhook",
                 json=sample_payload,
                 headers={"Authorization": "Bearer test_token_123"},
             )
+
+    @pytest.mark.asyncio
+    async def test_send_stockpile_prefers_error_over_message(
+        self, webhook_connector: WebhookConnector, sample_payload: dict[str, Any]
+    ) -> None:
+        """A response with both fields surfaces ``error``, not ``message``.
+
+        Args:
+            webhook_connector (WebhookConnector): Webhook connector fixture.
+            sample_payload (dict[str, Any]): Sample payload fixture.
+        """
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"error": "Something failed", "message": "ignored"}
+        mock_response.raise_for_status.return_value = None
+
+        with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+            mock_post.return_value = mock_response
+            result = await webhook_connector.send_stockpile(sample_payload)
+            assert result == ["Something failed"]
+
+    @pytest.mark.asyncio
+    async def test_send_stockpile_list_response(
+        self, webhook_connector: WebhookConnector, sample_payload: dict[str, Any]
+    ) -> None:
+        """A list response yields one message per entry (error or message).
+
+        Args:
+            webhook_connector (WebhookConnector): Webhook connector fixture.
+            sample_payload (dict[str, Any]): Sample payload fixture.
+        """
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = [
+            {"message": "Row 1 added"},
+            {"error": "Row 2 failed"},
+        ]
+        mock_response.raise_for_status.return_value = None
+
+        with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+            mock_post.return_value = mock_response
+            result = await webhook_connector.send_stockpile(sample_payload)
+            assert result == ["Row 1 added", "Row 2 failed"]
 
     @pytest.mark.asyncio
     async def test_send_stockpile_empty_payload(self, webhook_connector: WebhookConnector) -> None:
@@ -211,7 +254,7 @@ class TestWebhookConnector:
         """
         result = await webhook_connector.send_stockpile({})
 
-        assert result == {"message": "FS: Stockpile is Empty"}
+        assert result == ["FS: Stockpile is Empty"]
 
     @pytest.mark.asyncio
     async def test_send_stockpile_no_url_configured(
@@ -228,7 +271,7 @@ class TestWebhookConnector:
 
         result = await connector.send_stockpile(sample_payload)
 
-        assert result == {"message": "FS: Webhook URL is not set"}
+        assert result == ["FS: Webhook URL is not set"]
 
     @pytest.mark.asyncio
     async def test_send_stockpile_http_error(
@@ -251,7 +294,7 @@ class TestWebhookConnector:
 
             result = await webhook_connector.send_stockpile(sample_payload)
 
-            assert result == {"message": "HTTP 404 error from server"}
+            assert result == ["HTTP 404 error from server"]
 
     @pytest.mark.asyncio
     async def test_send_stockpile_non_json_response(
@@ -274,7 +317,7 @@ class TestWebhookConnector:
 
             result = await webhook_connector.send_stockpile(sample_payload)
 
-            assert result == {"message": "HTTP 200: OK"}
+            assert result == ["HTTP 200: OK"]
 
     @pytest.mark.asyncio
     async def test_send_stockpile_connect_timeout(
@@ -310,11 +353,11 @@ class TestWebhookConnector:
 
             result = await webhook_connector.send_stockpile(sample_payload)
 
-            # Generic exceptions should return a dict with a message
-            assert isinstance(result, dict)
-            assert "FS: Error sending stockpile to the webhook" in result["message"]
-            assert "Exception" in result["message"]
-            assert "Generic error" in result["message"]
+            # Generic exceptions should return a single-element message list.
+            assert isinstance(result, list)
+            assert "FS: Error sending stockpile to the webhook" in result[0]
+            assert "Exception" in result[0]
+            assert "Generic error" in result[0]
 
     @pytest.mark.asyncio
     async def test_send_stockpile_response_with_error_field(
@@ -336,10 +379,8 @@ class TestWebhookConnector:
 
             result = await webhook_connector.send_stockpile(sample_payload)
 
-            # The method returns the error field value
-            assert isinstance(result, str) or result == {"error": "Validation failed"}
-            if isinstance(result, str):
-                assert result == "Validation failed"
+            # The error field is surfaced as the single message.
+            assert result == ["Validation failed"]
 
     @pytest.mark.asyncio
     async def test_send_stockpile_response_with_message_field(
@@ -361,10 +402,8 @@ class TestWebhookConnector:
 
             result = await webhook_connector.send_stockpile(sample_payload)
 
-            # The method returns the message field value
-            assert isinstance(result, str) or result == {"message": "Data received"}
-            if isinstance(result, str):
-                assert result == "Data received"
+            # The message field is surfaced as the single message.
+            assert result == ["Data received"]
 
     def test_build_auth_headers_token_override_parameter(
         self, webhook_connector: WebhookConnector

@@ -53,11 +53,11 @@ class TestWebhookOutputHandlerHandle:
         with patch.object(
             handler._webhook_connector, "send_stockpile", new_callable=AsyncMock
         ) as mock_send:
-            mock_send.return_value = {"status": "ok"}
+            mock_send.return_value = ["ok"]
 
             result = await handler.handle([sample_stockpile])
 
-            assert result == {"status": "ok"}
+            assert result == ["ok"]
             mock_send.assert_called_once()
             # Always wrapped in stockpiles array
             call_args = mock_send.call_args
@@ -76,7 +76,7 @@ class TestWebhookOutputHandlerHandle:
         with patch.object(
             handler._webhook_connector, "send_stockpile", new_callable=AsyncMock
         ) as mock_send:
-            mock_send.return_value = {"status": "ok"}
+            mock_send.return_value = ["ok"]
 
             await handler.handle([sample_stockpile], token="custom-token")
 
@@ -100,11 +100,11 @@ class TestWebhookOutputHandlerHandle:
         with patch.object(
             handler._webhook_connector, "send_stockpile", new_callable=AsyncMock
         ) as mock_send:
-            mock_send.return_value = {"status": "ok"}
+            mock_send.return_value = ["ok"]
 
             result = await handler.handle([sample_stockpile, stockpile2])
 
-            assert result == {"status": "ok"}
+            assert result == ["ok"]
             call_args = mock_send.call_args
             payload = call_args.kwargs["payload"]
             assert "stockpiles" in payload
@@ -120,4 +120,4 @@ class TestWebhookOutputHandlerHandle:
 
         result = await handler.handle([sample_stockpile])
 
-        assert result == {"message": "URL not configured"}
+        assert result == ["URL not configured"]

@@ -593,7 +593,7 @@ class TestWebhookOutputHandler:
             handler = WebhookOutputHandler(webhook_settings=webhook_settings)
             result = await handler.handle([sample_stockpile])
 
-            assert result == {"message": "URL not configured"}
+            assert result == ["URL not configured"]
 
     @pytest.mark.asyncio
     async def test_webhook_output_multiple_stockpiles(self, sample_stockpile: Stockpile) -> None:

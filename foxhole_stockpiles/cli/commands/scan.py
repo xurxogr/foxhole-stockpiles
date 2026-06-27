@@ -77,7 +77,7 @@ async def _run(
     output_file: Path | None,
     config: str | None,
     token: str | None,
-) -> dict[str, Any] | None:
+) -> dict[str, Any] | list[str] | None:
     """Run the OCR pipeline against a screenshot.
 
     Args:
@@ -93,8 +93,8 @@ async def _run(
         token (str | None): Override the webhook token from the config.
 
     Returns:
-        dict[str, Any] | None: Detected stockpile data, or None depending on the
-            configured output handlers.
+        dict[str, Any] | list[str] | None: Response data from the configured
+            output handlers (a dict, a list of messages, or None).
 
     Raises:
         typer.Exit: On missing inputs or pipeline failure.

@@ -68,7 +68,7 @@ class OutputCoordinator:
         self,
         stockpiles: list[Stockpile],
         **kwargs: Any,
-    ) -> dict[str, Any] | None:
+    ) -> dict[str, Any] | list[str] | None:
         """Handle output to all configured handlers.
 
         Processes all configured handlers in order. The first handler that returns
@@ -81,10 +81,10 @@ class OutputCoordinator:
             **kwargs: Additional handler-specific parameters (e.g., token for webhooks)
 
         Returns:
-            dict[str, Any] | None: Response data from the first handler that returns
-                data, or None if no handler returns data
+            dict[str, Any] | list[str] | None: Response data from the first handler
+                that returns data (a dict, a list of messages, or None)
         """
-        result: dict[str, Any] | None = None
+        result: dict[str, Any] | list[str] | None = None
         handlers = self.output_settings.handlers
 
         if not handlers:
