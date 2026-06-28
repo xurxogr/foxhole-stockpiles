@@ -117,14 +117,14 @@ class OutputHandlerDialog(QDialog):
         self.webhook_auth_type_input.currentTextChanged.connect(self._on_webhook_auth_changed)
         webhook_layout.addRow(self.auth_type_label, self.webhook_auth_type_input)
 
+        self.auth_header_label = QLabel()
+        self.webhook_auth_header_input = QLineEdit()
+        webhook_layout.addRow(self.auth_header_label, self.webhook_auth_header_input)
+
         self.auth_token_label = QLabel()
         self.webhook_token_input = QLineEdit()
         self.webhook_token_input.setEchoMode(QLineEdit.EchoMode.Password)
         webhook_layout.addRow(self.auth_token_label, self.webhook_token_input)
-
-        self.auth_header_label = QLabel()
-        self.webhook_auth_header_input = QLineEdit()
-        webhook_layout.addRow(self.auth_header_label, self.webhook_auth_header_input)
 
         layout.addWidget(self.webhook_group)
 
