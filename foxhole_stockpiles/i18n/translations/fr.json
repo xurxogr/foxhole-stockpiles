@@ -21,7 +21,8 @@
     "sav_error": "⚠ Erreur SAV : {error}",
     "clip_error": "⚠ Erreur du presse-papiers : {error}",
     "get_started": "Aucune méthode configurée — ouvrez Paramètres → Entrée pour configurer Capture, Presse-papiers ou SAV.",
-    "feed_placeholder": "L'activité apparaîtra ici…"
+    "feed_placeholder": "L'activité apparaîtra ici…",
+    "output_response": "Sortie : {text}"
   },
   "common": {
     "download": "Télécharger",

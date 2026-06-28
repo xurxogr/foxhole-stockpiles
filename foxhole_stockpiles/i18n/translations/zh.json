@@ -21,7 +21,8 @@
     "sav_error": "⚠ SAV 错误：{error}",
     "clip_error": "⚠ 剪贴板错误：{error}",
     "get_started": "尚未设置任何方法 — 打开 设置 → 输入 来设置 截图、剪贴板 或 SAV。",
-    "feed_placeholder": "活动将显示在此处…"
+    "feed_placeholder": "活动将显示在此处…",
+    "output_response": "输出：{text}"
   },
   "common": {
     "download": "下载",

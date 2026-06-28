@@ -21,7 +21,8 @@
     "sav_error": "⚠ SAV-Fehler: {error}",
     "clip_error": "⚠ Zwischenablage-Fehler: {error}",
     "get_started": "Noch keine Methode eingerichtet — öffne Einstellungen → Eingabe, um Screenshot, Zwischenablage oder SAV einzurichten.",
-    "feed_placeholder": "Aktivität erscheint hier…"
+    "feed_placeholder": "Aktivität erscheint hier…",
+    "output_response": "Ausgabe: {text}"
   },
   "common": {
     "download": "Herunterladen",

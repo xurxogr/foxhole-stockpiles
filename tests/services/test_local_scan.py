@@ -15,12 +15,13 @@ def test_scan_routes_to_outputs(mock_build_scanner: MagicMock, mock_oc_cls: Magi
     mock_build_scanner.return_value = scanner
 
     coordinator = MagicMock()
-    coordinator.handle_output = AsyncMock(return_value=None)
+    coordinator.handle_output = AsyncMock(return_value=["Stockpile received"])
     mock_oc_cls.return_value = coordinator
 
     service = LocalScanService(MagicMock())
-    result = service.scan(b"image-bytes")
+    result_stockpile, response = service.scan(b"image-bytes")
 
-    assert result is stockpile
+    assert result_stockpile is stockpile
+    assert response == ["Stockpile received"]
     scanner.scan_sync.assert_called_once_with(b"image-bytes", faction=None)
     coordinator.handle_output.assert_awaited_once_with(stockpiles=[stockpile])

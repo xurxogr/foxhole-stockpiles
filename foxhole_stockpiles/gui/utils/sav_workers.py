@@ -20,6 +20,7 @@ class SavScanWorker(QThread):
     error = Signal(str)  # Error message
     progress = Signal(str)  # Progress message
     stockpiles_found = Signal(list)  # List of Stockpile objects
+    output_response = Signal(object)  # OutputResponse (dict | list[str] | None)
 
     def __init__(
         self,
@@ -53,6 +54,7 @@ class SavScanWorker(QThread):
             stockpiles = asyncio.run(processor.run_once())
 
             self.stockpiles_found.emit(stockpiles)
+            self.output_response.emit(processor.last_output)
             self.finished.emit(True)
 
         except RuntimeError as e:
@@ -70,6 +72,7 @@ class SavMonitorWorker(QThread):
     error = Signal(str)  # Error message
     progress = Signal(str)  # Progress/status message
     stockpiles_changed = Signal(list)  # List of changed Stockpile objects
+    output_response = Signal(object)  # OutputResponse (dict | list[str] | None)
 
     def __init__(
         self,
@@ -167,6 +170,7 @@ class SavMonitorWorker(QThread):
                     changed = await self._processor._process_file(is_initial=False)
                     if changed:
                         self.stockpiles_changed.emit(changed)
+                        self.output_response.emit(self._processor.last_output)
 
             except asyncio.CancelledError:
                 break

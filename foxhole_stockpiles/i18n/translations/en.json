@@ -21,7 +21,8 @@
     "sav_error": "⚠ SAV error: {error}",
     "clip_error": "⚠ Clipboard error: {error}",
     "get_started": "No method set up yet — open Settings → Input to set up Screenshot, Clipboard, or SAV.",
-    "feed_placeholder": "Activity will appear here…"
+    "feed_placeholder": "Activity will appear here…",
+    "output_response": "Output: {text}"
   },
   "common": {
     "download": "Download",

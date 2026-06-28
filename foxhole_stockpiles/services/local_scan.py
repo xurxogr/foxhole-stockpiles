@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING
 
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.models.stockpile import Stockpile
-from foxhole_stockpiles.services.output_coordinator import OutputCoordinator
+from foxhole_stockpiles.services.output_coordinator import OutputCoordinator, OutputResponse
 from foxhole_stockpiles.services.scanner import build_scanner
 
 if TYPE_CHECKING:
@@ -50,7 +50,7 @@ class LocalScanService:
         self,
         image: bytes | str | Path | NDArray[np.uint8],
         faction: ItemFaction | None = None,
-    ) -> Stockpile:
+    ) -> tuple[Stockpile, OutputResponse]:
         """Scan an image and route the detected stockpile to all output handlers.
 
         Args:
@@ -60,9 +60,11 @@ class LocalScanService:
                 ``None`` applies no filter.
 
         Returns:
-            Stockpile: The detected stockpile (also dispatched to outputs).
+            tuple[Stockpile, OutputResponse]: The detected stockpile (also
+                dispatched to outputs) and the first return/webhook handler's
+                response, if any.
         """
         faction_filter = faction if faction != ItemFaction.NEUTRAL else None
         stockpile = self._scanner.scan_sync(image, faction=faction_filter)
-        asyncio.run(self._output_coordinator.handle_output(stockpiles=[stockpile]))
-        return stockpile
+        response = asyncio.run(self._output_coordinator.handle_output(stockpiles=[stockpile]))
+        return stockpile, response

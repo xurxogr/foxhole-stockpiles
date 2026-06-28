@@ -27,6 +27,7 @@ class LocalScanWorker(QThread):
     """
 
     scan_finished = Signal(object)  # Stockpile
+    output_response = Signal(object)  # OutputResponse (dict | list[str] | None)
     scan_error = Signal(str)
 
     def __init__(
@@ -59,13 +60,15 @@ class LocalScanWorker(QThread):
         """Run the scan in the background thread."""
         try:
             if self._filepath is not None:
-                stockpile: Stockpile = self._service.scan(self._filepath)
+                stockpile: Stockpile
+                response: object
+                stockpile, response = self._service.scan(self._filepath)
             elif self._capture:
                 image = capture_window()
                 # Save the screenshot whether or not the scan succeeds — a failed
                 # scan is exactly when the raw image is most useful to keep.
                 try:
-                    stockpile = self._service.scan(image)
+                    stockpile, response = self._service.scan(image)
                 except Exception:
                     self._save_capture(image, None)
                     raise
@@ -73,6 +76,7 @@ class LocalScanWorker(QThread):
             else:  # pragma: no cover - guarded by the caller
                 raise ValueError("Either filepath or capture must be provided")
             self.scan_finished.emit(stockpile)
+            self.output_response.emit(response)
         except Exception as exc:  # noqa: BLE001 - surface any failure to the UI
             self.scan_error.emit(str(exc))
 

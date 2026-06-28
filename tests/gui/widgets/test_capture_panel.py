@@ -31,6 +31,7 @@ class FakeScanWorker(QObject):
     """A scan worker with real Qt signals but a no-op thread lifecycle."""
 
     scan_finished = Signal(object)
+    output_response = Signal(object)
     scan_error = Signal(str)
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -150,6 +151,32 @@ class TestLogs:
         panel.retranslate()
         assert panel.start_stop_button.text() != ""
         assert panel.clear_logs_button.text() != ""
+
+
+class TestOutputResponse:
+    """Writing the first return/webhook handler response to the feed."""
+
+    def test_none_writes_nothing(self, panel: cp.CapturePanel) -> None:
+        """A None response (console/file only) leaves the feed untouched."""
+        panel.clear_logs()
+        panel._on_output_response(None)
+        assert panel.activity_feed.toPlainText() == ""
+
+    def test_webhook_list_writes_each_message(self, panel: cp.CapturePanel) -> None:
+        """A webhook list response writes one feed line per message."""
+        panel.clear_logs()
+        panel._on_output_response(["Row 1 added", "Row 2 failed"])
+        text = panel.activity_feed.toPlainText()
+        assert "Row 1 added" in text
+        assert "Row 2 failed" in text
+
+    def test_return_dict_writes_json(self, panel: cp.CapturePanel) -> None:
+        """A return/sheets dict response is written as JSON text."""
+        panel.clear_logs()
+        panel._on_output_response({"stockpiles": [{"name": "X"}]})
+        text = panel.activity_feed.toPlainText()
+        assert "stockpiles" in text
+        assert '"name": "X"' in text
 
 
 class TestAvailabilityHelpers:

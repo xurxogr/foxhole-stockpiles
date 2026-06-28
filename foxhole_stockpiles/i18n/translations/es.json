@@ -21,7 +21,8 @@
     "sav_error": "⚠ Error de SAV: {error}",
     "clip_error": "⚠ Error del portapapeles: {error}",
     "get_started": "Aún no hay ningún método configurado — abre Ajustes → Entrada para configurar Captura, Portapapeles o SAV.",
-    "feed_placeholder": "La actividad aparecerá aquí…"
+    "feed_placeholder": "La actividad aparecerá aquí…",
+    "output_response": "Salida: {text}"
   },
   "common": {
     "download": "Descargar",

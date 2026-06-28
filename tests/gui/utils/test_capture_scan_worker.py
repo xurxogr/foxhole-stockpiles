@@ -12,12 +12,14 @@ def test_capture_success_saves_with_stockpile(qtbot: Any) -> None:
     """A successful capture scan emits the stockpile and saves the screenshot."""
     service = MagicMock()
     stockpile = MagicMock()
-    service.scan.return_value = stockpile
+    service.scan.return_value = (stockpile, ["Stockpile received"])
 
     worker = LocalScanWorker(service, capture=True, screenshots_folder="shots")
     finished: list[Any] = []
+    responses: list[Any] = []
     errors: list[str] = []
     worker.scan_finished.connect(finished.append)
+    worker.output_response.connect(responses.append)
     worker.scan_error.connect(errors.append)
 
     with (
@@ -30,6 +32,7 @@ def test_capture_success_saves_with_stockpile(qtbot: Any) -> None:
     service.scan.assert_called_once_with(b"PNG")
     mock_save.assert_called_once_with(b"PNG", "shots", stockpile)
     assert finished == [stockpile]
+    assert responses == [["Stockpile received"]]
     assert errors == []
 
 
@@ -56,7 +59,7 @@ def test_capture_failed_scan_still_saves(qtbot: Any) -> None:
 def test_capture_no_folder_does_not_save(qtbot: Any) -> None:
     """With no screenshots_folder configured, nothing is saved."""
     service = MagicMock()
-    service.scan.return_value = MagicMock()
+    service.scan.return_value = (MagicMock(), None)
 
     worker = LocalScanWorker(service, capture=True, screenshots_folder="")
 
@@ -73,7 +76,7 @@ def test_file_scan_does_not_capture_or_save(qtbot: Any) -> None:
     """A file scan neither captures nor saves a screenshot."""
     service = MagicMock()
     stockpile = MagicMock()
-    service.scan.return_value = stockpile
+    service.scan.return_value = (stockpile, None)
 
     worker = LocalScanWorker(service, filepath="/tmp/x.png", screenshots_folder="shots")
     finished: list[Any] = []

@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from foxhole_stockpiles.models.stockpile import Stockpile
-from foxhole_stockpiles.services.output_coordinator import OutputCoordinator
+from foxhole_stockpiles.services.output_coordinator import OutputCoordinator, OutputResponse
 from foxhole_stockpiles.services.sav_parser import parse_save
 
 logger = logging.getLogger(__name__)
@@ -36,6 +36,9 @@ class SaveFileProcessor:
         self._emit_all_on_start = emit_all_on_start
         self._last_mtime: float | None = None
         self._running = False
+        # The output handlers' response from the most recent routed batch,
+        # surfaced so the GUI can show it. None when nothing was routed.
+        self.last_output: OutputResponse = None
 
         # Track stockpiles by key -> timestamp string for change detection
         self._stockpile_cache: dict[str, str] = {}
@@ -92,7 +95,7 @@ class SaveFileProcessor:
             return
 
         logger.info("Sending %d stockpile(s) to output handlers", len(stockpiles))
-        await self._output_coordinator.handle_output(stockpiles)
+        self.last_output = await self._output_coordinator.handle_output(stockpiles)
 
     def _detect_changes(
         self, stockpiles: list[Stockpile]

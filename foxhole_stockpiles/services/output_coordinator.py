@@ -20,6 +20,10 @@ from foxhole_stockpiles.handlers.sheets import SheetsOutputHandler
 from foxhole_stockpiles.handlers.webhook import WebhookOutputHandler
 from foxhole_stockpiles.models.stockpile import Stockpile
 
+# The response surfaced by the first return/webhook handler: a dict (return /
+# sheets), a list of messages (webhook), or None (console / file only).
+OutputResponse = dict[str, Any] | list[str] | None
+
 
 class OutputCoordinator:
     """Coordinates output handling by delegating to multiple configured handlers."""
@@ -68,7 +72,7 @@ class OutputCoordinator:
         self,
         stockpiles: list[Stockpile],
         **kwargs: Any,
-    ) -> dict[str, Any] | list[str] | None:
+    ) -> OutputResponse:
         """Handle output to all configured handlers.
 
         Processes all configured handlers in order. The first handler that returns

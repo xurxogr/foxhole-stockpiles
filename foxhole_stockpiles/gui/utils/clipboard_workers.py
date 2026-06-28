@@ -16,6 +16,7 @@ class ClipboardScanWorker(QThread):
     finished = Signal(bool)  # True = success, False = failure
     error = Signal(str)  # Error message
     stockpile_found = Signal(object)  # Stockpile | None
+    output_response = Signal(object)  # OutputResponse (dict | list[str] | None)
 
     def __init__(self, service: ClipboardScanService) -> None:
         """Initialize the one-shot clipboard scan worker.
@@ -31,6 +32,7 @@ class ClipboardScanWorker(QThread):
         try:
             stockpile = asyncio.run(self._service.scan_once())
             self.stockpile_found.emit(stockpile)
+            self.output_response.emit(self._service.last_output)
             self.finished.emit(True)
         except Exception as e:  # noqa: BLE001 - surface any failure to the log
             self.error.emit(f"Error reading clipboard: {e}")
@@ -43,6 +45,7 @@ class ClipboardMonitorWorker(QThread):
     finished = Signal(bool)  # True = stopped normally, False = error
     error = Signal(str)  # Error message
     stockpile_found = Signal(object)  # Stockpile emitted on each new export
+    output_response = Signal(object)  # OutputResponse (dict | list[str] | None)
 
     def __init__(self, service: ClipboardScanService, poll_interval: float = 1.0) -> None:
         """Initialize the clipboard monitor worker.
@@ -81,5 +84,6 @@ class ClipboardMonitorWorker(QThread):
                 stockpile = await self._service.poll()
                 if stockpile is not None:
                     self.stockpile_found.emit(stockpile)
+                    self.output_response.emit(self._service.last_output)
             except Exception as e:  # noqa: BLE001 - keep monitoring despite errors
                 logger.error("Clipboard monitor error: %s", e)

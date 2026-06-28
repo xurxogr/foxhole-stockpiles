@@ -6,6 +6,7 @@ action) captures the Foxhole window, scans it locally, and routes the result to
 the configured output handlers.
 """
 
+import json
 import logging
 from collections.abc import Callable
 from datetime import datetime
@@ -495,6 +496,25 @@ class CapturePanel(QWidget):
         """
         self.activity_feed.appendPlainText(f"    {message}")
 
+    def _on_output_response(self, response: object) -> None:
+        """Write the first return/webhook handler's response to the feed.
+
+        Args:
+            response (object): The output coordinator's response — a list of
+                webhook messages (one line each), a dict (return / sheets)
+                rendered as JSON text, or None when nothing was returned.
+        """
+        if response is None:
+            return
+        if isinstance(response, list):
+            for message in response:
+                self._feed(t("activity.output_response", text=str(message)))
+        elif isinstance(response, dict):
+            text = json.dumps(response, ensure_ascii=False)
+            self._feed(t("activity.output_response", text=text))
+        else:
+            self._feed(t("activity.output_response", text=str(response)))
+
     def _ocr_summary(self, stockpile: Stockpile) -> str:
         """Build a one-line OCR result summary: ``type | name | N items``.
 
@@ -640,6 +660,7 @@ class CapturePanel(QWidget):
                 (so the busy flag is cleared when it finishes).
         """
         worker.scan_finished.connect(self._on_scan_finished)
+        worker.output_response.connect(self._on_output_response)
         worker.scan_error.connect(self._on_scan_error)
 
         def _done() -> None:
@@ -757,6 +778,7 @@ class CapturePanel(QWidget):
         self._sav_scan_worker = SavScanWorker(sav_path, output_coordinator)
         self._sav_scan_worker.error.connect(self._on_sav_error)
         self._sav_scan_worker.stockpiles_found.connect(self._on_sav_stockpiles)
+        self._sav_scan_worker.output_response.connect(self._on_output_response)
         self._sav_scan_worker.finished.connect(self._on_sav_scan_finished)
         self._sav_scan_worker.start()
 
@@ -820,6 +842,7 @@ class CapturePanel(QWidget):
         self._sav_monitor_worker = SavMonitorWorker(sav_path, output_coordinator, poll_interval)
         self._sav_monitor_worker.error.connect(self._on_sav_error)
         self._sav_monitor_worker.stockpiles_changed.connect(self._on_sav_stockpiles)
+        self._sav_monitor_worker.output_response.connect(self._on_output_response)
         self._sav_monitor_worker.finished.connect(self._on_sav_monitor_finished)
         self._sav_monitor_worker.start()
 
@@ -924,6 +947,7 @@ class CapturePanel(QWidget):
 
         worker = ClipboardScanWorker(service)
         worker.stockpile_found.connect(self._on_clip_stockpile_found)
+        worker.output_response.connect(self._on_output_response)
         worker.error.connect(self._on_clip_error)
         worker.finished.connect(lambda _success: self._on_clip_scan_finished())
         self._clip_scan_worker = worker
@@ -969,6 +993,7 @@ class CapturePanel(QWidget):
         self._clip_monitor_worker = ClipboardMonitorWorker(service, poll_interval)
         self._clip_monitor_worker.error.connect(self._on_clip_error)
         self._clip_monitor_worker.stockpile_found.connect(self._on_clip_stockpile_found)
+        self._clip_monitor_worker.output_response.connect(self._on_output_response)
         self._clip_monitor_worker.finished.connect(self._on_clip_monitor_finished)
         self._clip_monitor_worker.start()
 

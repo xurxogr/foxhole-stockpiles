@@ -26,7 +26,7 @@ from foxhole_stockpiles.services.clipboard_parser import (
     parse_clipboard,
 )
 from foxhole_stockpiles.services.clipboard_source import ClipboardSource
-from foxhole_stockpiles.services.output_coordinator import OutputCoordinator
+from foxhole_stockpiles.services.output_coordinator import OutputCoordinator, OutputResponse
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +53,9 @@ class ClipboardScanService:
         self._code_map = code_map
         self._source = source or ClipboardSource()
         self._last_text: str | None = None
+        # The output handlers' response from the most recent routed stockpile,
+        # surfaced so the GUI can show it. None when nothing was routed.
+        self.last_output: OutputResponse = None
 
     def prime(self) -> None:
         """Seed the last-seen clipboard without emitting.
@@ -96,8 +99,9 @@ class ClipboardScanService:
         Returns:
             Stockpile | None: The stockpile passed in, for caller convenience.
         """
+        self.last_output = None
         if stockpile is not None:
-            await self._output_coordinator.handle_output([stockpile])
+            self.last_output = await self._output_coordinator.handle_output([stockpile])
         return stockpile
 
 
