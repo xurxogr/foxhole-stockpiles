@@ -221,196 +221,25 @@ class ModImporter:
             # Validate configuration (raises if any required config is missing)
             self._validate_config()
 
-            # Determine extraction directory and whether to skip extraction
-            use_existing_extract = False
-            if self.config.extract_dir:
-                # Use user-provided directory directly (no subdirectories added)
-                extracted_assets_dir = self.config.extract_dir
-
-                if self.config.extract_only:
-                    # Extract to this directory and stop
-                    should_cleanup = False
-                    logger.info("Extract-only mode: will save to %s", extracted_assets_dir)
-                else:
-                    # Use existing extracted files
-                    use_existing_extract = True
-                    should_cleanup = False
-                    logger.info("Using pre-extracted assets from: %s", extracted_assets_dir)
-
-                    if not extracted_assets_dir.exists():
-                        raise FileNotFoundError(
-                            f"Extract directory does not exist: {extracted_assets_dir}. "
-                            "Run with --extract-only first to extract assets."
-                        )
-
-                # Create directory if needed
-                extracted_assets_dir.mkdir(parents=True, exist_ok=True)
-
-                # Templates go in temp dir
-                wsl_temp_dir = self.get_wsl_temp_dir()
-                temp_base_dir = tempfile.mkdtemp(
-                    prefix=f"fs_mod_import_{self.config.mod_name}_", dir=wsl_temp_dir
-                )
-                templates_dir = Path(temp_base_dir) / "templates"
-            else:
-                # Create temporary base directory
-                wsl_temp_dir = self.get_wsl_temp_dir()
-                temp_base_dir = tempfile.mkdtemp(
-                    prefix=f"fs_mod_import_{self.config.mod_name}_", dir=wsl_temp_dir
-                )
-                logger.info("Created temporary directory: %s", temp_base_dir)
-
-                temp_base_path = Path(temp_base_dir)
-                extracted_assets_dir = temp_base_path / "extracted_assets" / self.config.mod_name
-                templates_dir = temp_base_path / "templates"
-
-            # Create subdirectories
-            extracted_assets_dir.mkdir(parents=True, exist_ok=True)
-            templates_dir.mkdir(parents=True, exist_ok=True)
+            (
+                extracted_assets_dir,
+                templates_dir,
+                use_existing_extract,
+                temp_base_dir,
+                should_cleanup,
+            ) = self._setup_directories()
 
             if self._should_cancel():
                 logger.info("Import cancelled before starting")
                 return result
 
-            # Skip validation and extraction if using pre-extracted assets
-            if use_existing_extract:
-                # Check if anything exists in the extract directory
-                extracted_count = 0
-                if extracted_assets_dir.exists():
-                    extracted_count = len(list(extracted_assets_dir.rglob("*.png")))
-
-                if extracted_count == 0:
-                    raise FileNotFoundError(
-                        f"No PNG files found in extract directory: {extracted_assets_dir}"
-                    )
-
-                logger.info(
-                    "Using %d pre-extracted assets from: %s",
-                    extracted_count,
-                    extracted_assets_dir,
-                )
-                self._report_progress(
-                    2,
-                    "Using pre-extracted assets",
-                    f"Found {extracted_count} assets in {extracted_assets_dir}",
-                )
-            else:
-                # Step 0: Validate PAK files contain required assets
-                self._report_progress(
-                    0,
-                    "Validating PAK files",
-                    "Checking for required assets (crate icon, subicons)...",
-                )
-
-                validation_result = await self._validate_pak_files()
-                if not validation_result.is_valid:
-                    result.success = False
-                    result.error_message = validation_result.error_message
-                    self._report_progress(
-                        0,
-                        "Validation failed",
-                        "Required assets missing",
-                        is_error=True,
-                        error_message=validation_result.error_message,
-                    )
-                    return result
-
-                logger.info(
-                    "PAK validation passed: crate_icon=%s, subicons=%d",
-                    validation_result.has_crate_icon,
-                    validation_result.subicons_count,
-                )
-
-                if self._should_cancel():
-                    logger.info("Import cancelled after validation")
-                    return result
-
-                # Step 1: Check catalog against database
-                self._report_progress(
-                    1, "Checking catalog", "Loading catalog and checking database..."
-                )
-
-                catalog = load_catalog(self.config.catalog_path)
-                total_items = len(catalog)
-                logger.info("Catalog contains %d items", total_items)
-
-                existing_codes = await self._get_existing_item_codes_from_database()
-                items_to_extract = [item for item in catalog if item.code not in existing_codes]
-
-                if not self.config.overwrite:
-                    if not items_to_extract:
-                        logger.info(
-                            "All %d catalog items already exist in database. Nothing to extract.",
-                            total_items,
-                        )
-                        result.success = True
-                        result.templates_skipped = total_items
-                        self._report_progress(
-                            5, "Complete", "All items already in database", is_complete=True
-                        )
-                        return result
-                    else:
-                        logger.info(
-                            "Need to extract %d items (%d already exist in database)",
-                            len(items_to_extract),
-                            len(existing_codes),
-                        )
-                        result.templates_skipped = len(existing_codes)
-                else:
-                    logger.info("Overwrite enabled - will extract all %d items", total_items)
-                    items_to_extract = catalog
-
-                if self._should_cancel():
-                    logger.info("Import cancelled before extraction")
-                    return result
-
-                # Step 2: Extract assets from PAK files
-                msg = f"Extracting {len(items_to_extract)} items from PAK files..."
-                self._report_progress(2, "Extracting assets", msg)
-                await self._extract_assets(extracted_assets_dir, existing_codes)
-
-                if self._should_cancel():
-                    logger.info("Import cancelled after extraction")
-                    return result
-
-                # Check if anything was extracted
-                extracted_count = 0
-                if extracted_assets_dir.exists():
-                    extracted_count = len(list(extracted_assets_dir.rglob("*.png")))
-
-                if extracted_count == 0:
-                    if existing_codes:
-                        logger.info(
-                            "No new items extracted. Database already contains %d items for mod.",
-                            len(existing_codes),
-                        )
-                        result.success = True
-                        self._report_progress(
-                            5, "Complete", "No new items to add", is_complete=True
-                        )
-                    else:
-                        result.warnings.append(
-                            "No items extracted from PAK files. "
-                            "Catalog items may not exist in this mod."
-                        )
-                        result.success = True
-                        self._report_progress(
-                            5, "Complete", "No items found in PAK files", is_complete=True
-                        )
-                    return result
-
-                logger.info(
-                    "Extracted %d assets, continuing with template generation...", extracted_count
-                )
-
-                # If extract_only, stop here
-                if self.config.extract_only:
-                    result.success = True
-                    result.templates_added = extracted_count
-                    msg = f"Extracted {extracted_count} assets to {extracted_assets_dir.parent}"
-                    self._report_progress(5, "Complete", msg, is_complete=True)
-                    logger.info("Extract-only mode: stopping after extraction")
-                    return result
+            extracted_count = await self._prepare_assets(
+                extracted_assets_dir=extracted_assets_dir,
+                use_existing_extract=use_existing_extract,
+                result=result,
+            )
+            if extracted_count is None:
+                return result
 
             # Step 3: Generate templates
             self._report_progress(3, "Generating templates", "Creating templates from assets...")
@@ -443,6 +272,222 @@ class ModImporter:
                 shutil.rmtree(temp_base_dir, ignore_errors=True)
 
         return result
+
+    def _setup_directories(self) -> tuple[Path, Path, bool, str, bool]:
+        """Determine the extraction/template directories to use for this run.
+
+        Returns:
+            tuple[Path, Path, bool, str, bool]: extracted_assets_dir, templates_dir,
+                use_existing_extract, temp_base_dir, should_cleanup.
+
+        Raises:
+            FileNotFoundError: If a configured extract_dir does not exist.
+        """
+        use_existing_extract = False
+        should_cleanup = True
+
+        if self.config.extract_dir:
+            # Use user-provided directory directly (no subdirectories added)
+            extracted_assets_dir = self.config.extract_dir
+
+            if self.config.extract_only:
+                # Extract to this directory and stop
+                should_cleanup = False
+                logger.info("Extract-only mode: will save to %s", extracted_assets_dir)
+            else:
+                # Use existing extracted files
+                use_existing_extract = True
+                should_cleanup = False
+                logger.info("Using pre-extracted assets from: %s", extracted_assets_dir)
+
+                if not extracted_assets_dir.exists():
+                    raise FileNotFoundError(
+                        f"Extract directory does not exist: {extracted_assets_dir}. "
+                        "Run with --extract-only first to extract assets."
+                    )
+
+            # Create directory if needed
+            extracted_assets_dir.mkdir(parents=True, exist_ok=True)
+
+            # Templates go in temp dir
+            wsl_temp_dir = self.get_wsl_temp_dir()
+            temp_base_dir = tempfile.mkdtemp(
+                prefix=f"fs_mod_import_{self.config.mod_name}_", dir=wsl_temp_dir
+            )
+            templates_dir = Path(temp_base_dir) / "templates"
+        else:
+            # Create temporary base directory
+            wsl_temp_dir = self.get_wsl_temp_dir()
+            temp_base_dir = tempfile.mkdtemp(
+                prefix=f"fs_mod_import_{self.config.mod_name}_", dir=wsl_temp_dir
+            )
+            logger.info("Created temporary directory: %s", temp_base_dir)
+
+            temp_base_path = Path(temp_base_dir)
+            extracted_assets_dir = temp_base_path / "extracted_assets" / self.config.mod_name
+            templates_dir = temp_base_path / "templates"
+
+        # Create subdirectories
+        extracted_assets_dir.mkdir(parents=True, exist_ok=True)
+        templates_dir.mkdir(parents=True, exist_ok=True)
+
+        return (
+            extracted_assets_dir,
+            templates_dir,
+            use_existing_extract,
+            temp_base_dir,
+            should_cleanup,
+        )
+
+    async def _prepare_assets(
+        self, extracted_assets_dir: Path, use_existing_extract: bool, result: ModImportResult
+    ) -> int | None:
+        """Ensure extracted assets are ready, validating/extracting as needed.
+
+        Args:
+            extracted_assets_dir: Directory holding (or to hold) extracted assets.
+            use_existing_extract: Whether to reuse assets already on disk instead
+                of validating PAK files and extracting from them.
+            result: Result object to populate when the pipeline completes or stops
+                here (mutated in place; the caller returns it as-is on None).
+
+        Returns:
+            int | None: Number of extracted assets to continue the pipeline with,
+                or None if the pipeline is already finished (success, skip, or
+                cancellation) and `result` should be returned as-is.
+
+        Raises:
+            FileNotFoundError: If use_existing_extract is set but no PNGs are found.
+        """
+        # Skip validation and extraction if using pre-extracted assets
+        if use_existing_extract:
+            extracted_count = 0
+            if extracted_assets_dir.exists():
+                extracted_count = len(list(extracted_assets_dir.rglob("*.png")))
+
+            if extracted_count == 0:
+                raise FileNotFoundError(
+                    f"No PNG files found in extract directory: {extracted_assets_dir}"
+                )
+
+            logger.info(
+                "Using %d pre-extracted assets from: %s", extracted_count, extracted_assets_dir
+            )
+            self._report_progress(
+                2,
+                "Using pre-extracted assets",
+                f"Found {extracted_count} assets in {extracted_assets_dir}",
+            )
+            return extracted_count
+
+        # Step 0: Validate PAK files contain required assets
+        self._report_progress(
+            0, "Validating PAK files", "Checking for required assets (crate icon, subicons)..."
+        )
+
+        validation_result = await self._validate_pak_files()
+        if not validation_result.is_valid:
+            result.success = False
+            result.error_message = validation_result.error_message
+            self._report_progress(
+                0,
+                "Validation failed",
+                "Required assets missing",
+                is_error=True,
+                error_message=validation_result.error_message,
+            )
+            return None
+
+        logger.info(
+            "PAK validation passed: crate_icon=%s, subicons=%d",
+            validation_result.has_crate_icon,
+            validation_result.subicons_count,
+        )
+
+        if self._should_cancel():
+            logger.info("Import cancelled after validation")
+            return None
+
+        # Step 1: Check catalog against database
+        self._report_progress(1, "Checking catalog", "Loading catalog and checking database...")
+
+        catalog = load_catalog(self.config.catalog_path)
+        total_items = len(catalog)
+        logger.info("Catalog contains %d items", total_items)
+
+        existing_codes = await self._get_existing_item_codes_from_database()
+        items_to_extract = [item for item in catalog if item.code not in existing_codes]
+
+        if not self.config.overwrite:
+            if not items_to_extract:
+                logger.info(
+                    "All %d catalog items already exist in database. Nothing to extract.",
+                    total_items,
+                )
+                result.success = True
+                result.templates_skipped = total_items
+                self._report_progress(
+                    5, "Complete", "All items already in database", is_complete=True
+                )
+                return None
+            logger.info(
+                "Need to extract %d items (%d already exist in database)",
+                len(items_to_extract),
+                len(existing_codes),
+            )
+            result.templates_skipped = len(existing_codes)
+        else:
+            logger.info("Overwrite enabled - will extract all %d items", total_items)
+            items_to_extract = catalog
+
+        if self._should_cancel():
+            logger.info("Import cancelled before extraction")
+            return None
+
+        # Step 2: Extract assets from PAK files
+        msg = f"Extracting {len(items_to_extract)} items from PAK files..."
+        self._report_progress(2, "Extracting assets", msg)
+        await self._extract_assets(extracted_assets_dir, existing_codes)
+
+        if self._should_cancel():
+            logger.info("Import cancelled after extraction")
+            return None
+
+        # Check if anything was extracted
+        extracted_count = 0
+        if extracted_assets_dir.exists():
+            extracted_count = len(list(extracted_assets_dir.rglob("*.png")))
+
+        if extracted_count == 0:
+            if existing_codes:
+                logger.info(
+                    "No new items extracted. Database already contains %d items for mod.",
+                    len(existing_codes),
+                )
+                result.success = True
+                self._report_progress(5, "Complete", "No new items to add", is_complete=True)
+            else:
+                result.warnings.append(
+                    "No items extracted from PAK files. Catalog items may not exist in this mod."
+                )
+                result.success = True
+                self._report_progress(
+                    5, "Complete", "No items found in PAK files", is_complete=True
+                )
+            return None
+
+        logger.info("Extracted %d assets, continuing with template generation...", extracted_count)
+
+        # If extract_only, stop here
+        if self.config.extract_only:
+            result.success = True
+            result.templates_added = extracted_count
+            msg = f"Extracted {extracted_count} assets to {extracted_assets_dir.parent}"
+            self._report_progress(5, "Complete", msg, is_complete=True)
+            logger.info("Extract-only mode: stopping after extraction")
+            return None
+
+        return extracted_count
 
     def _validate_config(self) -> None:
         """Validate configuration before running.
