@@ -234,14 +234,6 @@ class TestButtonStatesAndRefresh:
         assert panel._scan_service is None
         assert panel._clip_service is None
 
-    def test_refresh_db_info_resets_services(self, panel: cp.CapturePanel) -> None:
-        """refresh_db_info drops cached services."""
-        panel._scan_service = MagicMock()
-        panel._clip_service = MagicMock()
-        panel.refresh_db_info()
-        assert panel._scan_service is None
-        assert panel._clip_service is None
-
 
 class TestSetupPrompt:
     """The 'no method configured' hint and feed-clearing transition."""

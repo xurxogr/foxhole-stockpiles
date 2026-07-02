@@ -560,7 +560,6 @@ class TestSaveSettingsLanguageChange:
             MagicMock: Mock ConfigManager
         """
         from foxhole_stockpiles.core.settings.sections.gui import GUISettings
-        from foxhole_stockpiles.enums.supported_language import SupportedLanguage
 
         # Mock get_translator to ensure consistent language state
         mock_translator = MagicMock()
@@ -577,7 +576,7 @@ class TestSaveSettingsLanguageChange:
             mock_class.return_value = mock_instance
 
             settings = AppSettings()
-            settings.gui = GUISettings(language=SupportedLanguage.ENGLISH)
+            settings.gui = GUISettings(language="en")
             mock_instance.load_config.return_value = settings
             mock_instance.save_config.return_value = (True, "Success")
             yield mock_instance

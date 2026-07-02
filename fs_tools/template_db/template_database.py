@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 #   1: Pickle format (monolithic or split files)
 #   2: HDF5 format (groups per resolution with columnar storage)
 DATABASE_VERSION = 2
-DATABASE_FORMAT = "hdf5"  # Current format: "hdf5"
 
 
 class TemplateDatabase:
