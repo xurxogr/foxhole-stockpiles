@@ -492,7 +492,7 @@ class BlueprintParser:
             self.raw_cache[cache_key] = data
             return data
 
-        except Exception as e:
+        except (OSError, json.JSONDecodeError) as e:
             self.logger.error("Failed to load JSON %s: %s", json_path, e)
             self.raw_cache[cache_key] = None
             return None

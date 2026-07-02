@@ -185,7 +185,7 @@ class ModImporter:
 
             except FileNotFoundError:
                 logger.debug("No database found for resolution %s", resolution.value)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - isolate one bad resolution from the rest
                 logger.warning("Error loading database for resolution %s: %s", resolution.value, e)
 
         logger.info(
@@ -259,7 +259,7 @@ class ModImporter:
             self._report_progress(5, "Complete", msg, is_complete=True)
             logger.info("Mod import pipeline completed successfully")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - outermost boundary, must report any failure to the GUI
             logger.exception("Error in import pipeline")
             result.success = False
             result.error_message = str(e)

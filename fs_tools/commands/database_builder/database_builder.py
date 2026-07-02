@@ -204,7 +204,7 @@ class DatabaseBuilder:
                     mod=mod_name,
                 )
                 templates.append(template)
-            except Exception as e:
+            except ValueError as e:
                 self._logger.error("Failed to create template for %s: %s", item_code, e)
                 continue
 

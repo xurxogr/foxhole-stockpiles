@@ -202,7 +202,7 @@ class PakExtractor:
                 else:
                     logger.warning("Failed to list files in %s: %s", pak_path, stderr)
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - isolate one PAK file from the rest
                 logger.error("Error listing files in %s: %s", pak_file, e)
 
         if not all_files:
@@ -374,7 +374,7 @@ class PakExtractor:
                     )
                     continue
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - isolate one PAK file from the rest
                 self._logger.error("Error extracting %s from %s: %s", file_path, pak_file, e)
                 continue
             finally:
@@ -494,7 +494,7 @@ class PakExtractor:
                 )
                 return False
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - isolate one UE version attempt from the rest
             self._logger.debug("Error converting %s with %s: %s", file_path, ue_version, e)
             return False
         finally:

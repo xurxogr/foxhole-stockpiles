@@ -172,7 +172,7 @@ class TemplateGenerator:
             logger.debug("Successfully loaded icon from %s: %s", mod_name, full_path)
             return image
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - PIL/codec failures vary by image format
             logger.error("Error loading icon %s from %s: %s", full_path, mod_name, e)
             return None
 
@@ -528,7 +528,7 @@ class TemplateGenerator:
                     "Generated templates for %s from %s at %dpx", code_name, mod_name, icon_size
                 )
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - isolate one item/resolution from the batch
                 logger.error(
                     "Error generating templates for %s from %s at %dpx: %s",
                     code_name,
@@ -768,7 +768,7 @@ async def main() -> None:
             print("❌ Template generation completed with errors. Check the logs for details.")
             exit(1)
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - CLI entry point, must report any failure before exit
         logger.exception("Template generation failed")
         print(f"❌ Template generation failed: {e}")
         exit(1)

@@ -741,7 +741,7 @@ class CatalogAssembler:
 
             try:
                 entry = self._parse_blueprint(json_path)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - isolate one bad blueprint from the batch
                 self.logger.error("Error building entry %s: %s", json_path.name, e)
                 self.stats["errors"] += 1
                 continue
