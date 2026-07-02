@@ -5,6 +5,7 @@ import datetime
 import json
 import logging
 import re
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,7 @@ from foxhole_stockpiles.enums.output_format import OutputFormat
 from foxhole_stockpiles.handlers.base_handler import BaseOutputDestinationHandler
 from foxhole_stockpiles.handlers.stockpile_json import stockpiles_to_json_payload
 from foxhole_stockpiles.models.stockpile import Stockpile
+from foxhole_stockpiles.models.stockpile_item import StockpileItem
 
 FormatSettings = JsonFormatSettings | CsvFormatSettings
 
@@ -205,41 +207,32 @@ class FileOutputHandler(BaseOutputDestinationHandler):
         Returns:
             list[str]: List of CSV/TSV row strings
         """
-        lines: list[str] = []
-
         # Get stockpile-level values
         stockpile_name = stockpile.name or ""
         stockpile_type = self._get_stockpile_type_str(stockpile) if stockpile.type else ""
         shard = stockpile.shard or ""
         ingame_timestamp = stockpile.ingame_timestamp or ""
 
+        def escape(value: str) -> str:
+            return self._escape_csv_value(value=value, separator=separator)
+
+        field_values: dict[str, Callable[[StockpileItem], str]] = {
+            "stockpile_name": lambda _item: escape(stockpile_name),
+            "stockpile_type": lambda _item: escape(stockpile_type),
+            "code": lambda item: escape(item.code),
+            "crated": lambda item: "1" if item.crated else "0",
+            "quantity": lambda item: str(item.quantity),
+            "confidence": lambda item: (
+                str(round(item.confidence, 3)) if item.confidence is not None else ""
+            ),
+            "shard": lambda _item: escape(shard),
+            "ingame_timestamp": lambda _item: escape(ingame_timestamp),
+        }
+
         # Add a row for each item
+        lines: list[str] = []
         for item in stockpile.items:
-            row_values: list[str] = []
-            for field in CSV_FIELDS:
-                if field == "stockpile_name":
-                    row_values.append(
-                        self._escape_csv_value(value=stockpile_name, separator=separator)
-                    )
-                elif field == "stockpile_type":
-                    row_values.append(
-                        self._escape_csv_value(value=stockpile_type, separator=separator)
-                    )
-                elif field == "code":
-                    row_values.append(self._escape_csv_value(value=item.code, separator=separator))
-                elif field == "crated":
-                    row_values.append("1" if item.crated else "0")
-                elif field == "quantity":
-                    row_values.append(str(item.quantity))
-                elif field == "confidence":
-                    confidence = round(item.confidence, 3) if item.confidence is not None else ""
-                    row_values.append(str(confidence) if confidence != "" else "")
-                elif field == "shard":
-                    row_values.append(self._escape_csv_value(value=shard, separator=separator))
-                elif field == "ingame_timestamp":
-                    row_values.append(
-                        self._escape_csv_value(value=ingame_timestamp, separator=separator)
-                    )
+            row_values = [field_values[field](item) for field in CSV_FIELDS]
             lines.append(separator.join(row_values))
 
         return lines
