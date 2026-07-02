@@ -1,4 +1,4 @@
-<!-- Generated: 2026-06-23 | Branch: main | Token estimate: ~850 -->
+<!-- Generated: 2026-07-03 | Branch: main | Token estimate: ~950 -->
 
 # CLI, GUI Capture & Local Pipeline
 
@@ -83,21 +83,24 @@ async def handle_output(stockpiles: list[Stockpile], **kwargs) -> dict | None:
 ```
 
 Handlers (`handlers/`), all `handle(stockpiles: list[Stockpile])`:
-`console.py`, `file.py` (JSON/CSV/TSV), `webhook.py` (HTTP POST, supports
-basic/bearer/**header** auth), `response.py` (`ReturnOutputHandler` → returns
-the dict), **`sheets.py`** (Google Sheets append). Interface: `base_handler.py`.
+`console.py`, `file.py` (JSON/CSV/TSV w/ table-driven field dispatch),
+`webhook.py` (HTTP POST, supports basic/bearer/**header** auth), `response.py`
+(`ReturnOutputHandler` → returns the dict), **`sheets.py`** (Google Sheets append),
+`stockpile_json.py` (shared JSON payload builder). Interface: `base_handler.py`.
 
-Webhook **header auth**: `WebhookHandlerSettings.auth_type="header"` +
-`auth_header` — the configured `token` is sent as the value of that header.
+Webhook **auth types** (removed obsolete `forward`): `auth_type` ∈ {basic, bearer, header}.
+**header auth**: `WebhookHandlerSettings.auth_type="header"` + `auth_header` —
+the configured `token` is sent as the value of that header.
 
 ## GUI capture panel (`gui/widgets/capture_panel.py`)
 
-`CapturePanel` is the main window's central widget:
-- **Start/Stop Capture** — toggles the `HotkeyListener`; warns if
-  `scanner.capture_key` unset or the scanner can't be built (no DB).
+`CapturePanel` is the main window's central widget (refactored with init_ui split
+into section builders + pure helpers extracted):
+- **Unified Capture button** — toggles hotkey listener; single click starts/stops.
 - **Scan a file** (menu) — local scan of a chosen image.
 - **SAV** column — one-shot scan + monitor (`gui/utils/sav_workers.py`).
-- Live log table (`gui/utils/qt_log_handler.py`) + DB-config validation.
+- **Activity feed** — user-friendly log via `QPlainTextEdit` (replaced old table);
+  timestamps + messages via `gui/utils/capture_feed_formatting.py` helper.
 
 ## Result shape
 
@@ -120,7 +123,9 @@ FS_SCANNER__CAPTURE_KEY=F9
 ## Key files
 
 1. `cli/commands/scan.py` — scan wiring
-2. `services/capture.py` — window capture
+2. `services/capture.py` — window capture + security
 3. `services/local_scan.py` — local scan → outputs
 4. `services/scanner.py` — external OCR seam
-5. `gui/widgets/capture_panel.py` — capture UI + hotkey
+5. `handlers/stockpile_json.py` — shared JSON payload builder
+6. `handlers/file.py` — CSV/TSV table-driven field dispatch
+7. `gui/widgets/capture_panel.py` — unified capture + activity feed

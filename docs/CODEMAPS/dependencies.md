@@ -1,4 +1,4 @@
-<!-- Generated: 2026-06-23 | Branch: main | Token estimate: ~800 -->
+<!-- Generated: 2026-07-03 | Branch: main | Token estimate: ~850 -->
 
 # Dependencies & External Tools
 

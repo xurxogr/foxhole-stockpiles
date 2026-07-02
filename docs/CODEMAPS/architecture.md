@@ -1,4 +1,4 @@
-<!-- Generated: 2026-06-23 | Branch: main | Token estimate: ~950 -->
+<!-- Generated: 2026-07-03 | Branch: main | Token estimate: ~1000 -->
 
 # Architecture & Design Patterns
 
@@ -17,9 +17,10 @@ foxhole_stockpiles ──depends──> fs-ocr (external Rust PyPI pkg)
 - **foxhole_stockpiles** — desktop runtime: CLI, PySide6 GUI, screenshot
   capture, local scan, SAV processing, output routing. Talks to the OCR engine
   only through `services/scanner.py`.
-- **fs_tools** — build-time tooling (catalog, template DB, asset extraction).
+- **fs_tools** — build-time tooling (catalog builder, template DB, asset extraction).
   Self-contained: own `core/settings`, `models`, `gui`, `i18n`. Owns the HDF5
-  template DB read/write code under `fs_tools/template_db/`.
+  template DB read/write code under `fs_tools/template_db/`, catalog builder in
+  `fs_tools/services/catalog_builder/` (includes field rule engine).
 - **fs-ocr** — external Rust OCR engine (PyPI `fs-ocr>=1.0.4`). NOT in this repo
   (the former in-repo `fs_ocr` package was deleted in commit `b0e8b6e`).
 
@@ -86,7 +87,7 @@ mod-import models, not a top-level field. Icon geometry is the single constant
 `fs_tools/constants.py:ICON_BOX_SCALE` (fs_tools-only) — the former `OCRSettings` model was removed.)
 
 Source priority (highest→lowest): env (`FS_<SECTION>__<KEY>`) → JSON file in
-platform config dir → defaults. Stepwise migration via `ConfigMigrator`
+platform config dir → defaults. Stepwise migration via `config_migrator/` package
 (`CURRENT_VERSION = 13`; v9→v10 drops `api_server`/`api_auth`, v10→v11 drops
 `stockpile_types`, v11→v12 drops `notifications`, v12→v13 drops `gui.config_level`).
 
@@ -98,12 +99,15 @@ scan/monitor tools, and a live log table. Config dialog
 (`windows/config_window.py`) has five always-visible tabs: Scanner (incl.
 capture hotkey), Output, SAV Processing, Logging, GUI.
 
-## Error handling
+## Error handling & security
 
 - Validate at boundaries (image decode, Pydantic config, DB existence).
 - `Scanner.__init__` raises `ValueError` (no `database_path`) / `FileNotFoundError`.
 - `services/capture.py` raises `CaptureError` (no window / minimized / inactive /
-  unavailable platform); the GUI surfaces it in the log + a message box.
+  unavailable platform); the GUI surfaces it in the activity feed + a message box.
+- **Security**: icon path sanitization before PAK extraction; config/token file
+  permissions restricted to owner-only; path-template placeholder sanitization in
+  file output handler (strip `/` and `\\` from user-controlled values).
 
 ## Design decisions (rationale)
 

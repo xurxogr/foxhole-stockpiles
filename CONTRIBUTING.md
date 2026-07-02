@@ -153,7 +153,7 @@ chore(deps): bump actions/checkout from 6 to 7
 - **Pydantic Models**: Use Pydantic for data validation and settings
 - **Error Handling**: Raise specific exceptions with clear error messages
 - **Logging**: Use structured logging (see `foxhole_stockpiles/core/logging.py`)
-- **Async/Await**: Use `async`/`await` for I/O operations in API code
+- **Async/Await**: Use `async`/`await` for I/O operations (services, handlers, GUI workers)
 - **Code Style**: Follow existing patterns in the codebase
 
 ## Testing Guidelines

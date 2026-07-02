@@ -1,4 +1,4 @@
-<!-- Generated: 2026-06-23 | Branch: main | Token estimate: ~950 -->
+<!-- Generated: 2026-07-03 | Branch: main | Token estimate: ~1000 -->
 
 # Data Models, Config & Database
 
@@ -65,7 +65,7 @@ The external `fs-ocr` exposes `StockpileScanner`, `ScanConfig`,
 | `OutputFormat` | JSON, CSV, TSV |
 | `OutputDestination` | return, file, webhook, console, **sheets** |
 | `OutputHandlerType` | return, file, webhook, console, **google sheets** |
-| `AuthType` | basic, bearer, header — now only for the **webhook output handler** (header = put the configured token in a user-chosen header) |
+| `AuthType` | basic, bearer, header (removed obsolete `forward`) — webhook output handler only (header = send token in user-chosen header name) |
 | `SavMode` | manual (hotkey scans once), monitor (poll `.sav` + emit changes) |
 
 ## Configuration (`core/settings/`)
@@ -106,7 +106,7 @@ discriminated-union wrapper.
 
 ### Sources & migration
 Priority: env `FS_<SECTION>__<KEY>` → JSON file (platform config dir,
-`json_settings_source.py`) → defaults. Stepwise upgrade in `config_migrator.py`
+`json_settings_source.py`) → defaults. Stepwise upgrade via `config_migrator/` package
 (v1 → … → 13). v9→v10 drops `api_server`/`api_auth`; v10→v11 drops
 `stockpile_types`; v11→v12 drops `notifications`; v12→v13 drops `gui.config_level`.
 
@@ -145,7 +145,7 @@ populated (no `x`/`y`); change-tracking keyed by `Stockpile.to_key()`.
 
 ## Key files
 1. `models/stockpile.py`, `models/stockpile_item.py`
-2. `core/settings/app_settings.py` + `config_migrator.py` (v13)
+2. `core/settings/app_settings.py` + `config_migrator/` package (v13)
 3. `core/settings/sections/scanner.py` — incl. `capture_key`
-4. `core/settings/sections/output/` — handler + format models
+4. `core/settings/sections/output/webhook_handler.py` — auth types (basic/bearer/header)
 5. `fs_tools/template_db/` — HDF5 access + matching

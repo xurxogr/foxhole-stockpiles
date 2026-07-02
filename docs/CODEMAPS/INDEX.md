@@ -1,8 +1,8 @@
-<!-- Generated: 2026-06-23 | Branch: main | Source files: ~220 (.py) | Token estimate: ~900 -->
+<!-- Generated: 2026-07-03 | Branch: main | Source files: ~235 (.py) | Token estimate: ~950 -->
 
 # Foxhole Stockpiles — Codemap Index
 
-**Last Updated:** 2026-06-23
+**Last Updated:** 2026-07-03
 **Version:** 0.4.0 | **Config schema:** v13 | **Python:** 3.12+
 
 ## What it is
@@ -49,12 +49,12 @@ capture-and-scan. The HDF5 template DB code lives in `fs_tools/template_db/`.
 ## foxhole_stockpiles modules
 
 - **cli/** — Typer app (`app.py`); commands `scan`, `gui`, `sav`; `_settings.py` loads `AppSettings`, `_console.py` Rich output.
-- **services/** — `scanner.py` (**OCR seam → external `fs_ocr`**), `capture.py` (grab the Foxhole window), `local_scan.py` (`LocalScanService`: scan → outputs), `output_coordinator.py` (sink routing), `catalog_service.py`, `sav_parser.py`, `savefile_processor.py`.
-- **core/** — `settings/` (Pydantic `AppSettings` v13 + `config_migrator.py` + nested `sections/`), `logging.py`, `utils.py`, `version.py`.
+- **services/** — `scanner.py` (**OCR seam → external `fs_ocr`**), `capture.py` (grab the Foxhole window), `local_scan.py` (`LocalScanService`: scan → outputs), `output_coordinator.py` (sink routing), `catalog_service.py`, `clipboard_parser/` package (clipboard scan parsing), `sav_parser.py`, `savefile_processor.py`.
+- **core/** — `settings/` (Pydantic `AppSettings` v13 + `config_migrator/` package + nested `sections/`), `logging.py`, `utils.py`, `version.py`.
 - **models/** — Pydantic v2: `stockpile.py` (`hex`/`coords`/`is_reserve`/`to_key()`), `stockpile_item.py` (`x`/`y`/`candidates`), `catalog_item.py`, `item_candidate.py`, `stockpile_coords.py`, memory-stat models.
-- **handlers/** — output sinks taking `list[Stockpile]`: `console.py`, `file.py`, `webhook.py`, `response.py` (return), **`sheets.py`** (Google Sheets); interface in `base_handler.py`.
+- **handlers/** — output sinks taking `list[Stockpile]`: `console.py`, `file.py`, `webhook.py`, `response.py` (return), **`sheets.py`** (Google Sheets), `stockpile_json.py` (shared JSON payload builder); interface in `base_handler.py`.
 - **enums/** — StrEnums: stockpile_type (~28), item_faction, item_category, supported_language, supported_resolution, output_format/destination/handler_type, auth_type, sav_mode.
-- **gui/** — PySide6 desktop app: `windows/` (main, config), `widgets/capture_panel.py` + `config_tabs/`, `utils/` (hotkey listener, capture+scan worker, SAV workers, log handler).
+- **gui/** — PySide6 desktop app: `windows/` (main, config), `widgets/capture_panel.py` (refactored init_ui + pure helpers) + `config_tabs/`, `utils/` (hotkey listener, capture+scan worker, SAV workers, activity feed formatter).
 - **connectors/**, **i18n/** — webhook connector, translations.
 
 ## See also

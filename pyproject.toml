@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "foxhole-stockpiles"
 dynamic = ["version"]
-description = "REST API for processing Foxhole game screenshots to extract stockpile information"
+description = "Capture-first desktop app for extracting stockpile data from Foxhole screenshots and .sav files"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
