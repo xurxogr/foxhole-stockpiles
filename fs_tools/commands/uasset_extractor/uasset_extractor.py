@@ -319,6 +319,10 @@ class PakExtractor:
         Returns:
             bool: True if extraction was successful, False otherwise.
         """
+        if not _is_safe_pak_relative_path(file_path):
+            self._logger.error("Refusing to extract unsafe PAK-internal path: %s", file_path)
+            return False
+
         for pak_file in self.pak_files:
             # Create a unique subdirectory for this PAK to avoid conflicts
             pak_name = Path(pak_file).stem
@@ -401,6 +405,10 @@ class PakExtractor:
         Returns:
             bool: True if conversion was successful, False otherwise.
         """
+        if not _is_safe_pak_relative_path(file_path):
+            self._logger.error("Refusing to convert unsafe PAK-internal path: %s", file_path)
+            return False
+
         if await self._try_convert_with_version(file_path=file_path, temp_dir=temp_dir):
             return True
 
