@@ -177,7 +177,6 @@ class TemplateManager:
         OrderedDict()
     )
     _shared_lock: ClassVar[Lock] = Lock()
-    _cache_size: ClassVar[int] = 16  # Default cache size
 
     def __init__(self, database_path: Path, cache_size: int | None = None) -> None:
         """Initialize template manager.
@@ -193,11 +192,9 @@ class TemplateManager:
         # Store instance-level cache size (for this instance's operations)
         self.cache_size = cache_size if cache_size is not None else 16
 
-        # Update class-level cache size if provided (for shared cache)
+        # If reducing cache size, evict excess entries from the shared cache
         if cache_size is not None and isinstance(cache_size, int):
             with self._shared_lock:
-                TemplateManager._cache_size = cache_size
-                # If reducing cache size, evict excess entries
                 self._evict_to_size(cache_size)
 
     @classmethod

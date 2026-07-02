@@ -217,7 +217,6 @@ class TestLRUCache:
     def clear_cache(self) -> None:
         """Clear the shared cache before each test."""
         TemplateManager._shared_databases.clear()
-        TemplateManager._cache_size = 16  # Reset to default
 
     async def test_no_caching_with_size_zero(self, tmp_path: Path) -> None:
         """Test that cache_size=0 disables caching completely.
@@ -545,7 +544,6 @@ class TestLoadAllResolutions:
     def clear_cache(self) -> None:
         """Clear the shared cache before each test."""
         TemplateManager._shared_databases.clear()
-        TemplateManager._cache_size = 16
 
     async def test_load_all_resolutions_single(self, tmp_path: Path) -> None:
         """Test loading all resolutions with single resolution.
