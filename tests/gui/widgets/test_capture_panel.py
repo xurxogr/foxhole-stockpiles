@@ -18,6 +18,7 @@ from PySide6.QtCore import QObject, Signal
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.enums.clip_mode import ClipMode
 from foxhole_stockpiles.enums.sav_mode import SavMode
+from foxhole_stockpiles.gui.utils import capture_availability
 from foxhole_stockpiles.gui.widgets import capture_panel as cp
 from foxhole_stockpiles.models.stockpile import Stockpile
 
@@ -72,6 +73,7 @@ def _patch_heavy(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(cp, name, MagicMock())
     monkeypatch.setattr(cp, "global_hotkeys_supported", lambda: True)
     monkeypatch.setattr(cp, "auto_detect_savefile", lambda: None)
+    monkeypatch.setattr(capture_availability, "auto_detect_savefile", lambda: None)
 
 
 @pytest.fixture

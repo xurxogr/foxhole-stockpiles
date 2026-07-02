@@ -30,6 +30,11 @@ from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.core.utils import auto_detect_savefile
 from foxhole_stockpiles.enums.clip_mode import ClipMode
 from foxhole_stockpiles.enums.sav_mode import SavMode
+from foxhole_stockpiles.gui.utils.capture_availability import (
+    catalog_available,
+    sav_file_available,
+)
+from foxhole_stockpiles.gui.utils.capture_feed_formatting import ocr_summary, stockpile_summary
 from foxhole_stockpiles.gui.utils.capture_scan_worker import LocalScanWorker
 from foxhole_stockpiles.gui.utils.clipboard_workers import (
     ClipboardMonitorWorker,
@@ -164,46 +169,82 @@ class CapturePanel(QWidget):
         # (OCR / SAV / Clipboard) showing its key, "monitoring", or that it is
         # not configured.
         top_layout = QHBoxLayout()
+        top_layout.addWidget(self._build_controls_group(), 1)
+        top_layout.addWidget(self._build_capture_group(), 1)
+        top_layout.addWidget(self._build_sav_group(), 1)
+        top_layout.addWidget(self._build_clip_group(), 1)
+        layout.addLayout(top_layout)
 
-        # === Controls: the one button that governs all configured methods ===
+        layout.addWidget(self._build_logs_group(), 1)
+
+        self.retranslate()
+        self._apply_sav_mode()
+        self._apply_clip_mode()
+
+    def _build_controls_group(self) -> QGroupBox:
+        """Build the single button that governs all configured methods.
+
+        Returns:
+            QGroupBox: The controls group box.
+        """
         self.controls_group = QGroupBox("")
         self.controls_group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         controls_layout = QVBoxLayout(self.controls_group)
         self.start_stop_button = QPushButton("")
         self.start_stop_button.clicked.connect(self.toggle_all)
         controls_layout.addWidget(self.start_stop_button)
-        top_layout.addWidget(self.controls_group, 1)
+        return self.controls_group
 
-        # === OCR (screenshot) status ===
+    def _build_capture_group(self) -> QGroupBox:
+        """Build the OCR (screenshot) status group.
+
+        Returns:
+            QGroupBox: The capture status group box.
+        """
         self.capture_group = QGroupBox("")
         self.capture_group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         capture_layout = QVBoxLayout(self.capture_group)
         self.ocr_status = QLabel("")
         capture_layout.addWidget(self.ocr_status)
-        top_layout.addWidget(self.capture_group, 1)
+        return self.capture_group
 
-        # === SAV status ===
+    def _build_sav_group(self) -> QGroupBox:
+        """Build the SAV status group.
+
+        Returns:
+            QGroupBox: The SAV status group box.
+        """
         self.sav_group = QGroupBox("")
         self.sav_group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         sav_layout = QVBoxLayout(self.sav_group)
         self.sav_status = QLabel("")
         sav_layout.addWidget(self.sav_status)
-        top_layout.addWidget(self.sav_group, 1)
+        return self.sav_group
 
-        # === Clipboard status ===
+    def _build_clip_group(self) -> QGroupBox:
+        """Build the clipboard status group.
+
+        Returns:
+            QGroupBox: The clipboard status group box.
+        """
         self.clip_group = QGroupBox("")
         self.clip_group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         clip_layout = QVBoxLayout(self.clip_group)
         self.clip_status = QLabel("")
         clip_layout.addWidget(self.clip_status)
-        top_layout.addWidget(self.clip_group, 1)
+        return self.clip_group
 
-        layout.addLayout(top_layout)
+    def _build_logs_group(self) -> QGroupBox:
+        """Build the activity feed group.
 
-        # Activity feed (always shown; fills the space under the fixed-height
-        # groups). A plain, read-only text view of friendly, user-facing
-        # messages — not the technical log, which still flows through `logging`
-        # to wherever the user configured it.
+        A plain, read-only text view of friendly, user-facing messages — not
+        the technical log, which still flows through `logging` to wherever
+        the user configured it. Always shown; fills the space under the
+        fixed-height status groups.
+
+        Returns:
+            QGroupBox: The activity feed group box.
+        """
         self.logs_group = QGroupBox("")
         logs_layout = QVBoxLayout()
         self.logs_group.setLayout(logs_layout)
@@ -215,7 +256,6 @@ class CapturePanel(QWidget):
         self.activity_feed.setStyleSheet(
             "QPlainTextEdit { background-color: #1E1E1E; color: #DDDDDD; }"
         )
-
         logs_layout.addWidget(self.activity_feed)
 
         log_controls = QHBoxLayout()
@@ -225,11 +265,7 @@ class CapturePanel(QWidget):
         log_controls.addWidget(self.clear_logs_button)
         logs_layout.addLayout(log_controls)
 
-        layout.addWidget(self.logs_group, 1)
-
-        self.retranslate()
-        self._apply_sav_mode()
-        self._apply_clip_mode()
+        return self.logs_group
 
     def refresh_db_info(self) -> None:
         """Re-read settings and refresh button availability (rebuilds the scanner)."""
@@ -281,7 +317,7 @@ class CapturePanel(QWidget):
             str: The configured-state descriptor for the SAV method.
         """
         if self._sav_mode == SavMode.MONITOR:
-            if self._sav_file_available(settings):
+            if sav_file_available(settings):
                 return t("server_panel.status_monitoring")
             return t("server_panel.status_not_configured")
         key = settings.sav_processing.sav_capture_key
@@ -298,7 +334,7 @@ class CapturePanel(QWidget):
         Returns:
             str: The configured-state descriptor for the clipboard method.
         """
-        if not self._catalog_available(settings):
+        if not catalog_available(settings):
             return t("server_panel.status_not_configured")
         if self._clip_mode == ClipMode.MONITOR:
             return t("server_panel.status_monitoring")
@@ -370,7 +406,7 @@ class CapturePanel(QWidget):
             bindings[settings.sav_processing.sav_capture_key] = self.sav_capture_triggered.emit
             announce.append(("sav", settings.sav_processing.sav_capture_key))
 
-        catalog_ok = self._catalog_available(settings)
+        catalog_ok = catalog_available(settings)
         if (
             self._clip_mode == ClipMode.MANUAL
             and catalog_ok
@@ -404,7 +440,7 @@ class CapturePanel(QWidget):
                 self._feed(t("activity.clip_capture_started", hotkey=key))
 
         # Monitors are independent pollers, not hotkey listeners.
-        if self._sav_mode == SavMode.MONITOR and self._sav_file_available(settings):
+        if self._sav_mode == SavMode.MONITOR and sav_file_available(settings):
             self.start_sav_monitor()
         if self._clip_mode == ClipMode.MONITOR and catalog_ok:
             self.start_clip_monitor()
@@ -444,8 +480,7 @@ class CapturePanel(QWidget):
         Returns:
             bool: True if a catalog file is configured and exists.
         """
-        catalog_path = settings.database_builder.catalog_file
-        return bool(catalog_path and catalog_path.exists())
+        return catalog_available(settings)
 
     @staticmethod
     def _sav_file_available(settings: AppSettings) -> bool:
@@ -457,8 +492,7 @@ class CapturePanel(QWidget):
         Returns:
             bool: True if a usable .sav file path is available.
         """
-        path = settings.sav_processing.sav_file_path or auto_detect_savefile()
-        return bool(path and path.exists())
+        return sav_file_available(settings)
 
     def _get_scan_service(self) -> LocalScanService | None:
         """Build (once) and return the local scan service.
@@ -515,40 +549,6 @@ class CapturePanel(QWidget):
         else:
             self._feed(t("activity.output_response", text=str(response)))
 
-    def _ocr_summary(self, stockpile: Stockpile) -> str:
-        """Build a one-line OCR result summary: ``type | name | N items``.
-
-        Args:
-            stockpile (Stockpile): The scanned stockpile.
-
-        Returns:
-            str: The summary line, omitting the name when absent.
-        """
-        parts: list[str] = [str(stockpile.type)]
-        if stockpile.name:
-            parts.append(stockpile.name)
-        parts.append(t("activity.item_count", count=len(stockpile.items)))
-        return " | ".join(parts)
-
-    def _stockpile_summary(self, stockpile: Stockpile) -> str:
-        """Build a one-line summary: ``type | name | hex | x, y | N items``.
-
-        Args:
-            stockpile (Stockpile): The stockpile to summarize.
-
-        Returns:
-            str: The summary line, dropping any field that is absent.
-        """
-        parts: list[str] = [str(stockpile.type)]
-        if stockpile.name:
-            parts.append(stockpile.name)
-        if stockpile.hex:
-            parts.append(stockpile.hex)
-        if stockpile.coords is not None:
-            parts.append(f"{stockpile.coords.x:.2f}, {stockpile.coords.y:.2f}")
-        parts.append(t("activity.item_count", count=len(stockpile.items)))
-        return " | ".join(parts)
-
     def _any_method_usable(self, settings: AppSettings) -> bool:
         """Return whether at least one input method is ready to run.
 
@@ -565,11 +565,11 @@ class CapturePanel(QWidget):
         capture_ok = db_valid and bool(settings.scanner.capture_key) and self._hotkeys_available
 
         if self._sav_mode == SavMode.MONITOR:
-            sav_ok = self._sav_file_available(settings)
+            sav_ok = sav_file_available(settings)
         else:
             sav_ok = bool(settings.sav_processing.sav_capture_key) and self._hotkeys_available
 
-        catalog_ok = self._catalog_available(settings)
+        catalog_ok = catalog_available(settings)
         if self._clip_mode == ClipMode.MONITOR:
             clip_ok = catalog_ok
         else:
@@ -685,7 +685,7 @@ class CapturePanel(QWidget):
             len(stockpile.items),
             stockpile.type,
         )
-        self._feed(t("activity.ocr_result", line=self._ocr_summary(stockpile)))
+        self._feed(t("activity.ocr_result", line=ocr_summary(stockpile)))
 
     def _on_scan_error(self, message: str) -> None:
         """Log a scan failure.
@@ -886,7 +886,7 @@ class CapturePanel(QWidget):
             return
         self._feed(t("activity.sav_summary", count=len(stockpiles)))
         for stockpile in stockpiles:
-            self._feed_detail(self._stockpile_summary(stockpile))
+            self._feed_detail(stockpile_summary(stockpile))
 
     def _on_sav_scan_finished(self, success: bool) -> None:
         """Handle SAV scan finished.
@@ -1034,7 +1034,7 @@ class CapturePanel(QWidget):
             len(stockpile.items),
             stockpile.type,
         )
-        self._feed(t("activity.clip_result", line=self._stockpile_summary(stockpile)))
+        self._feed(t("activity.clip_result", line=stockpile_summary(stockpile)))
 
     def _on_clip_error(self, error_msg: str) -> None:
         """Handle a clipboard processing error.
