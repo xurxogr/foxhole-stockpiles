@@ -233,10 +233,9 @@ class ModImporter:
                 logger.info("Import cancelled before starting")
                 return result
 
-            extracted_count = await self._prepare_assets(
+            extracted_count, result = await self._prepare_assets(
                 extracted_assets_dir=extracted_assets_dir,
                 use_existing_extract=use_existing_extract,
-                result=result,
             )
             if extracted_count is None:
                 return result
@@ -253,16 +252,16 @@ class ModImporter:
             self._report_progress(4, "Building database", "Adding templates to database...")
             await self._build_database(templates_dir)
 
-            result.success = True
-            result.templates_added = extracted_count  # Approximate
+            result = result.model_copy(
+                update={"success": True, "templates_added": extracted_count}  # Approximate
+            )
             msg = f"Successfully imported {extracted_count} templates"
             self._report_progress(5, "Complete", msg, is_complete=True)
             logger.info("Mod import pipeline completed successfully")
 
         except Exception as e:  # noqa: BLE001 - outermost boundary, must report any failure to the GUI
             logger.exception("Error in import pipeline")
-            result.success = False
-            result.error_message = str(e)
+            result = result.model_copy(update={"success": False, "error_message": str(e)})
             self._report_progress(0, "Error", "Import failed", is_error=True, error_message=str(e))
 
         finally:
@@ -340,21 +339,21 @@ class ModImporter:
         )
 
     async def _prepare_assets(
-        self, extracted_assets_dir: Path, use_existing_extract: bool, result: ModImportResult
-    ) -> int | None:
+        self, extracted_assets_dir: Path, use_existing_extract: bool
+    ) -> tuple[int | None, ModImportResult]:
         """Ensure extracted assets are ready, validating/extracting as needed.
 
         Args:
             extracted_assets_dir: Directory holding (or to hold) extracted assets.
             use_existing_extract: Whether to reuse assets already on disk instead
                 of validating PAK files and extracting from them.
-            result: Result object to populate when the pipeline completes or stops
-                here (mutated in place; the caller returns it as-is on None).
 
         Returns:
-            int | None: Number of extracted assets to continue the pipeline with,
-                or None if the pipeline is already finished (success, skip, or
-                cancellation) and `result` should be returned as-is.
+            tuple[int | None, ModImportResult]: Number of extracted assets to
+                continue the pipeline with, paired with the result accumulated so
+                far (e.g. `templates_skipped`). The count is None if the pipeline
+                is already finished (success, skip, or cancellation), in which
+                case the paired result is final and should be returned as-is.
 
         Raises:
             FileNotFoundError: If use_existing_extract is set but no PNGs are found.
@@ -378,7 +377,7 @@ class ModImporter:
                 "Using pre-extracted assets",
                 f"Found {extracted_count} assets in {extracted_assets_dir}",
             )
-            return extracted_count
+            return extracted_count, ModImportResult()
 
         # Step 0: Validate PAK files contain required assets
         self._report_progress(
@@ -387,8 +386,6 @@ class ModImporter:
 
         validation_result = await self._validate_pak_files()
         if not validation_result.is_valid:
-            result.success = False
-            result.error_message = validation_result.error_message
             self._report_progress(
                 0,
                 "Validation failed",
@@ -396,7 +393,9 @@ class ModImporter:
                 is_error=True,
                 error_message=validation_result.error_message,
             )
-            return None
+            return None, ModImportResult(
+                success=False, error_message=validation_result.error_message
+            )
 
         logger.info(
             "PAK validation passed: crate_icon=%s, subicons=%d",
@@ -406,7 +405,7 @@ class ModImporter:
 
         if self._should_cancel():
             logger.info("Import cancelled after validation")
-            return None
+            return None, ModImportResult()
 
         # Step 1: Check catalog against database
         self._report_progress(1, "Checking catalog", "Loading catalog and checking database...")
@@ -418,31 +417,30 @@ class ModImporter:
         existing_codes = await self._get_existing_item_codes_from_database()
         items_to_extract = [item for item in catalog if item.code not in existing_codes]
 
+        templates_skipped = 0
         if not self.config.overwrite:
             if not items_to_extract:
                 logger.info(
                     "All %d catalog items already exist in database. Nothing to extract.",
                     total_items,
                 )
-                result.success = True
-                result.templates_skipped = total_items
                 self._report_progress(
                     5, "Complete", "All items already in database", is_complete=True
                 )
-                return None
+                return None, ModImportResult(success=True, templates_skipped=total_items)
             logger.info(
                 "Need to extract %d items (%d already exist in database)",
                 len(items_to_extract),
                 len(existing_codes),
             )
-            result.templates_skipped = len(existing_codes)
+            templates_skipped = len(existing_codes)
         else:
             logger.info("Overwrite enabled - will extract all %d items", total_items)
             items_to_extract = catalog
 
         if self._should_cancel():
             logger.info("Import cancelled before extraction")
-            return None
+            return None, ModImportResult(templates_skipped=templates_skipped)
 
         # Step 2: Extract assets from PAK files
         msg = f"Extracting {len(items_to_extract)} items from PAK files..."
@@ -451,7 +449,7 @@ class ModImporter:
 
         if self._should_cancel():
             logger.info("Import cancelled after extraction")
-            return None
+            return None, ModImportResult(templates_skipped=templates_skipped)
 
         # Check if anything was extracted
         extracted_count = 0
@@ -464,30 +462,30 @@ class ModImporter:
                     "No new items extracted. Database already contains %d items for mod.",
                     len(existing_codes),
                 )
-                result.success = True
                 self._report_progress(5, "Complete", "No new items to add", is_complete=True)
-            else:
-                result.warnings.append(
+                return None, ModImportResult(success=True, templates_skipped=templates_skipped)
+
+            self._report_progress(5, "Complete", "No items found in PAK files", is_complete=True)
+            return None, ModImportResult(
+                success=True,
+                templates_skipped=templates_skipped,
+                warnings=[
                     "No items extracted from PAK files. Catalog items may not exist in this mod."
-                )
-                result.success = True
-                self._report_progress(
-                    5, "Complete", "No items found in PAK files", is_complete=True
-                )
-            return None
+                ],
+            )
 
         logger.info("Extracted %d assets, continuing with template generation...", extracted_count)
 
         # If extract_only, stop here
         if self.config.extract_only:
-            result.success = True
-            result.templates_added = extracted_count
             msg = f"Extracted {extracted_count} assets to {extracted_assets_dir.parent}"
             self._report_progress(5, "Complete", msg, is_complete=True)
             logger.info("Extract-only mode: stopping after extraction")
-            return None
+            return None, ModImportResult(
+                success=True, templates_added=extracted_count, templates_skipped=templates_skipped
+            )
 
-        return extracted_count
+        return extracted_count, ModImportResult(templates_skipped=templates_skipped)
 
     def _validate_config(self) -> None:
         """Validate configuration before running.
