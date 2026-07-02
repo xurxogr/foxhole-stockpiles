@@ -293,29 +293,29 @@ class CatalogAssembler:
             shippable_info = data.get("ShippableInfo", "")
 
             if vehicle_build_type and vehicle_build_type != "EVehicleBuildType::NotBuildable":
-                if "ProductionCategories" not in data:
-                    data["ProductionCategories"] = {}
-                data["ProductionCategories"]["MassProductionFactory"] = (
-                    "EFactoryQueueType::Vehicles"
-                )
+                self._set_mass_production_factory(data, "EFactoryQueueType::Vehicles")
             elif build_location_type in (
                 "EBuildLocationType::Anywhere",
                 "EBuildLocationType::ConstructionYard",
             ):
-                if "ProductionCategories" not in data:
-                    data["ProductionCategories"] = {}
-                data["ProductionCategories"]["MassProductionFactory"] = (
-                    "EFactoryQueueType::Structures"
-                )
+                self._set_mass_production_factory(data, "EFactoryQueueType::Structures")
             elif "Large" in shippable_info:
                 # Large shippable vehicles (e.g., landing crafts) are mass-produced
-                if "ProductionCategories" not in data:
-                    data["ProductionCategories"] = {}
-                data["ProductionCategories"]["MassProductionFactory"] = (
-                    "EFactoryQueueType::Vehicles"
-                )
+                self._set_mass_production_factory(data, "EFactoryQueueType::Vehicles")
 
         return data
+
+    @staticmethod
+    def _set_mass_production_factory(data: dict[str, Any], queue_type: str) -> None:
+        """Set ProductionCategories.MassProductionFactory, creating the dict if needed.
+
+        Args:
+            data (dict[str, Any]): Catalog entry data (modified in-place).
+            queue_type (str): EFactoryQueueType value to assign.
+        """
+        if "ProductionCategories" not in data:
+            data["ProductionCategories"] = {}
+        data["ProductionCategories"]["MassProductionFactory"] = queue_type
 
     def _expand_data(self, data: dict[str, Any], code_name: str) -> None:
         """Expand catalog entry with data tables and referenced blueprints.
