@@ -78,16 +78,6 @@ class CatalogService:
         entry = self._catalog.get(code)
         return entry.display_name if entry else code
 
-    @property
-    def item_count(self) -> int:
-        """The number of items in the catalog.
-
-        Returns:
-            Number of catalog entries loaded.
-        """
-        self._load()
-        return len(self._catalog)
-
 
 @lru_cache
 def get_catalog_service() -> CatalogService:

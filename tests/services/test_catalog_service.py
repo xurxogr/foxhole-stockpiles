@@ -105,26 +105,6 @@ class TestCatalogService:
         # Should still return original value
         assert service.get_display_name("Item1") == "First Item"
 
-    def test_item_count(self, tmp_path: Path) -> None:
-        """Test item_count returns correct count."""
-        catalog_path = tmp_path / "catalog.json"
-        catalog_data = [
-            {"CodeName": "Item1", "DisplayName": "First Item"},
-            {"CodeName": "Item2", "DisplayName": "Second Item"},
-            {"CodeName": "Item3", "DisplayName": "Third Item"},
-        ]
-        catalog_path.write_text(json.dumps(catalog_data))
-
-        service = CatalogService(catalog_path=catalog_path)
-
-        assert service.item_count == 3
-
-    def test_item_count_empty(self) -> None:
-        """Test item_count returns 0 when no catalog."""
-        service = CatalogService(catalog_path=None)
-
-        assert service.item_count == 0
-
     def test_catalog_entries_without_codename_skipped(self, tmp_path: Path) -> None:
         """Test that entries without CodeName are skipped."""
         catalog_path = tmp_path / "catalog.json"
@@ -139,6 +119,6 @@ class TestCatalogService:
         service = CatalogService(catalog_path=catalog_path)
 
         # Only items with non-empty CodeName should be loaded
-        assert service.item_count == 2
         assert service.get_display_name("Item1") == "First Item"
         assert service.get_display_name("Item2") == "Second Item"
+        assert service.get_display_name("") == ""

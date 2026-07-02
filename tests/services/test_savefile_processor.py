@@ -69,7 +69,7 @@ class TestInitAndProperties:
         proc, _ = make_processor(tmp_path)
         assert proc.file_path == tmp_path / "MapData.sav"
         assert proc.poll_interval == 1.0
-        assert proc.is_running is False
+        assert proc._running is False
 
     def test_poll_interval_setter(self, tmp_path: Path) -> None:
         """poll_interval can be reassigned."""
@@ -82,7 +82,7 @@ class TestInitAndProperties:
         proc, _ = make_processor(tmp_path)
         proc._running = True
         proc.stop()
-        assert proc.is_running is False
+        assert proc._running is False
 
 
 class TestTimestampKey:
@@ -230,10 +230,10 @@ class TestRunWatchMode:
         with patch(_PARSE, return_value=[make_stockpile()]):
             task = asyncio.create_task(proc.run())
             await asyncio.sleep(0.05)
-            assert proc.is_running is True
+            assert proc._running is True
             proc.stop()
             await asyncio.wait_for(task, timeout=2)
-        assert proc.is_running is False
+        assert proc._running is False
         assert len(coord.calls) >= 1
 
     async def test_reprocesses_on_modification(self, tmp_path: Path) -> None:
@@ -280,4 +280,4 @@ class TestRunWatchMode:
             task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await asyncio.wait_for(task, timeout=2)
-        assert proc.is_running is False
+        assert proc._running is False

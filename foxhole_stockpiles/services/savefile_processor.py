@@ -58,11 +58,6 @@ class SaveFileProcessor:
         """Set the polling interval."""
         self._poll_interval = value
 
-    @property
-    def is_running(self) -> bool:
-        """Check if processor is running in watch mode."""
-        return self._running
-
     @staticmethod
     def _timestamp_key(timestamp: datetime) -> str:
         """Normalize a timestamp to a stable UTC string for change detection.
