@@ -6,6 +6,7 @@ from typing import Any
 from foxhole_stockpiles.connectors.webhook import WebhookConnector
 from foxhole_stockpiles.core.settings.sections.output import WebhookHandlerSettings
 from foxhole_stockpiles.handlers.base_handler import BaseOutputDestinationHandler
+from foxhole_stockpiles.handlers.stockpile_json import stockpiles_to_json_payload
 from foxhole_stockpiles.models.stockpile import Stockpile
 
 
@@ -36,7 +37,7 @@ class WebhookOutputHandler(BaseOutputDestinationHandler):
         if not self._url:
             return ["URL not configured"]
 
-        payload = {"stockpiles": [s.model_dump(mode="json", exclude_none=True) for s in stockpiles]}
+        payload = stockpiles_to_json_payload(stockpiles)
         token = kwargs.get("token")
 
         response = await self._webhook_connector.send_stockpile(payload=payload, token=token)

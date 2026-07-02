@@ -16,6 +16,7 @@ from foxhole_stockpiles.core.settings.sections.output.csv_format import (
 from foxhole_stockpiles.core.settings.sections.output.json_format import JsonFormatSettings
 from foxhole_stockpiles.enums.output_format import OutputFormat
 from foxhole_stockpiles.handlers.base_handler import BaseOutputDestinationHandler
+from foxhole_stockpiles.handlers.stockpile_json import stockpiles_to_json_payload
 from foxhole_stockpiles.models.stockpile import Stockpile
 
 FormatSettings = JsonFormatSettings | CsvFormatSettings
@@ -163,7 +164,7 @@ class FileOutputHandler(BaseOutputDestinationHandler):
         Returns:
             str: JSON formatted string with {"stockpiles": [...]} structure
         """
-        payload = {"stockpiles": [s.model_dump(mode="json", exclude_none=True) for s in stockpiles]}
+        payload = stockpiles_to_json_payload(stockpiles)
         return json.dumps(obj=payload, indent=2)
 
     def _format_csv(self, stockpiles: list[Stockpile]) -> str:
