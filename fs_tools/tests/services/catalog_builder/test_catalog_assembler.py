@@ -870,6 +870,35 @@ class TestCatalogAssemblerEnrichItemComponent:
             data["ItemComponentClass"]["ProjectileClass"].get("ExplosiveCodeName") == "RPGExplosive"
         )
 
+    def test_enrich_item_component_does_not_alias_parser_cache(
+        self, mock_services: tuple[MagicMock, MagicMock, MagicMock]
+    ) -> None:
+        """Mutating a merged nested value must not mutate the parser's cached dict.
+
+        extract_catalog_data returns the parser's cached object by reference.
+        Merging its values into item_comp without deep-copying would let later
+        mutation of one item's catalog entry corrupt another item's cached
+        component/projectile blueprint data.
+        """
+        bp, ds, loc = mock_services
+        cached_nested = {"Stats": {"Damage": 25}}
+        cached_proj_nested = {"Falloff": {"Near": 1}}
+        bp.extract_catalog_data.side_effect = [
+            {"Nested": cached_nested, "ProjectileClasses": ["/Game/Blueprints/Projectiles/BPProj"]},
+            {"ExplosiveCodeName": "RPGExplosive", "NestedProj": cached_proj_nested},
+        ]
+
+        assembler = CatalogAssembler(bp, ds, loc)
+        data: dict[str, Any] = {"ItemComponentClass": "/Game/Blueprints/Items/BPComp"}
+        assembler._enrich_item_component_class(data)
+
+        item_comp = data["ItemComponentClass"]
+        item_comp["Nested"]["Stats"]["Damage"] = 999
+        item_comp["ProjectileClass"]["NestedProj"]["Falloff"]["Near"] = 999
+
+        assert cached_nested["Stats"]["Damage"] == 25
+        assert cached_proj_nested["Falloff"]["Near"] == 1
+
 
 class TestCatalogAssemblerAddSubtypeIcon:
     """Tests for CatalogAssembler._add_subtype_icon method."""

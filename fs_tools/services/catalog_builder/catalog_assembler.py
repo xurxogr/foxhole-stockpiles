@@ -500,10 +500,15 @@ class CatalogAssembler:
         else:
             return
 
-        # Parse the component blueprint
+        # Parse the component blueprint. extract_catalog_data returns the parser's
+        # cached dict by reference, so deep-copy before merging values into
+        # item_comp — item_comp lives inside data, which callers already deep-copy
+        # from cached_data, but that guarantee doesn't extend to values sourced
+        # from a *second* cache lookup here.
         comp_data = bp.extract_catalog_data(bp_path)
         if not comp_data:
             return
+        comp_data = copy.deepcopy(comp_data)
 
         # Merge all component properties into ItemComponentClass
         # Skip ObjectPath since we already have it
@@ -537,9 +542,10 @@ class CatalogAssembler:
                 proj_path = first_proj.replace("/Game/Blueprints/", "") + ".json"
                 proj_data = bp.extract_catalog_data(proj_path)
                 if proj_data:
-                    # Store all projectile data
+                    # Store all projectile data (deep-copied for the same reason
+                    # as comp_data above — proj_data is also a cached reference).
                     item_comp["ProjectileClass"] = {
-                        k: v for k, v in proj_data.items() if k != "ObjectPath"
+                        k: copy.deepcopy(v) for k, v in proj_data.items() if k != "ObjectPath"
                     }
 
     # Subtype icons base path
