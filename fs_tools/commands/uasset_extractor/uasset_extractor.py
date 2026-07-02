@@ -39,6 +39,26 @@ SUBICONS_PATH_PREFIX = "War/Content/Textures/UI/ItemIcons/"
 SUBICONS_FILENAME_PREFIX = "Subtype"
 
 
+def _is_safe_pak_relative_path(path: str) -> bool:
+    """Check whether a PAK-internal asset path is safe to extract.
+
+    Icon paths come from `catalog.json`, which is normally builder-controlled
+    but may originate from a corrupted or malicious catalog. Extraction joins
+    this path onto a temp directory and passes it to `repak`/`umodel.exe`, so
+    a `..` segment or an absolute path could escape the intended extraction
+    directory.
+
+    Args:
+        path (str): The PAK-internal relative path to check.
+
+    Returns:
+        bool: True if the path has no traversal or absolute-path segments.
+    """
+    if not path or Path(path).is_absolute():
+        return False
+    return ".." not in Path(path).parts
+
+
 class PakExtractor:
     """Extract and convert assets from Foxhole PAK files.
 
@@ -509,9 +529,24 @@ class PakExtractor:
                 self._logger.warning("Item %s has no icon path, skipping", item.code)
                 continue
 
-            files_to_extract.add(f"{item.icon_path}.uasset")
+            icon_file = f"{item.icon_path}.uasset"
+            if not _is_safe_pak_relative_path(icon_file):
+                self._logger.warning(
+                    "Item %s has an unsafe icon path, skipping: %s", item.code, icon_file
+                )
+                continue
+            files_to_extract.add(icon_file)
+
             if item.subicon_path:
-                files_to_extract.add(f"{item.subicon_path}.uasset")
+                subicon_file = f"{item.subicon_path}.uasset"
+                if not _is_safe_pak_relative_path(subicon_file):
+                    self._logger.warning(
+                        "Item %s has an unsafe subicon path, skipping: %s",
+                        item.code,
+                        subicon_file,
+                    )
+                    continue
+                files_to_extract.add(subicon_file)
 
         # Apply filter if configured
         if self.filter_assets is not None:
