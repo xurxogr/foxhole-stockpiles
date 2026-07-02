@@ -63,10 +63,14 @@ class SheetsOutputHandler(BaseOutputDestinationHandler):
                         return {"message": "Credentials missing"}
                     flow = InstalledAppFlow.from_client_secrets_file(self._creds_path, auth_scopes)
                     creds = await asyncio.to_thread(flow.run_local_server, port=0)
-                # Save the credentials for the next run
-                with open(Path("~/.fs_token").expanduser(), "w") as token:
-                    if creds:
+                # Save the credentials for the next run, restricted to the owner since
+                # this file holds a live OAuth refresh/access token.
+                token_path = Path("~/.fs_token").expanduser()
+                if creds:
+                    fd = os.open(token_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+                    with os.fdopen(fd, "w") as token:
                         token.write(creds.to_json())
+                    token_path.chmod(0o600)
 
         if creds is None and self._creds_path != "mock":
             return {"message": "Credentials invalid or authorization failed"}
