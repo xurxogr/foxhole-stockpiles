@@ -1,9 +1,9 @@
 """Add icon command for manually adding icons to template databases."""
 
-import argparse
-import sys
 from copy import copy
 from pathlib import Path
+
+import typer
 
 from foxhole_stockpiles.core.logging import setup_logging
 from foxhole_stockpiles.core.settings import get_settings
@@ -15,170 +15,105 @@ from fs_tools.template_db.icon_manager import IconManager
 from fs_tools.template_db.template_manager import TemplateManager
 
 
-async def main() -> None:
-    """Main entry point for add icon command."""
-    parser = argparse.ArgumentParser(
-        description="Add individual icons to template database",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  # Add a normal Colonial rifle icon at 1080p (icon must be 32x32)
-  fs add-icon --database data/templates.h5 --icon rifle_32x32.png \\
-    --code Rifle --faction c --category item \\
-    --mod vanilla --resolution 1080
+async def run(
+    icon: Path,
+    code: str,
+    faction: str,
+    category: str,
+    mod: str,
+    resolution: list[str],
+    database: Path | None = None,
+    crated: bool = False,
+    replace: bool = False,
+    verbose: bool = False,
+    quiet: bool = False,
+    log_file: Path | None = None,
+) -> None:
+    """Add individual icons to the template database.
 
-  # Add a crated Warden shippable icon at 2160p (icon must be 64x64)
-  fs add-icon --database data/templates.h5 --icon crate_64x64.png \\
-    --code ShippableCrate --faction w --category shippable \\
-    --crated --mod vanilla --resolution 2160
+    Args:
+        icon (Path): Path to icon image file.
+        code (str): Item code name (e.g., Rifle, LightTank).
+        faction (str): Faction for the icon (e.g., 'c', 'w', 'n').
+        category (str): Category for the icon.
+        mod (str): Mod name (e.g., vanilla, modname).
+        resolution (list[str]): Target resolutions (can be specified multiple times).
+        database (Path | None): Path to existing template database (.h5 file).
+            Defaults to None (falls back to config).
+        crated (bool): Mark this icon as a crated variant. Defaults to False.
+        replace (bool): Replace existing icon if one already exists with same
+            metadata. Defaults to False.
+        verbose (bool): Enable verbose logging (debug level). Defaults to False.
+        quiet (bool): Suppress all output except errors and warnings. Defaults
+            to False.
+        log_file (Path | None): Path to log file (default: console only).
+            Defaults to None.
 
-  # Add a neutral item at multiple resolutions (need separate sized icons)
-  fs add-icon --database data/templates.h5 --icon medkit_32x32.png \\
-    --code Medkit --faction n --category item \\
-    --mod vanilla --resolution 1080
-
-  fs add-icon --database data/templates.h5 --icon medkit_43x43.png \\
-    --code Medkit --faction n --category item \\
-    --mod vanilla --resolution 1440
-
-Note: Icon dimensions must exactly match the target resolution requirements.
-      Use: 664p=19px, 720p=21px, 1080p=32px, 1440p=43px, 2160p=64px
-        """,
-    )
-
-    parser.add_argument(
-        "--database",
-        type=Path,
-        help="Path to existing template database (.h5 file)",
-    )
-    parser.add_argument(
-        "--icon",
-        type=Path,
-        required=True,
-        help="Path to icon image file",
-    )
-    parser.add_argument(
-        "--code",
-        type=str,
-        required=True,
-        help="Item code name (e.g., Rifle, LightTank)",
-    )
-    parser.add_argument(
-        "--faction",
-        type=str,
-        required=True,
-        choices=[faction.value for faction in ItemFaction],
-        help="Faction for the icon. Valid factions: "
-        + ", ".join([f"'{f.value}'" for f in ItemFaction]),
-    )
-    parser.add_argument(
-        "--category",
-        type=str,
-        required=True,
-        choices=[category.value for category in ItemCategory if category != ItemCategory.Invalid],
-        help="Category for the icon. Valid categories: "
-        + ", ".join([f"'{c.value}'" for c in ItemCategory if c != ItemCategory.Invalid]),
-    )
-    parser.add_argument(
-        "--crated",
-        action="store_true",
-        help="Mark this icon as a crated variant",
-    )
-    parser.add_argument(
-        "--mod",
-        type=str,
-        required=True,
-        help="Mod name (e.g., vanilla, modname)",
-    )
-    parser.add_argument(
-        "--replace",
-        action="store_true",
-        help="Replace existing icon if one already exists with same metadata. "
-        "Without this flag, attempting to add a duplicate will result in an error.",
-    )
-    parser.add_argument(
-        "--resolution",
-        action="append",
-        required=True,
-        help=(
-            "Target resolution (can be specified multiple times, e.g., "
-            "--resolution 1080 --resolution 2160)"
-        ),
-    )
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Enable verbose logging (debug level)",
-    )
-    parser.add_argument(
-        "--quiet",
-        action="store_true",
-        default=False,
-        help="Suppress all output except errors and warnings",
-    )
-    parser.add_argument(
-        "--log-file",
-        type=Path,
-        help="Path to log file (default: console only)",
-    )
-
-    args = parser.parse_args()
-
+    Raises:
+        typer.Exit: If the database path is missing/invalid, or the faction,
+            category, or resolution values are invalid.
+    """
     # Setup logging
     settings = get_settings()
 
     # Use database from args or fall back to config
-    database_path = args.database if args.database is not None else settings.scanner.database_path
+    database_path = database if database is not None else settings.scanner.database_path
     if database_path is None:
-        parser.error("Database path must be provided via --database or in config file")
+        msg = "Database path must be provided via --database or in config file"
+        typer.echo(msg, err=True)
+        raise typer.Exit(code=2)
 
     # Validate database file exists (fail early with clearer error)
     if not database_path.exists():
-        print(f"Error: Database file not found: {database_path}", file=sys.stderr)
-        sys.exit(1)
+        typer.echo(f"Error: Database file not found: {database_path}", err=True)
+        raise typer.Exit(code=1)
     if not database_path.is_file():
-        print(f"Error: Database path is not a file: {database_path}", file=sys.stderr)
-        sys.exit(1)
+        typer.echo(f"Error: Database path is not a file: {database_path}", err=True)
+        raise typer.Exit(code=1)
 
     logging_settings = copy(settings.logging)
-    if args.quiet:
+    if quiet:
         logging_settings.log_level = "WARNING"
-    elif args.verbose:
+    elif verbose:
         logging_settings.log_level = "DEBUG"
 
-    logging_settings.log_file = args.log_file
+    logging_settings.log_file = str(log_file) if log_file is not None else None
     setup_logging(logging_settings)
 
     # Parse faction
-    faction = ItemFaction.from_string(args.faction)
-    if faction == ItemFaction.NEUTRAL and args.faction.lower() not in ["neutral", "n"]:
+    parsed_faction = ItemFaction.from_string(faction)
+    if parsed_faction == ItemFaction.NEUTRAL and faction.lower() not in ["neutral", "n"]:
         # Invalid input resulted in NEUTRAL
-        parser.error(f"Invalid faction '{args.faction}'. {ItemFaction.get_cli_help_text()}")
+        msg = f"Invalid faction '{faction}'. {ItemFaction.get_cli_help_text()}"
+        typer.echo(msg, err=True)
+        raise typer.Exit(code=2)
 
     # Parse category
     try:
-        category = ItemCategory(args.category)
-        if category == ItemCategory.Invalid:
-            parser.error(f"Invalid category '{args.category}'")
+        parsed_category = ItemCategory(category)
+        if parsed_category == ItemCategory.Invalid:
+            typer.echo(f"Invalid category '{category}'", err=True)
+            raise typer.Exit(code=2)
     except ValueError:
         valid_categories = [c.value for c in ItemCategory if c != ItemCategory.Invalid]
-        parser.error(
-            f"Invalid category '{args.category}'. "
-            f"Valid categories are: {', '.join(valid_categories)}"
-        )
+        msg = f"Invalid category '{category}'. Valid categories are: {', '.join(valid_categories)}"
+        typer.echo(msg, err=True)
+        raise typer.Exit(code=2) from None
 
     # Parse resolutions
     target_resolutions: list[SupportedResolution] = []
-    for res_str in args.resolution:
+    for res_str in resolution:
         try:
-            resolution = SupportedResolution(res_str)
-            target_resolutions.append(resolution)
+            parsed_resolution = SupportedResolution(res_str)
+            target_resolutions.append(parsed_resolution)
         except ValueError:
             valid_resolutions = [r.value for r in SupportedResolution]
-            parser.error(
+            msg = (
                 f"Invalid resolution '{res_str}'. "
                 f"Valid resolutions are: {', '.join(valid_resolutions)}"
             )
+            typer.echo(msg, err=True)
+            raise typer.Exit(code=2) from None
 
     template_manager = TemplateManager(database_path=database_path)
     databases = await template_manager.load_all_resolutions()
@@ -190,16 +125,16 @@ Note: Icon dimensions must exactly match the target resolution requirements.
         icon_scale=ICON_BOX_SCALE,
     )
 
-    for resolution in target_resolutions:
+    for target_resolution in target_resolutions:
         await manager.add_icon(
-            icon_path=args.icon,
-            item_code=args.code,
-            faction=faction,
-            category=category,
-            crated=args.crated,
-            mod=args.mod,
-            resolution=resolution,
-            replace=args.replace,
+            icon_path=icon,
+            item_code=code,
+            faction=parsed_faction,
+            category=parsed_category,
+            crated=crated,
+            mod=mod,
+            resolution=target_resolution,
+            replace=replace,
         )
 
     TemplateManager.save_databases_to_hdf5(

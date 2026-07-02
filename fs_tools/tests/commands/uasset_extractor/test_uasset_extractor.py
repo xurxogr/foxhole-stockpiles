@@ -1,23 +1,23 @@
 """Tests for commands.uasset_extractor.uasset_extractor module.
 
 This module contains comprehensive tests for the UAsset extractor command,
-including PAK file extraction, asset processing, main function behavior,
+including PAK file extraction, asset processing, run function behavior,
 and error handling scenarios.
 """
 
-import argparse
 import subprocess
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
+import typer
 
 from fs_tools.commands.uasset_extractor.uasset_extractor import (
     CRATE_ICON_PATH,
     SUBICONS_PATH_PREFIX,
     PakExtractor,
-    main,
+    run,
 )
 from fs_tools.models.pak_validation_result import PakValidationResult
 
@@ -794,36 +794,20 @@ class TestProcessFiles:
         assert result is True
 
 
-class TestMainFunction:
-    """Test suite for the main CLI function.
+class TestRunFunction:
+    """Test suite for the run CLI function.
 
-    This class contains tests for the main entry point of the uasset
-    extractor command, including argument parsing and workflow execution.
+    This class contains tests for the run entry point of the uasset
+    extractor command, including argument handling and workflow execution.
     """
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("foxhole_stockpiles.core.logging.setup_logging")
-    async def test_main_with_default_args(self, mock_setup_logging: Mock, mock_args: Mock) -> None:
-        """Test main function with default arguments.
+    async def test_run_with_default_args(self, mock_setup_logging: Mock) -> None:
+        """Test run function with default arguments.
 
         Args:
             mock_setup_logging (Mock): Mocked setup_logging function.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
         """
-        mock_args.return_value = argparse.Namespace(
-            catalog="catalog.json",
-            pak=None,
-            extractor_tool="C:\\repak\\repak.exe",
-            converter_tool="C:\\UModel\\umodel.exe",
-            output="output",
-            log_file=None,
-            verbose=False,
-            quiet=False,
-            workers=None,
-            filter_files=None,
-            filter_pattern=None,
-        )
-
         with patch(
             "fs_tools.commands.uasset_extractor.uasset_extractor.PakExtractor"
         ) as mock_extractor:
@@ -838,36 +822,30 @@ class TestMainFunction:
             instance.process_files = mock_process_files
             mock_extractor.return_value = instance
 
-            await main()
+            await run(
+                catalog="catalog.json",
+                pak=None,
+                extractor_tool="C:\\repak\\repak.exe",
+                converter_tool="C:\\UModel\\umodel.exe",
+                output="output",
+                log_file=None,
+                verbose=False,
+                quiet=False,
+                workers=None,
+                filter_files=None,
+                filter_pattern=None,
+            )
 
             mock_extractor.assert_called_once()
             process_files_mock.assert_called_once()
 
     @patch("fs_tools.commands.uasset_extractor.uasset_extractor.setup_logging")
-    @patch("argparse.ArgumentParser.parse_args")
-    async def test_main_with_verbose_logging(
-        self, mock_args: Mock, mock_setup_logging: Mock
-    ) -> None:
-        """Test main function with verbose logging enabled.
+    async def test_run_with_verbose_logging(self, mock_setup_logging: Mock) -> None:
+        """Test run function with verbose logging enabled.
 
         Args:
             mock_setup_logging (Mock): Mocked setup_logging function.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
         """
-        mock_args.return_value = argparse.Namespace(
-            catalog="catalog.json",
-            pak=["custom.pak"],
-            extractor_tool="repak.exe",
-            converter_tool="umodel.exe",
-            output="output",
-            log_file="test.log",
-            verbose=True,
-            quiet=False,
-            workers=None,
-            filter_files=None,
-            filter_pattern=None,
-        )
-
         with patch(
             "fs_tools.commands.uasset_extractor.uasset_extractor.PakExtractor"
         ) as mock_extractor:
@@ -881,34 +859,30 @@ class TestMainFunction:
             mock_instance.process_files = mock_process_files
             mock_extractor.return_value = mock_instance
 
-            await main()
+            await run(
+                catalog="catalog.json",
+                pak=["custom.pak"],
+                extractor_tool="repak.exe",
+                converter_tool="umodel.exe",
+                output="output",
+                log_file=Path("test.log"),
+                verbose=True,
+                quiet=False,
+                workers=None,
+                filter_files=None,
+                filter_pattern=None,
+            )
 
             # Verify verbose logging was set up
             mock_setup_logging.assert_called_once()
 
     @patch("fs_tools.commands.uasset_extractor.uasset_extractor.setup_logging")
-    @patch("argparse.ArgumentParser.parse_args")
-    async def test_main_with_quiet_logging(self, mock_args: Mock, mock_setup_logging: Mock) -> None:
-        """Test main function with quiet logging enabled.
+    async def test_run_with_quiet_logging(self, mock_setup_logging: Mock) -> None:
+        """Test run function with quiet logging enabled.
 
         Args:
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             mock_setup_logging (Mock): Mocked setup_logging function.
         """
-        mock_args.return_value = argparse.Namespace(
-            catalog="catalog.json",
-            pak=None,
-            extractor_tool="C:\\repak\\repak.exe",
-            converter_tool="C:\\UModel\\umodel.exe",
-            output="output",
-            log_file=None,
-            verbose=False,
-            quiet=True,
-            workers=None,
-            filter_files=None,
-            filter_pattern=None,
-        )
-
         with patch(
             "fs_tools.commands.uasset_extractor.uasset_extractor.PakExtractor"
         ) as mock_extractor:
@@ -920,36 +894,31 @@ class TestMainFunction:
             instance.process_files = mock_process_files
             mock_extractor.return_value = instance
 
-            await main()
+            await run(
+                catalog="catalog.json",
+                pak=None,
+                extractor_tool="C:\\repak\\repak.exe",
+                converter_tool="C:\\UModel\\umodel.exe",
+                output="output",
+                log_file=None,
+                verbose=False,
+                quiet=True,
+                workers=None,
+                filter_files=None,
+                filter_pattern=None,
+            )
 
             # Verify logging was set up
             mock_setup_logging.assert_called_once()
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("foxhole_stockpiles.core.logging.setup_logging")
-    async def test_main_with_multiple_pak_files(
-        self, mock_setup_logging: Mock, mock_args: Mock
-    ) -> None:
-        """Test main function with multiple PAK files.
+    async def test_run_with_multiple_pak_files(self, mock_setup_logging: Mock) -> None:
+        """Test run function with multiple PAK files.
 
         Args:
             mock_setup_logging (Mock): Mocked setup_logging function.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
         """
         pak_files = ["pak1.pak", "pak2.pak", "pak3.pak"]
-        mock_args.return_value = argparse.Namespace(
-            catalog="catalog.json",
-            pak=pak_files,
-            extractor_tool="repak.exe",
-            converter_tool="umodel.exe",
-            output="output",
-            log_file=None,
-            verbose=False,
-            quiet=False,
-            workers=None,
-            filter_files=None,
-            filter_pattern=None,
-        )
 
         with patch(
             "fs_tools.commands.uasset_extractor.uasset_extractor.PakExtractor"
@@ -962,127 +931,103 @@ class TestMainFunction:
             mock_instance.process_files = mock_process_files
             mock_extractor.return_value = mock_instance
 
-            await main()
+            await run(
+                catalog="catalog.json",
+                pak=pak_files,
+                extractor_tool="repak.exe",
+                converter_tool="umodel.exe",
+                output="output",
+                log_file=None,
+                verbose=False,
+                quiet=False,
+                workers=None,
+                filter_files=None,
+                filter_pattern=None,
+            )
 
             # Verify PakExtractor was called with multiple PAK files
             call_args = mock_extractor.call_args
             assert call_args[1]["pak_files"] == pak_files
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("foxhole_stockpiles.core.logging.setup_logging")
     @patch("builtins.print")
-    @patch("builtins.exit")
-    async def test_main_initialization_error(
-        self, mock_exit: Mock, mock_print: Mock, mock_setup_logging: Mock, mock_args: Mock
+    async def test_run_initialization_error(
+        self, mock_print: Mock, mock_setup_logging: Mock
     ) -> None:
-        """Test main function handles initialization errors.
+        """Test run function handles initialization errors.
 
         Args:
-            mock_exit (Mock): Mocked exit function.
             mock_print (Mock): Mocked print function.
             mock_setup_logging (Mock): Mocked setup_logging function.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
         """
-        mock_args.return_value = argparse.Namespace(
-            catalog="catalog.json",
-            pak=None,
-            extractor_tool="C:\\repak\\repak.exe",
-            converter_tool="C:\\UModel\\umodel.exe",
-            output="output",
-            log_file=None,
-            verbose=False,
-            quiet=False,
-            workers=None,
-            filter_files=None,
-            filter_pattern=None,
-        )
-
-        # Make exit() actually raise to prevent further code execution
-        mock_exit.side_effect = SystemExit(1)
-
         with patch(
             "fs_tools.commands.uasset_extractor.uasset_extractor.PakExtractor",
             side_effect=ValueError("Initialization error"),
         ):
-            with pytest.raises(SystemExit):
-                await main()
+            with pytest.raises(typer.Exit) as exc_info:
+                await run(
+                    catalog="catalog.json",
+                    pak=None,
+                    extractor_tool="C:\\repak\\repak.exe",
+                    converter_tool="C:\\UModel\\umodel.exe",
+                    output="output",
+                    log_file=None,
+                    verbose=False,
+                    quiet=False,
+                    workers=None,
+                    filter_files=None,
+                    filter_pattern=None,
+                )
 
-            # Verify error was printed and exit was called
+            # Verify error was printed and exit code is 1
             mock_print.assert_called()
-            mock_exit.assert_called_with(1)
+            assert exc_info.value.exit_code == 1
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("foxhole_stockpiles.core.logging.setup_logging")
     @patch("builtins.print")
-    @patch("builtins.exit")
-    async def test_main_file_not_found_error(
-        self, mock_exit: Mock, mock_print: Mock, mock_setup_logging: Mock, mock_args: Mock
+    async def test_run_file_not_found_error(
+        self, mock_print: Mock, mock_setup_logging: Mock
     ) -> None:
-        """Test main function handles file not found errors.
+        """Test run function handles file not found errors.
 
         Args:
-            mock_exit (Mock): Mocked exit function.
             mock_print (Mock): Mocked print function.
             mock_setup_logging (Mock): Mocked setup_logging function.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
         """
-        mock_args.return_value = argparse.Namespace(
-            catalog="catalog.json",
-            pak=None,
-            extractor_tool="C:\\repak\\repak.exe",
-            converter_tool="C:\\UModel\\umodel.exe",
-            output="output",
-            log_file=None,
-            verbose=False,
-            quiet=False,
-            workers=None,
-            filter_files=None,
-            filter_pattern=None,
-        )
-
-        # Make exit() actually raise to prevent further code execution
-        mock_exit.side_effect = SystemExit(1)
-
         with patch(
             "fs_tools.commands.uasset_extractor.uasset_extractor.PakExtractor",
             side_effect=FileNotFoundError("File not found"),
         ):
-            with pytest.raises(SystemExit):
-                await main()
+            with pytest.raises(typer.Exit) as exc_info:
+                await run(
+                    catalog="catalog.json",
+                    pak=None,
+                    extractor_tool="C:\\repak\\repak.exe",
+                    converter_tool="C:\\UModel\\umodel.exe",
+                    output="output",
+                    log_file=None,
+                    verbose=False,
+                    quiet=False,
+                    workers=None,
+                    filter_files=None,
+                    filter_pattern=None,
+                )
 
-            # Verify error was printed and exit was called
+            # Verify error was printed and exit code is 1
             mock_print.assert_called()
-            mock_exit.assert_called_with(1)
+            assert exc_info.value.exit_code == 1
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("foxhole_stockpiles.core.logging.setup_logging")
     @patch("builtins.print")
-    @patch("builtins.exit")
-    async def test_main_process_files_failure(
-        self, mock_exit: Mock, mock_print: Mock, mock_setup_logging: Mock, mock_args: Mock
+    async def test_run_process_files_failure(
+        self, mock_print: Mock, mock_setup_logging: Mock
     ) -> None:
-        """Test main function handles process_files failure.
+        """Test run function handles process_files failure.
 
         Args:
-            mock_exit (Mock): Mocked exit function.
             mock_print (Mock): Mocked print function.
             mock_setup_logging (Mock): Mocked setup_logging function.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
         """
-        mock_args.return_value = argparse.Namespace(
-            catalog="catalog.json",
-            pak=None,
-            extractor_tool="C:\\repak\\repak.exe",
-            converter_tool="C:\\UModel\\umodel.exe",
-            output="output",
-            log_file=None,
-            verbose=False,
-            quiet=False,
-            workers=None,
-            filter_files=None,
-            filter_pattern=None,
-        )
-
         with patch(
             "fs_tools.commands.uasset_extractor.uasset_extractor.PakExtractor"
         ) as mock_extractor:
@@ -1094,35 +1039,32 @@ class TestMainFunction:
             instance.process_files = mock_process_files
             mock_extractor.return_value = instance
 
-            await main()
+            with pytest.raises(typer.Exit) as exc_info:
+                await run(
+                    catalog="catalog.json",
+                    pak=None,
+                    extractor_tool="C:\\repak\\repak.exe",
+                    converter_tool="C:\\UModel\\umodel.exe",
+                    output="output",
+                    log_file=None,
+                    verbose=False,
+                    quiet=False,
+                    workers=None,
+                    filter_files=None,
+                    filter_pattern=None,
+                )
 
-            # Verify failure message was printed and exit was called
+            # Verify failure message was printed and exit code is 1
             mock_print.assert_called()
-            mock_exit.assert_called_with(1)
+            assert exc_info.value.exit_code == 1
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("foxhole_stockpiles.core.logging.setup_logging")
-    async def test_main_with_filter_files(self, mock_setup_logging: Mock, mock_args: Mock) -> None:
-        """Test main function with filter-files argument.
+    async def test_run_with_filter_files(self, mock_setup_logging: Mock) -> None:
+        """Test run function with filter-files argument.
 
         Args:
             mock_setup_logging (Mock): Mocked setup_logging function.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
         """
-        mock_args.return_value = argparse.Namespace(
-            catalog="catalog.json",
-            pak=None,
-            extractor_tool="C:\\repak\\repak.exe",
-            converter_tool="C:\\UModel\\umodel.exe",
-            output="output",
-            log_file=None,
-            verbose=False,
-            quiet=False,
-            workers=None,
-            filter_files=["War/Content/Icons/Icon1.uasset", "War/Content/Icons/Icon2.uasset"],
-            filter_pattern=None,
-        )
-
         with patch(
             "fs_tools.commands.uasset_extractor.uasset_extractor.PakExtractor"
         ) as mock_extractor:
@@ -1134,38 +1076,32 @@ class TestMainFunction:
             instance.process_files = mock_process_files
             mock_extractor.return_value = instance
 
-            await main()
+            await run(
+                catalog="catalog.json",
+                pak=None,
+                extractor_tool="C:\\repak\\repak.exe",
+                converter_tool="C:\\UModel\\umodel.exe",
+                output="output",
+                log_file=None,
+                verbose=False,
+                quiet=False,
+                workers=None,
+                filter_files=["War/Content/Icons/Icon1.uasset", "War/Content/Icons/Icon2.uasset"],
+                filter_pattern=None,
+            )
 
             # Verify PakExtractor was called with filter_assets as a set
             call_kwargs = mock_extractor.call_args[1]
             assert call_kwargs["filter_assets"] is not None
             assert isinstance(call_kwargs["filter_assets"], set)
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("foxhole_stockpiles.core.logging.setup_logging")
-    async def test_main_with_filter_pattern(
-        self, mock_setup_logging: Mock, mock_args: Mock
-    ) -> None:
-        """Test main function with filter-pattern argument.
+    async def test_run_with_filter_pattern(self, mock_setup_logging: Mock) -> None:
+        """Test run function with filter-pattern argument.
 
         Args:
             mock_setup_logging (Mock): Mocked setup_logging function.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
         """
-        mock_args.return_value = argparse.Namespace(
-            catalog="catalog.json",
-            pak=None,
-            extractor_tool="C:\\repak\\repak.exe",
-            converter_tool="C:\\UModel\\umodel.exe",
-            output="output",
-            log_file=None,
-            verbose=False,
-            quiet=False,
-            workers=None,
-            filter_files=None,
-            filter_pattern=["Subicons/"],
-        )
-
         with patch(
             "fs_tools.commands.uasset_extractor.uasset_extractor.PakExtractor"
         ) as mock_extractor:
@@ -1177,38 +1113,32 @@ class TestMainFunction:
             instance.process_files = mock_process_files
             mock_extractor.return_value = instance
 
-            await main()
+            await run(
+                catalog="catalog.json",
+                pak=None,
+                extractor_tool="C:\\repak\\repak.exe",
+                converter_tool="C:\\UModel\\umodel.exe",
+                output="output",
+                log_file=None,
+                verbose=False,
+                quiet=False,
+                workers=None,
+                filter_files=None,
+                filter_pattern=["Subicons/"],
+            )
 
             # Verify PakExtractor was called with filter_assets as a callable
             call_kwargs = mock_extractor.call_args[1]
             assert call_kwargs["filter_assets"] is not None
             assert callable(call_kwargs["filter_assets"])
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("foxhole_stockpiles.core.logging.setup_logging")
-    async def test_main_with_combined_filters(
-        self, mock_setup_logging: Mock, mock_args: Mock
-    ) -> None:
-        """Test main function with both filter-files and filter-pattern.
+    async def test_run_with_combined_filters(self, mock_setup_logging: Mock) -> None:
+        """Test run function with both filter-files and filter-pattern.
 
         Args:
             mock_setup_logging (Mock): Mocked setup_logging function.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
         """
-        mock_args.return_value = argparse.Namespace(
-            catalog="catalog.json",
-            pak=None,
-            extractor_tool="C:\\repak\\repak.exe",
-            converter_tool="C:\\UModel\\umodel.exe",
-            output="output",
-            log_file=None,
-            verbose=False,
-            quiet=False,
-            workers=None,
-            filter_files=["War/Content/Textures/UI/Menus/IconFilterCrates.uasset"],
-            filter_pattern=["Subicons/"],
-        )
-
         with patch(
             "fs_tools.commands.uasset_extractor.uasset_extractor.PakExtractor"
         ) as mock_extractor:
@@ -1220,7 +1150,19 @@ class TestMainFunction:
             instance.process_files = mock_process_files
             mock_extractor.return_value = instance
 
-            await main()
+            await run(
+                catalog="catalog.json",
+                pak=None,
+                extractor_tool="C:\\repak\\repak.exe",
+                converter_tool="C:\\UModel\\umodel.exe",
+                output="output",
+                log_file=None,
+                verbose=False,
+                quiet=False,
+                workers=None,
+                filter_files=["War/Content/Textures/UI/Menus/IconFilterCrates.uasset"],
+                filter_pattern=["Subicons/"],
+            )
 
             # Verify PakExtractor was called with filter_assets as a callable
             call_kwargs = mock_extractor.call_args[1]
@@ -1232,33 +1174,17 @@ class TestMainFunction:
             assert filter_func("War/Content/Icons/Subicons/Ammo.uasset") is True
             assert filter_func("War/Content/Icons/MainIcon.uasset") is False
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("foxhole_stockpiles.core.logging.setup_logging")
     @patch("builtins.print")
-    async def test_main_process_files_success(
-        self, mock_print: Mock, mock_setup_logging: Mock, mock_args: Mock
+    async def test_run_process_files_success(
+        self, mock_print: Mock, mock_setup_logging: Mock
     ) -> None:
-        """Test main function with successful process_files.
+        """Test run function with successful process_files.
 
         Args:
             mock_print (Mock): Mocked print function.
             mock_setup_logging (Mock): Mocked setup_logging function.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
         """
-        mock_args.return_value = argparse.Namespace(
-            catalog="catalog.json",
-            pak=None,
-            extractor_tool="C:\\repak\\repak.exe",
-            converter_tool="C:\\UModel\\umodel.exe",
-            output="output",
-            log_file=None,
-            verbose=False,
-            quiet=False,
-            workers=None,
-            filter_files=None,
-            filter_pattern=None,
-        )
-
         with patch(
             "fs_tools.commands.uasset_extractor.uasset_extractor.PakExtractor"
         ) as mock_extractor:
@@ -1270,7 +1196,19 @@ class TestMainFunction:
             instance.process_files = mock_process_files
             mock_extractor.return_value = instance
 
-            await main()
+            await run(
+                catalog="catalog.json",
+                pak=None,
+                extractor_tool="C:\\repak\\repak.exe",
+                converter_tool="C:\\UModel\\umodel.exe",
+                output="output",
+                log_file=None,
+                verbose=False,
+                quiet=False,
+                workers=None,
+                filter_files=None,
+                filter_pattern=None,
+            )
 
             # Verify success message was printed
             assert any("success" in str(call).lower() for call in mock_print.call_args_list)

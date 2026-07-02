@@ -1,12 +1,12 @@
 """Database builder for creating resolution-specific template databases."""
 
-import argparse
 import asyncio
 import logging
 from copy import copy
 from pathlib import Path
 
 import numpy
+import typer
 
 from foxhole_stockpiles.core.image_io import read_bgr, resize_bgr
 from foxhole_stockpiles.core.logging import setup_logging
@@ -504,106 +504,96 @@ class DatabaseBuilder:
         )
 
 
-async def main() -> None:
-    """Main entry point for database builder."""
-    parser = argparse.ArgumentParser(description="Build template databases")
-    parser.add_argument(
-        "--catalog",
-        type=Path,
-        help="Path to catalog.json (default: from database_builder.catalog_file setting)",
-    )
-    parser.add_argument("--templates", type=Path, required=True, help="Path to extracted templates")
-    parser.add_argument(
-        "--database",
-        type=Path,
-        help="Output database path (default: from scanner.database_path setting)",
-    )
-    parser.add_argument(
-        "--use-scaling",
-        action="store_true",
-        help="Scale from largest available size when exact size not found (better quality)",
-    )
-    parser.add_argument(
-        "--verbose", action="store_true", help="Enable verbose logging (debug level)"
-    )
-    parser.add_argument(
-        "--quiet",
-        action="store_true",
-        default=False,
-        help="Suppress all output except errors and warnings. "
-        "Only errors will be printed to console.",
-    )
-    parser.add_argument("--log-file", type=Path, help="Path to log file (default: console only)")
-    parser.add_argument(
-        "--resolution",
-        action="append",
-        help=(
-            "Resolution to generate (can be specified multiple times, e.g., --resolution 1024"
-            " --resolution 2160). If not specified, uses database_builder.target_resolutions"
-            " setting or all supported resolutions if not configured."
-        ),
-    )
+async def run(
+    templates: Path,
+    catalog: Path | None = None,
+    database: Path | None = None,
+    use_scaling: bool = False,
+    verbose: bool = False,
+    quiet: bool = False,
+    log_file: Path | None = None,
+    resolution: list[str] | None = None,
+) -> None:
+    """Build resolution-specific template databases.
 
-    args = parser.parse_args()
-
+    Args:
+        templates (Path): Path to extracted templates.
+        catalog (Path | None): Path to catalog.json (default: from
+            database_builder.catalog_file setting).
+        database (Path | None): Output database path (default: from
+            scanner.database_path setting).
+        use_scaling (bool): Scale from largest available size when exact size not
+            found (better quality).
+        verbose (bool): Enable verbose logging (debug level).
+        quiet (bool): Suppress all output except errors and warnings. Only errors
+            will be printed to console.
+        log_file (Path | None): Path to log file (default: console only).
+        resolution (list[str] | None): Resolutions to generate (can be specified
+            multiple times, e.g., --resolution 1024 --resolution 2160). If not
+            specified, uses database_builder.target_resolutions setting or all
+            supported resolutions if not configured.
+    """
     # Setup logging
     settings = get_settings()
 
     # Use catalog from args or fall back to config
-    catalog_path = (
-        args.catalog if args.catalog is not None else settings.database_builder.catalog_file
-    )
+    catalog_path = catalog if catalog is not None else settings.database_builder.catalog_file
     if catalog_path is None:
-        parser.error(
-            "Catalog path must be provided via --catalog or database_builder.catalog_file setting"
+        typer.echo(
+            "Catalog path must be provided via --catalog or database_builder.catalog_file setting",
+            err=True,
         )
+        raise typer.Exit(code=2)
 
     # Use database from args or fall back to config
-    database_path = args.database if args.database is not None else settings.scanner.database_path
+    database_path = database if database is not None else settings.scanner.database_path
     if database_path is None:
-        parser.error(
-            "Database path must be provided via --database or scanner.database_path setting"
+        typer.echo(
+            "Database path must be provided via --database or scanner.database_path setting",
+            err=True,
         )
+        raise typer.Exit(code=2)
 
     # Parse and validate resolutions if specified, otherwise use settings
     target_resolutions: list[SupportedResolution] | None = None
-    if args.resolution:
+    if resolution:
         # User specified resolutions via CLI
         target_resolutions = []
-        for res_str in args.resolution:
+        for res_str in resolution:
             try:
-                resolution = SupportedResolution(res_str)
-                target_resolutions.append(resolution)
+                target_resolutions.append(SupportedResolution(res_str))
             except ValueError:
                 valid_resolutions = [r.value for r in SupportedResolution]
-                parser.error(
+                typer.echo(
                     f"Invalid resolution '{res_str}'. "
-                    f"Valid resolutions are: {', '.join(valid_resolutions)}"
+                    f"Valid resolutions are: {', '.join(valid_resolutions)}",
+                    err=True,
                 )
+                raise typer.Exit(code=2) from None
     elif settings.database_builder.target_resolutions:
         # Use resolutions from settings (string list to enum list)
         target_resolutions = []
         for res_str in settings.database_builder.target_resolutions:
             try:
-                resolution = SupportedResolution(res_str)
-                target_resolutions.append(resolution)
+                resolution_enum = SupportedResolution(res_str)
+                target_resolutions.append(resolution_enum)
             except ValueError:
                 logging.warning("Invalid resolution in settings: '%s', skipping", res_str)
     # If still None, build_all_databases will use all supported resolutions
 
     logging_settings = copy(settings.logging)
     # Setup logging
-    if args.quiet:
+    if quiet:
         logging_settings.log_level = "WARNING"
-    elif args.verbose:
+    elif verbose:
         logging_settings.log_level = "DEBUG"
 
-    logging_settings.log_file = args.log_file
+    logging_settings.log_file = str(log_file) if log_file is not None else None
     setup_logging(logging_settings)
 
     # Build database
     builder = DatabaseBuilder(
-        catalog_path=catalog_path, assets_path=args.templates, use_scaling=args.use_scaling
+        catalog_path=catalog_path, assets_path=templates, use_scaling=use_scaling
     )
     await builder.build_all_databases(
         output_path=database_path, target_resolutions=target_resolutions

@@ -5,7 +5,6 @@ including TemplateGenerator class functionality, image processing, and
 template generation for multiple resolutions.
 """
 
-import argparse
 import json
 from pathlib import Path
 from typing import Any
@@ -13,6 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import numpy as np
 import pytest
+import typer
 
 from foxhole_stockpiles.enums.item_category import ItemCategory
 from foxhole_stockpiles.enums.item_faction import ItemFaction
@@ -20,7 +20,7 @@ from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.models.catalog_item import CatalogItem
 from fs_tools.commands.generate_templates.generate_templates import (
     TemplateGenerator,
-    main,
+    run,
 )
 
 
@@ -1102,30 +1102,27 @@ class TestTemplateGeneratorMethods:
         assert not (generator.template_path / "RawMaterial_crated").exists()
 
 
-class TestMainFunction:
-    """Test suite for the main CLI function.
+class TestRunFunction:
+    """Test suite for the run CLI function.
 
-    This class contains tests for the main entry point of the generate
-    templates command, including argument parsing and workflow execution.
+    This class contains tests for the run entry point of the generate
+    templates command, including argument handling and workflow execution.
     """
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("fs_tools.commands.generate_templates.generate_templates.TemplateGenerator")
     @patch("fs_tools.commands.generate_templates.generate_templates.setup_logging")
-    async def test_main_with_default_args(
+    async def test_run_with_default_args(
         self,
         mock_setup_logging: Mock,
         mock_generator_class: Mock,
-        mock_args: Mock,
         tmp_path: Path,
         mock_catalog_file: Path,
     ) -> None:
-        """Test main function with default arguments.
+        """Test run function with default arguments.
 
         Args:
             mock_setup_logging (Mock): Mocked setup_logging function.
             mock_generator_class (Mock): Mocked TemplateGenerator class.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             tmp_path (Path): Temporary directory path from pytest fixture.
             mock_catalog_file (Path): Mock catalog file from fixture.
         """
@@ -1134,22 +1131,20 @@ class TestMainFunction:
 
         templates_path = tmp_path / "templates"
 
-        mock_args.return_value = argparse.Namespace(
-            catalog=mock_catalog_file,
-            assets=assets_path,
-            templates=templates_path,
-            filter=None,
-            verbose=False,
-            quiet=False,
-            log_file=None,
-        )
-
         # Mock generator instance
         mock_generator = MagicMock()
         mock_generator.generate_all_templates = AsyncMock(return_value=True)
         mock_generator_class.return_value = mock_generator
 
-        await main()
+        await run(
+            assets=assets_path,
+            templates=templates_path,
+            catalog=mock_catalog_file,
+            filter=None,
+            verbose=False,
+            quiet=False,
+            log_file=None,
+        )
 
         # Verify TemplateGenerator was instantiated
         mock_generator_class.assert_called_once()
@@ -1157,23 +1152,20 @@ class TestMainFunction:
         # Verify generate_all_templates was called
         assert mock_generator.generate_all_templates.call_count > 0
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("fs_tools.commands.generate_templates.generate_templates.TemplateGenerator")
     @patch("fs_tools.commands.generate_templates.generate_templates.setup_logging")
-    async def test_main_with_filter(
+    async def test_run_with_filter(
         self,
         mock_setup_logging: Mock,
         mock_generator_class: Mock,
-        mock_args: Mock,
         tmp_path: Path,
         mock_catalog_file: Path,
     ) -> None:
-        """Test main function with filter argument.
+        """Test run function with filter argument.
 
         Args:
             mock_setup_logging (Mock): Mocked setup_logging function.
             mock_generator_class (Mock): Mocked TemplateGenerator class.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             tmp_path (Path): Temporary directory path from pytest fixture.
             mock_catalog_file (Path): Mock catalog file from fixture.
         """
@@ -1181,16 +1173,6 @@ class TestMainFunction:
         assets_path.mkdir()
 
         templates_path = tmp_path / "templates"
-
-        mock_args.return_value = argparse.Namespace(
-            catalog=mock_catalog_file,
-            assets=assets_path,
-            templates=templates_path,
-            filter="Rifle",
-            verbose=True,
-            quiet=False,
-            log_file=None,
-        )
 
         # Mock generator instance
         mock_generator = MagicMock()
@@ -1201,22 +1183,26 @@ class TestMainFunction:
         mock_generator.generate_all_templates = mock_generate_all
         mock_generator_class.return_value = mock_generator
 
-        await main()
+        await run(
+            assets=assets_path,
+            templates=templates_path,
+            catalog=mock_catalog_file,
+            filter="Rifle",
+            verbose=True,
+            quiet=False,
+            log_file=None,
+        )
 
         # Verify TemplateGenerator was called with filter
         call_kwargs = mock_generator_class.call_args[1]
         assert call_kwargs["filter_name"] == "Rifle"
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("fs_tools.commands.generate_templates.generate_templates.setup_logging")
-    async def test_main_catalog_not_found(
-        self, mock_setup_logging: Mock, mock_args: Mock, tmp_path: Path
-    ) -> None:
-        """Test main function when catalog file is not found.
+    async def test_run_catalog_not_found(self, mock_setup_logging: Mock, tmp_path: Path) -> None:
+        """Test run function when catalog file is not found.
 
         Args:
             mock_setup_logging (Mock): Mocked setup_logging function.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
         catalog_path = tmp_path / "nonexistent.json"
@@ -1224,39 +1210,34 @@ class TestMainFunction:
         assets_path.mkdir()
         templates_path = tmp_path / "templates"
 
-        mock_args.return_value = argparse.Namespace(
-            catalog=catalog_path,
-            assets=assets_path,
-            templates=templates_path,
-            filter=None,
-            verbose=False,
-            quiet=False,
-            log_file=None,
-        )
-
         # Should exit with code 1
-        with pytest.raises(SystemExit) as exc_info:
-            await main()
+        with pytest.raises(typer.Exit) as exc_info:
+            await run(
+                assets=assets_path,
+                templates=templates_path,
+                catalog=catalog_path,
+                filter=None,
+                verbose=False,
+                quiet=False,
+                log_file=None,
+            )
 
-        assert exc_info.value.code == 1
+        assert exc_info.value.exit_code == 1
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("fs_tools.commands.generate_templates.generate_templates.TemplateGenerator")
     @patch("fs_tools.commands.generate_templates.generate_templates.setup_logging")
-    async def test_main_generation_failure(
+    async def test_run_generation_failure(
         self,
         mock_setup_logging: Mock,
         mock_generator_class: Mock,
-        mock_args: Mock,
         tmp_path: Path,
         mock_catalog_file: Path,
     ) -> None:
-        """Test main function when template generation fails.
+        """Test run function when template generation fails.
 
         Args:
             mock_setup_logging (Mock): Mocked setup_logging function.
             mock_generator_class (Mock): Mocked TemplateGenerator class.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             tmp_path (Path): Temporary directory path from pytest fixture.
             mock_catalog_file (Path): Mock catalog file from fixture.
         """
@@ -1264,16 +1245,6 @@ class TestMainFunction:
         assets_path.mkdir()
 
         templates_path = tmp_path / "templates"
-
-        mock_args.return_value = argparse.Namespace(
-            catalog=mock_catalog_file,
-            assets=assets_path,
-            templates=templates_path,
-            filter=None,
-            verbose=False,
-            quiet=False,
-            log_file=None,
-        )
 
         # Mock generator instance to return failure
         mock_generator = MagicMock()
@@ -1285,104 +1256,100 @@ class TestMainFunction:
         mock_generator_class.return_value = mock_generator
 
         # Should exit with code 1
-        with pytest.raises(SystemExit) as exc_info:
-            await main()
+        with pytest.raises(typer.Exit) as exc_info:
+            await run(
+                assets=assets_path,
+                templates=templates_path,
+                catalog=mock_catalog_file,
+                filter=None,
+                verbose=False,
+                quiet=False,
+                log_file=None,
+            )
 
-        assert exc_info.value.code == 1
+        assert exc_info.value.exit_code == 1
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("fs_tools.commands.generate_templates.generate_templates.setup_logging")
-    async def test_main_assets_not_found(
-        self, mock_setup_logging: Mock, mock_args: Mock, tmp_path: Path, mock_catalog_file: Path
+    async def test_run_assets_not_found(
+        self, mock_setup_logging: Mock, tmp_path: Path, mock_catalog_file: Path
     ) -> None:
-        """Test main function when assets directory is not found.
+        """Test run function when assets directory is not found.
 
         Args:
             mock_setup_logging (Mock): Mocked setup_logging function.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             tmp_path (Path): Temporary directory path from pytest fixture.
             mock_catalog_file (Path): Mock catalog file from fixture.
         """
         assets_path = tmp_path / "nonexistent_assets"
         templates_path = tmp_path / "templates"
 
-        mock_args.return_value = argparse.Namespace(
-            catalog=mock_catalog_file,
-            assets=assets_path,
-            templates=templates_path,
-            filter=None,
-            verbose=False,
-            quiet=False,
-            log_file=None,
-        )
-
         # Should exit with code 1
-        with pytest.raises(SystemExit) as exc_info:
-            await main()
+        with pytest.raises(typer.Exit) as exc_info:
+            await run(
+                assets=assets_path,
+                templates=templates_path,
+                catalog=mock_catalog_file,
+                filter=None,
+                verbose=False,
+                quiet=False,
+                log_file=None,
+            )
 
-        assert exc_info.value.code == 1
+        assert exc_info.value.exit_code == 1
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("fs_tools.commands.generate_templates.generate_templates.TemplateGenerator")
     @patch("fs_tools.commands.generate_templates.generate_templates.setup_logging")
-    async def test_main_with_quiet_mode(
+    async def test_run_with_quiet_mode(
         self,
         mock_setup_logging: Mock,
         mock_generator_class: Mock,
-        mock_args: Mock,
         tmp_path: Path,
         mock_catalog_file: Path,
     ) -> None:
-        """Test main function with quiet mode.
+        """Test run function with quiet mode.
 
         Args:
             mock_setup_logging (Mock): Mocked setup_logging function.
             mock_generator_class (Mock): Mocked TemplateGenerator class.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             tmp_path (Path): Temporary directory path from pytest fixture.
             mock_catalog_file (Path): Mock catalog file from fixture.
         """
         assets_path = tmp_path / "assets"
         assets_path.mkdir()
         templates_path = tmp_path / "templates"
-
-        mock_args.return_value = argparse.Namespace(
-            catalog=mock_catalog_file,
-            assets=assets_path,
-            templates=templates_path,
-            filter=None,
-            verbose=False,
-            quiet=True,
-            log_file=None,
-        )
 
         # Mock generator instance
         mock_generator = MagicMock()
         mock_generator.generate_all_templates = AsyncMock(return_value=True)
         mock_generator_class.return_value = mock_generator
 
-        await main()
+        await run(
+            assets=assets_path,
+            templates=templates_path,
+            catalog=mock_catalog_file,
+            filter=None,
+            verbose=False,
+            quiet=True,
+            log_file=None,
+        )
 
         # Verify setup_logging was called
         assert mock_setup_logging.call_count > 0
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("fs_tools.commands.generate_templates.generate_templates.TemplateGenerator")
     @patch("fs_tools.commands.generate_templates.generate_templates.setup_logging")
-    async def test_main_with_exception(
+    async def test_run_with_exception(
         self,
         mock_setup_logging: Mock,
         mock_generator_class: Mock,
-        mock_args: Mock,
         tmp_path: Path,
         mock_catalog_file: Path,
     ) -> None:
-        """Test main function when an exception occurs during generation.
+        """Test run function when an exception occurs during generation.
 
         Args:
             mock_setup_logging (Mock): Mocked setup_logging function.
             mock_generator_class (Mock): Mocked TemplateGenerator class.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             tmp_path (Path): Temporary directory path from pytest fixture.
             mock_catalog_file (Path): Mock catalog file from fixture.
         """
@@ -1390,21 +1357,19 @@ class TestMainFunction:
         assets_path.mkdir()
         templates_path = tmp_path / "templates"
 
-        mock_args.return_value = argparse.Namespace(
-            catalog=mock_catalog_file,
-            assets=assets_path,
-            templates=templates_path,
-            filter=None,
-            verbose=False,
-            quiet=False,
-            log_file=None,
-        )
-
         # Mock generator to raise exception
         mock_generator_class.side_effect = RuntimeError("Unexpected error")
 
         # Should exit with code 1
-        with pytest.raises(SystemExit) as exc_info:
-            await main()
+        with pytest.raises(typer.Exit) as exc_info:
+            await run(
+                assets=assets_path,
+                templates=templates_path,
+                catalog=mock_catalog_file,
+                filter=None,
+                verbose=False,
+                quiet=False,
+                log_file=None,
+            )
 
-        assert exc_info.value.code == 1
+        assert exc_info.value.exit_code == 1

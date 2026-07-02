@@ -6,13 +6,12 @@ This module builds catalog files from PAK files by:
 3. Building the catalog using CatalogAssembler
 """
 
-import argparse
-import asyncio
 import json
 import logging
-import sys
 from copy import copy
 from pathlib import Path
+
+import typer
 
 from foxhole_stockpiles.core.logging import setup_logging
 from foxhole_stockpiles.core.settings import get_settings
@@ -30,127 +29,88 @@ DEFAULT_CONVERTER = r"C:\UAssetGUI\UAssetGUI.exe"
 DEFAULT_OUTPUT = "catalog.json"
 
 
-async def main() -> None:
-    """Command-line interface for catalog builder."""
-    parser = argparse.ArgumentParser(
-        description="Build catalog from Foxhole PAK file",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
-    parser.add_argument(
-        "--pak",
-        type=Path,
-        default=DEFAULT_PAK_FILE,
-        help="Path to War-WindowsNoEditor.pak file",
-    )
-    parser.add_argument(
-        "--extractor",
-        type=Path,
-        default=DEFAULT_EXTRACTOR,
-        help="Path to repak.exe extraction tool",
-    )
-    parser.add_argument(
-        "--converter",
-        type=Path,
-        default=DEFAULT_CONVERTER,
-        help="Path to UAssetGUI.exe conversion tool",
-    )
-    parser.add_argument(
-        "--output",
-        type=Path,
-        default=DEFAULT_OUTPUT,
-        help="Output path for catalog JSON",
-    )
-    parser.add_argument(
-        "--keep-temp",
-        action="store_true",
-        help="Keep temporary extraction directory",
-    )
-    parser.add_argument(
-        "--force-extract",
-        action="store_true",
-        help="Force re-extraction from PAK even if JSON files exist",
-    )
-    parser.add_argument(
-        "--workers",
-        type=int,
-        default=4,
-        help="Number of parallel conversions",
-    )
-    parser.add_argument(
-        "--log-file",
-        type=Path,
-        help="Path to log file (default: console only)",
-    )
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Enable verbose logging (debug level)",
-    )
-    parser.add_argument(
-        "--quiet",
-        action="store_true",
-        help="Suppress all output except errors",
-    )
-    parser.add_argument(
-        "--extract-dir",
-        type=Path,
-        help="Use existing extraction directory instead of extracting from PAK (e.g., war/)",
-    )
+async def run(
+    pak: Path = Path(DEFAULT_PAK_FILE),
+    extractor: Path = Path(DEFAULT_EXTRACTOR),
+    converter: Path = Path(DEFAULT_CONVERTER),
+    output: Path = Path(DEFAULT_OUTPUT),
+    keep_temp: bool = False,
+    force_extract: bool = False,
+    workers: int = 4,
+    log_file: Path | None = None,
+    verbose: bool = False,
+    quiet: bool = False,
+    extract_dir: Path | None = None,
+) -> None:
+    """Build catalog from Foxhole PAK file.
 
-    args = parser.parse_args()
-
+    Args:
+        pak (Path): Path to War-WindowsNoEditor.pak file.
+        extractor (Path): Path to repak.exe extraction tool.
+        converter (Path): Path to UAssetGUI.exe conversion tool.
+        output (Path): Output path for catalog JSON.
+        keep_temp (bool): Keep temporary extraction directory. Defaults to False.
+        force_extract (bool): Force re-extraction from PAK even if JSON files
+            exist. Defaults to False.
+        workers (int): Number of parallel conversions. Defaults to 4.
+        log_file (Path | None): Path to log file (default: console only).
+        verbose (bool): Enable verbose logging (debug level). Defaults to False.
+        quiet (bool): Suppress all output except errors. Defaults to False.
+        extract_dir (Path | None): Use existing extraction directory instead of
+            extracting from PAK (e.g., war/).
+    """
     # Setup logging
     settings = copy(get_settings())
     logging_settings = settings.logging
 
-    if args.quiet:
+    if quiet:
         logging_settings.log_level = "WARNING"
-    elif args.verbose:
+    elif verbose:
         logging_settings.log_level = "DEBUG"
 
-    logging_settings.log_file = args.log_file
+    logging_settings.log_file = str(log_file) if log_file is not None else None
     setup_logging(logging_settings)
 
     logger = logging.getLogger(__name__)
 
     # Get extraction directory
-    if args.extract_dir:
-        extract_dir = args.extract_dir
-        logger.debug("Using provided extraction directory: %s", extract_dir)
+    if extract_dir:
+        resolved_extract_dir = extract_dir
+        logger.debug("Using provided extraction directory: %s", resolved_extract_dir)
     else:
         # Extract from PAK
         # Use temp directory if --keep-temp, otherwise cache in "war/" directory
-        extraction_dir = None if args.keep_temp else Path("war")
-        extractor = BlueprintExtractor(
-            pak_file=args.pak,
-            extractor_tool=args.extractor,
-            converter_tool=args.converter,
-            max_workers=args.workers,
-            force_extract=args.force_extract,
+        extraction_dir = None if keep_temp else Path("war")
+        blueprint_extractor = BlueprintExtractor(
+            pak_file=pak,
+            extractor_tool=extractor,
+            converter_tool=converter,
+            max_workers=workers,
+            force_extract=force_extract,
             extraction_dir=extraction_dir,
         )
 
-        extract_dir = await extractor.extract()
+        resolved_extract_dir = await blueprint_extractor.extract()
 
         logger.debug(
             "Files extracted: %d, converted: %d",
-            extractor.stats["extracted"],
-            extractor.stats["converted"],
+            blueprint_extractor.stats["extracted"],
+            blueprint_extractor.stats["converted"],
         )
 
     # Build catalog using service
     logger.info("Building catalog...")
     try:
-        service = CatalogAssembler.from_extract_dir(extract_dir)
+        service = CatalogAssembler.from_extract_dir(resolved_extract_dir)
     except (FileNotFoundError, NotADirectoryError) as e:
         logger.error("Invalid extraction directory: %s", e)
-        sys.exit(1)
+        raise typer.Exit(code=1) from e
 
     catalog = service.build_catalog()
 
     # Write output (sorted keys for easier comparison)
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    with open(args.output, "w", encoding="utf-8") as f:
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with open(output, "w", encoding="utf-8") as f:
         json.dump(catalog, f, indent=2, sort_keys=True, ensure_ascii=False)
 
     # Print summary
@@ -161,9 +121,5 @@ async def main() -> None:
         stats["parsed"],
         stats["stockpilable"],
         stats["errors"],
-        args.output,
+        output,
     )
-
-
-if __name__ == "__main__":
-    asyncio.run(main())

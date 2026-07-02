@@ -5,13 +5,13 @@ including DatabaseBuilder class functionality, template processing, and
 database creation for multiple resolutions.
 """
 
-import argparse
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import numpy as np
 import pytest
+import typer
 
 from foxhole_stockpiles.enums.item_category import ItemCategory
 from foxhole_stockpiles.enums.item_faction import ItemFaction
@@ -19,7 +19,7 @@ from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.models.catalog_item import CatalogItem
 from fs_tools.commands.database_builder.database_builder import (
     DatabaseBuilder,
-    main,
+    run,
 )
 from fs_tools.models.icon_template import IconTemplate
 from fs_tools.template_db.template_database import TemplateDatabase
@@ -590,11 +590,11 @@ class TestDatabaseBuilderMethods:
         assert found_icons == []
 
 
-class TestMainFunction:
-    """Test suite for the main CLI function.
+class TestRunFunction:
+    """Test suite for the run CLI function.
 
-    This class contains tests for the main entry point of the database
-    builder command, including argument parsing and workflow execution.
+    This class contains tests for the run entry point of the database
+    builder command, including argument handling and workflow execution.
     """
 
     def _create_mock_settings(self) -> MagicMock:
@@ -610,25 +610,22 @@ class TestMainFunction:
         mock_settings.logging = MagicMock()
         return mock_settings
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("fs_tools.commands.database_builder.database_builder.DatabaseBuilder")
     @patch("fs_tools.commands.database_builder.database_builder.setup_logging")
     @patch("fs_tools.commands.database_builder.database_builder.get_settings")
-    async def test_main_with_default_args(
+    async def test_run_with_default_args(
         self,
         mock_get_settings: Mock,
         mock_setup_logging: Mock,
         mock_builder_class: Mock,
-        mock_args: Mock,
         tmp_path: Path,
     ) -> None:
-        """Test main function with default arguments.
+        """Test run function with default arguments.
 
         Args:
             mock_get_settings (Mock): Mocked get_settings function.
             mock_setup_logging (Mock): Mocked setup_logging function.
             mock_builder_class (Mock): Mocked DatabaseBuilder class.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
         catalog_path = tmp_path / "catalog.json"
@@ -640,14 +637,15 @@ class TestMainFunction:
         database_path = tmp_path / "database.h5"
 
         # Mock settings
-        mock_settings = MagicMock()
-        mock_settings.database_builder.catalog_file = None
-        mock_settings.database_builder.target_resolutions = None
-        mock_settings.scanner.database_path = None
-        mock_settings.logging = MagicMock()
+        mock_settings = self._create_mock_settings()
         mock_get_settings.return_value = mock_settings
 
-        mock_args.return_value = argparse.Namespace(
+        # Mock builder instance
+        mock_builder = MagicMock()
+        mock_builder.build_all_databases = AsyncMock(return_value=None)
+        mock_builder_class.return_value = mock_builder
+
+        await run(
             catalog=catalog_path,
             templates=templates_path,
             database=database_path,
@@ -658,38 +656,28 @@ class TestMainFunction:
             resolution=None,
         )
 
-        # Mock builder instance
-        mock_builder = MagicMock()
-        mock_builder.build_all_databases = AsyncMock(return_value=None)
-        mock_builder_class.return_value = mock_builder
-
-        await main()
-
         # Verify DatabaseBuilder was instantiated
         mock_builder_class.assert_called_once()
 
         # Verify build_all_databases was called
         assert mock_builder.build_all_databases.call_count > 0
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("fs_tools.commands.database_builder.database_builder.DatabaseBuilder")
     @patch("fs_tools.commands.database_builder.database_builder.setup_logging")
     @patch("fs_tools.commands.database_builder.database_builder.get_settings")
-    async def test_main_with_specific_resolutions(
+    async def test_run_with_specific_resolutions(
         self,
         mock_get_settings: Mock,
         mock_setup_logging: Mock,
         mock_builder_class: Mock,
-        mock_args: Mock,
         tmp_path: Path,
     ) -> None:
-        """Test main function with specific resolution arguments.
+        """Test run function with specific resolution arguments.
 
         Args:
             mock_get_settings (Mock): Mocked get_settings function.
             mock_setup_logging (Mock): Mocked setup_logging function.
             mock_builder_class (Mock): Mocked DatabaseBuilder class.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
         catalog_path = tmp_path / "catalog.json"
@@ -700,7 +688,14 @@ class TestMainFunction:
 
         database_path = tmp_path / "database.h5"
 
-        mock_args.return_value = argparse.Namespace(
+        mock_get_settings.return_value = self._create_mock_settings()
+
+        # Mock builder instance
+        mock_builder = MagicMock()
+        mock_builder.build_all_databases = AsyncMock(return_value=None)
+        mock_builder_class.return_value = mock_builder
+
+        await run(
             catalog=catalog_path,
             templates=templates_path,
             database=database_path,
@@ -711,35 +706,28 @@ class TestMainFunction:
             resolution=["1080", "2160"],
         )
 
-        # Mock builder instance
-        mock_builder = MagicMock()
-        mock_builder.build_all_databases = AsyncMock(return_value=None)
-        mock_builder_class.return_value = mock_builder
-
-        await main()
-
         # Verify build_all_databases was called with specific resolutions
         assert mock_builder.build_all_databases.call_count > 0
         call_kwargs = mock_builder.build_all_databases.call_args[1]
         assert "target_resolutions" in call_kwargs
         assert len(call_kwargs["target_resolutions"]) == 2
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("fs_tools.commands.database_builder.database_builder.DatabaseBuilder")
     @patch("fs_tools.commands.database_builder.database_builder.setup_logging")
-    async def test_main_with_quiet_mode(
+    @patch("fs_tools.commands.database_builder.database_builder.get_settings")
+    async def test_run_with_quiet_mode(
         self,
+        mock_get_settings: Mock,
         mock_setup_logging: Mock,
         mock_builder_class: Mock,
-        mock_args: Mock,
         tmp_path: Path,
     ) -> None:
-        """Test main function with quiet mode enabled.
+        """Test run function with quiet mode enabled.
 
         Args:
+            mock_get_settings (Mock): Mocked get_settings function.
             mock_setup_logging (Mock): Mocked setup_logging function.
             mock_builder_class (Mock): Mocked DatabaseBuilder class.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
         catalog_path = tmp_path / "catalog.json"
@@ -750,7 +738,14 @@ class TestMainFunction:
 
         database_path = tmp_path / "database.h5"
 
-        mock_args.return_value = argparse.Namespace(
+        mock_get_settings.return_value = self._create_mock_settings()
+
+        # Mock builder instance
+        mock_builder = MagicMock()
+        mock_builder.build_all_databases = AsyncMock(return_value=None)
+        mock_builder_class.return_value = mock_builder
+
+        await run(
             catalog=catalog_path,
             templates=templates_path,
             database=database_path,
@@ -761,32 +756,25 @@ class TestMainFunction:
             resolution=None,
         )
 
-        # Mock builder instance
-        mock_builder = MagicMock()
-        mock_builder.build_all_databases = AsyncMock(return_value=None)
-        mock_builder_class.return_value = mock_builder
-
-        await main()
-
         # Verify setup_logging was called
         mock_setup_logging.assert_called_once()
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("fs_tools.commands.database_builder.database_builder.DatabaseBuilder")
     @patch("fs_tools.commands.database_builder.database_builder.setup_logging")
-    async def test_main_with_invalid_resolution(
+    @patch("fs_tools.commands.database_builder.database_builder.get_settings")
+    async def test_run_with_invalid_resolution(
         self,
+        mock_get_settings: Mock,
         mock_setup_logging: Mock,
         mock_builder_class: Mock,
-        mock_args: Mock,
         tmp_path: Path,
     ) -> None:
-        """Test main function with invalid resolution argument.
+        """Test run function with invalid resolution argument.
 
         Args:
+            mock_get_settings (Mock): Mocked get_settings function.
             mock_setup_logging (Mock): Mocked setup_logging function.
             mock_builder_class (Mock): Mocked DatabaseBuilder class.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
         catalog_path = tmp_path / "catalog.json"
@@ -797,47 +785,44 @@ class TestMainFunction:
 
         database_path = tmp_path / "database.h5"
 
-        mock_args.return_value = argparse.Namespace(
-            catalog=catalog_path,
-            templates=templates_path,
-            database=database_path,
-            use_scaling=False,
-            verbose=False,
-            quiet=False,
-            log_file=None,
-            resolution=["9999"],  # Invalid resolution
-        )
+        mock_get_settings.return_value = self._create_mock_settings()
 
         # Mock builder instance
         mock_builder = MagicMock()
         mock_builder.build_all_databases = AsyncMock(return_value=None)
         mock_builder_class.return_value = mock_builder
 
-        # Should raise SystemExit due to parser.error()
-        with pytest.raises(SystemExit) as exc_info:
-            await main()
+        # Should raise typer.Exit due to invalid resolution
+        with pytest.raises(typer.Exit) as exc_info:
+            await run(
+                catalog=catalog_path,
+                templates=templates_path,
+                database=database_path,
+                use_scaling=False,
+                verbose=False,
+                quiet=False,
+                log_file=None,
+                resolution=["9999"],  # Invalid resolution
+            )
 
-        assert exc_info.value.code == 2
+        assert exc_info.value.exit_code == 2
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("fs_tools.commands.database_builder.database_builder.DatabaseBuilder")
     @patch("fs_tools.commands.database_builder.database_builder.setup_logging")
     @patch("fs_tools.commands.database_builder.database_builder.get_settings")
-    async def test_main_uses_settings_when_args_not_provided(
+    async def test_run_uses_settings_when_args_not_provided(
         self,
         mock_get_settings: Mock,
         mock_setup_logging: Mock,
         mock_builder_class: Mock,
-        mock_args: Mock,
         tmp_path: Path,
     ) -> None:
-        """Test that main function uses settings when CLI args not provided.
+        """Test that run function uses settings when CLI args not provided.
 
         Args:
             mock_get_settings (Mock): Mocked get_settings function.
             mock_setup_logging (Mock): Mocked setup_logging function.
             mock_builder_class (Mock): Mocked DatabaseBuilder class.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
         catalog_path = tmp_path / "catalog.json"
@@ -856,24 +841,22 @@ class TestMainFunction:
         mock_settings.logging = MagicMock()
         mock_get_settings.return_value = mock_settings
 
-        # Args with catalog=None (should use settings)
-        mock_args.return_value = argparse.Namespace(
-            catalog=None,  # Not provided, should use settings
-            templates=templates_path,
-            database=None,  # Not provided, should use settings
-            use_scaling=False,
-            verbose=False,
-            quiet=False,
-            log_file=None,
-            resolution=None,  # Not provided, should use settings
-        )
-
         # Mock builder instance
         mock_builder = MagicMock()
         mock_builder.build_all_databases = AsyncMock(return_value=None)
         mock_builder_class.return_value = mock_builder
 
-        await main()
+        # catalog/database/resolution not provided, should use settings
+        await run(
+            templates=templates_path,
+            catalog=None,
+            database=None,
+            use_scaling=False,
+            verbose=False,
+            quiet=False,
+            log_file=None,
+            resolution=None,
+        )
 
         # Verify DatabaseBuilder was instantiated with catalog from settings
         call_args = mock_builder_class.call_args

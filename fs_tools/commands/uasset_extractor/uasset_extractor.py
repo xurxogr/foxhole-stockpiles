@@ -5,7 +5,6 @@ and convert them to PNG format for use in the stockpile recognition system.
 Uses repak for extraction and UModel.exe for conversion.
 """
 
-import argparse
 import asyncio
 import logging
 import multiprocessing
@@ -14,6 +13,8 @@ import tempfile
 from collections.abc import Callable
 from copy import copy
 from pathlib import Path
+
+import typer
 
 from foxhole_stockpiles.core.logging import setup_logging
 from foxhole_stockpiles.core.settings import get_settings
@@ -660,103 +661,83 @@ class PakExtractor:
             return successful_conversions > 0
 
 
-async def main() -> None:
+async def run(
+    pak: list[str] | None = None,
+    catalog: str | None = None,
+    extractor_tool: str | None = None,
+    converter_tool: str | None = None,
+    output: str = DEFAULT_OUTPUT,
+    workers: int | None = None,
+    filter_files: list[str] | None = None,
+    filter_pattern: list[str] | None = None,
+    log_file: Path | None = None,
+    verbose: bool = False,
+    quiet: bool = False,
+) -> None:
     """Command-line interface for the PAK extraction tool.
 
     Parses command-line arguments and runs the extraction process.
     Exits with code 1 if any operations fail, 0 if all succeed.
-    """
-    parser = argparse.ArgumentParser(
-        description="Extract and convert files from a PAK file based on catalog.json",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
-    parser.add_argument(
-        "--pak",
-        action="append",
-        help="Path to PAK file(s). Can be specified multiple times for mod support.",
-    )
-    parser.add_argument(
-        "--catalog",
-        help="Path to catalog.json file (default: from database_builder.catalog_file setting)",
-    )
-    parser.add_argument(
-        "--extractor-tool",
-        help="Path to repak.exe (default: from database_builder.extractor_tool setting)",
-    )
-    parser.add_argument(
-        "--converter-tool",
-        help="Path to umodel.exe (default: from database_builder.converter_tool setting)",
-    )
-    parser.add_argument(
-        "--output",
-        help="Output directory for converted files",
-        default=DEFAULT_OUTPUT,
-    )
-    parser.add_argument(
-        "--workers",
-        type=int,
-        default=None,
-        help="Number of parallel operations (default: cpu count)",
-    )
-    parser.add_argument(
-        "--filter-files",
-        action="append",
-        help="Extract only these specific file paths. Can be specified multiple times. "
-        "Example: --filter-files 'War/Content/Icons/Icon1.uasset'",
-    )
-    parser.add_argument(
-        "--filter-pattern",
-        action="append",
-        help="Extract only files matching this pattern (substring match). "
-        "Can be specified multiple times. Example: --filter-pattern 'Subicons/'",
-    )
-    parser.add_argument("--log-file", type=Path, help="Path to log file (default: console only)")
-    parser.add_argument(
-        "--verbose", action="store_true", help="Enable verbose logging (debug level)"
-    )
-    parser.add_argument(
-        "--quiet",
-        action="store_true",
-        help="Suppress all output except errors and warnings. "
-        "Only errors will be printed to console.",
-    )
-    args = parser.parse_args()
 
+    Args:
+        pak (list[str] | None): Path to PAK file(s). Can be specified multiple times for
+            mod support. Defaults to None.
+        catalog (str | None): Path to catalog.json file (default: from
+            database_builder.catalog_file setting). Defaults to None.
+        extractor_tool (str | None): Path to repak.exe (default: from
+            database_builder.extractor_tool setting). Defaults to None.
+        converter_tool (str | None): Path to umodel.exe (default: from
+            database_builder.converter_tool setting). Defaults to None.
+        output (str): Output directory for converted files. Defaults to DEFAULT_OUTPUT.
+        workers (int | None): Number of parallel operations (default: cpu count).
+            Defaults to None.
+        filter_files (list[str] | None): Extract only these specific file paths. Can be
+            specified multiple times. Defaults to None.
+        filter_pattern (list[str] | None): Extract only files matching this pattern
+            (substring match). Can be specified multiple times. Defaults to None.
+        log_file (Path | None): Path to log file (default: console only). Defaults to None.
+        verbose (bool): Enable verbose logging (debug level). Defaults to False.
+        quiet (bool): Suppress all output except errors and warnings. Only errors will
+            be printed to console. Defaults to False.
+
+    Raises:
+        typer.Exit: If PakExtractor construction fails or if some operations fail.
+    """
     # Setup logging
     settings = copy(get_settings())
     logging_settings = settings.logging
     # Setup logging
-    if args.quiet:
+    if quiet:
         logging_settings.log_level = "WARNING"
-    elif args.verbose:
+    elif verbose:
         logging_settings.log_level = "DEBUG"
 
-    logging_settings.log_file = args.log_file
+    logging_settings.log_file = str(log_file) if log_file is not None else None
     setup_logging(logging_settings)
 
     # Use settings as defaults
-    catalog_file = args.catalog or (
+    catalog_file = catalog or (
         str(settings.database_builder.catalog_file)
         if settings.database_builder.catalog_file
         else DEFAULT_CATALOG
     )
-    extractor_tool = args.extractor_tool or (
+    resolved_extractor_tool = extractor_tool or (
         str(settings.external_tools.repak) if settings.external_tools.repak else DEFAULT_EXTRACTOR
     )
-    converter_tool = args.converter_tool or (
+    resolved_converter_tool = converter_tool or (
         str(settings.external_tools.umodel) if settings.external_tools.umodel else DEFAULT_CONVERTER
     )
 
     # Build filter_assets from CLI arguments
     filter_assets: set[str] | Callable[[str], bool] | None = None
 
-    if args.filter_files or args.filter_pattern:
-        if args.filter_files and not args.filter_pattern:
+    if filter_files or filter_pattern:
+        if filter_files and not filter_pattern:
             # Only specific files - use set
-            filter_assets = set(args.filter_files)
-        elif args.filter_pattern and not args.filter_files:
+            filter_assets = set(filter_files)
+        elif filter_pattern and not filter_files:
             # Only patterns - use callable
-            patterns = args.filter_pattern
+            patterns = filter_pattern
 
             def pattern_filter(path: str) -> bool:
                 return any(pattern in path for pattern in patterns)
@@ -764,8 +745,8 @@ async def main() -> None:
             filter_assets = pattern_filter
         else:
             # Both specified - combine them
-            specific_files = set(args.filter_files)
-            patterns = args.filter_pattern
+            specific_files = set(filter_files or [])
+            patterns = filter_pattern or []
 
             def combined_filter(path: str) -> bool:
                 return path in specific_files or any(pattern in path for pattern in patterns)
@@ -774,20 +755,20 @@ async def main() -> None:
 
     try:
         extractor = PakExtractor(
-            pak_files=args.pak or DEFAULT_PAK_FILES,
+            pak_files=pak or DEFAULT_PAK_FILES,
             catalog_file=catalog_file,
-            extractor_tool=extractor_tool,
-            converter_tool=converter_tool,
-            output_dir=args.output,
+            extractor_tool=resolved_extractor_tool,
+            converter_tool=resolved_converter_tool,
+            output_dir=output,
             filter_assets=filter_assets,
         )
     except (ValueError, FileNotFoundError) as e:
         print(f"Error: {e}")
-        exit(1)
+        raise typer.Exit(code=1) from e
 
-    success = await extractor.process_files(max_workers=args.workers)
+    success = await extractor.process_files(max_workers=workers)
     if not success:
         print("\nSome operations failed. Check the logs above for details.")
-        exit(1)
+        raise typer.Exit(code=1)
     else:
         print("\nAll operations completed successfully!")

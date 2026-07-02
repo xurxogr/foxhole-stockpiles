@@ -1,4 +1,4 @@
-"""Tests for the ``build-catalog`` command entry point (``catalog_builder.main``).
+"""Tests for the ``build-catalog`` command entry point (``catalog_builder.run``).
 
 The extractor, catalog assembler and logging setup are mocked so the test drives
 the argument handling and control flow without touching PAK files or real tools.
@@ -7,11 +7,11 @@ the argument handling and control flow without touching PAK files or real tools.
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+import typer
 
 from fs_tools.commands.catalog_builder import catalog_builder as cb
 
@@ -27,29 +27,25 @@ def _service() -> MagicMock:
     return service
 
 
-async def test_main_with_extract_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """With --extract-dir, extraction is skipped and the catalog is written."""
+async def test_run_with_extract_dir(tmp_path: Path) -> None:
+    """With extract_dir, extraction is skipped and the catalog is written."""
     out = tmp_path / "catalog.json"
     extract = tmp_path / "war"
     extract.mkdir()
-    monkeypatch.setattr(sys, "argv", ["prog", "--extract-dir", str(extract), "--output", str(out)])
 
     with (
         patch.object(cb, "setup_logging"),
         patch(_FROM_EXTRACT, return_value=_service()) as ffe,
     ):
-        await cb.main()
+        await cb.run(extract_dir=extract, output=out)
 
     ffe.assert_called_once()
     assert json.loads(out.read_text(encoding="utf-8")) == {"ItemX": {"code": "ItemX"}}
 
 
-async def test_main_extracts_from_pak(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Without --extract-dir, the blueprint extractor runs first."""
+async def test_run_extracts_from_pak(tmp_path: Path) -> None:
+    """Without extract_dir, the blueprint extractor runs first."""
     out = tmp_path / "catalog.json"
-    monkeypatch.setattr(
-        sys, "argv", ["prog", "--output", str(out), "--pak", str(tmp_path / "x.pak")]
-    )
     extractor = MagicMock()
     extractor.extract = AsyncMock(return_value=tmp_path / "extracted")
     extractor.stats = {"extracted": 5, "converted": 5}
@@ -59,46 +55,33 @@ async def test_main_extracts_from_pak(tmp_path: Path, monkeypatch: pytest.Monkey
         patch.object(cb, "BlueprintExtractor", return_value=extractor) as extractor_cls,
         patch(_FROM_EXTRACT, return_value=_service()),
     ):
-        await cb.main()
+        await cb.run(output=out, pak=tmp_path / "x.pak")
 
     extractor_cls.assert_called_once()
     extractor.extract.assert_awaited_once()
     assert out.exists()
 
 
-async def test_main_invalid_extract_dir_exits(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_run_invalid_extract_dir_exits(tmp_path: Path) -> None:
     """An invalid extraction directory exits with code 1."""
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        ["prog", "--extract-dir", str(tmp_path / "war"), "--output", str(tmp_path / "o.json")],
-    )
-
     with (
         patch.object(cb, "setup_logging"),
         patch(_FROM_EXTRACT, side_effect=FileNotFoundError("nope")),
-        pytest.raises(SystemExit),
+        pytest.raises(typer.Exit),
     ):
-        await cb.main()
+        await cb.run(extract_dir=tmp_path / "war", output=tmp_path / "o.json")
 
 
-async def test_main_quiet_flag(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """The --quiet flag is accepted and the catalog is still written."""
+async def test_run_quiet_flag(tmp_path: Path) -> None:
+    """The quiet flag is accepted and the catalog is still written."""
     out = tmp_path / "catalog.json"
     extract = tmp_path / "war"
     extract.mkdir()
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        ["prog", "--extract-dir", str(extract), "--output", str(out), "--quiet"],
-    )
 
     with (
         patch.object(cb, "setup_logging"),
         patch(_FROM_EXTRACT, return_value=_service()),
     ):
-        await cb.main()
+        await cb.run(extract_dir=extract, output=out, quiet=True)
 
     assert out.exists()

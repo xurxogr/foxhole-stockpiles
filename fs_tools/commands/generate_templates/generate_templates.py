@@ -1,12 +1,12 @@
 """Generate training templates command for Foxhole stockpile recognition system."""
 
-import argparse
 import asyncio
 import logging
 from copy import copy
 from pathlib import Path
 
 import numpy as np
+import typer
 from numpy.typing import NDArray
 from PIL import Image
 from PIL.Image import Resampling
@@ -653,122 +653,79 @@ class TemplateGenerator:
         return total_failed_items == 0
 
 
-async def main() -> None:
-    """Command-line entry point for template generation."""
-    parser = argparse.ArgumentParser(
-        description="Generate icon templates from extracted Foxhole game assets",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=(
-            "Examples:\n"
-            "  # Generate all templates\n"
-            "  fs generate-templates \\\n"
-            "    --catalog training/catalog.json \\\n"
-            "    --assets training/extracted_assets \\\n"
-            "    --templates training/templates\n"
-            "\n"
-            "  # Generate templates for specific items\n"
-            "  fs generate-templates \\\n"
-            "    --catalog training/catalog.json \\\n"
-            "    --assets training/extracted_assets \\\n"
-            "    --templates training/templates \\\n"
-            "    --filter Rifle\n"
-            "\n"
-            "  # Generate with verbose logging\n"
-            "  fs generate-templates \\\n"
-            "    --catalog training/catalog.json \\\n"
-            "    --assets training/extracted_assets \\\n"
-            "    --templates training/templates \\\n"
-            "    --verbose --log-file generation.log"
-        ),
-    )
+async def run(
+    assets: Path,
+    templates: Path,
+    catalog: Path | None = None,
+    filter: str | None = None,
+    verbose: bool = False,
+    quiet: bool = False,
+    log_file: Path | None = None,
+) -> None:
+    """Command-line entry point for template generation.
 
-    parser.add_argument(
-        "--catalog",
-        type=Path,
-        help="Path to catalog.json file (default: from database_builder.catalog_file setting)",
-    )
-    parser.add_argument(
-        "--assets",
-        type=Path,
-        required=True,
-        help="Path to the folder containing extracted assets (with mod subfolders)",
-    )
-    parser.add_argument(
-        "--templates",
-        type=Path,
-        required=True,
-        help="Path where generated templates will be saved",
-    )
-    parser.add_argument(
-        "--filter",
-        help="Filter items by CodeName containing this string (case-insensitive)",
-    )
-    parser.add_argument(
-        "--verbose", action="store_true", help="Enable verbose logging (debug level)"
-    )
-    parser.add_argument(
-        "--quiet",
-        action="store_true",
-        default=False,
-        help="Suppress all output except errors and warnings. "
-        "Only errors will be printed to console.",
-    )
-    parser.add_argument("--log-file", type=Path, help="Path to log file (default: console only)")
-
-    args = parser.parse_args()
-
+    Args:
+        assets (Path): Path to the folder containing extracted assets (with mod subfolders).
+        templates (Path): Path where generated templates will be saved.
+        catalog (Path | None): Path to catalog.json file (default: from
+            database_builder.catalog_file setting).
+        filter (str | None): Filter items by CodeName containing this string
+            (case-insensitive).
+        verbose (bool): Enable verbose logging (debug level). Defaults to False.
+        quiet (bool): Suppress all output except errors and warnings. Only errors will be
+            printed to console. Defaults to False.
+        log_file (Path | None): Path to log file (default: console only).
+    """
     # Setup logging
     settings = get_settings()
     logging_settings = copy(settings.logging)
     # Setup logging
-    if args.quiet:
+    if quiet:
         logging_settings.log_level = "WARNING"
-    elif args.verbose:
+    elif verbose:
         logging_settings.log_level = "DEBUG"
 
-    logging_settings.log_file = args.log_file
+    logging_settings.log_file = str(log_file) if log_file is not None else None
     setup_logging(logging_settings)
 
     # Use catalog from args or fall back to config
-    catalog_path = (
-        args.catalog if args.catalog is not None else settings.database_builder.catalog_file
-    )
+    catalog_path = catalog if catalog is not None else settings.database_builder.catalog_file
     if catalog_path is None:
         logger.error(
             "Catalog path must be provided via --catalog or database_builder.catalog_file setting"
         )
-        exit(1)
+        raise typer.Exit(code=1)
 
     # Validate input paths
     if not catalog_path.exists():
         logger.error("Catalog file not found: %s", catalog_path)
-        exit(1)
+        raise typer.Exit(code=1)
 
-    if not args.assets.exists():
-        logger.error("Assets directory not found: %s", args.assets)
-        exit(1)
+    if not assets.exists():
+        logger.error("Assets directory not found: %s", assets)
+        raise typer.Exit(code=1)
 
     try:
         # Create generator and process templates
         generator = TemplateGenerator(
             catalog_path=catalog_path,
-            assets_path=args.assets,
-            template_path=args.templates,
-            filter_name=args.filter,
+            assets_path=assets,
+            template_path=templates,
+            filter_name=filter,
             template_settings=TemplateSettings(),
         )
 
         success = await generator.generate_all_templates()
 
-        if success:
-            logger.info("Template generation completed successfully!")
-            print("✅ Template generation completed successfully!")
-        else:
-            logger.error("Template generation completed with errors")
-            print("❌ Template generation completed with errors. Check the logs for details.")
-            exit(1)
-
     except Exception as e:  # noqa: BLE001 - CLI entry point, must report any failure before exit
         logger.exception("Template generation failed")
         print(f"❌ Template generation failed: {e}")
-        exit(1)
+        raise typer.Exit(code=1) from e
+
+    if success:
+        logger.info("Template generation completed successfully!")
+        print("✅ Template generation completed successfully!")
+    else:
+        logger.error("Template generation completed with errors")
+        print("❌ Template generation completed with errors. Check the logs for details.")
+        raise typer.Exit(code=1)

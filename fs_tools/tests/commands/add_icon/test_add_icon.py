@@ -5,18 +5,18 @@ including IconManager class functionality, icon addition, and database
 update operations.
 """
 
-import argparse
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import numpy as np
 import pytest
+import typer
 
 from foxhole_stockpiles.core.image_io import write_bgr
 from foxhole_stockpiles.enums.item_category import ItemCategory
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
-from fs_tools.commands.add_icon.add_icon import main
+from fs_tools.commands.add_icon.add_icon import run
 from fs_tools.models.icon_template import IconTemplate
 from fs_tools.template_db.icon_manager import IconManager
 from fs_tools.template_db.template_database import TemplateDatabase
@@ -666,14 +666,12 @@ class TestMainFunction:
     command, including argument parsing and workflow execution.
     """
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("fs_tools.commands.add_icon.add_icon.IconManager")
     @patch("fs_tools.commands.add_icon.add_icon.setup_logging")
     async def test_main_with_default_args(
         self,
         mock_setup_logging: Mock,
         mock_adder_class: Mock,
-        mock_args: Mock,
         sample_database_file: Path,
         sample_icon_file: Path,
     ) -> None:
@@ -682,11 +680,15 @@ class TestMainFunction:
         Args:
             mock_setup_logging (Mock): Mocked setup_logging function.
             mock_adder_class (Mock): Mocked IconManager class.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             sample_database_file (Path): Sample database file from fixture.
             sample_icon_file (Path): Sample icon file from fixture.
         """
-        mock_args.return_value = argparse.Namespace(
+        # Mock adder instance
+        mock_adder = MagicMock()
+        mock_adder.add_icon = AsyncMock(return_value=None)
+        mock_adder_class.return_value = mock_adder
+
+        await run(
             database=sample_database_file,
             icon=sample_icon_file,
             code="TestItem",
@@ -701,13 +703,6 @@ class TestMainFunction:
             log_file=None,
         )
 
-        # Mock adder instance
-        mock_adder = MagicMock()
-        mock_adder.add_icon = AsyncMock(return_value=None)
-        mock_adder_class.return_value = mock_adder
-
-        await main()
-
         # Verify IconManager was instantiated with database_path and databases
         mock_adder_class.assert_called_once()
         call_kwargs = mock_adder_class.call_args.kwargs
@@ -717,14 +712,12 @@ class TestMainFunction:
         # Verify add_icon was called
         assert mock_adder.add_icon.call_count == 1
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("fs_tools.commands.add_icon.add_icon.IconManager")
     @patch("fs_tools.commands.add_icon.add_icon.setup_logging")
     async def test_main_with_multiple_resolutions(
         self,
         mock_setup_logging: Mock,
         mock_adder_class: Mock,
-        mock_args: Mock,
         sample_database_file: Path,
         sample_icon_file: Path,
     ) -> None:
@@ -733,11 +726,15 @@ class TestMainFunction:
         Args:
             mock_setup_logging (Mock): Mocked setup_logging function.
             mock_adder_class (Mock): Mocked IconManager class.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             sample_database_file (Path): Sample database file from fixture.
             sample_icon_file (Path): Sample icon file from fixture.
         """
-        mock_args.return_value = argparse.Namespace(
+        # Mock adder instance
+        mock_adder = MagicMock()
+        mock_adder.add_icon = AsyncMock(return_value=None)
+        mock_adder_class.return_value = mock_adder
+
+        await run(
             database=sample_database_file,
             icon=sample_icon_file,
             code="TestItem",
@@ -752,24 +749,15 @@ class TestMainFunction:
             log_file=None,
         )
 
-        # Mock adder instance
-        mock_adder = MagicMock()
-        mock_adder.add_icon = AsyncMock(return_value=None)
-        mock_adder_class.return_value = mock_adder
-
-        await main()
-
         # Verify add_icon was called twice (once for each resolution)
         assert mock_adder.add_icon.call_count == 2
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("fs_tools.commands.add_icon.add_icon.IconManager")
     @patch("fs_tools.commands.add_icon.add_icon.setup_logging")
     async def test_main_with_crated_flag(
         self,
         mock_setup_logging: Mock,
         mock_adder_class: Mock,
-        mock_args: Mock,
         sample_database_file: Path,
         sample_icon_file: Path,
     ) -> None:
@@ -778,11 +766,15 @@ class TestMainFunction:
         Args:
             mock_setup_logging (Mock): Mocked setup_logging function.
             mock_adder_class (Mock): Mocked IconManager class.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             sample_database_file (Path): Sample database file from fixture.
             sample_icon_file (Path): Sample icon file from fixture.
         """
-        mock_args.return_value = argparse.Namespace(
+        # Mock adder instance
+        mock_adder = MagicMock()
+        mock_adder.add_icon = AsyncMock(return_value=None)
+        mock_adder_class.return_value = mock_adder
+
+        await run(
             database=sample_database_file,
             icon=sample_icon_file,
             code="TestItem",
@@ -797,25 +789,16 @@ class TestMainFunction:
             log_file=None,
         )
 
-        # Mock adder instance
-        mock_adder = MagicMock()
-        mock_adder.add_icon = AsyncMock(return_value=None)
-        mock_adder_class.return_value = mock_adder
-
-        await main()
-
         # Verify add_icon was called with crated=True
         call_kwargs = mock_adder.add_icon.call_args[1]
         assert call_kwargs["crated"] is True
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("fs_tools.commands.add_icon.add_icon.IconManager")
     @patch("fs_tools.commands.add_icon.add_icon.setup_logging")
     async def test_main_with_verbose_mode(
         self,
         mock_setup_logging: Mock,
         mock_adder_class: Mock,
-        mock_args: Mock,
         sample_database_file: Path,
         sample_icon_file: Path,
     ) -> None:
@@ -824,11 +807,15 @@ class TestMainFunction:
         Args:
             mock_setup_logging (Mock): Mocked setup_logging function.
             mock_adder_class (Mock): Mocked IconManager class.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             sample_database_file (Path): Sample database file from fixture.
             sample_icon_file (Path): Sample icon file from fixture.
         """
-        mock_args.return_value = argparse.Namespace(
+        # Mock adder instance
+        mock_adder = MagicMock()
+        mock_adder.add_icon = AsyncMock(return_value=None)
+        mock_adder_class.return_value = mock_adder
+
+        await run(
             database=sample_database_file,
             icon=sample_icon_file,
             code="TestItem",
@@ -843,24 +830,15 @@ class TestMainFunction:
             log_file=None,
         )
 
-        # Mock adder instance
-        mock_adder = MagicMock()
-        mock_adder.add_icon = AsyncMock(return_value=None)
-        mock_adder_class.return_value = mock_adder
-
-        await main()
-
         # Verify setup_logging was called
         mock_setup_logging.assert_called_once()
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("fs_tools.commands.add_icon.add_icon.IconManager")
     @patch("fs_tools.commands.add_icon.add_icon.setup_logging")
     async def test_main_with_invalid_resolution(
         self,
         mock_setup_logging: Mock,
         mock_adder_class: Mock,
-        mock_args: Mock,
         sample_database_file: Path,
         sample_icon_file: Path,
     ) -> None:
@@ -869,43 +847,38 @@ class TestMainFunction:
         Args:
             mock_setup_logging (Mock): Mocked setup_logging function.
             mock_adder_class (Mock): Mocked IconManager class.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             sample_database_file (Path): Sample database file from fixture.
             sample_icon_file (Path): Sample icon file from fixture.
         """
-        mock_args.return_value = argparse.Namespace(
-            database=sample_database_file,
-            icon=sample_icon_file,
-            code="TestItem",
-            faction="n",  # Use shorthand like inspector
-            category="item",
-            crated=False,
-            mod="vanilla",
-            resolution=["9999"],  # Invalid resolution
-            verbose=False,
-            quiet=False,
-            log_file=None,
-        )
-
         # Mock adder instance
         mock_adder = MagicMock()
         mock_adder.add_icon = AsyncMock(return_value=None)
         mock_adder_class.return_value = mock_adder
 
-        # Should raise SystemExit due to parser.error()
-        with pytest.raises(SystemExit) as exc_info:
-            await main()
+        # Should raise typer.Exit due to invalid resolution
+        with pytest.raises(typer.Exit) as exc_info:
+            await run(
+                database=sample_database_file,
+                icon=sample_icon_file,
+                code="TestItem",
+                faction="n",  # Use shorthand like inspector
+                category="item",
+                crated=False,
+                mod="vanilla",
+                resolution=["9999"],  # Invalid resolution
+                verbose=False,
+                quiet=False,
+                log_file=None,
+            )
 
-        assert exc_info.value.code == 2
+        assert exc_info.value.exit_code == 2
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("fs_tools.commands.add_icon.add_icon.IconManager")
     @patch("fs_tools.commands.add_icon.add_icon.setup_logging")
     async def test_main_with_different_factions(
         self,
         mock_setup_logging: Mock,
         mock_adder_class: Mock,
-        mock_args: Mock,
         sample_database_file: Path,
         sample_icon_file: Path,
     ) -> None:
@@ -914,7 +887,6 @@ class TestMainFunction:
         Args:
             mock_setup_logging (Mock): Mocked setup_logging function.
             mock_adder_class (Mock): Mocked IconManager class.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             sample_database_file (Path): Sample database file from fixture.
             sample_icon_file (Path): Sample icon file from fixture.
         """
@@ -929,7 +901,12 @@ class TestMainFunction:
             # Reset mock for each iteration
             mock_adder_class.reset_mock()
 
-            mock_args.return_value = argparse.Namespace(
+            # Mock adder instance
+            mock_adder = MagicMock()
+            mock_adder.add_icon = AsyncMock(return_value=None)
+            mock_adder_class.return_value = mock_adder
+
+            await run(
                 database=sample_database_file,
                 icon=sample_icon_file,
                 code="TestItem",
@@ -944,30 +921,20 @@ class TestMainFunction:
                 log_file=None,
             )
 
-            # Mock adder instance
-            mock_adder = MagicMock()
-            mock_adder.add_icon = AsyncMock(return_value=None)
-            mock_adder_class.return_value = mock_adder
-
-            await main()
-
             # Verify add_icon was called with correct faction
             call_kwargs = mock_adder.add_icon.call_args[1]
             assert call_kwargs["faction"].value == expected_faction_values[faction]
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("fs_tools.commands.add_icon.add_icon.get_settings")
     async def test_main_missing_database_path(
         self,
         mock_get_settings: Mock,
-        mock_args: Mock,
         tmp_path: Path,
     ) -> None:
         """Test main function when database path is not provided.
 
         Args:
             mock_get_settings (Mock): Mocked get_settings function.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
         icon_path = tmp_path / "icon.png"
@@ -978,38 +945,32 @@ class TestMainFunction:
         mock_settings.scanner.database_path = None
         mock_get_settings.return_value = mock_settings
 
-        mock_args.return_value = argparse.Namespace(
-            database=None,  # No database provided
-            icon=icon_path,
-            code="TestItem",
-            name="Test Item",
-            faction="w",
-            category="item",
-            crated=False,
-            mod="vanilla",
-            resolution=["1080"],
-            replace=False,
-            verbose=False,
-            quiet=False,
-            log_file=None,
-        )
+        # Should exit with code 2
+        with pytest.raises(typer.Exit) as exc_info:
+            await run(
+                database=None,  # No database provided
+                icon=icon_path,
+                code="TestItem",
+                faction="w",
+                category="item",
+                crated=False,
+                mod="vanilla",
+                resolution=["1080"],
+                replace=False,
+                verbose=False,
+                quiet=False,
+                log_file=None,
+            )
 
-        # Should exit with code 2 for argparse error
-        with pytest.raises(SystemExit) as exc_info:
-            await main()
+        assert exc_info.value.exit_code == 2
 
-        assert exc_info.value.code == 2
-
-    @patch("argparse.ArgumentParser.parse_args")
     async def test_main_database_file_not_exists(
         self,
-        mock_args: Mock,
         tmp_path: Path,
     ) -> None:
         """Test main function when database file does not exist.
 
         Args:
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
         icon_path = tmp_path / "icon.png"
@@ -1017,38 +978,32 @@ class TestMainFunction:
 
         database_path = tmp_path / "nonexistent.h5"  # Doesn't exist
 
-        mock_args.return_value = argparse.Namespace(
-            database=database_path,
-            icon=icon_path,
-            code="TestItem",
-            name="Test Item",
-            faction="w",
-            category="item",
-            crated=False,
-            mod="vanilla",
-            resolution=["1080"],
-            replace=False,
-            verbose=False,
-            quiet=False,
-            log_file=None,
-        )
-
         # Should exit with code 1
-        with pytest.raises(SystemExit) as exc_info:
-            await main()
+        with pytest.raises(typer.Exit) as exc_info:
+            await run(
+                database=database_path,
+                icon=icon_path,
+                code="TestItem",
+                faction="w",
+                category="item",
+                crated=False,
+                mod="vanilla",
+                resolution=["1080"],
+                replace=False,
+                verbose=False,
+                quiet=False,
+                log_file=None,
+            )
 
-        assert exc_info.value.code == 1
+        assert exc_info.value.exit_code == 1
 
-    @patch("argparse.ArgumentParser.parse_args")
     async def test_main_database_path_is_directory(
         self,
-        mock_args: Mock,
         tmp_path: Path,
     ) -> None:
         """Test main function when database path is a directory instead of a file.
 
         Args:
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
         icon_path = tmp_path / "icon.png"
@@ -1057,29 +1012,25 @@ class TestMainFunction:
         database_path = tmp_path / "database_dir"
         database_path.mkdir()  # Create directory instead of file
 
-        mock_args.return_value = argparse.Namespace(
-            database=database_path,
-            icon=icon_path,
-            code="TestItem",
-            name="Test Item",
-            faction="w",
-            category="item",
-            crated=False,
-            mod="vanilla",
-            resolution=["1080"],
-            replace=False,
-            verbose=False,
-            quiet=False,
-            log_file=None,
-        )
-
         # Should exit with code 1
-        with pytest.raises(SystemExit) as exc_info:
-            await main()
+        with pytest.raises(typer.Exit) as exc_info:
+            await run(
+                database=database_path,
+                icon=icon_path,
+                code="TestItem",
+                faction="w",
+                category="item",
+                crated=False,
+                mod="vanilla",
+                resolution=["1080"],
+                replace=False,
+                verbose=False,
+                quiet=False,
+                log_file=None,
+            )
 
-        assert exc_info.value.code == 1
+        assert exc_info.value.exit_code == 1
 
-    @patch("argparse.ArgumentParser.parse_args")
     @patch("fs_tools.commands.add_icon.add_icon.IconManager")
     @patch("fs_tools.commands.add_icon.add_icon.TemplateManager")
     @patch("fs_tools.commands.add_icon.add_icon.setup_logging")
@@ -1088,7 +1039,6 @@ class TestMainFunction:
         mock_setup_logging: Mock,
         mock_template_manager_class: Mock,
         mock_adder_class: Mock,
-        mock_args: Mock,
         tmp_path: Path,
     ) -> None:
         """Test main function with quiet mode enabled.
@@ -1097,7 +1047,6 @@ class TestMainFunction:
             mock_setup_logging (Mock): Mocked setup_logging function.
             mock_template_manager_class (Mock): Mocked TemplateManager class.
             mock_adder_class (Mock): Mocked IconManager class.
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
         db_path = tmp_path / "test.h5"
@@ -1106,7 +1055,17 @@ class TestMainFunction:
         icon_path = tmp_path / "icon.png"
         icon_path.touch()
 
-        mock_args.return_value = argparse.Namespace(
+        # Mock template manager
+        mock_template_manager = MagicMock()
+        mock_template_manager.load_all_resolutions = AsyncMock(return_value={})
+        mock_template_manager_class.return_value = mock_template_manager
+
+        # Mock adder instance
+        mock_adder = MagicMock()
+        mock_adder.add_icon = AsyncMock(return_value=None)
+        mock_adder_class.return_value = mock_adder
+
+        await run(
             database=db_path,
             icon=icon_path,
             code="TestItem",
@@ -1121,31 +1080,16 @@ class TestMainFunction:
             log_file=None,
         )
 
-        # Mock template manager
-        mock_template_manager = MagicMock()
-        mock_template_manager.load_all_resolutions = AsyncMock(return_value={})
-        mock_template_manager_class.return_value = mock_template_manager
-
-        # Mock adder instance
-        mock_adder = MagicMock()
-        mock_adder.add_icon = AsyncMock(return_value=None)
-        mock_adder_class.return_value = mock_adder
-
-        await main()
-
         # Verify setup_logging was called
         mock_setup_logging.assert_called_once()
 
-    @patch("argparse.ArgumentParser.parse_args")
     async def test_main_with_invalid_faction(
         self,
-        mock_args: Mock,
         tmp_path: Path,
     ) -> None:
         """Test main function with invalid faction that becomes NEUTRAL.
 
         Args:
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
         db_path = tmp_path / "test.h5"
@@ -1154,38 +1098,32 @@ class TestMainFunction:
         icon_path = tmp_path / "icon.png"
         icon_path.touch()
 
-        mock_args.return_value = argparse.Namespace(
-            database=db_path,
-            icon=icon_path,
-            code="TestItem",
-            name="Test Item",
-            faction="invalid_faction",  # Invalid faction
-            category="item",
-            crated=False,
-            mod="vanilla",
-            resolution=["1080"],
-            replace=False,
-            verbose=False,
-            quiet=False,
-            log_file=None,
-        )
+        # Should exit with code 2
+        with pytest.raises(typer.Exit) as exc_info:
+            await run(
+                database=db_path,
+                icon=icon_path,
+                code="TestItem",
+                faction="invalid_faction",  # Invalid faction
+                category="item",
+                crated=False,
+                mod="vanilla",
+                resolution=["1080"],
+                replace=False,
+                verbose=False,
+                quiet=False,
+                log_file=None,
+            )
 
-        # Should exit with code 2 for argparse error
-        with pytest.raises(SystemExit) as exc_info:
-            await main()
+        assert exc_info.value.exit_code == 2
 
-        assert exc_info.value.code == 2
-
-    @patch("argparse.ArgumentParser.parse_args")
     async def test_main_with_invalid_category(
         self,
-        mock_args: Mock,
         tmp_path: Path,
     ) -> None:
         """Test main function with Invalid category value.
 
         Args:
-            mock_args (Mock): Mocked ArgumentParser.parse_args method.
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
         db_path = tmp_path / "test.h5"
@@ -1194,29 +1132,21 @@ class TestMainFunction:
         icon_path = tmp_path / "icon.png"
         icon_path.touch()
 
-        mock_args.return_value = argparse.Namespace(
-            database=db_path,
-            icon=icon_path,
-            code="TestItem",
-            name="Test Item",
-            faction="w",
-            category="invalid",  # Invalid category (ItemCategory.Invalid)
-            crated=False,
-            mod="vanilla",
-            resolution=["1080"],
-            replace=False,
-            verbose=False,
-            quiet=False,
-            log_file=None,
-        )
+        # Should exit with code 2
+        with pytest.raises(typer.Exit) as exc_info:
+            await run(
+                database=db_path,
+                icon=icon_path,
+                code="TestItem",
+                faction="w",
+                category="invalid",  # Invalid category (ItemCategory.Invalid)
+                crated=False,
+                mod="vanilla",
+                resolution=["1080"],
+                replace=False,
+                verbose=False,
+                quiet=False,
+                log_file=None,
+            )
 
-        # Should exit with code 2 for argparse error
-        with pytest.raises(SystemExit) as exc_info:
-            await main()
-
-        assert exc_info.value.code == 2
-
-
-def test_main_module_importable() -> None:
-    """Test that __main__ module can be imported without errors."""
-    import fs_tools.commands.add_icon.__main__  # noqa: F401
+        assert exc_info.value.exit_code == 2
