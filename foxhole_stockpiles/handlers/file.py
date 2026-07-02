@@ -270,17 +270,8 @@ class FileOutputHandler(BaseOutputDestinationHandler):
             correct_ext = ".json"
 
         path = Path(file_path)
-        current_ext = path.suffix.lower()
-
-        # Known extensions to replace
-        known_extensions = {".json", ".csv", ".tsv"}
-
-        if current_ext in known_extensions:
-            # Replace the existing extension
+        if path.suffix:
+            # Replace the existing extension, whatever it is
             return str(path.with_suffix(correct_ext))
-        elif current_ext:
-            # Has some other extension, replace it
-            return str(path.with_suffix(correct_ext))
-        else:
-            # No extension, add the correct one
-            return file_path + correct_ext
+        # No extension, add the correct one
+        return file_path + correct_ext

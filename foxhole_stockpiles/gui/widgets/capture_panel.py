@@ -724,7 +724,7 @@ class CapturePanel(QWidget):
         """
         try:
             settings = AppSettings()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - surface config errors to the user
             return None, t("server_panel.sav.error_loading_settings", error=str(e))
 
         sav_path = settings.sav_processing.sav_file_path
@@ -768,7 +768,7 @@ class CapturePanel(QWidget):
         try:
             settings = AppSettings()
             output_coordinator = OutputCoordinator(settings.output)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - surface config/output errors in the log
             logger.error("[SAV] %s", t("server_panel.sav.error_output", error=str(e)))
             return
 
@@ -790,7 +790,7 @@ class CapturePanel(QWidget):
         """
         try:
             mode = AppSettings().sav_processing.mode
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - default to manual if settings fail to load
             logger.warning("Could not read SAV mode: %s", e)
             mode = SavMode.MANUAL
 
@@ -824,7 +824,7 @@ class CapturePanel(QWidget):
             settings = AppSettings()
             output_coordinator = OutputCoordinator(settings.output)
             poll_interval = settings.sav_processing.poll_interval
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - surface config/output errors to the user
             QMessageBox.critical(
                 self,
                 t("server_panel.sav.error_title"),
@@ -873,7 +873,7 @@ class CapturePanel(QWidget):
         Args:
             error_msg (str): Error message.
         """
-        logger.error(f"[SAV] {error_msg}")
+        logger.error("[SAV] %s", error_msg)
         self._feed(t("activity.sav_error", error=error_msg))
 
     def _on_sav_stockpiles(self, stockpiles: list[Stockpile]) -> None:
@@ -923,7 +923,7 @@ class CapturePanel(QWidget):
         """
         try:
             mode = AppSettings().clipboard.mode
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - default to manual if settings fail to load
             logger.warning("Could not read clipboard mode: %s", e)
             mode = ClipMode.MANUAL
 
@@ -977,7 +977,7 @@ class CapturePanel(QWidget):
 
         try:
             poll_interval = AppSettings().clipboard.poll_interval
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - surface config errors to the user
             QMessageBox.critical(self, t("server_panel.clip.error_title"), str(e))
             return
 

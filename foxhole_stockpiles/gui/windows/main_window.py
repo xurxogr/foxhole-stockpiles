@@ -55,8 +55,8 @@ class MainWindow(QMainWindow):
         try:
             settings = AppSettings()
             return settings.gui.minimize_to_tray
-        except Exception as e:
-            logger.warning(f"Failed to load minimize_to_tray setting: {e}")
+        except Exception as e:  # noqa: BLE001 - fall back to default if settings fail to load
+            logger.warning("Failed to load minimize_to_tray setting: %s", e)
             return False
 
     def init_ui(self) -> None:
@@ -220,14 +220,14 @@ class MainWindow(QMainWindow):
         self.minimize_to_tray = self._load_minimize_to_tray_setting()
         # The SAV mode may have changed; enable the manual-scan action accordingly.
         self._apply_sav_menu_state()
-        logger.info(f"Config reloaded - minimize_to_tray: {self.minimize_to_tray}")
+        logger.info("Config reloaded - minimize_to_tray: %s", self.minimize_to_tray)
 
     def _apply_sav_menu_state(self) -> None:
         """Enable File → Scan SAV only in manual mode (disabled while monitoring)."""
         try:
             is_manual = AppSettings().sav_processing.mode == SavMode.MANUAL
-        except Exception as e:
-            logger.warning(f"Failed to read SAV mode: {e}")
+        except Exception as e:  # noqa: BLE001 - default to manual if settings fail to load
+            logger.warning("Failed to read SAV mode: %s", e)
             is_manual = True
         self.scan_sav_action.setEnabled(is_manual)
 

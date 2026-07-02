@@ -28,7 +28,7 @@ class ConfigManager:
             settings = get_settings()
             logger.info("Configuration loaded successfully from %s", self.config_path)
             return settings
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - fall back to defaults if config fails to load
             logger.warning("Failed to load config, using defaults: %s", e)
             return AppSettings()
 
@@ -58,7 +58,6 @@ class ConfigManager:
             logger.info("Configuration saved successfully to %s", self.config_path)
             return True, f"Configuration saved to {self.config_path}"
 
-        except Exception as e:
-            error_msg = f"Failed to save configuration: {e}"
-            logger.error(error_msg)
-            return False, error_msg
+        except Exception as e:  # noqa: BLE001 - surface save errors to the user
+            logger.error("Failed to save configuration: %s", e)
+            return False, f"Failed to save configuration: {e}"

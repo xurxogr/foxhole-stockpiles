@@ -62,7 +62,7 @@ class CatalogService:
 
         except json.JSONDecodeError as e:
             logger.error("Failed to parse catalog file %s: %s", self._catalog_path, e)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - keep the app usable with an empty catalog
             logger.error("Failed to load catalog: %s", e)
 
     def get_display_name(self, code: str) -> str:
