@@ -4,6 +4,7 @@ import asyncio
 import datetime
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,25 @@ from foxhole_stockpiles.handlers.base_handler import BaseOutputDestinationHandle
 from foxhole_stockpiles.models.stockpile import Stockpile
 
 FormatSettings = JsonFormatSettings | CsvFormatSettings
+
+_PATH_SEPARATORS = re.compile(r"[\\/]")
+
+
+def _sanitize_placeholder_value(value: str) -> str:
+    r"""Strip path separators from a value substituted into a path template.
+
+    Stockpile-derived placeholders (name, hex, type) originate from OCR-read
+    in-game text or `.sav` data, which is player-controlled. Without this,
+    a stockpile named e.g. "../../etc/foo" could escape the configured
+    output directory when substituted into the file path template.
+
+    Args:
+        value (str): The raw placeholder value.
+
+    Returns:
+        str: Value with `/` and `\\` replaced, safe for use as a path segment.
+    """
+    return _PATH_SEPARATORS.sub("_", value)
 
 
 class FileOutputHandler(BaseOutputDestinationHandler):
@@ -86,7 +106,7 @@ class FileOutputHandler(BaseOutputDestinationHandler):
             "{coords}": coords_str,
         }
         for placeholder, value in placeholders.items():
-            file = file.replace(placeholder, value)
+            file = file.replace(placeholder, _sanitize_placeholder_value(value))
 
         # Ensure correct file extension based on format
         file = self._fix_extension(file)
