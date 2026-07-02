@@ -7,7 +7,7 @@ including ItemDynamicData, VehicleDynamicData, AmmoDynamicData, and profile tabl
 import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from fs_tools.services.catalog_builder.utils import (
     extract_property_value,
@@ -410,6 +410,74 @@ class DataTableLookup:
 
         return resolve_import_path(damage_type_ref, raw_imports)
 
+    @staticmethod
+    def _find_specialized_factory_export(exports: list[dict[str, Any]]) -> dict[str, Any] | None:
+        """Find the SpecializedFactoryComponent export in a blueprint's exports.
+
+        Args:
+            exports (list[dict[str, Any]]): The blueprint's "Exports" list.
+
+        Returns:
+            dict[str, Any] | None: The matching export, or None if not found.
+        """
+        for export in exports:
+            if "SpecializedFactoryComponent" in export.get("ObjectName", ""):
+                return export
+        return None
+
+    @staticmethod
+    def _extract_production_categories_prop(export: dict[str, Any]) -> list[dict[str, Any]]:
+        """Extract the ProductionCategories property value from a factory export.
+
+        Args:
+            export (dict[str, Any]): The SpecializedFactoryComponent export.
+
+        Returns:
+            list[dict[str, Any]]: The ProductionCategories value, or [] if absent.
+        """
+        for prop in export.get("Data", []):
+            if prop.get("Name") == "ProductionCategories":
+                return cast(list[dict[str, Any]], prop.get("Value", []))
+        return []
+
+    @staticmethod
+    def _extract_category_item_codes(cat_value: list[dict[str, Any]]) -> list[str]:
+        """Extract CodeName values from a category's CategoryItems property.
+
+        Args:
+            cat_value (list[dict[str, Any]]): Properties of one production category.
+
+        Returns:
+            list[str]: CodeName values found in CategoryItems.
+        """
+        item_codes: list[str] = []
+        for cprop in cat_value:
+            if cprop.get("Name") != "CategoryItems":
+                continue
+            for item in cprop.get("Value", []):
+                for iprop in item.get("Value", []):
+                    if iprop.get("Name") == "CodeName":
+                        item_codes.append(iprop.get("Value"))
+        return item_codes
+
+    @classmethod
+    def _parse_production_category(
+        cls, cat_value: list[dict[str, Any]]
+    ) -> tuple[str | None, list[str]]:
+        """Parse a single production category entry into its type and item codes.
+
+        Args:
+            cat_value (list[dict[str, Any]]): Properties of one production category.
+
+        Returns:
+            tuple[str | None, list[str]]: The category's QueueType (or None) and
+                the CodeNames it contains.
+        """
+        cat_type = next(
+            (cprop.get("Value") for cprop in cat_value if cprop.get("Name") == "Type"), None
+        )
+        return cat_type, cls._extract_category_item_codes(cat_value)
+
     def _parse_factory_production_categories(self, factory_path: str) -> dict[str, str]:
         """Parse production categories from a factory blueprint.
 
@@ -433,43 +501,16 @@ class DataTableLookup:
             self.logger.error("Error loading factory blueprint %s: %s", factory_path, e)
             return result
 
-        # Find SpecializedFactoryComponent export
-        exports = data.get("Exports", [])
-        for export in exports:
-            obj_name = export.get("ObjectName", "")
-            if "SpecializedFactoryComponent" not in obj_name:
-                continue
+        export = self._find_specialized_factory_export(data.get("Exports", []))
+        if export is None:
+            self.logger.debug("Loaded %d production categories from %s", len(result), factory_path)
+            return result
 
-            # Find ProductionCategories property
-            for prop in export.get("Data", []):
-                if prop.get("Name") != "ProductionCategories":
-                    continue
-
-                categories = prop.get("Value", [])
-                for cat in categories:
-                    cat_value = cat.get("Value", [])
-                    cat_type = None
-                    cat_items = []
-
-                    for cprop in cat_value:
-                        cprop_name = cprop.get("Name")
-                        if cprop_name == "Type":
-                            cat_type = cprop.get("Value")
-                        elif cprop_name == "CategoryItems":
-                            items_val = cprop.get("Value", [])
-                            for item in items_val:
-                                item_value = item.get("Value", [])
-                                for iprop in item_value:
-                                    if iprop.get("Name") == "CodeName":
-                                        cat_items.append(iprop.get("Value"))
-
-                    if cat_type:
-                        for code_name in cat_items:
-                            result[code_name] = cat_type
-
-                break  # Found ProductionCategories
-
-            break  # Found SpecializedFactoryComponent
+        for category in self._extract_production_categories_prop(export):
+            cat_type, cat_items = self._parse_production_category(category.get("Value", []))
+            if cat_type:
+                for code_name in cat_items:
+                    result[code_name] = cat_type
 
         self.logger.debug("Loaded %d production categories from %s", len(result), factory_path)
         return result
