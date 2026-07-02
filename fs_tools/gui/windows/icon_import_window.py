@@ -90,6 +90,26 @@ class IconImportWindow(QMainWindow):
 
         layout = QVBoxLayout(central_widget)
 
+        self._build_vanilla_section(layout)
+        self._build_mod_pak_section(layout)
+        self._build_config_section(layout)
+        self._build_logs_section(layout)
+        self._build_action_buttons(layout)
+
+        # Apply translations
+        self.retranslate()
+
+        # Connect to language change signal with cleanup
+        self._language_callback = self._on_language_changed
+        on_language_changed(self._language_callback)
+        self.destroyed.connect(lambda cb=self._language_callback: off_language_changed(cb))
+
+    def _build_vanilla_section(self, layout: QVBoxLayout) -> None:
+        """Build the vanilla PAK section (hidden until validation requires it).
+
+        Args:
+            layout (QVBoxLayout): Parent layout to add the section to.
+        """
         # Vanilla PAK Section (initially hidden, shown when mod PAK lacks required assets)
         self.vanilla_group = QGroupBox()
         vanilla_layout = QVBoxLayout()
@@ -131,6 +151,12 @@ class IconImportWindow(QMainWindow):
         # Initially hide vanilla section until validation shows it's needed
         self.vanilla_group.setVisible(False)
 
+    def _build_mod_pak_section(self, layout: QVBoxLayout) -> None:
+        """Build the mod PAK files section.
+
+        Args:
+            layout (QVBoxLayout): Parent layout to add the section to.
+        """
         # Mod PAK Files Section
         self.mod_pak_group = QGroupBox()
         mod_pak_layout = QVBoxLayout()
@@ -178,6 +204,12 @@ class IconImportWindow(QMainWindow):
 
         layout.addWidget(self.mod_pak_group)
 
+    def _build_config_section(self, layout: QVBoxLayout) -> None:
+        """Build the configuration section (mod name, overwrite, DB path, workers).
+
+        Args:
+            layout (QVBoxLayout): Parent layout to add the section to.
+        """
         # Configuration Section
         self.config_group = QGroupBox()
         config_layout = QVBoxLayout()
@@ -229,6 +261,12 @@ class IconImportWindow(QMainWindow):
 
         layout.addWidget(self.config_group)
 
+    def _build_logs_section(self, layout: QVBoxLayout) -> None:
+        """Build the process logs section.
+
+        Args:
+            layout (QVBoxLayout): Parent layout to add the section to.
+        """
         # Logs Section
         self.logs_group = QGroupBox()
         logs_layout = QVBoxLayout()
@@ -268,6 +306,12 @@ class IconImportWindow(QMainWindow):
 
         layout.addWidget(self.logs_group, stretch=1)  # Expand to use maximum available space
 
+    def _build_action_buttons(self, layout: QVBoxLayout) -> None:
+        """Build the bottom action buttons row.
+
+        Args:
+            layout (QVBoxLayout): Parent layout to add the row to.
+        """
         # Action Buttons (at bottom)
         action_buttons_layout = QHBoxLayout()
         self.start_button = QPushButton()
@@ -295,14 +339,6 @@ class IconImportWindow(QMainWindow):
         action_buttons_layout.addWidget(self.close_button)
 
         layout.addLayout(action_buttons_layout)
-
-        # Apply translations
-        self.retranslate()
-
-        # Connect to language change signal with cleanup
-        self._language_callback = self._on_language_changed
-        on_language_changed(self._language_callback)
-        self.destroyed.connect(lambda cb=self._language_callback: off_language_changed(cb))
 
     def _on_language_changed(self, _language: str) -> None:
         """Handle language change event."""
