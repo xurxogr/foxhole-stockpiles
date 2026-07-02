@@ -10,8 +10,13 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from fs_tools.services.catalog_builder.blueprint_import_resolution import (
+    process_import,
+    resolve_import_asset_path,
+    resolve_import_full_path,
+)
+from fs_tools.services.catalog_builder.blueprint_type_processing import process_value
 from fs_tools.services.catalog_builder.utils import (
-    normalize_object_path,
     parse_reference,
     simplify_value,
 )
@@ -393,7 +398,7 @@ class BlueprintParser:
                         elif full_mode and raw_imports:
                             # Try resolving as asset path from raw imports
                             raw_import = raw_imports[abs(ref_idx) - 1]
-                            asset_path = self._resolve_import_asset_path(raw_import, raw_imports)
+                            asset_path = resolve_import_asset_path(raw_import, raw_imports)
                             if asset_path:
                                 dict_result[key] = asset_path
                     elif full_mode and ref_idx <= len(raw_exports):  # Export reference
@@ -433,7 +438,7 @@ class BlueprintParser:
                             list_result.append(import_path)
                         elif full_mode and raw_imports:
                             raw_import = raw_imports[abs(ref_idx) - 1]
-                            asset_path = self._resolve_import_asset_path(raw_import, raw_imports)
+                            asset_path = resolve_import_asset_path(raw_import, raw_imports)
                             if asset_path:
                                 list_result.append(asset_path)
                     elif full_mode and ref_idx <= len(raw_exports):
@@ -549,15 +554,13 @@ class BlueprintParser:
                 processed_imports = []
                 for import_obj in value:
                     # Returns full path for BlueprintGeneratedClass, None otherwise
-                    processed_import = self._process_import(
-                        data=import_obj, all_imports=raw_imports
-                    )
+                    processed_import = process_import(data=import_obj, all_imports=raw_imports)
                     processed_imports.append(processed_import)
                 result["Imports"] = processed_imports
 
             else:
                 # Process all other fields recursively (strips $type, simplifies values)
-                result[key] = self._process_value(value)
+                result[key] = process_value(value)
 
         return result
 
@@ -664,7 +667,7 @@ class BlueprintParser:
             if isinstance(prop, dict) and "Name" in prop:
                 prop_name = prop.get("Name")
                 # Process the property value, stripping $type structures
-                prop_value = self._process_value(prop)
+                prop_value = process_value(prop)
                 result["Data"][prop_name] = prop_value
 
         # Post-process: resolve simple Export references to names
@@ -686,14 +689,8 @@ class BlueprintParser:
 
         return result
 
-    # =========================================================================
-    # Type Processing Methods - Convert $type structures to simple values
-    # =========================================================================
-
     def _process_value(self, data: Any) -> Any:
         """Process any value, converting $type structures to simple values.
-
-        This is the main dispatcher that routes to specific type handlers.
 
         Args:
             data (Any): Data to process (dict with $type, or simple value)
@@ -701,228 +698,12 @@ class BlueprintParser:
         Returns:
             Any: Processed value (simple type without $type structures)
         """
-        # Handle lists - process each item recursively
-        if isinstance(data, list):
-            return [self._process_value(item) for item in data]
-
-        # Handle non-dict primitives (int, str, bool, None, etc.)
-        if not isinstance(data, dict):
-            return data
-
-        type_str = data.get("$type", "")
-        if not type_str:
-            # No $type, process dict values recursively
-            return {k: self._process_value(v) for k, v in data.items()}
-
-        # Route to appropriate handler based on $type
-        # PropertyData types (most common)
-        if "PropertyData" in type_str:
-            if "Struct" in type_str:
-                return self._process_struct_data(data=data, type_str=type_str)
-            return self._process_property_data(data=data, type_str=type_str)
-
-        # UnrealTypes
-        if "UnrealTypes" in type_str:
-            return self._process_unreal_type(data=data)
-
-        # Field types
-        if "FieldTypes" in type_str:
-            return self._process_field_type(data=data)
-
-        # CustomVersion
-        if "CustomVersion" in type_str:
-            return self._process_custom_version(data)
-
-        # Default: return Value field or the whole dict
-        return data.get("Value", data)
-
-    def _process_property_data(self, data: dict[str, Any], type_str: str) -> Any:
-        """Process PropertyData types.
-
-        Handles types like IntPropertyData, BoolPropertyData, StrPropertyData, etc.
-
-        Args:
-            data (dict): Property data dict
-            type_str (str): The $type string
-
-        Returns:
-            Any: Extracted simple value
-        """
-        # Integer types
-        if any(
-            x in type_str
-            for x in [
-                "IntPropertyData",
-                "Int8PropertyData",
-                "Int16PropertyData",
-                "Int64PropertyData",
-                "UInt16PropertyData",
-                "UInt32PropertyData",
-            ]
-        ):
-            return data.get("Value", 0)
-
-        # Boolean
-        if "BoolPropertyData" in type_str:
-            return data.get("Value", False)
-
-        # Float
-        if "FloatPropertyData" in type_str:
-            return data.get("Value", 0.0)
-
-        # String/Name
-        if "StrPropertyData" in type_str or "NamePropertyData" in type_str:
-            value = data.get("Value")
-            return (
-                value.get("Value", "") if isinstance(value, dict) else (str(value) if value else "")
-            )
-
-        # Text
-        if "TextPropertyData" in type_str:
-            culture_invariant = data.get("CultureInvariantString")
-            value = data.get("Value")
-
-            # Return both text and GUID if both exist (for localization support)
-            if culture_invariant and value and isinstance(value, str):
-                return {"Text": culture_invariant, "Guid": value}
-
-            # Fallback: just return the text
-            if culture_invariant:
-                return culture_invariant
-            return (
-                value.get("CultureInvariantString", "")
-                if isinstance(value, dict)
-                else (str(value) if value else "")
-            )
-
-        # Byte/Enum
-        if "BytePropertyData" in type_str or "EnumPropertyData" in type_str:
-            value = data.get("Value")
-            return value.get("Value", "") if isinstance(value, dict) else value
-
-        # SoftObject (check before ObjectPropertyData since it's a substring match)
-        if "SoftObjectPropertyData" in type_str:
-            value = data.get("Value")
-            return value.get("AssetPathName", "") if isinstance(value, dict) else value
-
-        # Object
-        if "ObjectPropertyData" in type_str:
-            value = data.get("Value")
-            if isinstance(value, dict):
-                # Value is dict with Index field
-                index = value.get("Index", 0)
-            elif isinstance(value, int):
-                # Value is directly the index
-                index = value
-            else:
-                return value
-
-            # Mark as reference so we can identify it later
-            return f"Reference: {index}"
-
-        # Array
-        if "ArrayPropertyData" in type_str:
-            value = data.get("Value", [])
-            return (
-                [self._process_value(item) for item in value] if isinstance(value, list) else value
-            )
-
-        # Map
-        if "MapPropertyData" in type_str:
-            return data.get("Value", {})
-
-        # Set
-        if "SetPropertyData" in type_str:
-            value = data.get("Value", [])
-            return (
-                [self._process_value(item) for item in value] if isinstance(value, list) else value
-            )
-
-        # Delegate
-        if "FDelegate" in type_str or "DelegatePropertyData" in type_str:
-            return data.get("Value")
-
-        # MulticastDelegate
-        if "MulticastSparseDelegatePropertyData" in type_str:
-            return data.get("Value", [])
-
-        # Default
-        return data.get("Value")
-
-    def _process_struct_data(self, data: dict[str, Any], type_str: str) -> Any:
-        """Process Struct types.
-
-        Handles types like VectorPropertyData, ColorPropertyData, StructPropertyData, etc.
-
-        Args:
-            data (dict): Struct data dict
-            type_str (str): The $type string
-
-        Returns:
-            Any: Extracted simple value (dict, list, or primitive)
-        """
-        value = data.get("Value", [])
-
-        # StructPropertyData contains nested properties
-        if "StructPropertyData" in type_str and not any(
-            x in type_str
-            for x in [
-                "Vector",
-                "Color",
-                "Rotator",
-                "Quat",
-                "Box",
-                "IntPoint",
-                "Guid",
-                "RichCurve",
-            ]
-        ):
-            if isinstance(value, list):
-                # Process each property in the struct
-                result = {}
-                for prop in value:
-                    if isinstance(prop, dict) and "Name" in prop:
-                        prop_name = prop.get("Name")
-                        result[prop_name] = self._process_value(prop)
-                return result
-            return value
-
-        # GUID - extract Guid string from dict
-        if "GuidPropertyData" in type_str:
-            if isinstance(value, dict):
-                return str(value.get("Guid", ""))
-            return value
-
-        # PerPlatformFloat - use data.get with default
-        if "PerPlatformFloatPropertyData" in type_str:
-            return data.get("Value", 0.0)
-
-        # All other struct types return value as-is:
-        # Vector types (Vector2D, Vector, Vector4), Rotator, Quat, Color types,
-        # Box types, IntPoint, RichCurveKey, Material/Expression Input, SkeletalMesh
-        return value
-
-    def _process_unreal_type(self, data: dict[str, Any]) -> Any:
-        """Process UnrealTypes.
-
-        Handles types like FVector, FRotator, FLinearColor, etc.
-
-        Args:
-            data (dict): Unreal type dict
-
-        Returns:
-            Any: Extracted simple value (dict without $type)
-        """
-        # These are usually simple structs, return without $type field
-        return {k: v for k, v in data.items() if k != "$type"}
+        return process_value(data)
 
     def _resolve_import_full_path(
         self, import_obj: dict[str, Any], all_imports: list[dict[str, Any]]
     ) -> str | None:
         """Resolve an import's full path by following OuterIndex chain.
-
-        Only resolves BlueprintGeneratedClass imports. For other assets, use
-        _resolve_import_asset_path instead.
 
         Args:
             import_obj (dict): The import object to resolve
@@ -931,33 +712,12 @@ class BlueprintParser:
         Returns:
             str | None: Full path like "/Game/Blueprints/Items/Grenade" or None
         """
-        # Only resolve BlueprintGeneratedClass imports
-        if import_obj.get("ClassName") != "BlueprintGeneratedClass":
-            return None
-
-        # Follow OuterIndex to get package path
-        outer_index = import_obj.get("OuterIndex", 0)
-        if outer_index < 0:
-            try:
-                # Get the package import
-                package_import = all_imports[abs(outer_index) - 1]
-                package_path: str = package_import.get("ObjectName", "")
-
-                # The package path should start with /Game/
-                if package_path.startswith("/Game/"):
-                    return package_path
-            except IndexError:
-                pass
-
-        return None
+        return resolve_import_full_path(import_obj=import_obj, all_imports=all_imports)
 
     def _resolve_import_asset_path(
         self, import_obj: dict[str, Any], all_imports: list[dict[str, Any]]
     ) -> str | None:
         """Resolve any import to its asset path (for full extraction).
-
-        Unlike _resolve_import_full_path, this resolves all asset types
-        (Texture2D, StaticMesh, etc.) not just BlueprintGeneratedClass.
 
         Args:
             import_obj (dict): The import object to resolve
@@ -966,70 +726,4 @@ class BlueprintParser:
         Returns:
             str | None: Asset path like "War/Content/Textures/UI/Icon.0" or None
         """
-        class_name: str = import_obj.get("ClassName", "")
-
-        # Skip script/engine classes (not assets)
-        if class_name in ("Package", "Class", "Function", "ScriptStruct"):
-            return None
-
-        # Follow OuterIndex to get package path
-        outer_index = import_obj.get("OuterIndex", 0)
-        if outer_index < 0:
-            try:
-                package_import = all_imports[abs(outer_index) - 1]
-                package_path: str = package_import.get("ObjectName", "")
-
-                if package_path.startswith("/Game/"):
-                    return normalize_object_path(package_path)
-            except IndexError:
-                pass
-
-        return None
-
-    def _process_import(
-        self, data: dict[str, Any], all_imports: list[dict[str, Any]]
-    ) -> str | None:
-        """Process Import - return full path for blueprints, None for others.
-
-        Args:
-            data (dict): Import data dict
-            all_imports (list[dict]): All raw imports for path resolution (unprocessed dicts)
-
-        Returns:
-            str | None: Full blueprint path or None if not a blueprint
-        """
-        # Resolve to full path for BlueprintGeneratedClass, None otherwise
-        return self._resolve_import_full_path(import_obj=data, all_imports=all_imports)
-
-    def _process_field_type(self, data: dict[str, Any]) -> Any:
-        """Process Field types.
-
-        Handles UArrayProperty, UBoolProperty, UObjectProperty, etc.
-
-        Args:
-            data (dict): Field type dict
-
-        Returns:
-            Any: Processed field data
-        """
-        # Field types describe property metadata, not values
-        # For now, return simplified version
-        return {
-            "Name": data.get("Name", ""),
-            "Flags": data.get("Flags", 0),
-        }
-
-    def _process_custom_version(self, data: dict[str, Any]) -> dict[str, Any]:
-        """Process CustomVersion type.
-
-        Converts CustomVersion object to simple FriendlyName: Version mapping.
-
-        Args:
-            data (dict): CustomVersion data dict
-
-        Returns:
-            dict: Simple mapping of {FriendlyName: Version}
-        """
-        friendly_name = data.get("FriendlyName", "Unknown")
-        version = data.get("Version", 0)
-        return {friendly_name: version}
+        return resolve_import_asset_path(import_obj=import_obj, all_imports=all_imports)

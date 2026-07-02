@@ -10,6 +10,11 @@ from pathlib import Path
 from typing import Any
 
 from fs_tools.services.catalog_builder.blueprint_parser import BlueprintParser
+from fs_tools.services.catalog_builder.damage_type_resolver import (
+    build_damage_type_result,
+    get_ammo_code,
+    resolve_damage_type,
+)
 from fs_tools.services.catalog_builder.data_table_lookup import DataTableLookup
 from fs_tools.services.catalog_builder.localization_lookup import (
     LocalizationLookup,
@@ -210,34 +215,7 @@ class CatalogAssembler:
         Returns:
             str | None: Ammo CodeName to use for DamageType lookup, or None.
         """
-        code_name = data.get("CodeName", "")
-
-        # Case 1: Item itself is ammo (has AmmoDynamicData entry)
-        if self.data_service.get_ammo_dynamic_data(code_name):
-            return str(code_name)
-
-        item_comp = data.get("ItemComponentClass")
-        if not isinstance(item_comp, dict):
-            return None
-
-        # Case 2: Single ammo type from MultiAmmo
-        multi_ammo = item_comp.get("MultiAmmo", [])
-        if isinstance(multi_ammo, list) and len(multi_ammo) == 1:
-            return str(multi_ammo[0])
-
-        # Case 3: CompatibleAmmoCodeName (single ammo weapons)
-        compat_ammo = item_comp.get("CompatibleAmmoCodeName")
-        if compat_ammo:
-            return str(compat_ammo)
-
-        # Case 4: ProjectileClass.ExplosiveCodeName
-        proj_class = item_comp.get("ProjectileClass")
-        if isinstance(proj_class, dict):
-            explosive = proj_class.get("ExplosiveCodeName")
-            if explosive:
-                return str(explosive)
-
-        return None
+        return get_ammo_code(data=data, data_service=self.data_service)
 
     def _parse_blueprint(self, json_path: Path) -> dict[str, Any] | None:
         """Build a complete catalog entry from a blueprint file.
@@ -406,157 +384,32 @@ class CatalogAssembler:
         """Build a resolved DamageType dict from blueprint data.
 
         Args:
-            dt_data: Extracted damage type blueprint data.
-            bp_path: Blueprint path (for building ObjectPath).
+            dt_data (dict[str, Any]): Extracted damage type blueprint data.
+            bp_path (str): Blueprint path (for building ObjectPath).
 
         Returns:
-            dict: Resolved DamageType with properties and resolved text.
+            dict[str, Any]: Resolved DamageType with properties and resolved text.
         """
-        loc_service = self.loc_service
-
-        # Build ObjectPath from blueprint path
-        # DamageTypes/BPFoo.json -> /Game/Blueprints/DamageTypes/BPFoo -> normalized
-        game_path = "/Game/Blueprints/" + bp_path.replace(".json", "")
-        object_path = normalize_object_path(game_path)
-
-        resolved: dict[str, Any] = {"ObjectPath": object_path}
-
-        # Copy relevant properties
-        for key in [
-            "Type",
-            "Icon",
-            "VehicleSubsystemDisableMultipliers",
-            "bApplyDamageFalloff",
-            "bCanWoundCharacter",
-            "bExposeInUI",
-            "bAlwaysAppliesBleeding",
-            "bCanRuinStructures",
-            # Tank armour related
-            "TankArmourPenetrationFactor",
-            "TankArmourEffectType",
-            "bApplyTankArmourMechanics",
-            "bApplyTankArmourAngleRangeBonuses",
-        ]:
-            if key in dt_data:
-                value = dt_data[key]
-                # Simplify Icon to just the ResourceObject path
-                if key == "Icon" and isinstance(value, dict):
-                    value = value.get("ResourceObject", value)
-                resolved[key] = value
-
-        # Resolve DisplayName
-        display_name = dt_data.get("DisplayName")
-        if display_name:
-            text = extract_localized_text(display_name)
-            if text and loc_service.is_guid(text):
-                resolved["DisplayName"] = loc_service.get_with_fallback(text)
-            elif text:
-                resolved["DisplayName"] = text
-
-        # Resolve DescriptionDetails (array of tooltip texts joined with newlines)
-        desc_details = dt_data.get("DescriptionDetails")
-        if isinstance(desc_details, list) and desc_details:
-            # Collect texts from the array (may be GUIDs or already resolved text)
-            texts: list[str] = []
-            guids: list[str] = []
-            for item in desc_details:
-                if isinstance(item, dict):
-                    text_value = item.get("Text", "")
-                    # Handle nested dict format {"Text": {"Text": "...", "Guid": "..."}}
-                    if isinstance(text_value, dict):
-                        text = str(text_value.get("Text", ""))
-                        guid = text_value.get("Guid")
-                        if guid and isinstance(guid, str):
-                            guids.append(guid)
-                    else:
-                        text = str(text_value) if text_value else ""
-                elif isinstance(item, str):
-                    text = item
-                else:
-                    continue
-                if not text:
-                    continue
-                if loc_service.is_guid(text):
-                    guids.append(text)
-                    texts.append(loc_service.get_with_fallback(text))
-                else:
-                    # Already resolved text (from CultureInvariantString)
-                    texts.append(text)
-
-            if texts:
-                resolved["DescriptionDetails"] = "\n".join(texts)
-
-                # Build locales only if we have GUIDs to look up
-                if guids:
-                    all_langs: set[str] = set()
-                    for guid in guids:
-                        translations = loc_service.get_all_languages(guid)
-                        if translations:
-                            all_langs.update(translations.keys())
-
-                    if all_langs:
-                        locales: dict[str, str] = {}
-                        for lang in sorted(all_langs):
-                            lang_texts = []
-                            for guid in guids:
-                                translations = loc_service.get_all_languages(guid)
-                                if translations and lang in translations:
-                                    lang_texts.append(translations[lang])
-                            if lang_texts:
-                                locales[lang] = "\n".join(lang_texts)
-                        if locales:
-                            resolved["DescriptionDetailsLocales"] = locales
-
-        # Generate DescriptionDetails from boolean properties if not already set
-        if "DescriptionDetails" not in resolved:
-            generated_texts: list[str] = []
-            if dt_data.get("bBreachesBunkers"):
-                generated_texts.append("Always has a chance to breach bunkers")
-            if generated_texts:
-                resolved["DescriptionDetails"] = "\n".join(generated_texts)
-
-        return resolved
+        return build_damage_type_result(
+            dt_data=dt_data, bp_path=bp_path, loc_service=self.loc_service
+        )
 
     def _resolve_damage_type(self, ammo_code: str) -> dict[str, Any] | None:
         """Resolve DamageType import reference to full object.
 
         Args:
-            ammo_code: Ammo CodeName to resolve DamageType for.
+            ammo_code (str): Ammo CodeName to resolve DamageType for.
 
         Returns:
-            Resolved DamageType dict with DisplayName, Icon, Type, etc.,
-            or None if not found.
+            dict[str, Any] | None: Resolved DamageType dict with DisplayName,
+                Icon, Type, etc., or None if not found.
         """
-        ds = self.data_service
-        bp = self.blueprint_parser
-
-        # Get the damage type path from ammo data table
-        damage_type_path = ds.resolve_damage_type_import(ammo_code)
-        if not damage_type_path:
-            return None
-
-        # Handle Script paths (C++ classes) - return as Type field
-        if damage_type_path.startswith("/Script/"):
-            # Extract package path (e.g., /Script/War/Foo -> /Script/War)
-            parts = damage_type_path.split("/")
-            if len(parts) >= 3:
-                return {"Type": f"/Script/{parts[2]}"}
-            return {"Type": damage_type_path}
-
-        # Convert /Game/ path to relative path for parser
-        bp_path = damage_type_path.replace("/Game/Blueprints/", "")
-        bp_path = bp_path.replace("_C", "")
-        parts = bp_path.split("/")
-        if len(parts) >= 2 and parts[-1] == parts[-2]:
-            bp_path = "/".join(parts[:-1])
-        bp_path += ".json"
-
-        # Load damage type blueprint
-        dt_data = bp.extract_catalog_data(bp_path)
-        if not dt_data:
-            return None
-
-        return self._build_damage_type_result(dt_data, bp_path)
+        return resolve_damage_type(
+            ammo_code=ammo_code,
+            data_service=self.data_service,
+            blueprint_parser=self.blueprint_parser,
+            loc_service=self.loc_service,
+        )
 
     def _enrich_locales(
         self,
