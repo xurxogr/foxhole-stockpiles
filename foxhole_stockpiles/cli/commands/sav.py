@@ -1,8 +1,6 @@
 """``fs sav`` — process Foxhole save files and extract stockpile data."""
 
 import asyncio
-import os
-import sys
 from pathlib import Path
 
 import typer
@@ -15,75 +13,11 @@ from foxhole_stockpiles.core.settings.sections.output import (
     OutputHandlerConfig,
     OutputSettings,
 )
+from foxhole_stockpiles.core.utils import auto_detect_savefile, find_mapdata_file
 from foxhole_stockpiles.services.output_coordinator import OutputCoordinator
 from foxhole_stockpiles.services.savefile_processor import SaveFileProcessor
 
 app = typer.Typer(help="Process Foxhole save files for stockpile data.")
-
-
-def _get_default_savefile_path() -> Path | None:
-    """Get the default Foxhole save file path based on OS.
-
-    Returns:
-        Path | None: Default save file path or None if not determinable.
-    """
-    if sys.platform == "win32":
-        local_appdata = os.environ.get("LOCALAPPDATA")
-        if local_appdata:
-            return Path(local_appdata) / "Foxhole" / "Saved" / "SaveGames"
-    elif sys.platform == "linux":
-        # WSL path - try common WSL mount points.
-        wsl_users = Path("/mnt/c/Users")
-        if wsl_users.exists():
-            try:
-                for user_dir in wsl_users.iterdir():
-                    try:
-                        wsl_path = (
-                            user_dir / "AppData" / "Local" / "Foxhole" / "Saved" / "SaveGames"
-                        )
-                        if wsl_path.exists():
-                            return wsl_path
-                    except PermissionError:
-                        continue
-            except PermissionError:
-                pass
-
-        # Native Linux (Proton/Wine).
-        home = Path.home()
-        proton_path = (
-            home
-            / ".steam"
-            / "steam"
-            / "steamapps"
-            / "compatdata"
-            / "505460"
-            / "pfx"
-            / "drive_c"
-            / "users"
-            / "steamuser"
-            / "AppData"
-            / "Local"
-            / "Foxhole"
-            / "Saved"
-            / "SaveGames"
-        )
-        if proton_path.exists():
-            return proton_path
-    return None
-
-
-def _find_mapdata_file(save_dir: Path) -> Path | None:
-    """Find the MapData.sav file in the save directory.
-
-    Args:
-        save_dir (Path): Save games directory.
-
-    Returns:
-        Path | None: Path to MapData.sav or None if not found.
-    """
-    for f in save_dir.glob("*_MapData.sav"):
-        return f
-    return None
 
 
 def _resolve_save_file(file: Path | None, save_dir: Path | None) -> Path:
@@ -104,14 +38,12 @@ def _resolve_save_file(file: Path | None, save_dir: Path | None) -> Path:
     if file:
         save_file = file
     elif save_dir:
-        save_file = _find_mapdata_file(save_dir)
+        save_file = find_mapdata_file(save_dir)
         if save_file is None:
             typer.echo(f"Error: No MapData.sav file found in {save_dir}", err=True)
             raise typer.Exit(code=1)
     else:
-        default_dir = _get_default_savefile_path()
-        if default_dir and default_dir.exists():
-            save_file = _find_mapdata_file(default_dir)
+        save_file = auto_detect_savefile()
 
     if save_file is None:
         typer.echo(

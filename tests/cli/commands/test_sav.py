@@ -1,7 +1,5 @@
 """Tests for the ``fs sav`` command (``foxhole_stockpiles.cli.commands.sav``)."""
 
-import os
-import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -12,60 +10,6 @@ from typer.testing import CliRunner
 from foxhole_stockpiles.cli.commands import sav
 
 runner = CliRunner()
-
-
-class TestGetDefaultSavefilePath:
-    """Test suite for the ``_get_default_savefile_path`` helper."""
-
-    def test_win32_with_localappdata(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """On Windows the path is built from LOCALAPPDATA."""
-        monkeypatch.setattr(sys, "platform", "win32")
-        monkeypatch.setattr(os, "environ", {"LOCALAPPDATA": "/x/Local"})
-        result = sav._get_default_savefile_path()
-        assert result == Path("/x/Local") / "Foxhole" / "Saved" / "SaveGames"
-
-    def test_win32_without_localappdata(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Missing LOCALAPPDATA yields None."""
-        monkeypatch.setattr(sys, "platform", "win32")
-        monkeypatch.setattr(os, "environ", {})
-        assert sav._get_default_savefile_path() is None
-
-    def test_linux_nothing_found(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """On Linux with no WSL/Proton paths present, returns None."""
-        monkeypatch.setattr(sys, "platform", "linux")
-        with (
-            patch("pathlib.Path.exists", return_value=False),
-            patch("pathlib.Path.home", return_value=Path("/home/u")),
-        ):
-            assert sav._get_default_savefile_path() is None
-
-    def test_other_platform(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """An unsupported platform yields None."""
-        monkeypatch.setattr(sys, "platform", "darwin")
-        assert sav._get_default_savefile_path() is None
-
-
-class TestFindMapdataFile:
-    """Test suite for the ``_find_mapdata_file`` helper."""
-
-    def test_finds_mapdata_file(self, tmp_path: Path) -> None:
-        """Returns the MapData.sav file present in the directory.
-
-        Args:
-            tmp_path (Path): Temporary directory path from pytest fixture.
-        """
-        save_file = tmp_path / "World_MapData.sav"
-        save_file.touch()
-
-        assert sav._find_mapdata_file(tmp_path) == save_file
-
-    def test_returns_none_when_absent(self, tmp_path: Path) -> None:
-        """Returns None when no MapData.sav file is present.
-
-        Args:
-            tmp_path (Path): Temporary directory path from pytest fixture.
-        """
-        assert sav._find_mapdata_file(tmp_path) is None
 
 
 class TestResolveSaveFile:
@@ -97,13 +41,13 @@ class TestResolveSaveFile:
         """With no file/dir given, the OS default directory is searched."""
         save_file = tmp_path / "World_MapData.sav"
         save_file.touch()
-        with patch.object(sav, "_get_default_savefile_path", return_value=tmp_path):
+        with patch.object(sav, "auto_detect_savefile", return_value=save_file):
             assert sav._resolve_save_file(None, None) == save_file
 
     def test_no_default_found_exits(self) -> None:
         """No file/dir and no default path exits with an error."""
         with (
-            patch.object(sav, "_get_default_savefile_path", return_value=None),
+            patch.object(sav, "auto_detect_savefile", return_value=None),
             pytest.raises(typer.Exit),
         ):
             sav._resolve_save_file(None, None)
