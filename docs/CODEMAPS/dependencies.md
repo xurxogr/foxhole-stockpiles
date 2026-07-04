@@ -100,7 +100,7 @@ Packaging: `tool.setuptools.packages.find` includes `foxhole_stockpiles*` +
 
 ```jsonc
 // platform config dir (~/.fs_config)
-{ "config_version": 13,
+{ "config_version": 15,
   "scanner": { "database_path": "...templates.h5", "capture_key": "F9", "confidence_gap": 0.0 },
   "output": { "handlers": [ /* console/file/webhook/return/sheets */ ] },
   "sav_processing": { /* save dir / map data resolution */ } }

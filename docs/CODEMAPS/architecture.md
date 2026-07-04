@@ -3,7 +3,7 @@
 # Architecture & Design Patterns
 
 **Type:** multi-package Python workspace (flat layout), **2 installable packages**.
-Config schema **v13**. Desktop app — **no REST server**.
+Config schema **v15**. Desktop app — **no REST server**.
 
 ## Package boundaries
 
@@ -79,17 +79,19 @@ SAV-sourced `Stockpile`s carry map metadata (`hex`, `coords`, `is_reserve`) and 
 
 ## Settings architecture
 
-`core/settings/app_settings.py` → `AppSettings(BaseSettings)`, schema **v13**.
+`core/settings/app_settings.py` → `AppSettings(BaseSettings)`, schema **v15**.
 Top-level sections: `external_tools`, `logging`, `output`, `scanner`,
-`database_builder`, `gui`, `sav_processing`.
+`database_builder`, `gui`, `sav_processing`, `clipboard`.
 (The capture hotkey is `scanner.capture_key`. `TemplateSettings` is consumed by
 mod-import models, not a top-level field. Icon geometry is the single constant
 `fs_tools/constants.py:ICON_BOX_SCALE` (fs_tools-only) — the former `OCRSettings` model was removed.)
 
 Source priority (highest→lowest): env (`FS_<SECTION>__<KEY>`) → JSON file in
 platform config dir → defaults. Stepwise migration via `config_migrator/` package
-(`CURRENT_VERSION = 13`; v9→v10 drops `api_server`/`api_auth`, v10→v11 drops
-`stockpile_types`, v11→v12 drops `notifications`, v12→v13 drops `gui.config_level`).
+(`CURRENT_VERSION = 15`; v9→v10 drops `api_server`/`api_auth`, v10→v11 drops
+`stockpile_types`, v11→v12 drops `notifications`, v12→v13 drops `gui.config_level`,
+v13→v14 reworks webhook `forward` auth into `header`, v14→v15 drops
+`scanner.early_exit_threshold` and `sav_processing.emit_all_on_start`).
 
 ## GUI structure
 
@@ -126,4 +128,4 @@ capture hotkey), Output, SAV Processing, Logging, GUI.
 2. `services/capture.py` + `services/local_scan.py` — capture + local scan→output
 3. `gui/widgets/capture_panel.py` — capture UI + hotkey
 4. `services/output_coordinator.py` — output routing (list-based)
-5. `core/settings/app_settings.py` — configuration (v13)
+5. `core/settings/app_settings.py` — configuration (v15)

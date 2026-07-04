@@ -74,7 +74,7 @@ def clip(
     Args:
         once (bool): Read the clipboard once and exit instead of monitoring.
         poll_interval (float): Polling interval in seconds.
-        output (str | None): Output file path overriding configured handlers.
+        output (Path | None): Output file path overriding configured handlers.
         config (str | None): Path to a configuration file.
         verbose (bool): Enable debug-level logging.
     """

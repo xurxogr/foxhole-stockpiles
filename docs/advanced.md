@@ -144,9 +144,9 @@ Per-tool documentation:
 
 ## Configuration
 
-Settings are stored as JSON in the platform config directory (`~/.fs_config`). The schema is **v13** and is migrated to the latest format automatically whenever settings are loaded — no manual migration step.
+Settings are stored as JSON in the platform config directory (`~/.fs_config`). The schema is **v15** and is migrated to the latest format automatically whenever settings are loaded — no manual migration step.
 
-**Top-level sections:** `external_tools`, `logging`, `output`, `scanner`, `database_builder`, `gui`, `sav_processing`. The capture hotkey lives at `scanner.capture_key` (e.g. `"F9"`).
+**Top-level sections:** `external_tools`, `logging`, `output`, `scanner`, `database_builder`, `gui`, `sav_processing`, `clipboard`. The capture hotkey lives at `scanner.capture_key` (e.g. `"F9"`).
 
 Any value can be overridden with an environment variable in `FS_<SECTION>__<KEY>` form:
 

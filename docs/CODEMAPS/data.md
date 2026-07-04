@@ -70,10 +70,10 @@ The external `fs-ocr` exposes `StockpileScanner`, `ScanConfig`,
 
 ## Configuration (`core/settings/`)
 
-### AppSettings root (schema **v13**)
+### AppSettings root (schema **v15**)
 ```python
 class AppSettings(BaseSettings):
-    config_version: int        # CURRENT_VERSION = 13
+    config_version: int        # CURRENT_VERSION = 15
     external_tools: ExternalToolsSettings
     logging: LoggingSettings
     output: OutputSettings
@@ -81,20 +81,23 @@ class AppSettings(BaseSettings):
     database_builder: DatabaseBuilderSettings
     gui: GUISettings
     sav_processing: SavProcessingSettings
+    clipboard: ClipboardSettings
 ```
 (`api_server`/`api_auth` removed in v10; `stockpile_types` in v11;
-`notifications` in v12; `gui.config_level` in v13.)
+`notifications` in v12; `gui.config_level` in v13; v13→v14 reworks webhook
+`forward` auth into `header` (`client_auth_header` → `auth_header`); v14→v15
+drops `scanner.early_exit_threshold` and `sav_processing.emit_all_on_start`,
+both dead fields with no consumer.)
 `sections/templates.py` (`TemplateSettings`) is consumed by mod-import models —
 not a top-level field. (The old `OCRSettings` icon-geometry model was removed; its
 one live value is `fs_tools/constants.py:ICON_BOX_SCALE = 64/2160` (fs_tools-only).)
 
 ### ScannerSettings (`sections/scanner.py`)
 `database_path`, **`capture_key`** (global hotkey, e.g. `"F9"`; `None` disables
-capture), `early_exit_threshold`, `confidence_gap`, `screenshots_folder`. The
-runtime `Scanner` reads `database_path` + `confidence_gap` (passed to
-`fs_ocr.ScanConfig`); the GUI binds the hotkey from `capture_key` and saves each
-capture to `screenshots_folder` when set. `early_exit_threshold` is consumed by
-the `fs_tools` candidate inspector, not the runtime.
+capture), `confidence_gap`, `screenshots_folder`. The runtime `Scanner` reads
+`database_path` + `confidence_gap` (passed to `fs_ocr.ScanConfig`); the GUI
+binds the hotkey from `capture_key` and saves each capture to
+`screenshots_folder` when set.
 
 ### OutputSettings (`sections/output/`)
 `OutputSettings.handlers: list[OutputHandlerConfig]`; per-handler models:
@@ -107,8 +110,10 @@ discriminated-union wrapper.
 ### Sources & migration
 Priority: env `FS_<SECTION>__<KEY>` → JSON file (platform config dir,
 `json_settings_source.py`) → defaults. Stepwise upgrade via `config_migrator/` package
-(v1 → … → 13). v9→v10 drops `api_server`/`api_auth`; v10→v11 drops
-`stockpile_types`; v11→v12 drops `notifications`; v12→v13 drops `gui.config_level`.
+(v1 → … → 15). v9→v10 drops `api_server`/`api_auth`; v10→v11 drops
+`stockpile_types`; v11→v12 drops `notifications`; v12→v13 drops `gui.config_level`;
+v13→v14 reworks webhook `forward` auth into `header`; v14→v15 drops
+`scanner.early_exit_threshold` and `sav_processing.emit_all_on_start`.
 
 ## Template database (HDF5) — owned by `fs_tools`
 
@@ -145,7 +150,7 @@ populated (no `x`/`y`); change-tracking keyed by `Stockpile.to_key()`.
 
 ## Key files
 1. `models/stockpile.py`, `models/stockpile_item.py`
-2. `core/settings/app_settings.py` + `config_migrator/` package (v13)
+2. `core/settings/app_settings.py` + `config_migrator/` package (v15)
 3. `core/settings/sections/scanner.py` — incl. `capture_key`
 4. `core/settings/sections/output/webhook_handler.py` — auth types (basic/bearer/header)
 5. `fs_tools/template_db/` — HDF5 access + matching
