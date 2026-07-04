@@ -33,20 +33,8 @@ def test_scanner_tab_initialization(scanner_tab: ScannerTab) -> None:
     """
     assert scanner_tab.database_path_input is not None
     assert scanner_tab.capture_key_display is not None
-    assert scanner_tab.early_exit_input is not None
     assert scanner_tab.confidence_gap_input is not None
     assert scanner_tab.screenshots_folder_input is not None
-
-
-def test_scanner_tab_early_exit_range(scanner_tab: ScannerTab) -> None:
-    """Test early exit threshold has correct range.
-
-    Args:
-        scanner_tab: ScannerTab instance
-    """
-    assert scanner_tab.early_exit_input.minimum() == 0.0
-    assert scanner_tab.early_exit_input.maximum() == 1.0
-    assert scanner_tab.early_exit_input.decimals() == 3
 
 
 def test_scanner_tab_default_values(scanner_tab: ScannerTab) -> None:
@@ -168,7 +156,6 @@ def test_scanner_tab_set_values(scanner_tab: ScannerTab) -> None:
     settings = ScannerSettings(
         database_path=Path("/test/db.h5"),
         capture_key="F9",
-        early_exit_threshold=0.99,
         confidence_gap=0.1,
         screenshots_folder="/test/screenshots",
     )
@@ -177,7 +164,6 @@ def test_scanner_tab_set_values(scanner_tab: ScannerTab) -> None:
 
     assert scanner_tab.database_path_input.text() == "/test/db.h5"
     assert scanner_tab.capture_key_display.text() == "F9"
-    assert scanner_tab.early_exit_input.value() == 0.99
     assert scanner_tab.confidence_gap_input.value() == 0.1
     assert scanner_tab.screenshots_folder_input.text() == "/test/screenshots"
 
@@ -202,14 +188,12 @@ def test_scanner_tab_get_values(scanner_tab: ScannerTab) -> None:
         scanner_tab: ScannerTab instance
     """
     scanner_tab.database_path_input.setText("/path/to/db.h5")
-    scanner_tab.early_exit_input.setValue(0.995)
     scanner_tab.confidence_gap_input.setValue(0.15)
     scanner_tab.screenshots_folder_input.setText("/my/screenshots")
 
     settings = scanner_tab.get_values()
 
     assert settings.database_path == Path("/path/to/db.h5")
-    assert settings.early_exit_threshold == 0.995
     assert settings.confidence_gap == 0.15
     assert settings.screenshots_folder == "/my/screenshots"
 

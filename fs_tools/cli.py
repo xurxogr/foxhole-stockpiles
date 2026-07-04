@@ -387,7 +387,7 @@ Prerequisites:
   2. umodel.exe - UAsset converter (https://www.gildor.org/en/projects/umodel)
   3. catalog.json - Item definitions file
 
-  Configure these in your .fs_config settings file or pass as arguments.
+  Configure these in your settings file or pass as arguments.
 """
 
 

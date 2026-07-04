@@ -3,7 +3,6 @@
 from pathlib import Path
 
 from PySide6.QtWidgets import (
-    QCheckBox,
     QComboBox,
     QDialog,
     QDoubleSpinBox,
@@ -93,11 +92,6 @@ class SavProcessingTab(QWidget):
         self.poll_interval_input.setSuffix(" s")
         form_layout.addRow(self.poll_interval_label, self.poll_interval_input)
 
-        # Emit all on start
-        self.emit_all_label = QLabel()
-        self.emit_all_checkbox = QCheckBox()
-        form_layout.addRow(self.emit_all_label, self.emit_all_checkbox)
-
         layout.addLayout(form_layout)
         layout.addStretch()
 
@@ -135,10 +129,6 @@ class SavProcessingTab(QWidget):
 
         self.poll_interval_label.setText(t("sav_processing_tab.poll_interval_label"))
         self.poll_interval_label.setToolTip(t("sav_processing_tab.poll_interval_tooltip"))
-
-        self.emit_all_label.setText(t("sav_processing_tab.emit_all_label"))
-        self.emit_all_label.setToolTip(t("sav_processing_tab.emit_all_tooltip"))
-        self.emit_all_checkbox.setText(t("sav_processing_tab.emit_all_checkbox"))
 
     def _auto_detect_sav_file(self) -> None:
         """Auto-detect the SAV file from default locations."""
@@ -193,7 +183,6 @@ class SavProcessingTab(QWidget):
         self.sav_key_display.setText(settings.sav_capture_key or "")
         self.sav_file_input.setText(str(settings.sav_file_path) if settings.sav_file_path else "")
         self.poll_interval_input.setValue(settings.poll_interval)
-        self.emit_all_checkbox.setChecked(settings.emit_all_on_start)
 
     def get_values(self) -> SavProcessingSettings:
         """Get current values from widgets.
@@ -208,5 +197,4 @@ class SavProcessingTab(QWidget):
             sav_capture_key=self._sav_capture_key_value or None,
             sav_file_path=Path(sav_path_text) if sav_path_text else None,
             poll_interval=self.poll_interval_input.value(),
-            emit_all_on_start=self.emit_all_checkbox.isChecked(),
         )

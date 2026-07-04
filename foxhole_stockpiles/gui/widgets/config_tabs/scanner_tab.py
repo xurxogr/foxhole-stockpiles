@@ -77,15 +77,6 @@ class ScannerTab(QWidget):
         key_layout.addWidget(self.capture_key_clear)
         self._form_layout.addRow(self.capture_key_label, key_layout_widget)
 
-        # Early Exit Threshold (used by fs-tools' candidate inspector)
-        self.early_exit_label = QLabel()
-        self.early_exit_input = QDoubleSpinBox()
-        self.early_exit_input.setRange(0.0, 1.0)
-        self.early_exit_input.setSingleStep(0.01)
-        self.early_exit_input.setDecimals(3)
-        self.early_exit_input.setValue(0.0)
-        self._form_layout.addRow(self.early_exit_label, self.early_exit_input)
-
         # Confidence Gap
         self.confidence_gap_label = QLabel()
         self.confidence_gap_input = QDoubleSpinBox()
@@ -137,10 +128,6 @@ class ScannerTab(QWidget):
         self.capture_key_display.setPlaceholderText(t("scanner_tab.capture_hotkey_placeholder"))
         self.capture_key_change.setText(t("scanner_tab.capture_change"))
         self.capture_key_clear.setText(t("common.clear"))
-
-        # Early Exit Threshold
-        self.early_exit_label.setText(t("scanner_tab.early_exit"))
-        self.early_exit_label.setToolTip(t("scanner_tab.early_exit_tooltip"))
 
         # Confidence Gap
         self.confidence_gap_label.setText(t("scanner_tab.confidence_gap"))
@@ -206,7 +193,6 @@ class ScannerTab(QWidget):
         )
         self._capture_key_value = settings.capture_key
         self.capture_key_display.setText(settings.capture_key or "")
-        self.early_exit_input.setValue(settings.early_exit_threshold)
         self.confidence_gap_input.setValue(settings.confidence_gap)
         self.screenshots_folder_input.setText(settings.screenshots_folder or "")
 
@@ -220,7 +206,6 @@ class ScannerTab(QWidget):
         return ScannerSettings(
             database_path=Path(db_path_text) if db_path_text else None,
             capture_key=self._capture_key_value or None,
-            early_exit_threshold=self.early_exit_input.value(),
             confidence_gap=self.confidence_gap_input.value(),
             screenshots_folder=self.screenshots_folder_input.text() or "",
         )

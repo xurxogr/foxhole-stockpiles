@@ -25,7 +25,6 @@ class TestScannerSettingsInitialization:
 
         assert config.database_path is None
         assert config.capture_key is None
-        assert config.early_exit_threshold == 0.0
         assert config.confidence_gap == 0.0
         assert config.screenshots_folder == ""
 
@@ -40,14 +39,12 @@ class TestScannerSettingsInitialization:
         config = ScannerSettings(
             database_path=db_file,
             capture_key="F9",
-            early_exit_threshold=0.99,
             confidence_gap=0.15,
             screenshots_folder="screenshots",
         )
 
         assert config.database_path == db_file
         assert config.capture_key == "F9"
-        assert config.early_exit_threshold == 0.99
         assert config.confidence_gap == 0.15
         assert config.screenshots_folder == "screenshots"
 
@@ -89,20 +86,6 @@ class TestFieldConstraints:
     This class contains tests for built-in Pydantic constraints
     like ge, le on various fields.
     """
-
-    def test_early_exit_threshold_below_minimum(self) -> None:
-        """Test early_exit_threshold validation fails below 0.0."""
-        with pytest.raises(ValidationError) as exc_info:
-            ScannerSettings(early_exit_threshold=-0.1)
-
-        assert "greater than or equal to 0" in str(exc_info.value)
-
-    def test_early_exit_threshold_above_maximum(self) -> None:
-        """Test early_exit_threshold validation fails above 1.0."""
-        with pytest.raises(ValidationError) as exc_info:
-            ScannerSettings(early_exit_threshold=1.5)
-
-        assert "less than or equal to 1" in str(exc_info.value)
 
     def test_confidence_gap_below_minimum(self) -> None:
         """Test that confidence_gap below minimum (< 0.0) raises validation error."""

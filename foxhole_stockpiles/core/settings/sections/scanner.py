@@ -21,16 +21,6 @@ class ScannerSettings(BaseModel):
         ),
         default=None,
     )
-    early_exit_threshold: float = Field(
-        description=(
-            "Early exit threshold for icon matching (used by fs-tools' candidate "
-            "inspector). If a match with confidence >= this threshold is found, stop "
-            "testing other candidates. Set to 0.0 to disable early exit."
-        ),
-        default=0.0,
-        ge=0.0,
-        le=1.0,
-    )
     confidence_gap: float = Field(
         description=(
             "Confidence gap for returning alternative candidates. "
@@ -59,7 +49,6 @@ class ScannerSettings(BaseModel):
             "example": {
                 "database_path": "database.h5",
                 "capture_key": "F9",
-                "early_exit_threshold": 0.0,
                 "confidence_gap": 0.0,
                 "screenshots_folder": "screenshots",
             }

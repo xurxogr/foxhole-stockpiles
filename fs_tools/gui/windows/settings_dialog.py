@@ -46,7 +46,8 @@ class SettingsDialog(QDialog):
     - External tools: repak, umodel and uassetgui
     - Database builder settings: catalog file and resolutions
 
-    All values are persisted to the shared ``.fs_config`` file.
+    All values are persisted to the shared config file (see
+    ``foxhole_stockpiles.core.settings.config_path``).
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:

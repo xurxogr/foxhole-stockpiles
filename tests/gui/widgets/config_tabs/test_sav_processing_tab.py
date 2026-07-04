@@ -108,7 +108,6 @@ def test_set_and_get_values_roundtrip(tab: SavProcessingTab, tmp_path: Path) -> 
         sav_capture_key="<ctrl>+d",
         sav_file_path=sav,
         poll_interval=2.0,
-        emit_all_on_start=True,
     )
     tab.set_values(settings)
     result = tab.get_values()
@@ -116,4 +115,3 @@ def test_set_and_get_values_roundtrip(tab: SavProcessingTab, tmp_path: Path) -> 
     assert result.sav_capture_key == "<ctrl>+d"
     assert result.sav_file_path == sav
     assert result.poll_interval == 2.0
-    assert result.emit_all_on_start is True

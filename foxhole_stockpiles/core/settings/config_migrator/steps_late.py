@@ -1,4 +1,4 @@
-"""Config migration steps v7 -> v14."""
+"""Config migration steps v7 -> v15."""
 
 from typing import Any
 
@@ -96,8 +96,7 @@ def migrate_v10_to_v11(data: dict[str, Any]) -> dict[str, Any]:
       user-editable aliases had no effect.
     * The dead ``scanner`` knobs ``template_cache_size``, ``debug_mode``
       and ``extract_icons`` are removed — they were old in-repo-engine
-      options with no remaining consumer. (``early_exit_threshold`` is kept
-      for ``fs_tools``' candidate inspector; ``screenshots_folder`` is kept
+      options with no remaining consumer. (``screenshots_folder`` is kept
       and now drives screenshot saving in the capture flow.)
 
     Any stored values are dropped so they do not linger in ``.fs_config``
@@ -206,5 +205,34 @@ def migrate_v13_to_v14(data: dict[str, Any]) -> dict[str, Any]:
 
         if "client_auth_header" in handler:
             handler["auth_header"] = handler.pop("client_auth_header")
+
+    return data
+
+
+def migrate_v14_to_v15(data: dict[str, Any]) -> dict[str, Any]:
+    """Migrate from v14 to v15 (drop two dead settings).
+
+    * ``scanner.early_exit_threshold`` had no consumer: nothing ever read it
+      outside the config tab that displayed it (the claim in an earlier
+      migration step that fs-tools' candidate inspector used it was stale).
+    * ``sav_processing.emit_all_on_start`` was configurable via the GUI but
+      never actually plumbed into ``SaveFileProcessor`` — both call sites
+      that construct it hardcode their own ``True``/``False`` instead of
+      reading the setting.
+
+    Any stored values are dropped so they do not linger in the config file
+    (the settings models forbid unknown fields).
+
+    Args:
+        data (dict[str, Any]): V14 configuration data.
+
+    Returns:
+        dict[str, Any]: V15 configuration data.
+    """
+    if "scanner" in data and isinstance(data["scanner"], dict):
+        data["scanner"].pop("early_exit_threshold", None)
+
+    if "sav_processing" in data and isinstance(data["sav_processing"], dict):
+        data["sav_processing"].pop("emit_all_on_start", None)
 
     return data

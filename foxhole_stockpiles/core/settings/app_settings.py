@@ -1,6 +1,5 @@
 """Application settings."""
 
-from pathlib import Path
 from typing import Any
 
 from pydantic import Field, model_validator
@@ -11,6 +10,10 @@ from pydantic_settings import (
 )
 
 from foxhole_stockpiles.core.settings.config_migrator import ConfigMigrator
+from foxhole_stockpiles.core.settings.config_path import (
+    default_config_path,
+    migrate_legacy_config_file,
+)
 from foxhole_stockpiles.core.settings.json_settings_source import Utf8JsonConfigSettingsSource
 from foxhole_stockpiles.core.settings.sections import (
     ClipboardSettings,
@@ -22,6 +25,9 @@ from foxhole_stockpiles.core.settings.sections import (
     SavProcessingSettings,
     ScannerSettings,
 )
+
+_config_path = default_config_path()
+migrate_legacy_config_file(_config_path)
 
 
 class AppSettings(BaseSettings):
@@ -54,7 +60,7 @@ class AppSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_nested_delimiter="__",
         env_prefix="FS_",
-        json_file=str(Path("~/.fs_config").expanduser()),
+        json_file=str(_config_path),
     )
 
     @model_validator(mode="before")

@@ -29,6 +29,8 @@ dependencies = [
     "pillow>=12.2.0",
     "pydantic>=2.13.4",
     "pydantic_settings>=2.14.2",
+    # Platform-appropriate config directory resolution
+    "platformdirs>=4.10.0",
     # HDF5 for database storage
     "h5py>=3.16.0",
     # Screenshot capture (window detection + global hotkey)

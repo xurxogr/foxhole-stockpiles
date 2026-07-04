@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from foxhole_stockpiles.core.settings import AppSettings
+from foxhole_stockpiles.core.settings.config_path import default_config_path
 from foxhole_stockpiles.gui.utils.config_manager import ConfigManager
 
 
@@ -25,7 +26,7 @@ def mock_settings() -> MagicMock:
 def test_config_manager_initialization() -> None:
     """Test ConfigManager initialization."""
     manager = ConfigManager()
-    assert manager.config_path == Path("~/.fs_config").expanduser()
+    assert manager.config_path == default_config_path()
 
 
 def test_config_manager_load_config() -> None:

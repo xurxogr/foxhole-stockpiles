@@ -38,11 +38,6 @@ class SavProcessingSettings(BaseModel):
         ge=0.1,
         le=60.0,
     )
-    emit_all_on_start: bool = Field(
-        description="Emit all stockpiles on first read (for single scan mode)",
-        default=True,
-    )
-
     model_config = ConfigDict(
         extra="forbid",
         json_schema_extra={
@@ -52,7 +47,6 @@ class SavProcessingSettings(BaseModel):
                     "C:/Users/User/AppData/Local/Foxhole/Saved/SaveGames/User_MapData.sav"
                 ),
                 "poll_interval": 1.0,
-                "emit_all_on_start": True,
             }
         },
     )

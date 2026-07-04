@@ -24,7 +24,7 @@ def isolate_app_settings(
 ) -> Generator[None, None, None]:
     """Isolate AppSettings from the developer's machine for every test.
 
-    By default ``AppSettings`` loads ``~/.fs_config`` and any ``FS_*``-prefixed
+    By default ``AppSettings`` loads its platform config file and any ``FS_*``-prefixed
     environment variables, so an unguarded test would pick up whatever
     configuration happens to exist on the machine. That makes the suite pass or
     fail depending on the developer's real config and diverge from CI (where no

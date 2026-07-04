@@ -3,10 +3,10 @@
 import json
 import logging
 import os
-from pathlib import Path
 
 from foxhole_stockpiles.core.settings import get_settings
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
+from foxhole_stockpiles.core.settings.config_path import default_config_path
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ class ConfigManager:
 
     def __init__(self) -> None:
         """Initialize the configuration manager."""
-        self.config_path = Path("~/.fs_config").expanduser()
+        self.config_path = default_config_path()
 
     def load_config(self) -> AppSettings:
         """Load configuration from file or create default.
@@ -47,6 +47,7 @@ class ConfigManager:
 
             # Save to file with pretty printing, restricted to the owner since
             # this config can hold a plaintext webhook auth token.
+            self.config_path.parent.mkdir(parents=True, exist_ok=True)
             fd = os.open(self.config_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
             with os.fdopen(fd, "w", encoding="utf-8") as f:
                 json.dump(config_dict, f, indent=2, ensure_ascii=False)
