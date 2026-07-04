@@ -190,7 +190,7 @@ class LocalizationLookup:
 
                 strings = self._read_namespace_strings(f, version, string_array)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - malformed locres files vary by UE version
             self.logger.error("Error parsing locres file %s: %s", filepath, e)
 
         return strings
