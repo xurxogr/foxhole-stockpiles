@@ -389,6 +389,20 @@ class ModImporter:
             to_extract_count=to_extract_count,
         )
 
+    @staticmethod
+    def _count_extracted_pngs(extracted_assets_dir: Path) -> int:
+        """Count PNG assets already present in the extraction directory.
+
+        Args:
+            extracted_assets_dir: Directory to count extracted PNGs in.
+
+        Returns:
+            int: Number of PNG files found, or 0 if the directory doesn't exist.
+        """
+        if not extracted_assets_dir.exists():
+            return 0
+        return len(list(extracted_assets_dir.rglob("*.png")))
+
     def _prepare_from_existing_extract(
         self, extracted_assets_dir: Path
     ) -> tuple[int | None, ModImportResult]:
@@ -403,9 +417,7 @@ class ModImporter:
         Raises:
             FileNotFoundError: If no PNGs are found in the directory.
         """
-        extracted_count = 0
-        if extracted_assets_dir.exists():
-            extracted_count = len(list(extracted_assets_dir.rglob("*.png")))
+        extracted_count = self._count_extracted_pngs(extracted_assets_dir)
 
         if extracted_count == 0:
             raise FileNotFoundError(
@@ -518,9 +530,7 @@ class ModImporter:
             logger.info("Import cancelled after extraction")
             return None, ModImportResult(templates_skipped=templates_skipped)
 
-        extracted_count = 0
-        if extracted_assets_dir.exists():
-            extracted_count = len(list(extracted_assets_dir.rglob("*.png")))
+        extracted_count = self._count_extracted_pngs(extracted_assets_dir)
 
         if extracted_count == 0:
             if existing_codes:
