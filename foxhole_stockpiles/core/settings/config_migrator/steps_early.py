@@ -1,5 +1,6 @@
 """Config migration steps v1 -> v7."""
 
+from copy import deepcopy
 from typing import Any
 
 
@@ -96,6 +97,7 @@ def migrate_v3_to_v4(data: dict[str, Any]) -> dict[str, Any]:
     if "stockpile_types" not in data or not isinstance(data["stockpile_types"], dict):
         return data
 
+    data = deepcopy(data)
     stockpile_types = data["stockpile_types"]
 
     # Remove the undefined field (no longer valid)
