@@ -328,105 +328,96 @@ class OutputHandlerDialog(QDialog):
         self._on_handler_type_changed()
         self._on_webhook_auth_changed()
 
+    def _require_field(self, value: str, widget: QLineEdit, message_key: str) -> bool:
+        """Warn and focus a field if it is empty.
+
+        Args:
+            value: The field's current (already-stripped) value.
+            widget: The field to focus if the value is empty.
+            message_key: Translation key for the validation error message.
+
+        Returns:
+            True if the value is non-empty, False if a warning was shown.
+        """
+        if value:
+            return True
+        QMessageBox.warning(self, t("common.validation_error"), t(message_key))
+        widget.setFocus()
+        return False
+
+    def _warn(self, message_key: str, widget: QLineEdit | None = None) -> None:
+        """Show a validation warning, optionally focusing a field.
+
+        Args:
+            message_key: Translation key for the validation error message.
+            widget: Field to focus after showing the warning, if any.
+        """
+        QMessageBox.warning(self, t("common.validation_error"), t(message_key))
+        if widget is not None:
+            widget.setFocus()
+
     def _validate_and_accept(self) -> None:
         """Validate input and accept dialog if valid."""
         handler_type = self.handler_type_input.currentText()
 
         if handler_type == "file":
-            path = self.file_path_input.text().strip()
-            if not path:
-                QMessageBox.warning(
-                    self,
-                    t("common.validation_error"),
-                    t("output_tab.handler_dialog.file_path_required"),
-                )
-                self.file_path_input.setFocus()
+            if not self._require_field(
+                self.file_path_input.text().strip(),
+                self.file_path_input,
+                "output_tab.handler_dialog.file_path_required",
+            ):
                 return
 
         elif handler_type == "webhook":
-            url = self.webhook_url_input.text().strip()
-            if not url:
-                QMessageBox.warning(
-                    self,
-                    t("common.validation_error"),
-                    t("output_tab.handler_dialog.webhook_url_required"),
-                )
-                self.webhook_url_input.setFocus()
+            if not self._require_field(
+                self.webhook_url_input.text().strip(),
+                self.webhook_url_input,
+                "output_tab.handler_dialog.webhook_url_required",
+            ):
                 return
 
         elif handler_type == "google sheets":
-            if self.creds_path_input.text().strip() == "":
-                QMessageBox.warning(
-                    self,
-                    t("common.validation_error"),
-                    t("output_tab.handler_dialog.creds_path_required"),
-                )
-                self.creds_path_input.setFocus()
+            if not self._require_field(
+                self.creds_path_input.text().strip(),
+                self.creds_path_input,
+                "output_tab.handler_dialog.creds_path_required",
+            ):
                 return
-            if self.spreadsheet_url_input.text().strip() == "":
-                QMessageBox.warning(
-                    self,
-                    t("common.validation_error"),
-                    t("output_tab.handler_dialog.spreadsheet_url_required"),
-                )
-                self.spreadsheet_url_input.setFocus()
+            if not self._require_field(
+                self.spreadsheet_url_input.text().strip(),
+                self.spreadsheet_url_input,
+                "output_tab.handler_dialog.spreadsheet_url_required",
+            ):
                 return
-            if self.sheet_id_input.text().strip() == "":
-                QMessageBox.warning(
-                    self,
-                    t("common.validation_error"),
-                    t("output_tab.handler_dialog.sheet_id_required"),
-                )
-                self.sheet_id_input.setFocus()
+            if not self._require_field(
+                self.sheet_id_input.text().strip(),
+                self.sheet_id_input,
+                "output_tab.handler_dialog.sheet_id_required",
+            ):
                 return
 
             if not os.path.exists(self.creds_path_input.text()):
-                QMessageBox.warning(
-                    self,
-                    t("common.validation_error"),
-                    t("output_tab.handler_dialog.creds_path_invalid"),
+                self._warn(
+                    "output_tab.handler_dialog.creds_path_invalid", self.spreadsheet_url_input
                 )
-                self.spreadsheet_url_input.setFocus()
                 return
 
             id_match = re.search(
                 r"(?<=https://docs.google.com/spreadsheets/d/).*(?=/)",
                 self.spreadsheet_url_input.text(),
             )
-
             if id_match is None:
-                QMessageBox.warning(
-                    self,
-                    t("common.validation_error"),
-                    t("output_tab.handler_dialog.spreadsheet_url_invalid"),
-                )
-                self.spreadsheet_url_input.setFocus()
-                return
-
-            sheet_id = self.sheet_id_input.text().strip()
-
-            if not sheet_id:
-                QMessageBox.warning(
-                    self,
-                    t("common.validation_error"),
-                    t("output_tab.handler_dialog.sheet_id_invalid"),
+                self._warn(
+                    "output_tab.handler_dialog.spreadsheet_url_invalid", self.spreadsheet_url_input
                 )
                 return
 
             if not bool(re.search("[a-zA-Z]+[1-9][0-9]*", self.start_cell_input.text())):
-                QMessageBox.warning(
-                    self,
-                    t("common.validation_error"),
-                    t("output_tab.handler_dialog.start_cell_invalid"),
-                )
+                self._warn("output_tab.handler_dialog.start_cell_invalid")
                 return
 
             if self.row_format_input.text().strip() == "":
-                QMessageBox.warning(
-                    self,
-                    t("common.validation_error"),
-                    t("output_tab.handler_dialog.row_format_missing"),
-                )
+                self._warn("output_tab.handler_dialog.row_format_missing")
                 return
 
         self.accept()
@@ -458,41 +449,42 @@ class OutputHandlerDialog(QDialog):
             | ConsoleHandlerSettings
             | SheetsHandlerSettings
         )
-        if handler_type == OutputHandlerType.FILE:
-            handler_settings = FileHandlerSettings(path=self.file_path_input.text() or "output")
-            if not name:
-                name = "File Output"
-        elif handler_type == OutputHandlerType.WEBHOOK:
-            webhook_auth_type_str = self.webhook_auth_type_input.currentText()
-            webhook_auth_type: AuthType | None = (
-                None if webhook_auth_type_str == "null" else AuthType(webhook_auth_type_str)
-            )
-            handler_settings = WebhookHandlerSettings(
-                url=self.webhook_url_input.text() or "https://example.com/webhook",
-                auth_type=webhook_auth_type,
-                token=self.webhook_token_input.text() or None,
-                auth_header=self.webhook_auth_header_input.text() or None,
-            )
-            if not name:
-                name = "Webhook"
-        elif handler_type == OutputHandlerType.CONSOLE:
-            handler_settings = ConsoleHandlerSettings()
-            if not name:
-                name = "Console"
-        elif handler_type == OutputHandlerType.SHEETS:
-            handler_settings = SheetsHandlerSettings(
-                creds_path=self.creds_path_input.text(),
-                spreadsheet_url=self.spreadsheet_url_input.text(),
-                sheet_id=self.sheet_id_input.text(),
-                start_cell=self.start_cell_input.text(),
-                row_format=self.row_format_input.text(),
-            )
-            if not name:
-                name = "Append rows (Google Sheets)"
-        else:  # RETURN
-            handler_settings = ReturnHandlerSettings()
-            if not name:
-                name = "API Response"
+        match handler_type:
+            case OutputHandlerType.FILE:
+                handler_settings = FileHandlerSettings(path=self.file_path_input.text() or "output")
+                if not name:
+                    name = "File Output"
+            case OutputHandlerType.WEBHOOK:
+                webhook_auth_type_str = self.webhook_auth_type_input.currentText()
+                webhook_auth_type: AuthType | None = (
+                    None if webhook_auth_type_str == "null" else AuthType(webhook_auth_type_str)
+                )
+                handler_settings = WebhookHandlerSettings(
+                    url=self.webhook_url_input.text() or "https://example.com/webhook",
+                    auth_type=webhook_auth_type,
+                    token=self.webhook_token_input.text() or None,
+                    auth_header=self.webhook_auth_header_input.text() or None,
+                )
+                if not name:
+                    name = "Webhook"
+            case OutputHandlerType.CONSOLE:
+                handler_settings = ConsoleHandlerSettings()
+                if not name:
+                    name = "Console"
+            case OutputHandlerType.SHEETS:
+                handler_settings = SheetsHandlerSettings(
+                    creds_path=self.creds_path_input.text(),
+                    spreadsheet_url=self.spreadsheet_url_input.text(),
+                    sheet_id=self.sheet_id_input.text(),
+                    start_cell=self.start_cell_input.text(),
+                    row_format=self.row_format_input.text(),
+                )
+                if not name:
+                    name = "Append rows (Google Sheets)"
+            case _:  # RETURN
+                handler_settings = ReturnHandlerSettings()
+                if not name:
+                    name = "API Response"
 
         return OutputHandlerConfig(
             name=name,
