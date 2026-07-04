@@ -286,7 +286,7 @@ class SettingsDialog(QDialog):
 
         try:
             success, msg = self.config_manager.save_config(updated_settings)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - surface any save failure to the user
             logger.error("Failed to save settings: %s", e)
             self.status_label.setText(f"Error: {e}")
             self.status_label.show()

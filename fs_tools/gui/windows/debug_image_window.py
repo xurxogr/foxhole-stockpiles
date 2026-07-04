@@ -97,7 +97,7 @@ class DatabaseLoader(QThread):
             manager = TemplateManager(database_path=db_path)
             all_databases = asyncio.run(manager.load_all_resolutions())
             self.finished.emit(all_databases)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - report any failure via the error signal
             logger.exception("Failed to load databases")
             self.error.emit(str(e))
 

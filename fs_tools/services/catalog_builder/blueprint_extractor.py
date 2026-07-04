@@ -216,7 +216,7 @@ class BlueprintExtractor:
 
                 self.logger.info("Extracted: %s", directory)
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - log context before re-raising
                 self.logger.error("Error extracting %s: %s", directory, e)
                 raise
 
@@ -264,7 +264,7 @@ class BlueprintExtractor:
                 )
                 return False, "failed"
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - isolate one conversion failure from the rest
             self.logger.error("✗ Error converting %s: %s", uasset_path.name, e)
             return False, "failed"
 

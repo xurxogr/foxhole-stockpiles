@@ -104,7 +104,7 @@ class IconImportWorker(QThread):
         try:
             # Run async operations
             asyncio.run(self._run_import())
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - report any failure via the error signal
             logger.exception("Icon import failed with exception")
             self.error.emit(str(e))
             self.finished.emit(False)

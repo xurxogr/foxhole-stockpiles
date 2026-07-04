@@ -75,7 +75,7 @@ class DatabaseLoader(QThread):
 
             self.finished.emit(all_databases)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - report any failure via the error signal
             logger.exception("Failed to load databases")
             self.error.emit(str(e))
 
@@ -669,6 +669,41 @@ class DatabaseVisualizerWindow(QDialog):
         # Display comparison images
         self._display_comparison_images(template, highest_template)
 
+    @staticmethod
+    def _template_to_pixmap(image: np.ndarray) -> tuple[QPixmap, int, int]:
+        """Convert a template's BGR image array into a displayable QPixmap.
+
+        Args:
+            image (np.ndarray): BGR image array from an IconTemplate.
+
+        Returns:
+            tuple[QPixmap, int, int]: The pixmap and its (width, height).
+        """
+        rgb = swap_rb(image)
+        h, w, ch = rgb.shape
+        bytes_per_line = ch * w
+        qt_image = QImage(rgb.data.tobytes(), w, h, bytes_per_line, QImage.Format.Format_RGB888)
+        return QPixmap.fromImage(qt_image), w, h
+
+    @staticmethod
+    def _scale_pixmap(pixmap: QPixmap, width: int, height: int) -> QPixmap:
+        """Scale a pixmap to the given size, keeping aspect ratio.
+
+        Args:
+            pixmap (QPixmap): The pixmap to scale.
+            width (int): Target width.
+            height (int): Target height.
+
+        Returns:
+            QPixmap: The scaled pixmap.
+        """
+        return pixmap.scaled(
+            width,
+            height,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.FastTransformation,
+        )
+
     def _display_comparison_images(
         self, current_template: IconTemplate | None, highest_template: IconTemplate | None
     ) -> None:
@@ -681,66 +716,24 @@ class DatabaseVisualizerWindow(QDialog):
         if not current_template:
             return
 
-        # Get dimensions
-        current_rgb = swap_rb(current_template.image)
-        current_h, current_w, current_ch = current_rgb.shape
+        current_pixmap, current_w, current_h = self._template_to_pixmap(current_template.image)
 
-        # Display current resolution image (scaled to match target size)
-        current_bytes_per_line = current_ch * current_w
-        current_qt_image = QImage(
-            current_rgb.data.tobytes(),
-            current_w,
-            current_h,
-            current_bytes_per_line,
-            QImage.Format.Format_RGB888,
-        )
-        current_pixmap = QPixmap.fromImage(current_qt_image)
-
-        # Calculate target size and scale based on highest resolution
         if highest_template:
-            highest_rgb = swap_rb(highest_template.image)
-            highest_h, highest_w, highest_ch = highest_rgb.shape
+            highest_pixmap, highest_w, highest_h = self._template_to_pixmap(highest_template.image)
 
             # Target size: highest resolution at 4x scale
             target_width = highest_w * 4
             target_height = highest_h * 4
 
-            # Calculate scale factor for current resolution to match target size
-            current_scale_x = target_width / current_w
-            current_scale_y = target_height / current_h
-            current_scale = min(current_scale_x, current_scale_y)  # Keep aspect ratio
-
-            # Scale and display current image
-            current_scaled = current_pixmap.scaled(
-                int(current_w * current_scale),
-                int(current_h * current_scale),
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.FastTransformation,
+            # Keep aspect ratio when scaling current resolution to match target size
+            current_scale = min(target_width / current_w, target_height / current_h)
+            current_scaled = self._scale_pixmap(
+                current_pixmap, int(current_w * current_scale), int(current_h * current_scale)
             )
-
-            # Display highest resolution image (4x)
-            highest_bytes_per_line = highest_ch * highest_w
-            highest_qt_image = QImage(
-                highest_rgb.data.tobytes(),
-                highest_w,
-                highest_h,
-                highest_bytes_per_line,
-                QImage.Format.Format_RGB888,
-            )
-            highest_pixmap = QPixmap.fromImage(highest_qt_image)
-
-            # Scale highest to 4x
-            highest_scaled = highest_pixmap.scaled(
-                target_width,
-                target_height,
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.FastTransformation,
-            )
+            highest_scaled = self._scale_pixmap(highest_pixmap, target_width, target_height)
 
             self.highest_image.setPixmap(highest_scaled)
             self.highest_image.resize(highest_scaled.size())
-
-            # Update group box title with highest resolution
             self.highest_group.setTitle(
                 t("database_visualizer.highest_resolution_found").replace(
                     "{resolution}", highest_template.resolution.value
@@ -749,22 +742,15 @@ class DatabaseVisualizerWindow(QDialog):
         else:
             # Fallback: use 8x for current if no highest template
             current_scale = 8.0
-
-            current_scaled = current_pixmap.scaled(
-                int(current_w * current_scale),
-                int(current_h * current_scale),
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.FastTransformation,
+            current_scaled = self._scale_pixmap(
+                current_pixmap, int(current_w * current_scale), int(current_h * current_scale)
             )
 
-            # No highest resolution template found
             self.highest_image.setText(t("database_visualizer.template_not_found"))
             self.highest_group.setTitle(t("database_visualizer.highest_resolution_not_found"))
 
         self.current_image.setPixmap(current_scaled)
         self.current_image.resize(current_scaled.size())
-
-        # Update group box title with current resolution and scale
         self.current_group.setTitle(
             t("database_visualizer.current_resolution_scale")
             .replace("{resolution}", current_template.resolution.value)
@@ -795,7 +781,7 @@ class DatabaseVisualizerWindow(QDialog):
         # Load the image
         try:
             loaded_image = Image.open(file_path)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - surface any load failure to the user
             self._show_replace_error(str(e))
             return
 
@@ -842,7 +828,7 @@ class DatabaseVisualizerWindow(QDialog):
                 resolution=self.current_resolution,
                 output_path=Path(self.database_path),
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - surface any replace failure to the user
             self._show_replace_error(str(e))
             return
 
@@ -879,7 +865,7 @@ class DatabaseVisualizerWindow(QDialog):
         # Save the icon image
         try:
             write_bgr(file_path, template.image)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - surface any save failure to the user
             logger.exception("Failed to save icon")
             QMessageBox.critical(
                 self,
@@ -935,7 +921,7 @@ class DatabaseVisualizerWindow(QDialog):
                 resolution=self.current_resolution,
                 output_path=Path(self.database_path),
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - surface any delete failure to the user
             logger.exception("Failed to delete icon")
             QMessageBox.critical(
                 self,

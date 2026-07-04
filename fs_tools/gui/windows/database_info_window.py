@@ -182,7 +182,7 @@ class DatabaseInfoWindow(QDialog):
 
             logger.info(f"Loaded statistics for database: {db_path}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - surface any load failure to the user
             logger.error(f"Failed to load database statistics: {e}")
             self._show_message(t("database_info_window.error_loading"), str(e)[:200])
 

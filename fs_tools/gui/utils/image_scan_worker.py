@@ -126,6 +126,6 @@ class ImageScanWorker(QThread):
                 )
             )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - report any failure via the error signal
             logger.exception("Failed to scan image")
             self.error.emit(str(e))

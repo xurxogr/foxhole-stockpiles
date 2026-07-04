@@ -79,7 +79,7 @@ class CatalogBuilderWorker(QThread):
         try:
             # Run the async build process
             asyncio.run(self._build_catalog())
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - report any failure via the error signal
             logger.error("Catalog builder failed: %s", e)
             logger.debug("Traceback: %s", traceback.format_exc())
             self.error.emit(str(e))

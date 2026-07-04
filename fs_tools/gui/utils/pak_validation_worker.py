@@ -52,7 +52,7 @@ class PakValidationWorker(QThread):
                 self.validation_complete.emit(result)
             finally:
                 loop.close()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - report any failure via the validation result
             logger.error("PAK validation error: %s", e)
             # Create error result
             result = PakValidationResult()

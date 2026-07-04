@@ -184,7 +184,7 @@ class ToolsMainWindow(QMainWindow):
             settings = AppSettings()
             if settings.scanner.database_path:
                 return str(settings.scanner.database_path)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - fall back to "not configured" on any read failure
             logger.warning("Could not read configured database path: %s", e)
         return None
 
@@ -215,7 +215,7 @@ class ToolsMainWindow(QMainWindow):
         """
         try:
             settings = AppSettings()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - leave tool rows disabled on any settings failure
             logger.warning("Could not read settings for tool availability: %s", e)
             return
 

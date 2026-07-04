@@ -387,7 +387,7 @@ async def run(
         raise typer.Exit(code=1) from e
     except typer.Exit:
         raise
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - surface any unexpected failure to the CLI user
         logger.exception("Unexpected error during import")
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(code=1) from e
