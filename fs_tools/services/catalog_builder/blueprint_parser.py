@@ -397,6 +397,50 @@ class BlueprintParser:
         # Recursively extract parent data (this will also merge grandparent data)
         return self.extract_catalog_data(relative_path)
 
+    def _resolve_reference(
+        self,
+        ref_idx: int,
+        imports: list[str | None],
+        raw_imports: list[dict[str, Any]],
+        raw_exports: list[dict[str, Any]],
+        full_mode: bool,
+    ) -> tuple[bool, Any]:
+        """Resolve a single blueprint reference index to its value.
+
+        Args:
+            ref_idx (int): Reference index parsed from a raw string value.
+            imports (list[str | None]): Processed imports array (blueprint paths or None).
+            raw_imports (list[dict[str, Any]]): Raw imports array for asset path resolution.
+            raw_exports (list[dict[str, Any]]): Raw exports array for export ref resolution.
+            full_mode (bool): Whether export refs and raw-import fallback are enabled.
+
+        Returns:
+            tuple[bool, Any]: ``(resolved, value)``; ``resolved`` is False when
+                the reference is null or could not be resolved and should be skipped.
+        """
+        if ref_idx == 0:
+            return False, None  # Skip null references
+
+        if ref_idx < 0:  # Import reference
+            import_path = imports[abs(ref_idx) - 1]
+            if import_path:
+                return True, import_path
+            if full_mode and raw_imports:
+                # Try resolving as asset path from raw imports
+                raw_import = raw_imports[abs(ref_idx) - 1]
+                asset_path = resolve_import_asset_path(raw_import, raw_imports)
+                if asset_path:
+                    return True, asset_path
+            return False, None
+
+        if full_mode and ref_idx <= len(raw_exports):  # Export reference
+            export_obj = raw_exports[ref_idx - 1]
+            obj_name = export_obj.get("ObjectName")
+            if obj_name:
+                return True, obj_name
+
+        return False, None  # Unresolved reference
+
     def _process_data(
         self,
         data: Any,
@@ -426,89 +470,104 @@ class BlueprintParser:
             Processed data with references resolved.
         """
         full_mode = raw_imports is not None or raw_exports is not None
-        if raw_imports is None:
-            raw_imports = []
-        if raw_exports is None:
-            raw_exports = []
+        raw_imports = raw_imports if raw_imports is not None else []
+        raw_exports = raw_exports if raw_exports is not None else []
 
         if isinstance(data, dict):
-            dict_result: dict[str, Any] = {}
-            for key, value in data.items():
-                ref_idx = parse_reference(value) if isinstance(value, str) else None
-                if ref_idx is not None:
-                    if ref_idx == 0:
-                        continue  # Skip null references
-                    if ref_idx < 0:  # Import reference
-                        import_path = imports[abs(ref_idx) - 1]
-                        if import_path:
-                            dict_result[key] = import_path
-                        elif full_mode and raw_imports:
-                            # Try resolving as asset path from raw imports
-                            raw_import = raw_imports[abs(ref_idx) - 1]
-                            asset_path = resolve_import_asset_path(raw_import, raw_imports)
-                            if asset_path:
-                                dict_result[key] = asset_path
-                    elif full_mode and ref_idx <= len(raw_exports):  # Export reference
-                        export_obj = raw_exports[ref_idx - 1]
-                        obj_name = export_obj.get("ObjectName")
-                        if obj_name:
-                            dict_result[key] = obj_name
-                    # else: skip unresolved references
-
-                elif isinstance(value, (dict, list)):
-                    processed = self._process_data(
-                        data=value,
-                        imports=imports,
-                        raw_imports=raw_imports if full_mode else None,
-                        raw_exports=raw_exports if full_mode else None,
-                    )
-                    if full_mode:
-                        dict_result[key] = simplify_value(processed)
-                    elif processed:  # Simple mode: only include if not empty
-                        dict_result[key] = processed
-
-                else:
-                    dict_result[key] = simplify_value(value) if full_mode else value
-
-            return dict_result
+            return self._process_dict(data, imports, raw_imports, raw_exports, full_mode)
 
         if isinstance(data, list):
-            list_result: list[Any] = []
-            for item in data:
-                ref_idx = parse_reference(item) if isinstance(item, str) else None
-                if ref_idx is not None:
-                    if ref_idx == 0:
-                        continue  # Skip null references
-                    if ref_idx < 0:
-                        import_path = imports[abs(ref_idx) - 1]
-                        if import_path:
-                            list_result.append(import_path)
-                        elif full_mode and raw_imports:
-                            raw_import = raw_imports[abs(ref_idx) - 1]
-                            asset_path = resolve_import_asset_path(raw_import, raw_imports)
-                            if asset_path:
-                                list_result.append(asset_path)
-                    elif full_mode and ref_idx <= len(raw_exports):
-                        export_obj = raw_exports[ref_idx - 1]
-                        obj_name = export_obj.get("ObjectName")
-                        if obj_name:
-                            list_result.append(obj_name)
-
-                elif isinstance(item, (dict, list)):
-                    processed = self._process_data(
-                        data=item,
-                        imports=imports,
-                        raw_imports=raw_imports if full_mode else None,
-                        raw_exports=raw_exports if full_mode else None,
-                    )
-                    if full_mode or processed:
-                        list_result.append(processed)
-                else:
-                    list_result.append(item)
-
-            return list_result
+            return self._process_list(data, imports, raw_imports, raw_exports, full_mode)
 
         return data
+
+    def _process_dict(
+        self,
+        data: dict[str, Any],
+        imports: list[str | None],
+        raw_imports: list[dict[str, Any]],
+        raw_exports: list[dict[str, Any]],
+        full_mode: bool,
+    ) -> dict[str, Any]:
+        """Process a dict's fields, resolving references and recursing into nested values.
+
+        Args:
+            data (dict[str, Any]): Dict to process.
+            imports (list[str | None]): Processed imports array.
+            raw_imports (list[dict[str, Any]]): Raw imports array (full mode).
+            raw_exports (list[dict[str, Any]]): Raw exports array (full mode).
+            full_mode (bool): Whether export refs and simplify_value are applied.
+
+        Returns:
+            dict[str, Any]: Processed dict with references resolved.
+        """
+        result: dict[str, Any] = {}
+        for key, value in data.items():
+            ref_idx = parse_reference(value) if isinstance(value, str) else None
+            if ref_idx is not None:
+                resolved, resolved_value = self._resolve_reference(
+                    ref_idx, imports, raw_imports, raw_exports, full_mode
+                )
+                if resolved:
+                    result[key] = resolved_value
+            elif isinstance(value, (dict, list)):
+                processed = self._process_data(
+                    data=value,
+                    imports=imports,
+                    raw_imports=raw_imports if full_mode else None,
+                    raw_exports=raw_exports if full_mode else None,
+                )
+                if full_mode:
+                    result[key] = simplify_value(processed)
+                elif processed:  # Simple mode: only include if not empty
+                    result[key] = processed
+            else:
+                result[key] = simplify_value(value) if full_mode else value
+
+        return result
+
+    def _process_list(
+        self,
+        data: list[Any],
+        imports: list[str | None],
+        raw_imports: list[dict[str, Any]],
+        raw_exports: list[dict[str, Any]],
+        full_mode: bool,
+    ) -> list[Any]:
+        """Process a list's items, resolving references and recursing into nested values.
+
+        Args:
+            data (list[Any]): List to process.
+            imports (list[str | None]): Processed imports array.
+            raw_imports (list[dict[str, Any]]): Raw imports array (full mode).
+            raw_exports (list[dict[str, Any]]): Raw exports array (full mode).
+            full_mode (bool): Whether export refs and simplify_value are applied.
+
+        Returns:
+            list[Any]: Processed list with references resolved.
+        """
+        result: list[Any] = []
+        for item in data:
+            ref_idx = parse_reference(item) if isinstance(item, str) else None
+            if ref_idx is not None:
+                resolved, resolved_value = self._resolve_reference(
+                    ref_idx, imports, raw_imports, raw_exports, full_mode
+                )
+                if resolved:
+                    result.append(resolved_value)
+            elif isinstance(item, (dict, list)):
+                processed = self._process_data(
+                    data=item,
+                    imports=imports,
+                    raw_imports=raw_imports if full_mode else None,
+                    raw_exports=raw_exports if full_mode else None,
+                )
+                if full_mode or processed:
+                    result.append(processed)
+            else:
+                result.append(item)
+
+        return result
 
     def _load_raw_json(self, json_path: Path) -> dict[str, Any] | None:
         """Load raw JSON file with caching.
