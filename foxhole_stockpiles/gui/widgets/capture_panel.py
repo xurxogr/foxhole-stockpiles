@@ -379,16 +379,19 @@ class CapturePanel(QWidget):
         else:
             self._start_all()
 
-    def _start_all(self) -> None:
-        """Arm one hotkey listener for all key methods, then start any monitors."""
-        try:
-            settings = AppSettings()
-        except Exception as e:  # noqa: BLE001 - surface config errors in the log
-            logger.error("Cannot read settings to start capture: %s", e)
-            return
+    def _collect_bindings(
+        self, settings: AppSettings
+    ) -> tuple[dict[str, Callable[[], None]], list[tuple[str, str]]]:
+        """Collect hotkey bindings for every configured key-driven method.
 
-        # Collect the bindings for every configured key-driven method into one
-        # listener (a single OS hook), noting what to announce once it starts.
+        Args:
+            settings (AppSettings): The current app settings.
+
+        Returns:
+            tuple[dict[str, Callable[[], None]], list[tuple[str, str]]]: The
+                hotkey-to-callback bindings for a single `HotkeyListener`, and
+                the matching (kind, key) pairs to announce once it starts.
+        """
         bindings: dict[str, Callable[[], None]] = {}
         announce: list[tuple[str, str]] = []
 
@@ -406,15 +409,48 @@ class CapturePanel(QWidget):
             bindings[settings.sav_processing.sav_capture_key] = self.sav_capture_triggered.emit
             announce.append(("sav", settings.sav_processing.sav_capture_key))
 
-        catalog_ok = catalog_available(settings)
         if (
             self._clip_mode == ClipMode.MANUAL
-            and catalog_ok
+            and catalog_available(settings)
             and settings.clipboard.clip_capture_key
             and self._hotkeys_available
         ):
             bindings[settings.clipboard.clip_capture_key] = self.clip_capture_triggered.emit
             announce.append(("clip", settings.clipboard.clip_capture_key))
+
+        return bindings, announce
+
+    def _announce_armed(self, kind: str, key: str) -> None:
+        """Mark a key-driven method as armed and log/feed its start.
+
+        Args:
+            kind (str): Which method armed — "ocr", "sav", or "clip".
+            key (str): The hotkey bound to it.
+        """
+        if kind == "ocr":
+            self.capturing = True
+            logger.info("Capture armed (hotkey: %s)", key)
+            self._feed(t("activity.capture_started", hotkey=key))
+        elif kind == "sav":
+            self._sav_listening = True
+            logger.info("SAV hotkey armed (hotkey: %s)", key)
+            self._feed(t("activity.sav_capture_started", hotkey=key))
+        else:
+            self._clip_listening = True
+            logger.info("Clipboard hotkey armed (hotkey: %s)", key)
+            self._feed(t("activity.clip_capture_started", hotkey=key))
+
+    def _start_all(self) -> None:
+        """Arm one hotkey listener for all key methods, then start any monitors."""
+        try:
+            settings = AppSettings()
+        except Exception as e:  # noqa: BLE001 - surface config errors in the log
+            logger.error("Cannot read settings to start capture: %s", e)
+            return
+
+        # Collect the bindings for every configured key-driven method into one
+        # listener (a single OS hook), noting what to announce once it starts.
+        bindings, announce = self._collect_bindings(settings)
 
         if bindings:
             try:
@@ -426,23 +462,12 @@ class CapturePanel(QWidget):
                 announce = []
 
         for kind, key in announce:
-            if kind == "ocr":
-                self.capturing = True
-                logger.info("Capture armed (hotkey: %s)", key)
-                self._feed(t("activity.capture_started", hotkey=key))
-            elif kind == "sav":
-                self._sav_listening = True
-                logger.info("SAV hotkey armed (hotkey: %s)", key)
-                self._feed(t("activity.sav_capture_started", hotkey=key))
-            else:
-                self._clip_listening = True
-                logger.info("Clipboard hotkey armed (hotkey: %s)", key)
-                self._feed(t("activity.clip_capture_started", hotkey=key))
+            self._announce_armed(kind, key)
 
         # Monitors are independent pollers, not hotkey listeners.
         if self._sav_mode == SavMode.MONITOR and sav_file_available(settings):
             self.start_sav_monitor()
-        if self._clip_mode == ClipMode.MONITOR and catalog_ok:
+        if self._clip_mode == ClipMode.MONITOR and catalog_available(settings):
             self.start_clip_monitor()
 
         self._refresh_controls()
