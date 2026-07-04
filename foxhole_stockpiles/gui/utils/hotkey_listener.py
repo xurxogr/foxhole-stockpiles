@@ -35,7 +35,8 @@ def global_hotkeys_supported() -> bool:
 
     try:
         from pynput import keyboard  # noqa: F401
-    except Exception:
+    except Exception as exc:  # noqa: BLE001 - any import failure means unsupported here
+        logger.debug("pynput import failed: %s", exc)
         return False
 
     return True
