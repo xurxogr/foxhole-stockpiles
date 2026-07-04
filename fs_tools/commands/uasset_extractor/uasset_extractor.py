@@ -17,7 +17,7 @@ from pathlib import Path
 import typer
 
 from foxhole_stockpiles.core.logging import setup_logging
-from foxhole_stockpiles.core.settings import get_settings
+from foxhole_stockpiles.core.settings import AppSettings, get_settings
 from foxhole_stockpiles.core.utils import get_subprocess_kwargs
 from foxhole_stockpiles.models.catalog_item import CatalogItem
 from fs_tools.core.utils import load_catalog, validate_tool_path
@@ -179,7 +179,51 @@ class PakExtractor:
             result.error_message = str(e)
             return result
 
-        # Collect all files from all PAK files
+        all_files = await PakExtractor._list_all_pak_files(pak_files, extractor_path, logger)
+        if not all_files:
+            result.error_message = "Could not list any files from the provided PAK files"
+            return result
+
+        result.files_found = all_files
+        result.has_crate_icon = CRATE_ICON_PATH in all_files
+
+        # Subicons are files in ItemIcons folder with "Subtype" in the filename
+        subicons = [
+            f
+            for f in all_files
+            if SUBICONS_PATH_PREFIX in f and SUBICONS_FILENAME_PREFIX in f.split("/")[-1]
+        ]
+        result.subicons_count = len(subicons)
+        result.has_subicons = result.subicons_count > 0
+        result.is_valid = result.has_crate_icon and result.has_subicons
+
+        if result.is_valid:
+            logger.info(
+                "PAK validation passed: crate_icon=%s, subicons=%d",
+                result.has_crate_icon,
+                result.subicons_count,
+            )
+        else:
+            result.error_message = PakExtractor._missing_assets_message(result)
+
+        return result
+
+    @staticmethod
+    async def _list_all_pak_files(
+        pak_files: list[str] | list[Path],
+        extractor_path: Path,
+        logger: logging.Logger,
+    ) -> set[str]:
+        """List every file contained across a set of PAK files.
+
+        Args:
+            pak_files (list[str] | list[Path]): PAK file paths to list.
+            extractor_path (Path): Path to the repak tool.
+            logger (logging.Logger): Logger to report per-file progress/errors on.
+
+        Returns:
+            set[str]: Union of all file paths found across the given PAK files.
+        """
         all_files: set[str] = set()
 
         for pak_file in pak_files:
@@ -189,14 +233,12 @@ class PakExtractor:
                 continue
 
             try:
-                # Run repak list to get all files in the PAK
                 command = [str(extractor_path), "list", str(pak_path)]
                 logger.debug("Listing files in PAK: %s", pak_path)
 
                 returncode, stdout, stderr = await external_tools.run_tool(command)
 
                 if returncode == 0:
-                    # Parse the file list (one file per line)
                     files = stdout.strip().split("\n")
                     all_files.update(f.strip() for f in files if f.strip())
                     logger.debug("Found %d files in %s", len(files), pak_path.name)
@@ -206,27 +248,20 @@ class PakExtractor:
             except Exception as e:  # noqa: BLE001 - isolate one PAK file from the rest
                 logger.error("Error listing files in %s: %s", pak_file, e)
 
-        if not all_files:
-            result.error_message = "Could not list any files from the provided PAK files"
-            return result
+        return all_files
 
-        result.files_found = all_files
+    @staticmethod
+    def _missing_assets_message(result: PakValidationResult) -> str:
+        """Build the user-facing error message for a failed asset validation.
 
-        # Check for crate icon
-        result.has_crate_icon = CRATE_ICON_PATH in all_files
+        Args:
+            result (PakValidationResult): Validation result with has_crate_icon/has_subicons set.
 
-        # Check for subicons (files in ItemIcons folder with "Subtype" in the filename)
-        subicons = [
-            f
-            for f in all_files
-            if SUBICONS_PATH_PREFIX in f and SUBICONS_FILENAME_PREFIX in f.split("/")[-1]
-        ]
-        result.subicons_count = len(subicons)
-        result.has_subicons = result.subicons_count > 0
-
-        # Determine validity - we need both crate icon and subicons
+        Returns:
+            str: Human-readable description of which required assets are missing.
+        """
         if not result.has_crate_icon and not result.has_subicons:
-            result.error_message = (
+            return (
                 "The PAK files are missing required assets:\n"
                 "  - Crate icon (IconFilterCrates)\n"
                 "  - Subicons\n\n"
@@ -234,27 +269,17 @@ class PakExtractor:
                 "Please include the vanilla game PAK file (War-WindowsNoEditor.pak) "
                 "in your import."
             )
-        elif not result.has_crate_icon:
-            result.error_message = (
+        if not result.has_crate_icon:
+            return (
                 "The PAK files are missing the crate icon (IconFilterCrates).\n"
                 "This asset is required to build template databases.\n"
                 "Please include the vanilla game PAK file."
             )
-        elif not result.has_subicons:
-            result.error_message = (
-                "The PAK files are missing subicons.\n"
-                "Subicons are required to build template databases.\n"
-                "Please include the vanilla game PAK file."
-            )
-        else:
-            result.is_valid = True
-            logger.info(
-                "PAK validation passed: crate_icon=%s, subicons=%d",
-                result.has_crate_icon,
-                result.subicons_count,
-            )
-
-        return result
+        return (
+            "The PAK files are missing subicons.\n"
+            "Subicons are required to build template databases.\n"
+            "Please include the vanilla game PAK file."
+        )
 
     def _detect_windows_tools(self) -> tuple[bool, bool]:
         """Detect if the tools are Windows executables.
@@ -430,41 +455,31 @@ class PakExtractor:
         Returns:
             bool: True if conversion succeeded, False otherwise.
         """
+        pak_root_dir = self._find_pak_root_dir(temp_dir, file_path)
+        if pak_root_dir is None:
+            self._logger.error("Could not find extracted file: %s", file_path)
+            return False
+
+        # Convert paths to Windows format if using Windows converter in WSL
+        if self._converter_is_windows:
+            pak_root_dir_str = self._convert_wsl_path_to_windows(pak_root_dir)
+            output_dir_str = pak_root_dir_str.rstrip("\\") + "\\War\\Content\\"
+        else:
+            pak_root_dir_str = str(pak_root_dir)
+            output_dir_str = str(pak_root_dir) + "/War/Content/"
+
+        command = [
+            str(self.converter_tool),
+            f"-path={pak_root_dir_str}",
+            f"-game={ue_version}",
+            "-png",
+            "-export",
+            file_path,
+            f"-out={output_dir_str}",
+        ]
+
         process = None
         try:
-            # Find the PAK directory that contains the extracted file
-            temp_path = Path(temp_dir)
-            pak_root_dir = None
-
-            for pak_dir in temp_path.iterdir():
-                if pak_dir.is_dir():
-                    potential_file = pak_dir / file_path
-                    if potential_file.exists():
-                        pak_root_dir = pak_dir
-                        break
-
-            if not pak_root_dir:
-                self._logger.error("Could not find extracted file: %s", file_path)
-                return False
-
-            # Convert paths to Windows format if using Windows converter in WSL
-            if self._converter_is_windows:
-                pak_root_dir_str = self._convert_wsl_path_to_windows(pak_root_dir)
-                output_dir_str = pak_root_dir_str.rstrip("\\") + "\\War\\Content\\"
-            else:
-                pak_root_dir_str = str(pak_root_dir)
-                output_dir_str = str(pak_root_dir) + "/War/Content/"
-
-            command = [
-                str(self.converter_tool),
-                f"-path={pak_root_dir_str}",
-                f"-game={ue_version}",
-                "-png",
-                "-export",
-                file_path,
-                f"-out={output_dir_str}",
-            ]
-
             self._logger.debug("Trying conversion with %s: %s", ue_version, file_path)
             self._logger.debug("Full command: %s", " ".join(command))
             process = await asyncio.create_subprocess_exec(
@@ -477,31 +492,13 @@ class PakExtractor:
             stdout, stderr = await process.communicate()
             returncode = process.returncode
 
-            if returncode == 0:
-                # Handle the output path conversion
-                file_path_obj = Path(file_path)
-                png_name = file_path_obj.with_suffix(".png")
-                converted_path = pak_root_dir / png_name
-                output_path = Path(self.output_dir) / png_name
-
-                # Ensure output directory exists
-                output_path.parent.mkdir(parents=True, exist_ok=True)
-
-                # Move the converted file if it exists
-                if converted_path.exists():
-                    shutil.move(str(converted_path), str(output_path))
-                    self._logger.info("Successfully converted with %s: %s", ue_version, png_name)
-                    return True
-                else:
-                    self._logger.debug(
-                        "Converted file not found at expected path: %s", converted_path
-                    )
-                    return False
-            else:
+            if returncode != 0:
                 self._logger.debug(
                     "Conversion failed with %s for %s: %s", ue_version, file_path, stderr.decode()
                 )
                 return False
+
+            return self._move_converted_output(pak_root_dir, file_path, ue_version)
 
         except Exception as e:  # noqa: BLE001 - isolate one UE version attempt from the rest
             self._logger.debug("Error converting %s with %s: %s", file_path, ue_version, e)
@@ -515,6 +512,46 @@ class PakExtractor:
                 except (ProcessLookupError, OSError):
                     # Process already terminated or cleanup failed
                     pass
+
+    @staticmethod
+    def _find_pak_root_dir(temp_dir: str, file_path: str) -> Path | None:
+        """Find the per-PAK extraction directory that contains the given file.
+
+        Args:
+            temp_dir (str): Temporary directory containing one subdirectory per PAK file.
+            file_path (str): The PAK-internal relative path of the extracted file.
+
+        Returns:
+            Path | None: The PAK subdirectory containing the file, or None if not found.
+        """
+        for pak_dir in Path(temp_dir).iterdir():
+            if pak_dir.is_dir() and (pak_dir / file_path).exists():
+                return pak_dir
+        return None
+
+    def _move_converted_output(self, pak_root_dir: Path, file_path: str, ue_version: str) -> bool:
+        """Move a successfully converted PNG from the PAK dir into the output dir.
+
+        Args:
+            pak_root_dir (Path): PAK subdirectory UModel wrote the converted PNG into.
+            file_path (str): The PAK-internal relative path that was converted.
+            ue_version (str): The Unreal Engine version used for conversion (for logging).
+
+        Returns:
+            bool: True if the converted PNG was found and moved, False otherwise.
+        """
+        png_name = Path(file_path).with_suffix(".png")
+        converted_path = pak_root_dir / png_name
+        output_path = Path(self.output_dir) / png_name
+
+        if not converted_path.exists():
+            self._logger.debug("Converted file not found at expected path: %s", converted_path)
+            return False
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(converted_path), str(output_path))
+        self._logger.info("Successfully converted with %s: %s", ue_version, png_name)
+        return True
 
     def get_files_to_extract(self) -> set[str]:
         """Get all unique files that need to be extracted from the catalog.
@@ -661,6 +698,94 @@ class PakExtractor:
             return successful_conversions > 0
 
 
+def _configure_run_logging(
+    settings: AppSettings, *, quiet: bool, verbose: bool, log_file: Path | None
+) -> None:
+    """Apply CLI verbosity flags to the logging settings and initialize logging.
+
+    Args:
+        settings (AppSettings): Settings whose ``logging`` section is updated in place.
+        quiet (bool): Suppress all output except errors and warnings.
+        verbose (bool): Enable debug-level logging.
+        log_file (Path | None): Path to log file, or None for console-only logging.
+    """
+    if quiet:
+        settings.logging.log_level = "WARNING"
+    elif verbose:
+        settings.logging.log_level = "DEBUG"
+
+    settings.logging.log_file = str(log_file) if log_file is not None else None
+    setup_logging(settings.logging)
+
+
+def _resolve_run_tool_paths(
+    settings: AppSettings,
+    *,
+    catalog: str | None,
+    extractor_tool: str | None,
+    converter_tool: str | None,
+) -> tuple[str, str, str]:
+    """Resolve catalog/extractor/converter paths from CLI args, falling back to settings.
+
+    Args:
+        settings (AppSettings): Settings providing defaults for unset arguments.
+        catalog (str | None): Catalog path from the CLI, if provided.
+        extractor_tool (str | None): Extractor tool path from the CLI, if provided.
+        converter_tool (str | None): Converter tool path from the CLI, if provided.
+
+    Returns:
+        tuple[str, str, str]: Resolved (catalog_file, extractor_tool, converter_tool).
+    """
+    catalog_file = catalog or (
+        str(settings.database_builder.catalog_file)
+        if settings.database_builder.catalog_file
+        else DEFAULT_CATALOG
+    )
+    resolved_extractor_tool = extractor_tool or (
+        str(settings.external_tools.repak) if settings.external_tools.repak else DEFAULT_EXTRACTOR
+    )
+    resolved_converter_tool = converter_tool or (
+        str(settings.external_tools.umodel) if settings.external_tools.umodel else DEFAULT_CONVERTER
+    )
+    return catalog_file, resolved_extractor_tool, resolved_converter_tool
+
+
+def _build_filter_assets(
+    filter_files: list[str] | None, filter_pattern: list[str] | None
+) -> set[str] | Callable[[str], bool] | None:
+    """Build the asset filter from CLI filter arguments.
+
+    Args:
+        filter_files (list[str] | None): Extract only these specific file paths.
+        filter_pattern (list[str] | None): Extract only files matching these substrings.
+
+    Returns:
+        set[str] | Callable[[str], bool] | None: A set filter, a callable filter combining
+            both, or None if neither was provided.
+    """
+    if not filter_files and not filter_pattern:
+        return None
+
+    if filter_files and not filter_pattern:
+        return set(filter_files)
+
+    if filter_pattern and not filter_files:
+        patterns = filter_pattern
+
+        def pattern_filter(path: str) -> bool:
+            return any(pattern in path for pattern in patterns)
+
+        return pattern_filter
+
+    specific_files = set(filter_files or [])
+    patterns = filter_pattern or []
+
+    def combined_filter(path: str) -> bool:
+        return path in specific_files or any(pattern in path for pattern in patterns)
+
+    return combined_filter
+
+
 async def run(
     pak: list[str] | None = None,
     catalog: str | None = None,
@@ -703,55 +828,13 @@ async def run(
     Raises:
         typer.Exit: If PakExtractor construction fails or if some operations fail.
     """
-    # Setup logging
     settings = copy(get_settings())
-    logging_settings = settings.logging
-    # Setup logging
-    if quiet:
-        logging_settings.log_level = "WARNING"
-    elif verbose:
-        logging_settings.log_level = "DEBUG"
+    _configure_run_logging(settings, quiet=quiet, verbose=verbose, log_file=log_file)
 
-    logging_settings.log_file = str(log_file) if log_file is not None else None
-    setup_logging(logging_settings)
-
-    # Use settings as defaults
-    catalog_file = catalog or (
-        str(settings.database_builder.catalog_file)
-        if settings.database_builder.catalog_file
-        else DEFAULT_CATALOG
+    catalog_file, resolved_extractor_tool, resolved_converter_tool = _resolve_run_tool_paths(
+        settings, catalog=catalog, extractor_tool=extractor_tool, converter_tool=converter_tool
     )
-    resolved_extractor_tool = extractor_tool or (
-        str(settings.external_tools.repak) if settings.external_tools.repak else DEFAULT_EXTRACTOR
-    )
-    resolved_converter_tool = converter_tool or (
-        str(settings.external_tools.umodel) if settings.external_tools.umodel else DEFAULT_CONVERTER
-    )
-
-    # Build filter_assets from CLI arguments
-    filter_assets: set[str] | Callable[[str], bool] | None = None
-
-    if filter_files or filter_pattern:
-        if filter_files and not filter_pattern:
-            # Only specific files - use set
-            filter_assets = set(filter_files)
-        elif filter_pattern and not filter_files:
-            # Only patterns - use callable
-            patterns = filter_pattern
-
-            def pattern_filter(path: str) -> bool:
-                return any(pattern in path for pattern in patterns)
-
-            filter_assets = pattern_filter
-        else:
-            # Both specified - combine them
-            specific_files = set(filter_files or [])
-            patterns = filter_pattern or []
-
-            def combined_filter(path: str) -> bool:
-                return path in specific_files or any(pattern in path for pattern in patterns)
-
-            filter_assets = combined_filter
+    filter_assets = _build_filter_assets(filter_files, filter_pattern)
 
     try:
         extractor = PakExtractor(
