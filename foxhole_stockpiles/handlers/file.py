@@ -247,6 +247,12 @@ class FileOutputHandler(BaseOutputDestinationHandler):
         Returns:
             str: Escaped value
         """
+        # Neutralize formula injection (CWE-1236): stockpile/item names originate
+        # from OCR/.sav data, which is effectively player-controlled input, and a
+        # leading =/+/-/@ would execute as a formula when opened in Excel/Sheets.
+        if value.startswith(("=", "+", "-", "@")):
+            value = "'" + value
+
         # Quote if value contains separator, quotes, or newlines
         if separator in value or '"' in value or "\n" in value:
             return '"' + value.replace('"', '""') + '"'

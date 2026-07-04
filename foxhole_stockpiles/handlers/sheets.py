@@ -170,11 +170,19 @@ class SheetsOutputHandler(BaseOutputDestinationHandler):
                             else:
                                 row.append(stockpile.coords.y)
                         case "stockpile_name":
-                            row.append(stockpile.name if stockpile.is_reserve else "Public")
+                            row.append(
+                                self._neutralize_formula(stockpile.name)
+                                if stockpile.is_reserve
+                                else "Public"
+                            )
                         case "item_code_name":
-                            row.append(item.code)
+                            row.append(self._neutralize_formula(item.code))
                         case "item_display_name":
-                            row.append(get_catalog_service().get_display_name(item.code))
+                            row.append(
+                                self._neutralize_formula(
+                                    get_catalog_service().get_display_name(item.code)
+                                )
+                            )
                         case "item_quantity":
                             row.append(item.quantity)
                         case "item_crated":
@@ -185,3 +193,19 @@ class SheetsOutputHandler(BaseOutputDestinationHandler):
                 values.append(row)
 
         return values
+
+    @staticmethod
+    def _neutralize_formula(value: str | None) -> str | None:
+        """Prevent formula injection when a value is written with USER_ENTERED.
+
+        Args:
+            value (str | None): The value to neutralize, or None.
+
+        Returns:
+            str | None: The value prefixed with a single quote if it starts with
+                a character that Sheets would interpret as a formula, unchanged
+                otherwise.
+        """
+        if value is not None and value.startswith(("=", "+", "-", "@")):
+            return "'" + value
+        return value
