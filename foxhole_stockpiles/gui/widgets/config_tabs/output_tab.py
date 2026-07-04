@@ -75,7 +75,7 @@ class OutputHandlerDialog(QDialog):
 
         self.handler_type_label = QLabel()
         self.handler_type_input = QComboBox()
-        self.handler_type_input.addItems(["return", "file", "webhook", "console", "google sheets"])
+        self.handler_type_input.addItems([t.value for t in OutputHandlerType])
         self.handler_type_input.currentTextChanged.connect(self._on_handler_type_changed)
         basic_layout.addRow(self.handler_type_label, self.handler_type_input)
 
