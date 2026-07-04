@@ -84,78 +84,20 @@ class IconManager:
         if not icon_path.exists():
             raise FileNotFoundError(f"Icon file not found: {icon_path}")
 
-        if resolution not in self.databases:
-            raise ValueError(
-                f"Resolution {resolution.value} not found in database. "
-                f"Available resolutions: {[r.value for r in self.databases.keys()]}"
-            )
-
-        # Load icon image
         self._logger.debug("Loading icon from %s", icon_path)
         icon_image = await asyncio.to_thread(read_bgr, str(icon_path))
         if icon_image is None:
             raise ValueError(f"Failed to load icon image: {icon_path}")
 
-        # Calculate expected icon size for this resolution
-        expected_size = self._calculate_icon_size(int(resolution.value))
-
-        # Validate icon dimensions
-        if icon_image.shape[0] != expected_size or icon_image.shape[1] != expected_size:
-            raise ValueError(
-                f"Icon has incorrect dimensions {icon_image.shape[1]}x{icon_image.shape[0]}. "
-                f"Expected {expected_size}x{expected_size} for resolution {resolution.value}. "
-                f"Please resize the icon before adding it to the database."
-            )
-
-        # Check for existing icon with same metadata
-        database = self.databases[resolution]
-        existing_idx = self._find_existing_icon(
-            database=database,
+        self._add_icon_template(
+            icon_image=icon_image,
             item_code=item_code,
             faction=faction,
             category=category,
             crated=crated,
             mod=mod,
-        )
-
-        # Create template
-        template = IconTemplate(
-            image=icon_image.astype(numpy.uint8),
-            code=item_code,
-            crated=crated,
             resolution=resolution,
-            faction=faction,
-            category=category,
-            mod=mod,
-        )
-
-        if existing_idx is not None:
-            if not replace:
-                raise ValueError(
-                    f"Icon already exists for '{item_code}' "
-                    f"(faction={faction.value}, category={category.value}, "
-                    f"crated={crated}, mod={mod}) in resolution {resolution.value}. "
-                    f"Use --replace flag to replace existing icon."
-                )
-            # Replace in-place to preserve position
-            self._logger.debug(
-                "Replacing existing icon at index %d for '%s'", existing_idx, item_code
-            )
-            database.templates[existing_idx] = template
-        else:
-            # Add to database
-            database.add_template(template=template)
-
-        action = "Replaced" if existing_idx is not None else "Added"
-        self._logger.info(
-            "%s icon for '%s' to resolution %s (crated=%s, faction=%s, category=%s, mod=%s)",
-            action,
-            item_code,
-            resolution.value,
-            crated,
-            faction.value,
-            category.value,
-            mod,
+            replace=replace,
         )
 
     def add_icon_from_image(
@@ -188,16 +130,52 @@ class IconManager:
             ValueError: If resolution not found in database, image is invalid,
                         or duplicate exists without replace flag
         """
+        self._add_icon_template(
+            icon_image=icon_image,
+            item_code=item_code,
+            faction=faction,
+            category=category,
+            crated=crated,
+            mod=mod,
+            resolution=resolution,
+            replace=replace,
+        )
+
+    def _add_icon_template(
+        self,
+        icon_image: numpy.ndarray,
+        item_code: str,
+        faction: ItemFaction,
+        category: ItemCategory,
+        crated: bool,
+        mod: str,
+        resolution: SupportedResolution,
+        replace: bool,
+    ) -> None:
+        """Validate an already-loaded icon image and add/replace it in the database.
+
+        Args:
+            icon_image (numpy.ndarray): Icon image as BGR numpy array
+            item_code (str): Item code name
+            faction (ItemFaction): Item faction
+            category (ItemCategory): Item category
+            crated (bool): Whether this is a crated variant
+            mod (str): Mod name
+            resolution (SupportedResolution): Target resolution
+            replace (bool): If True, replace existing icon with same metadata; if False, error
+                on duplicate
+
+        Raises:
+            ValueError: If resolution not found in database, image dimensions are wrong,
+                        or duplicate exists without replace flag
+        """
         if resolution not in self.databases:
             raise ValueError(
                 f"Resolution {resolution.value} not found in database. "
                 f"Available resolutions: {[r.value for r in self.databases.keys()]}"
             )
 
-        # Calculate expected icon size for this resolution
         expected_size = self._calculate_icon_size(int(resolution.value))
-
-        # Validate icon dimensions
         if icon_image.shape[0] != expected_size or icon_image.shape[1] != expected_size:
             raise ValueError(
                 f"Icon has incorrect dimensions {icon_image.shape[1]}x{icon_image.shape[0]}. "
@@ -205,7 +183,6 @@ class IconManager:
                 f"Please resize the icon before adding it to the database."
             )
 
-        # Check for existing icon with same metadata
         database = self.databases[resolution]
         existing_idx = self._find_existing_icon(
             database=database,
@@ -216,7 +193,6 @@ class IconManager:
             mod=mod,
         )
 
-        # Create template
         template = IconTemplate(
             image=icon_image.astype(numpy.uint8),
             code=item_code,
@@ -235,13 +211,11 @@ class IconManager:
                     f"crated={crated}, mod={mod}) in resolution {resolution.value}. "
                     f"Use --replace flag to replace existing icon."
                 )
-            # Replace in-place to preserve position
             self._logger.debug(
                 "Replacing existing icon at index %d for '%s'", existing_idx, item_code
             )
             database.templates[existing_idx] = template
         else:
-            # Add to database
             database.add_template(template=template)
 
         action = "Replaced" if existing_idx is not None else "Added"
