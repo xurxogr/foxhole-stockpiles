@@ -20,7 +20,17 @@ DATABASE_VERSION = 2
 
 
 class TemplateDatabase:
-    """Resolution-specific template database with basic faction and mod filtering."""
+    """Resolution-specific template database with basic faction and mod filtering.
+
+    Note:
+        This class and `IconManager` mutate `templates`/`*_lookup` in place
+        rather than returning new copies, deliberately departing from the
+        project's default immutability convention. A database can hold
+        thousands of templates; copying it on every add/replace/delete would
+        make catalog-building/icon-editing workflows needlessly slow for no
+        practical benefit, since instances are never shared across concurrent
+        writers.
+    """
 
     def __init__(self, resolution: SupportedResolution) -> None:
         """Initialize template database.

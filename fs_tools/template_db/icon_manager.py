@@ -15,7 +15,13 @@ from fs_tools.template_db.template_database import TemplateDatabase
 
 
 class IconManager:
-    """Manages icons in template databases (add, replace, delete)."""
+    """Manages icons in template databases (add, replace, delete).
+
+    Note:
+        Mutates `TemplateDatabase` instances in place (see the "Note" on
+        `TemplateDatabase` for why this is an intentional exception to the
+        project's immutability convention).
+    """
 
     def __init__(
         self,
