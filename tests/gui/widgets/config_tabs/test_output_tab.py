@@ -18,10 +18,8 @@ from foxhole_stockpiles.core.settings.sections.output import (
 from foxhole_stockpiles.enums.auth_type import AuthType
 from foxhole_stockpiles.enums.output_format import OutputFormat
 from foxhole_stockpiles.enums.output_handler_type import OutputHandlerType
-from foxhole_stockpiles.gui.widgets.config_tabs.output_tab import (
-    OutputHandlerDialog,
-    OutputTab,
-)
+from foxhole_stockpiles.gui.widgets.config_tabs.output_handler_dialog import OutputHandlerDialog
+from foxhole_stockpiles.gui.widgets.config_tabs.output_tab import OutputTab
 from foxhole_stockpiles.i18n import t
 
 
@@ -762,7 +760,9 @@ class TestOutputHandlerDialog:
         dialog.file_path_input.setText("")
 
         with (
-            patch("foxhole_stockpiles.gui.widgets.config_tabs.output_tab.QMessageBox.warning"),
+            patch(
+                "foxhole_stockpiles.gui.widgets.config_tabs.output_handler_dialog.QMessageBox.warning"
+            ),
             patch.object(dialog, "accept") as mock_accept,
         ):
             dialog._validate_and_accept()
@@ -781,7 +781,9 @@ class TestOutputHandlerDialog:
         dialog.webhook_url_input.setText("")
 
         with (
-            patch("foxhole_stockpiles.gui.widgets.config_tabs.output_tab.QMessageBox.warning"),
+            patch(
+                "foxhole_stockpiles.gui.widgets.config_tabs.output_handler_dialog.QMessageBox.warning"
+            ),
             patch.object(dialog, "accept") as mock_accept,
         ):
             dialog._validate_and_accept()
@@ -846,7 +848,7 @@ class TestOutputHandlerDialog:
         test_path = "/path/to/output.json"
 
         with patch(
-            "foxhole_stockpiles.gui.widgets.config_tabs.output_tab.QFileDialog.getSaveFileName"
+            "foxhole_stockpiles.gui.widgets.config_tabs.output_handler_dialog.QFileDialog.getSaveFileName"
         ) as mock_dialog:
             mock_dialog.return_value = (test_path, "JSON Files (*.json)")
 
@@ -979,7 +981,7 @@ class TestOutputHandlerDialogSheets:
         dialog = OutputHandlerDialog()
         qtbot.addWidget(dialog)
         with patch(
-            "foxhole_stockpiles.gui.widgets.config_tabs.output_tab.QFileDialog.getOpenFileName",
+            "foxhole_stockpiles.gui.widgets.config_tabs.output_handler_dialog.QFileDialog.getOpenFileName",
             return_value=("/picked/creds.json", ""),
         ):
             dialog.browse_credentials()
