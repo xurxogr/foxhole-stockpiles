@@ -1,6 +1,7 @@
 """Webhook handler settings."""
 
-from typing import Self
+from typing import ClassVar, Self
+from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -37,6 +38,8 @@ class WebhookHandlerSettings(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    ALLOWED_URL_SCHEMES: ClassVar[frozenset[str]] = frozenset({"http", "https"})
+
     @model_validator(mode="after")
     def validate_auth_consistency(self) -> Self:
         """Validate that webhook auth type and token are consistent.
@@ -56,4 +59,23 @@ class WebhookHandlerSettings(BaseModel):
                 raise ValueError("token must be set when auth_type is 'header'")
             if not self.auth_header:
                 raise ValueError("auth_header must be set when auth_type is 'header'")
+        return self
+
+    @model_validator(mode="after")
+    def validate_url_scheme(self) -> Self:
+        """Validate that the webhook URL uses an allowed scheme.
+
+        Returns:
+            Self: The validated instance.
+
+        Raises:
+            ValueError: If the URL scheme is not http or https.
+        """
+        if self.url:
+            scheme = urlsplit(self.url).scheme.lower()
+            if scheme not in self.ALLOWED_URL_SCHEMES:
+                raise ValueError(
+                    f"Webhook URL scheme '{scheme}' is not allowed; "
+                    f"must be one of {sorted(self.ALLOWED_URL_SCHEMES)}"
+                )
         return self
