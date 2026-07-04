@@ -93,6 +93,71 @@ class LocalizationLookup:
         string = self._read_fstring(f)
         return str_hash, string
 
+    def _read_string_array(self, f: BufferedReader, str_array_offset: int) -> list[str]:
+        """Read the compact string array table from a locres file.
+
+        Args:
+            f (BufferedReader): File handle to read from.
+            str_array_offset (int): Byte offset of the string array, or -1 if absent.
+
+        Returns:
+            list[str]: The strings in the string array, in index order.
+        """
+        string_array: list[str] = []
+        if str_array_offset == -1:
+            return string_array
+
+        current_pos = f.tell()
+        f.seek(str_array_offset)
+
+        str_count = struct.unpack("<i", f.read(4))[0]
+        for _ in range(str_count):
+            s = self._read_fstring(f)
+            if s is None:
+                break
+            struct.unpack("<I", f.read(4))[0]  # source string hash
+            string_array.append(s)
+
+        # Return to namespace section
+        f.seek(current_pos)
+        return string_array
+
+    def _read_namespace_strings(
+        self, f: BufferedReader, version: int, string_array: list[str]
+    ) -> dict[str, str]:
+        """Read all namespace/key/string entries following the string array.
+
+        Args:
+            f (BufferedReader): File handle to read from.
+            version (int): Locres format version.
+            string_array (list[str]): String array read from the file (for version >= 1).
+
+        Returns:
+            dict[str, str]: Dict mapping GUID keys to localized strings.
+        """
+        strings: dict[str, str] = {}
+
+        namespace_count = struct.unpack("<I", f.read(4))[0]
+        for _ in range(namespace_count):
+            self._read_text_key(f)  # namespace key (hash + string)
+
+            key_count = struct.unpack("<I", f.read(4))[0]
+            for _ in range(key_count):
+                _, key_string = self._read_text_key(f)
+                struct.unpack("<I", f.read(4))[0]  # source string hash
+
+                if version >= 1:
+                    str_index = struct.unpack("<i", f.read(4))[0]
+                    value = string_array[str_index] if 0 <= str_index < len(string_array) else ""
+                else:
+                    value = self._read_fstring(f) or ""
+
+                # Use key_string as the key (this is the GUID)
+                if key_string:
+                    strings[key_string] = value
+
+        return strings
+
     def _parse_locres(self, filepath: Path) -> dict[str, str]:
         """Parse a UE4 .locres file.
 
@@ -117,60 +182,13 @@ class LocalizationLookup:
 
                 # String array offset (8 bytes) - version >= 1 (Compact)
                 str_array_offset = struct.unpack("<q", f.read(8))[0]
-
-                # First, read the string array
-                string_array = []
-                if str_array_offset != -1:
-                    current_pos = f.tell()
-                    f.seek(str_array_offset)
-
-                    str_count = struct.unpack("<i", f.read(4))[0]
-
-                    for _ in range(str_count):
-                        s = self._read_fstring(f)
-                        if s is None:
-                            break
-                        # Read source string hash (4 bytes)
-                        struct.unpack("<I", f.read(4))[0]
-                        string_array.append(s)
-
-                    # Return to namespace section
-                    f.seek(current_pos)
+                string_array = self._read_string_array(f, str_array_offset)
 
                 # Skip entries count if version >= 2 (Optimized_CRC32)
                 if version >= 2:
                     struct.unpack("<I", f.read(4))[0]
 
-                # Read namespace count
-                namespace_count = struct.unpack("<I", f.read(4))[0]
-
-                for _ in range(namespace_count):
-                    # Namespace key (hash + string)
-                    self._read_text_key(f)
-
-                    # Key count
-                    key_count = struct.unpack("<I", f.read(4))[0]
-
-                    for _ in range(key_count):
-                        # Key (hash + string)
-                        _, key_string = self._read_text_key(f)
-
-                        # Read source string hash (4 bytes)
-                        struct.unpack("<I", f.read(4))[0]
-
-                        # String index (version >= 1) or direct string
-                        if version >= 1:
-                            str_index = struct.unpack("<i", f.read(4))[0]
-                            if 0 <= str_index < len(string_array):
-                                value = string_array[str_index]
-                            else:
-                                value = ""
-                        else:
-                            value = self._read_fstring(f) or ""
-
-                        # Use key_string as the key (this is the GUID)
-                        if key_string:
-                            strings[key_string] = value
+                strings = self._read_namespace_strings(f, version, string_array)
 
         except Exception as e:
             self.logger.error("Error parsing locres file %s: %s", filepath, e)
