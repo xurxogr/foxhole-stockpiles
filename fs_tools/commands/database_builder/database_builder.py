@@ -338,6 +338,130 @@ class DatabaseBuilder:
 
         return found_paths
 
+    def _merge_existing_templates(
+        self,
+        merged_db: TemplateDatabase,
+        existing_db: TemplateDatabase,
+        new_keys: set[tuple[str, bool, str]],
+        overwrite: bool,
+    ) -> dict[str, int]:
+        """Add surviving existing templates to merged_db.
+
+        Args:
+            merged_db (TemplateDatabase): Database being built for this resolution; templates
+                are appended to it in place.
+            existing_db (TemplateDatabase): Existing templates for this resolution.
+            new_keys (set[tuple[str, bool, str]]): Template keys present in the new database
+                for this resolution.
+            overwrite (bool): If True, replace matching templates instead of keeping them.
+
+        Returns:
+            dict[str, int]: Stat deltas for "existing_templates" and "replaced".
+        """
+        existing_templates = 0
+        replaced = 0
+        for template in existing_db.templates:
+            key = (template.code, template.crated, template.mod)
+            if overwrite and key in new_keys:
+                # Skip this template - it will be replaced by the new one
+                replaced += 1
+                self._logger.debug(
+                    "Replacing template: %s (crated=%s, mod=%s)",
+                    template.code,
+                    template.crated,
+                    template.mod,
+                )
+            else:
+                merged_db.add_template(template)
+                existing_templates += 1
+        return {"existing_templates": existing_templates, "replaced": replaced}
+
+    def _merge_new_templates(
+        self, merged_db: TemplateDatabase, new_db_for_res: TemplateDatabase
+    ) -> dict[str, int]:
+        """Add new templates to merged_db, skipping duplicates already present.
+
+        Args:
+            merged_db (TemplateDatabase): Database being built for this resolution, already
+                seeded with surviving existing templates; templates are appended in place.
+            new_db_for_res (TemplateDatabase): Newly built templates for this resolution.
+
+        Returns:
+            dict[str, int]: Stat deltas for "new_templates" and "skipped".
+        """
+        merged_keys = {(t.code, t.crated, t.mod) for t in merged_db.templates}
+        new_templates = 0
+        skipped = 0
+        for template in new_db_for_res.templates:
+            key = (template.code, template.crated, template.mod)
+            if key in merged_keys:
+                # Duplicate (only happens when overwrite=False)
+                self._logger.debug(
+                    "Skipping duplicate template: %s (crated=%s, mod=%s)",
+                    template.code,
+                    template.crated,
+                    template.mod,
+                )
+                skipped += 1
+            else:
+                self._logger.debug(
+                    "Adding new template: %s (crated=%s, mod=%s)",
+                    template.code,
+                    template.crated,
+                    template.mod,
+                )
+                merged_db.add_template(template)
+                new_templates += 1
+                merged_keys.add(key)
+        return {"new_templates": new_templates, "skipped": skipped}
+
+    def _merge_resolution(
+        self,
+        existing_db: TemplateDatabase | None,
+        new_db_for_res: TemplateDatabase | None,
+        overwrite: bool,
+    ) -> tuple[TemplateDatabase | None, dict[str, int]]:
+        """Merge one resolution's existing and new template databases.
+
+        Args:
+            existing_db (TemplateDatabase | None): Existing templates for this resolution,
+                if any.
+            new_db_for_res (TemplateDatabase | None): Newly built templates for this
+                resolution, if any.
+            overwrite (bool): If True, replace matching templates. If False, skip duplicates.
+
+        Returns:
+            tuple[TemplateDatabase | None, dict[str, int]]: The merged database for this
+                resolution (None if there's nothing to keep), and the resulting stat deltas.
+        """
+        if new_db_for_res is None:
+            # No new templates for this resolution, keep existing
+            if existing_db:
+                return existing_db, {"existing_templates": len(existing_db.templates)}
+            return None, {}
+
+        if existing_db is None:
+            # No existing templates for this resolution, use new
+            return new_db_for_res, {"new_templates": len(new_db_for_res.templates)}
+
+        # Both exist, merge them
+        self._logger.debug(
+            "Merging resolution %s: existing=%d, new=%d",
+            new_db_for_res.resolution,
+            len(existing_db.templates),
+            len(new_db_for_res.templates),
+        )
+
+        merged_db = TemplateDatabase(resolution=new_db_for_res.resolution)
+        new_keys = {(t.code, t.crated, t.mod) for t in new_db_for_res.templates}
+
+        existing_stats = self._merge_existing_templates(
+            merged_db=merged_db, existing_db=existing_db, new_keys=new_keys, overwrite=overwrite
+        )
+        new_stats = self._merge_new_templates(merged_db=merged_db, new_db_for_res=new_db_for_res)
+
+        return merged_db, {**existing_stats, **new_stats}
+
     async def _merge_with_existing(
         self,
         new_databases: dict[SupportedResolution, TemplateDatabase],
@@ -368,95 +492,18 @@ class DatabaseBuilder:
         existing_databases = await temp_manager.load_all_resolutions()
 
         merged_databases: dict[SupportedResolution, TemplateDatabase] = {}
-        stats = {
-            "resolutions": 0,
-            "new_templates": 0,
-            "existing_templates": 0,
-            "skipped": 0,
-            "replaced": 0,
-        }
+        stats = {"new_templates": 0, "existing_templates": 0, "skipped": 0, "replaced": 0}
 
-        # Build set of new template keys for quick lookup when overwriting
-        # Key format: (code, crated, mod)
-        new_keys_by_resolution: dict[SupportedResolution, set[tuple[str, bool, str]]] = {}
-        for resolution, new_db in new_databases.items():
-            new_keys_by_resolution[resolution] = {
-                (t.code, t.crated, t.mod) for t in new_db.templates
-            }
-
-        # Merge each resolution
         for resolution in set(list(existing_databases.keys()) + list(new_databases.keys())):
-            existing_db: TemplateDatabase | None = existing_databases.get(resolution)
-            new_db_for_res: TemplateDatabase | None = new_databases.get(resolution)
-
-            if new_db_for_res is None:
-                # No new templates for this resolution, keep existing
-                if existing_db:
-                    merged_databases[resolution] = existing_db
-                    stats["existing_templates"] += len(existing_db.templates)
-                continue
-
-            if existing_db is None:
-                # No existing templates for this resolution, use new
-                merged_databases[resolution] = new_db_for_res
-                stats["new_templates"] += len(new_db_for_res.templates)
-                stats["resolutions"] += 1
-                continue
-
-            # Both exist, merge them
-            self._logger.debug(
-                "Merging resolution %s: existing=%d, new=%d",
-                resolution,
-                len(existing_db.templates),
-                len(new_db_for_res.templates),
+            merged_db, resolution_stats = self._merge_resolution(
+                existing_db=existing_databases.get(resolution),
+                new_db_for_res=new_databases.get(resolution),
+                overwrite=overwrite,
             )
-
-            merged_db = TemplateDatabase(resolution=resolution)
-            new_keys = new_keys_by_resolution.get(resolution, set())
-
-            # Add existing templates (skip those being replaced if overwrite=True)
-            for template in existing_db.templates:
-                key = (template.code, template.crated, template.mod)
-                if overwrite and key in new_keys:
-                    # Skip this template - it will be replaced by the new one
-                    stats["replaced"] += 1
-                    self._logger.debug(
-                        "Replacing template: %s (crated=%s, mod=%s)",
-                        template.code,
-                        template.crated,
-                        template.mod,
-                    )
-                else:
-                    merged_db.add_template(template)
-                    stats["existing_templates"] += 1
-
-            # Create set of keys now in merged_db for duplicate detection
-            merged_keys = {(t.code, t.crated, t.mod) for t in merged_db.templates}
-
-            # Add new templates
-            for template in new_db_for_res.templates:
-                key = (template.code, template.crated, template.mod)
-                if key in merged_keys:
-                    # Duplicate (only happens when overwrite=False)
-                    self._logger.debug(
-                        "Skipping duplicate template: %s (crated=%s, mod=%s)",
-                        template.code,
-                        template.crated,
-                        template.mod,
-                    )
-                    stats["skipped"] += 1
-                else:
-                    self._logger.debug(
-                        "Adding new template: %s (crated=%s, mod=%s)",
-                        template.code,
-                        template.crated,
-                        template.mod,
-                    )
-                    merged_db.add_template(template)
-                    stats["new_templates"] += 1
-                    merged_keys.add(key)
-
-            merged_databases[resolution] = merged_db
+            if merged_db is not None:
+                merged_databases[resolution] = merged_db
+            for key, value in resolution_stats.items():
+                stats[key] += value
 
         self._logger.info(
             "Merge complete: %d resolutions, %d new templates added, "

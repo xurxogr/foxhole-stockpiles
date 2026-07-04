@@ -201,6 +201,97 @@ class BlueprintParser:
         import_path = imports[abs(super_ref) - 1]
         return import_path or None
 
+    def _resolve_actual_json_path(self, json_path: Path | str) -> Path:
+        """Resolve the requested blueprint path to its actual on-disk location.
+
+        Args:
+            json_path (Path | str): Path to the blueprint JSON file, as requested.
+
+        Returns:
+            Path: The resolved, absolute path — the actual file location if found
+                in a subdirectory, otherwise the requested path resolved as-is.
+        """
+        json_path_obj = Path(json_path)
+        if not json_path_obj.is_absolute():
+            json_path_obj = self.blueprints_dir / json_path_obj
+        json_path_obj = json_path_obj.resolve()
+
+        actual_path = self._find_blueprint_path(json_path_obj)
+        return actual_path or json_path_obj
+
+    def _compute_object_path(self, json_path_obj: Path) -> str:
+        """Compute the catalog ObjectPath for a blueprint file.
+
+        ObjectPath is the path relative to the extraction root (the war/
+        directory three levels above blueprints_dir), with the .json extension
+        stripped.
+
+        Args:
+            json_path_obj (Path): Resolved, absolute path to the blueprint JSON file.
+
+        Returns:
+            str: The ObjectPath, or the absolute path if it isn't relative to the
+                extraction root.
+        """
+        try:
+            extraction_root = self.blueprints_dir.parent.parent.parent.resolve()
+            relative_path = json_path_obj.relative_to(extraction_root)
+            object_path = str(relative_path).replace("\\", "/")
+            if object_path.endswith(".json"):
+                object_path = object_path[:-5]
+            return object_path
+        except ValueError:
+            # Path is not relative to extraction root
+            return str(json_path_obj)
+
+    def _extract_property_data(self, data: Any, imports: list[str | None], cache_key: str) -> Any:
+        """Process the Default__ export's Data fields into catalog properties.
+
+        Args:
+            data (Any): The Default__ export's Data payload (dict or list).
+            imports (list[str | None]): Processed imports array for the blueprint.
+            cache_key (str): Cache key used to look up raw imports/exports when
+                full extraction is enabled.
+
+        Returns:
+            Any: Processed catalog properties (dict, matching _process_data's contract).
+        """
+        if not self.full_extraction:
+            return self._process_data(data=data, imports=imports)
+
+        # For full extraction, get raw imports/exports to resolve all references
+        raw_data = self.raw_cache.get(cache_key) or {}
+        raw_imports = raw_data.get("Imports", [])
+        raw_exports = raw_data.get("Exports", [])
+        return self._process_data(
+            data=data, imports=imports, raw_imports=raw_imports, raw_exports=raw_exports
+        )
+
+    def _merge_with_parent(self, catalog_data: dict[str, Any], parent_path: str) -> dict[str, Any]:
+        """Merge parent blueprint catalog data beneath the child's own data.
+
+        Args:
+            catalog_data (dict[str, Any]): The child blueprint's own catalog data.
+            parent_path (str): Parent blueprint path (e.g., /Game/Blueprints/...).
+
+        Returns:
+            dict[str, Any]: Merged catalog data (parent values first, child
+                overrides), or catalog_data unchanged if the parent has no data.
+        """
+        parent_data = self._get_parent_data(parent_path)
+        if not parent_data:
+            return catalog_data
+
+        # Merge parent data (parent values first, child overrides)
+        merged = dict(parent_data)
+        merged.update(catalog_data)
+        # Keep child's CodeName, ObjectPath and ParentBlueprint
+        merged["CodeName"] = catalog_data.get("CodeName")
+        merged["ObjectPath"] = catalog_data.get("ObjectPath")
+        if "ParentBlueprint" in catalog_data:
+            merged["ParentBlueprint"] = catalog_data["ParentBlueprint"]
+        return merged
+
     def extract_catalog_data(self, json_path: Path | str) -> dict[str, Any] | None:
         """Extract simplified catalog data from a blueprint.
 
@@ -233,15 +324,7 @@ class BlueprintParser:
             # }
         """
         # Resolve the actual path first (for cache key)
-        json_path_obj = Path(json_path)
-        if not json_path_obj.is_absolute():
-            json_path_obj = self.blueprints_dir / json_path_obj
-        json_path_obj = json_path_obj.resolve()
-
-        # Find actual file path (may be in subdirectory)
-        actual_path = self._find_blueprint_path(json_path_obj)
-        if actual_path:
-            json_path_obj = actual_path
+        json_path_obj = self._resolve_actual_json_path(json_path)
 
         # Check catalog cache first (stores fully merged data with parents)
         cache_key = str(json_path_obj)
@@ -266,22 +349,7 @@ class BlueprintParser:
             self.catalog_cache[cache_key] = None
             return None
 
-        catalog_data = {}
-
-        # ObjectPath uses the actual file location
-        # Convert to relative path from extraction root (war/ directory)
-        # blueprints_dir is war/War/Content/Blueprints, so go 3 levels up
-        try:
-            extraction_root = self.blueprints_dir.parent.parent.parent.resolve()
-            relative_path = json_path_obj.relative_to(extraction_root)
-            # Remove .json extension for ObjectPath
-            object_path = str(relative_path).replace("\\", "/")
-            if object_path.endswith(".json"):
-                object_path = object_path[:-5]
-            catalog_data["ObjectPath"] = object_path
-        except ValueError:
-            # Path is not relative to extraction root
-            catalog_data["ObjectPath"] = str(json_path_obj)
+        catalog_data: dict[str, Any] = {"ObjectPath": self._compute_object_path(json_path_obj)}
 
         # Step 2: Check for ParentBlueprint via ClassIndex → SuperIndex chain
         parent_path = self._resolve_parent_blueprint(default_export, exports, imports)
@@ -296,34 +364,13 @@ class BlueprintParser:
             self.catalog_cache[cache_key] = catalog_data
             return catalog_data
 
-        if self.full_extraction:
-            # For full extraction, get raw imports/exports to resolve all references
-            raw_data = self.raw_cache.get(cache_key) or {}
-            raw_imports = raw_data.get("Imports", [])
-            raw_exports = raw_data.get("Exports", [])
-
-            catalog_data.update(
-                self._process_data(
-                    data=data, imports=imports, raw_imports=raw_imports, raw_exports=raw_exports
-                )
-            )
-        else:
-            catalog_data.update(self._process_data(data=data, imports=imports))
+        catalog_data.update(
+            self._extract_property_data(data=data, imports=imports, cache_key=cache_key)
+        )
 
         # Step 4: Merge properties from parent blueprints (parent first, then child overrides)
         if parent_path and parent_path.startswith("/Game/Blueprints/"):
-            parent_data = self._get_parent_data(parent_path)
-            if parent_data:
-                # Merge parent data (parent values first, child overrides)
-                merged = dict(parent_data)
-                merged.update(catalog_data)
-                # Keep child's CodeName and ObjectPath
-                merged["CodeName"] = catalog_data.get("CodeName")
-                merged["ObjectPath"] = catalog_data.get("ObjectPath")
-                # Keep child's ParentBlueprint
-                if "ParentBlueprint" in catalog_data:
-                    merged["ParentBlueprint"] = catalog_data["ParentBlueprint"]
-                catalog_data = merged
+            catalog_data = self._merge_with_parent(catalog_data, parent_path)
 
         # Cache the fully merged result
         self.catalog_cache[cache_key] = catalog_data
