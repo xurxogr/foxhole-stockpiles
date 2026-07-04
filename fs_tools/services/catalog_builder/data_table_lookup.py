@@ -83,7 +83,7 @@ class DataTableLookup:
                 data: dict[str, Any] = json.load(f)
                 self._raw_cache[table_name] = data
                 return data
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - isolate one malformed table from the batch
             self.logger.error("Error loading data table %s: %s", table_name, e)
             return None
 
@@ -497,7 +497,7 @@ class DataTableLookup:
         try:
             with open(factory_file, encoding="utf-8") as f:
                 data = json.load(f)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - isolate one malformed blueprint from the batch
             self.logger.error("Error loading factory blueprint %s: %s", factory_path, e)
             return result
 

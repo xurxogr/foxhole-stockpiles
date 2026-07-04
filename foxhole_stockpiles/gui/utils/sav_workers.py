@@ -60,7 +60,7 @@ class SavScanWorker(QThread):
         except RuntimeError as e:
             self.error.emit(str(e))
             self.finished.emit(False)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - report any failure via the error signal
             self.error.emit(f"Error processing SAV file: {e}")
             self.finished.emit(False)
 
@@ -123,7 +123,7 @@ class SavMonitorWorker(QThread):
         except RuntimeError as e:
             self.error.emit(str(e))
             self.finished.emit(False)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - report any failure via the error signal
             self.error.emit(f"Error monitoring SAV file: {e}")
             self.finished.emit(False)
 
@@ -144,7 +144,7 @@ class SavMonitorWorker(QThread):
                     )
                 logger.info("Cached %d stockpile(s). Monitoring for changes...", len(stockpiles))
                 self.progress.emit(f"Monitoring {len(stockpiles)} stockpile(s)...")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - keep monitoring even if the initial read fails
                 logger.warning("Could not read initial state: %s", e)
 
         self._processor._running = True
@@ -174,7 +174,7 @@ class SavMonitorWorker(QThread):
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - keep the poll loop alive on any error
                 logger.error("Monitor error: %s", e)
 
         self._processor._running = False

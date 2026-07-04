@@ -194,7 +194,7 @@ class WebhookConnector:
                 return [f"HTTP {response.status_code}: {response.text}"]
         except ConnectTimeout:
             raise
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - report any send failure back as a response message
             error_message = f"{self.DEFAULT_ERROR_PREFIX}: ({type(e).__name__}, {str(e)})"
             self._logger.error(error_message)
             return_data = [error_message]

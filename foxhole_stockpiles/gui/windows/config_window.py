@@ -148,7 +148,7 @@ class ConfigWindow(QMainWindow):
             self.settings = self.config_manager.load_config()
             self.populate_tabs()
             logger.info("Settings loaded successfully")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - surface any load failure to the user
             QMessageBox.critical(
                 self,
                 t("config_window.dialogs.error_loading_title"),
@@ -230,7 +230,7 @@ class ConfigWindow(QMainWindow):
                 )
                 logger.error("Failed to save settings: %s", msg)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - surface any save failure to the user
             QMessageBox.critical(
                 self,
                 t("config_window.dialogs.error_title"),

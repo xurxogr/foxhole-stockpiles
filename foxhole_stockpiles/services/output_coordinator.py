@@ -116,7 +116,7 @@ class OutputCoordinator:
                         handler_config.name,
                     )
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - one handler's failure must not block the rest
                 self.logger.error(
                     "Handler '%s' failed: %s",
                     handler_config.name,

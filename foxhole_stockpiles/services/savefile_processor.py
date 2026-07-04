@@ -195,7 +195,7 @@ class SaveFileProcessor:
 
             return changed_stockpiles
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - re-raised unless suppress_errors is set
             if not suppress_errors:
                 raise
             logger.error("Error processing file: %s", e)
@@ -240,7 +240,7 @@ class SaveFileProcessor:
 
                 except asyncio.CancelledError:
                     break
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 - keep the poll loop alive on any error
                     logger.error("Processor error: %s", e)
         finally:
             self._running = False

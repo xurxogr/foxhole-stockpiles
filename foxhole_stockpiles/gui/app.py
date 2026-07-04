@@ -24,7 +24,7 @@ def _load_language_from_settings() -> str:
     try:
         settings = AppSettings()
         return settings.gui.language
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - fall back to English if settings fail to load
         logger.debug("Could not load language from settings: %s", e)
         return "en"
 
@@ -39,7 +39,7 @@ def launch_gui() -> None:
     try:
         settings = AppSettings()
         setup_logging(settings.logging)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - fall back to basic logging if settings fail to load
         # If settings fail to load, use basic logging config
         logging.basicConfig(level=logging.INFO)
         logger.warning("Could not load settings for logging: %s", e)
