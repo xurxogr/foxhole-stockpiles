@@ -198,7 +198,12 @@ def scan(
     ),
     config: str | None = typer.Option(None, "--config", help="Path to configuration file."),
     token: str | None = typer.Option(
-        None, "--token", help="Override the webhook token from the configuration file."
+        None,
+        "--token",
+        envvar="FS_WEBHOOK_TOKEN",
+        help="Override the webhook token from the configuration file. "
+        "Prefer the FS_WEBHOOK_TOKEN environment variable over this flag "
+        "to avoid exposing the token via `ps`/shell history.",
     ),
 ) -> None:
     """Scan a stockpile screenshot and emit the detected items.
