@@ -970,7 +970,7 @@
       "MajorDamagePercent": 0.7,
       "MassOverride": 13000,
       "MaxEncumbranceMassOverride": 0,
-      "MaxHealth": 15000,
+      "MaxHealth": 10000,
       "MinTankArmourPercent": 0.33,
       "MinorDamagePercent": 0.5,
       "ObjectPath": "War/Content/Blueprints/Data/BPVehicleDynamicData",
@@ -1768,7 +1768,7 @@
       "MajorDamagePercent": 0.7,
       "MassOverride": 13000,
       "MaxEncumbranceMassOverride": 0,
-      "MaxHealth": 15000,
+      "MaxHealth": 10000,
       "MinTankArmourPercent": 0.33,
       "MinorDamagePercent": 0.5,
       "ObjectPath": "War/Content/Blueprints/Data/BPVehicleDynamicData",
@@ -2616,10 +2616,6 @@
           {
             "CodeName": "FacilityMaterials9",
             "Quantity": 4
-          },
-          {
-            "CodeName": "FacilityMaterials11",
-            "Quantity": 10
           }
         ],
         "Resource": {
@@ -3286,10 +3282,6 @@
           {
             "CodeName": "FacilityMaterials9",
             "Quantity": 2
-          },
-          {
-            "CodeName": "FacilityMaterials11",
-            "Quantity": 10
           }
         ],
         "Resource": {
@@ -3983,10 +3975,6 @@
           {
             "CodeName": "FacilityMaterials9",
             "Quantity": 2
-          },
-          {
-            "CodeName": "FacilityMaterials11",
-            "Quantity": 10
           }
         ],
         "Resource": {
@@ -4364,7 +4352,7 @@
     "GenericStockpileComponent": "GenericStockpileComponent",
     "Health": 8300,
     "Icon": "War/Content/Textures/UI/VehicleIcons/AircraftParatrooperCIcon.0",
-    "IntelType": "EMapIntelligenceType::LargeAircraft",
+    "IntelType": "EMapIntelligenceType::LogisticsAircraft",
     "KillVolume": "KillVolume",
     "LeftWingGroup": "LeftWingGroup",
     "LockSound": "War/Content/Audio/SFX/Vehicles/Lock_Cue.0",
@@ -4893,7 +4881,7 @@
           },
           {
             "CodeName": "FacilityMaterials9",
-            "Quantity": 4
+            "Quantity": 6
           },
           {
             "CodeName": "FacilityMaterials11",
@@ -4920,7 +4908,7 @@
       "MajorDamagePercent": 0.7,
       "MassOverride": 6000,
       "MaxEncumbranceMassOverride": 0,
-      "MaxHealth": 8300,
+      "MaxHealth": 7000,
       "MinTankArmourPercent": 0.33,
       "MinorDamagePercent": 0.5,
       "ObjectPath": "War/Content/Blueprints/Data/BPVehicleDynamicData",
@@ -5201,9 +5189,9 @@
     },
     "FuselageGroup": "FuselageGroup",
     "GenericStockpileComponent": "GenericStockpileComponent",
-    "Health": 8300,
+    "Health": 7000,
     "Icon": "War/Content/Textures/UI/VehicleIcons/AircraftParatrooperWIcon.0",
-    "IntelType": "EMapIntelligenceType::LargeAircraft",
+    "IntelType": "EMapIntelligenceType::LogisticsAircraft",
     "KillVolume": "KillVolume",
     "LeftWingGroup": "LeftWingGroup",
     "LockSound": "War/Content/Audio/SFX/Vehicles/Lock_Cue.0",
@@ -5664,7 +5652,7 @@
           },
           {
             "CodeName": "FacilityMaterials9",
-            "Quantity": 4
+            "Quantity": 6
           },
           {
             "CodeName": "FacilityMaterials11",
@@ -5691,7 +5679,7 @@
       "MajorDamagePercent": 0.7,
       "MassOverride": 6000,
       "MaxEncumbranceMassOverride": 0,
-      "MaxHealth": 8300,
+      "MaxHealth": 7000,
       "MinTankArmourPercent": 0.33,
       "MinorDamagePercent": 0.5,
       "ObjectPath": "War/Content/Blueprints/Data/BPVehicleDynamicData",
@@ -6965,7 +6953,7 @@
     "BomberSeatIndex": 1,
     "BuildOffset": {
       "$type": "UAssetAPI.UnrealTypes.FVector, UAssetAPI",
-      "X": 0,
+      "X": 125,
       "Y": 0,
       "Z": 130
     },
@@ -7086,7 +7074,7 @@
     "FactionVariant": "EFactionId::Colonials",
     "FuselageGroup": "FuselageGroup",
     "GenericStockpileComponent": "GenericStockpileComponent",
-    "Icon": "War/Content/Blueprints/Vehicles/Aircraft/AircraftScout2C/AircraftScout2CIcon.0",
+    "Icon": "War/Content/Textures/UI/VehicleIcons/AircraftScout2CIcon.0",
     "KillVolume": "KillVolume",
     "LeftWingGroup": "LeftWingGroup",
     "LockSound": "War/Content/Audio/SFX/Vehicles/Lock_Cue.0",
@@ -8248,7 +8236,7 @@
           },
           "Translation": {
             "$type": "UAssetAPI.UnrealTypes.FVector, UAssetAPI",
-            "X": -465,
+            "X": -400,
             "Y": -143,
             "Z": -182
           }
@@ -8332,7 +8320,7 @@
           },
           "Translation": {
             "$type": "UAssetAPI.UnrealTypes.FVector, UAssetAPI",
-            "X": -465,
+            "X": -400,
             "Y": 143,
             "Z": -182
           }
@@ -10506,11 +10494,7 @@
           },
           {
             "CodeName": "FacilityMaterials9",
-            "Quantity": 6
-          },
-          {
-            "CodeName": "FacilityMaterials11",
-            "Quantity": 10
+            "Quantity": 4
           }
         ],
         "Resource": {
@@ -10533,7 +10517,7 @@
       "MajorDamagePercent": 0.7,
       "MassOverride": 9000,
       "MaxEncumbranceMassOverride": 0,
-      "MaxHealth": 10800,
+      "MaxHealth": 7000,
       "MinTankArmourPercent": 0.33,
       "MinorDamagePercent": 0.5,
       "ObjectPath": "War/Content/Blueprints/Data/BPVehicleDynamicData",
@@ -11222,10 +11206,6 @@
           {
             "CodeName": "FacilityMaterials9",
             "Quantity": 2
-          },
-          {
-            "CodeName": "FacilityMaterials11",
-            "Quantity": 10
           }
         ],
         "Resource": {
@@ -11394,6 +11374,76 @@
     "bCanBeRepairedByLargeShips": true,
     "bIsReserveStockpiled": true,
     "bIsUsableFromVehicle": true
+  },
+  {
+    "ChassisName": "Siren",
+    "CodeName": "AirSirenT",
+    "Description": "A blaring siren with a distinctive tone that signifies a warning about impending airborne operations.",
+    "DisplayName": "Air Raid Siren",
+    "Encumbrance": 300,
+    "EquipmentSlot": "EEquipmentSlot::Large",
+    "Icon": "War/Content/Textures/UI/ItemIcons/AirSirenTIcon.0",
+    "ItemBox": "ItemBox",
+    "ItemCategory": "EItemCategory::Utility",
+    "ItemComponentClass": {
+      "ActivityStateInfos": {
+        "ActivityMontage": "War/Content/Animation/Character/RPG_RocketLauncher/RPG_Equipping.0",
+        "Duration": 0.5
+      },
+      "DeployCodeName": "DeployedAirSirenT",
+      "EquippedGripType": "EEquippedWeaponGripType::LargeDeployableItem",
+      "Mesh": "War/Content/Meshes/Weapons/SK_AirSirenTPickUp.0",
+      "MeshOffset": {
+        "$type": "UAssetAPI.UnrealTypes.FVector, UAssetAPI",
+        "X": 0,
+        "Y": 0,
+        "Z": 10
+      },
+      "MeshRotation": {
+        "$type": "UAssetAPI.UnrealTypes.FRotator, UAssetAPI",
+        "Pitch": 0,
+        "Roll": 90,
+        "Yaw": -30
+      },
+      "ObjectPath": "War/Content/Blueprints/Items/BPAirSirenTComponent.0",
+      "SafeItem": true
+    },
+    "ItemDynamicData": {
+      "CostPerCrate": [
+        {
+          "ItemCodeName": "Cloth",
+          "Quantity": 150
+        }
+      ],
+      "CrateProductionTime": 75,
+      "CrateRetrieveTime": 10,
+      "ObjectPath": "War/Content/Blueprints/Data/BPItemDynamicData",
+      "QuantityPerCrate": 5,
+      "ResearchLevel": 0,
+      "SingleRetrieveTime": 10
+    },
+    "ItemMesh": "ItemMesh",
+    "ItemProfileData": {
+      "ObjectPath": "War/Content/Blueprints/Data/BPItemProfileTable",
+      "ReserveStockpileMaxQuantity": 100,
+      "RetrieveQuantity": 1,
+      "StackTransferLimit": 1,
+      "bIsConvertibleToCrate": false,
+      "bIsCratable": true,
+      "bIsStackable": false,
+      "bIsStockpilable": true,
+      "bIsStockpiledWithAmmo": false,
+      "bUsableInVehicle": false
+    },
+    "ItemProfileType": "EItemProfileType::HandheldWeapon",
+    "ObjectPath": "War/Content/Blueprints/ItemPickups/BPAirSirenTPickup",
+    "ProductionCategories": {
+      "Factory": "EFactoryQueueType::Utility"
+    },
+    "RootComponent": "ItemBox",
+    "StealthComponent": "StealthComponent",
+    "TechID": "ETechID::UnlockAirSirenT",
+    "bIsLarge": true
   },
   {
     "ChassisName": "ChassisRawMaterial",
@@ -23938,7 +23988,8 @@
     "ObjectPath": "War/Content/Blueprints/ItemPickups/Facilities/BPFacilityMaterials12Pickup",
     "RootComponent": "ItemBox",
     "StealthComponent": "StealthComponent",
-    "TechID": "ETechID::UnlockFacilityMineOilRig"
+    "TechID": "ETechID::UnlockFacilityMineOilRig",
+    "bIsReservableWhenCrated": true
   },
   {
     "ChassisName": "ChassisLargeMaterial",
@@ -24632,7 +24683,8 @@
     "RootComponent": "ItemBox",
     "StealthComponent": "StealthComponent",
     "TechID": "ETechID::UnlockFacilityMineOilRig",
-    "bIsLarge": true
+    "bIsLarge": true,
+    "bIsReservableWhenCrated": true
   },
   {
     "ChassisName": "ChassisRefinedMaterial",
@@ -29015,13 +29067,15 @@
       "bUsableInVehicle": false
     },
     "ItemProfileType": "EItemProfileType::Accessory",
+    "MaskSkeletalMesh": "War/Content/Meshes/Wearables/Gasmask.0",
     "ObjectPath": "War/Content/Blueprints/ItemPickups/BPGasMaskPickup",
     "ProductionCategories": {
       "Factory": "EFactoryQueueType::Utility"
     },
     "RootComponent": "ItemBox",
     "StealthComponent": "StealthComponent",
-    "TechID": "ETechID::UnlockGasMask"
+    "TechID": "ETechID::UnlockGasMask",
+    "bIsGasMask": true
   },
   {
     "ChassisName": "ChassisFieldGear",
@@ -29171,7 +29225,7 @@
       "CrateProductionTime": 100,
       "CrateRetrieveTime": 16,
       "ObjectPath": "War/Content/Blueprints/Data/BPItemDynamicData",
-      "QuantityPerCrate": 10,
+      "QuantityPerCrate": 5,
       "ResearchLevel": 0,
       "SingleRetrieveTime": 4
     },
@@ -36269,7 +36323,7 @@
       "MajorDamagePercent": 0.85,
       "MassOverride": 160000,
       "MaxEncumbranceMassOverride": 0,
-      "MaxHealth": 1800,
+      "MaxHealth": 1750,
       "MinTankArmourPercent": 0.33,
       "MinorDamagePercent": 0.7,
       "ObjectPath": "War/Content/Blueprints/Data/BPVehicleDynamicData",
@@ -41538,7 +41592,7 @@
     "CodeName": "MediumTank2TwinC",
     "CommanderIndex": 2,
     "DepthCuttoffForSwimDamage": 225,
-    "Description": "This evolution of the “Bardiche” is fitted quad-mounted AP/RPG launchers paired with a 12.7mm machine gun. The “Ranseur” indicates progress in Kraunian design as they continue to leverage outdated equipment to create deadly, modern armour.",
+    "Description": "This evolution of the “Bardiche” is fitted quad-mounted RPG launchers paired with a 12.7mm machine gun. The “Ranseur” indicates progress in Kraunian design as they continue to leverage outdated equipment to create deadly, modern armour.",
     "DescriptionLocales": {
       "de": "Diese Weiterentwicklung des \"Bardiche\" ist mit vier fest-montierten AP/RPG Raketenwerfern und einem 12,7mm Maschinengewehr ausgestattet. Der \"Ranseur\" zeigt die Fortschritte im kraunischen Design, das bewusst veraltete Ausrüstung nutzend weit tödlich-modernere Panzer kreiert.",
       "en": "This evolution of the “Bardiche” is fitted quad-mounted AP/RPG launchers paired with a 12.7mm machine gun. The “Ranseur” indicates progress in Kraunian design as they continue to leverage outdated equipment to create deadly, modern armour.",
@@ -42970,7 +43024,7 @@
         ],
         "Resource": {
           "CodeName": "FacilityMaterials3",
-          "Quantity": 3
+          "Quantity": 10
         }
       },
       "DefaultSurfaceMovementRate": 0.7,
@@ -44657,6 +44711,13 @@
         "Mesh": "War/Content/Meshes/Weapons/SmallSeaMine.0",
         "MineDeploymentPS": "War/Content/FX/MineDeploy01.0",
         "MineSpacing": 100
+      },
+      {
+        "CodeName": "WaterWallMaterials",
+        "HeightOffset": 15,
+        "Mesh": "War/Content/Meshes/Structures/Walls/WaterWallBouyForBoat.0",
+        "MineDeploymentPS": "War/Content/FX/MineDeploy02.0",
+        "MineSpacing": 110
       }
     ],
     "MineSplashPS": "War/Content/FX/CollisionImpactSplash01.0",
@@ -47295,6 +47356,53 @@
     "bIsLiquid": true
   },
   {
+    "ChassisName": "ChassisFieldGear",
+    "CodeName": "PilotMask",
+    "Description": "A pilot’s mask that wraps around the head and includes a headset which help facilitate communications at high altitudes. This allows pilots to receive critical intelligence updates while flying.",
+    "DisplayName": "Flight Mask",
+    "EquipmentSlot": "EEquipmentSlot::Head",
+    "EquippedEncumbrance": 5,
+    "Icon": "War/Content/Textures/UI/ItemIcons/PilotMaskIcon.0",
+    "ItemBox": "ItemBox",
+    "ItemCategory": "EItemCategory::Utility",
+    "ItemDynamicData": {
+      "CostPerCrate": [
+        {
+          "ItemCodeName": "Cloth",
+          "Quantity": 150
+        }
+      ],
+      "CrateProductionTime": 75,
+      "CrateRetrieveTime": 10,
+      "ObjectPath": "War/Content/Blueprints/Data/BPItemDynamicData",
+      "QuantityPerCrate": 5,
+      "ResearchLevel": 0,
+      "SingleRetrieveTime": 10
+    },
+    "ItemProfileData": {
+      "ObjectPath": "War/Content/Blueprints/Data/BPItemProfileTable",
+      "ReserveStockpileMaxQuantity": 100,
+      "RetrieveQuantity": 1,
+      "StackTransferLimit": 1,
+      "bIsConvertibleToCrate": false,
+      "bIsCratable": true,
+      "bIsStackable": false,
+      "bIsStockpilable": true,
+      "bIsStockpiledWithAmmo": false,
+      "bUsableInVehicle": false
+    },
+    "ItemProfileType": "EItemProfileType::Accessory",
+    "MaskSkeletalMesh": "War/Content/Meshes/Wearables/PilotMask.0",
+    "ObjectPath": "War/Content/Blueprints/ItemPickups/BPPilotMaskPickup",
+    "ProductionCategories": {
+      "Factory": "EFactoryQueueType::Utility"
+    },
+    "RootComponent": "ItemBox",
+    "StealthComponent": "StealthComponent",
+    "TechID": "ETechID::UnlockPilotUniform",
+    "bIsRadio": true
+  },
+  {
     "ChassisName": "Colonial Pilot Uniform",
     "ChassisNameLocales": {
       "de": "Colonial Pilotenoverall",
@@ -47997,7 +48105,7 @@
   {
     "ChassisName": "ChassisFieldGear",
     "CodeName": "Radio",
-    "Description": "Allows receiving map intelligence reports on detected ground and naval targets.",
+    "Description": "Allows receiving map intelligence reports on detected ground, naval, and air targets.",
     "DescriptionLocales": {
       "de": "Erlaubt es, Karten-Aufklärungen über entdeckte Land und See Ziele zu empfangen.",
       "en": "Allows receiving map intelligence reports on detected ground and naval targets.",
@@ -48014,6 +48122,7 @@
       "ru": "Рация",
       "zh": "无线电"
     },
+    "Encumbrance": 2,
     "EquipmentSlot": "EEquipmentSlot::Utility",
     "Icon": "War/Content/Textures/UI/ItemIcons/RadioItemIcon.0",
     "ItemBox": "ItemBox",
@@ -48050,66 +48159,8 @@
       "Factory": "EFactoryQueueType::Utility"
     },
     "RootComponent": "ItemBox",
-    "StealthComponent": "StealthComponent"
-  },
-  {
-    "ChassisName": "ChassisFieldGear",
-    "CodeName": "RadioAircraft",
-    "Description": "Allows receiving map intelligence reports on detected airborne targets.",
-    "DescriptionLocales": {
-      "en": "Allows receiving map intelligence reports on detected airborne targets.",
-      "fr": "Permets la réception de rapports de renseignements sur carte sur les cibles détectées dans les airs.",
-      "pt": "Permite receber relatórios de inteligência de mapas sobre alvos aéreos detectados.",
-      "ru": "Позволяет получать разведку на карте по замеченным воздушным целям.",
-      "zh": "能够接收探测到的空军目标的地图情报。"
-    },
-    "DisplayName": "Liaison Transmitter",
-    "DisplayNameLocales": {
-      "en": "Liaison Transmitter",
-      "fr": "Transmetteur de Liaison",
-      "pt": "Transmissor de Comunicação",
-      "ru": "Передатчик связи",
-      "zh": "联络发射机"
-    },
-    "EquipmentSlot": "EEquipmentSlot::Utility",
-    "Icon": "War/Content/Textures/UI/ItemIcons/RadioItemIcon.0",
-    "ItemBox": "ItemBox",
-    "ItemCategory": "EItemCategory::Utility",
-    "ItemDynamicData": {
-      "CostPerCrate": [
-        {
-          "ItemCodeName": "Cloth",
-          "Quantity": 75
-        }
-      ],
-      "CrateProductionTime": 50,
-      "CrateRetrieveTime": 10,
-      "ObjectPath": "War/Content/Blueprints/Data/BPItemDynamicData",
-      "QuantityPerCrate": 5,
-      "ResearchLevel": 0,
-      "SingleRetrieveTime": 10
-    },
-    "ItemProfileData": {
-      "ObjectPath": "War/Content/Blueprints/Data/BPItemProfileTable",
-      "ReserveStockpileMaxQuantity": 100,
-      "RetrieveQuantity": 1,
-      "StackTransferLimit": 1,
-      "bIsConvertibleToCrate": false,
-      "bIsCratable": true,
-      "bIsStackable": false,
-      "bIsStockpilable": true,
-      "bIsStockpiledWithAmmo": false,
-      "bUsableInVehicle": false
-    },
-    "ItemProfileType": "EItemProfileType::Tool",
-    "MapIntelContainer": "EMapIntelContainer::Air",
-    "ObjectPath": "War/Content/Blueprints/ItemPickups/BPRadioAircraftPickup",
-    "ProductionCategories": {
-      "Factory": "EFactoryQueueType::Utility"
-    },
-    "RootComponent": "ItemBox",
     "StealthComponent": "StealthComponent",
-    "SubTypeIcon": "War/Content/Textures/UI/ItemIcons/SubtypeAirIcon.0"
+    "bIsRadio": true
   },
   {
     "BackpackMeshes": [
@@ -48361,27 +48412,28 @@
       "CrateProductionTime": 100,
       "CrateRetrieveTime": 6,
       "ObjectPath": "War/Content/Blueprints/Data/BPItemDynamicData",
-      "QuantityPerCrate": 100,
+      "QuantityPerCrate": 2,
       "ResearchLevel": 0,
       "SingleRetrieveTime": 6
     },
     "ItemFlagsMask": 2049,
     "ItemProfileData": {
       "ObjectPath": "War/Content/Blueprints/Data/BPItemProfileTable",
-      "ReserveStockpileMaxQuantity": 100,
-      "RetrieveQuantity": 100,
-      "StackTransferLimit": 4,
-      "bIsConvertibleToCrate": false,
-      "bIsCratable": false,
+      "ReserveStockpileMaxQuantity": 300,
+      "RetrieveQuantity": 10,
+      "StackTransferLimit": 2,
+      "bIsConvertibleToCrate": true,
+      "bIsCratable": true,
       "bIsStackable": true,
       "bIsStockpilable": true,
       "bIsStockpiledWithAmmo": false,
       "bUsableInVehicle": false
     },
-    "ItemProfileType": "EItemProfileType::RawResource",
+    "ItemProfileType": "EItemProfileType::RefinedResource",
     "ObjectPath": "War/Content/Blueprints/ItemPickups/BPRareMetalPickup",
     "RootComponent": "ItemBox",
-    "StealthComponent": "StealthComponent"
+    "StealthComponent": "StealthComponent",
+    "bIsReservableWhenCrated": true
   },
   {
     "ChassisName": "ChassisRefinedMaterial",
@@ -56424,7 +56476,8 @@
         "Roll": 0,
         "Yaw": 110
       },
-      "ObjectPath": "War/Content/Blueprints/Items/BPSurfaceWaterMineComponent.0"
+      "ObjectPath": "War/Content/Blueprints/Items/BPSurfaceWaterMineComponent.0",
+      "WaterMineClass": "War/Content/Blueprints/Items/BPSurfaceWaterMine.0"
     },
     "ItemDynamicData": {
       "CostPerCrate": [
@@ -58999,7 +59052,7 @@
       "MajorDamagePercent": 0.85,
       "MassOverride": 8000,
       "MaxEncumbranceMassOverride": 0,
-      "MaxHealth": 900,
+      "MaxHealth": 1250,
       "MinTankArmourPercent": 0.33,
       "MinorDamagePercent": 0.5,
       "ObjectPath": "War/Content/Blueprints/Data/BPVehicleDynamicData",
@@ -61524,12 +61577,13 @@
         "Y": 19.566036,
         "Z": 18.713276
       },
-      "ObjectPath": "War/Content/Blueprints/Items/BPWaterMineComponent.0"
+      "ObjectPath": "War/Content/Blueprints/Items/BPWaterMineComponent.0",
+      "WaterMineClass": "War/Content/Blueprints/Items/BPWaterMine.0"
     },
     "ItemDynamicData": {
       "CostPerCrate": [
         {
-          "ItemCodeName": "wood",
+          "ItemCodeName": "Wood",
           "Quantity": 40
         }
       ],
@@ -61555,6 +61609,74 @@
     },
     "ItemProfileType": "EItemProfileType::Tool",
     "ObjectPath": "War/Content/Blueprints/ItemPickups/BPWaterMinePickup",
+    "RootComponent": "ItemBox",
+    "StealthComponent": "StealthComponent",
+    "bIsLarge": true
+  },
+  {
+    "ChassisName": "Buoy",
+    "CodeName": "WaterWallMaterials",
+    "Description": "Material required to build Crespine Netting.",
+    "DisplayName": "Naval Buoy",
+    "Encumbrance": 385,
+    "EquipmentSlot": "EEquipmentSlot::Large",
+    "Icon": "War/Content/Textures/UI/ItemIcons/WaterWallItemIcon.0",
+    "ItemBox": "ItemBox",
+    "ItemCategory": "EItemCategory::HeavyAmmo",
+    "ItemComponentClass": {
+      "ActivityStateInfos": {
+        "ActivityMontage": "War/Content/Animation/Character/NWP_NoWeapon/NWP_HeavyMetalEquipping.0",
+        "Duration": 0.5
+      },
+      "EquippedGripType": "EEquippedWeaponGripType::LargeDeployableItem",
+      "Mesh": "War/Content/Meshes/Structures/Walls/SK_WaterWallBouy.0",
+      "MeshOffset": {
+        "$type": "UAssetAPI.UnrealTypes.FVector, UAssetAPI",
+        "X": 0,
+        "Y": -5,
+        "Z": -15
+      },
+      "MeshRotation": {
+        "$type": "UAssetAPI.UnrealTypes.FRotator, UAssetAPI",
+        "Pitch": 0,
+        "Roll": 0,
+        "Yaw": 110
+      },
+      "ObjectPath": "War/Content/Blueprints/Items/BPWaterWallBouyComponent.0"
+    },
+    "ItemDynamicData": {
+      "CostPerCrate": [
+        {
+          "ItemCodeName": "Cloth",
+          "Quantity": 150
+        }
+      ],
+      "CrateProductionTime": 125,
+      "CrateRetrieveTime": 20,
+      "ObjectPath": "War/Content/Blueprints/Data/BPItemDynamicData",
+      "QuantityPerCrate": 5,
+      "ResearchLevel": 0,
+      "SingleRetrieveTime": 6
+    },
+    "ItemMesh": "ItemMesh",
+    "ItemProfileData": {
+      "ObjectPath": "War/Content/Blueprints/Data/BPItemProfileTable",
+      "ReserveStockpileMaxQuantity": 100,
+      "RetrieveQuantity": 1,
+      "StackTransferLimit": 1,
+      "bIsConvertibleToCrate": false,
+      "bIsCratable": true,
+      "bIsStackable": false,
+      "bIsStockpilable": true,
+      "bIsStockpiledWithAmmo": false,
+      "bUsableInVehicle": false
+    },
+    "ItemProfileType": "EItemProfileType::Tool",
+    "ObjectPath": "War/Content/Blueprints/ItemPickups/BPWaterWallMaterialsPickup",
+    "ProductionCategories": {
+      "Factory": "EFactoryQueueType::HeavyAmmo",
+      "MassProductionFactory": "EFactoryQueueType::HeavyAmmo"
+    },
     "RootComponent": "ItemBox",
     "StealthComponent": "StealthComponent",
     "bIsLarge": true
