@@ -5,75 +5,89 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-07-14
+
+### Added
+- **Catalog and template database updated to game Update 65.**
+- **Catalog field rules**: the catalog builder can now trim the built catalog
+  down to just the fields you need (a "Full" or slimmer "FS" preset, or your
+  own custom rules), with an editor dialog in the GUI.
+- **Download buttons for the catalog and template database**, so users can
+  grab the ones they need straight from the GUI.
+- **Activity feed**: the capture panel now shows a friendly, readable feed of
+  scan results, capture start/stop, and webhook/return responses, replacing
+  the raw log table.
+- **Unified capture controls**: one button now starts and stops OCR, SAV, and
+  clipboard capture/monitoring together, with a status label per method.
+
+### Changed
+- **Webhooks use a `header` auth option** instead of the old `forward` option
+  (which no longer made sense once server mode was removed).
+- **The config file now lives in the standard per-OS app-data location**
+  instead of a hardcoded home-directory file; existing configs migrate
+  automatically.
+- **Webhook responses are handled as a list of messages**, since a webhook can
+  reply with one message or several.
+- README refocused on end users, with advanced/developer docs split out into
+  `docs/advanced.md`.
+- Lots of internal refactoring for readability and maintainability, with no
+  user-facing behavior change.
+
+### Fixed
+- **Formula injection in CSV/TSV and Google Sheets exports** is now blocked.
+- **Webhook URLs are restricted to `http(s)`**, and logged responses are
+  truncated.
+- **Webhook tokens can be supplied via an environment variable**, so they
+  don't need to be exposed on the command line.
+- **Hardened file handling against path traversal** during PAK extraction and
+  icon/output-path handling.
+- **Config and token files are now restricted to owner-only permissions.**
+- Silent capture-hotkey failures are now logged instead of ignored.
+- A few data-corruption edge cases from unintended in-place mutation were
+  fixed.
+
 ## [1.0.0] - 2026-06-24
 
 ### Added
-- **Local screenshot capture**: a configurable global hotkey (`scanner.capture_key`,
-  e.g. `F9`) captures the active Foxhole window (title "War", any monitor) and
-  scans it in-process, routing the result to the configured output handlers.
-  New dependencies: `pywinctl`, `pynput` (with Pillow `ImageGrab`).
-- **Google Sheets output handler** (`sheets`).
+- **Local screenshot capture**: a configurable global hotkey captures the
+  active Foxhole window and scans it in-process, routing the result to the
+  configured output handlers.
+- **Google Sheets output handler.**
 - **Clipboard stockpile scanning**: parses a stockpile list copied from the
-  in-game UI (the localized export text) into structured stockpiles and routes
-  them to the configured outputs, available from the GUI and the `fs clip`
-  command. Item codes are resolved from the catalog and the stockpile faction is
-  inferred from the items. Implemented in pure Python (no Rust dependency).
-- **Faction on `Stockpile` output** (`faction`): populated only when the source
-  provides it — read from `fs-sav` and `fs-ocr`, and inferred by item majority
-  vote for clipboard scans. Omitted from output when unknown.
+  in-game UI into structured stockpiles, available from the GUI and the
+  `fs clip` command.
+- **Stockpile faction** is now included in the output when the source
+  provides it (SAV files, OCR, or inferred for clipboard scans).
 
 ### Changed
-- **OCR engine is now the external Rust package `fs-ocr`** (PyPI); the in-repo
-  `fs_ocr` package was removed. The runtime talks to it through
-  `services/scanner.py`. HDF5 template DB code moved to `fs_tools/template_db/`.
-- Config schema migrated to **v13**; the capture hotkey lives at
-  `scanner.capture_key`.
-- **`Stockpile.type` is now a free-form string** instead of a fixed enum. Each
-  source's value is normalized to a canonical name when recognized and otherwise
-  passed through verbatim, so stockpile types added in new game updates are
-  preserved instead of collapsing to `Undefined`. The `StockpileType` enum is
-  retained only as the normalization target.
-- **SAV processing sends every stockpile to the output handlers in a single
-  call** (previously one call per map location). With a static file path this
-  fixes the output being overwritten down to a single stockpile; each handler now
-  decides its own per-location grouping.
-- **Upgraded `fs-sav` to 0.3.0**, which fixes stockpile-type detection and adds
+- **OCR now runs through the external `fs-ocr` engine** instead of an in-repo
+  implementation.
+- **Stockpile types are no longer limited to a fixed list**: unrecognized
+  types from new game updates are now preserved instead of being dropped.
+- **SAV processing now sends all stockpiles to the output handlers together**,
+  fixing file outputs being overwritten down to a single stockpile.
+- **Upgraded the `.sav` parser**, fixing stockpile-type detection and adding
   the controlling faction to its output.
 - **Merged the configurable input sections into a single GUI tab.**
 
 ### Fixed
-- **Clipboard parsing uses the stockpile hex code** instead of the localized
-  display name, so the `hex` field is stable across languages.
-- **Faction parsing from `.sav` files** now recognizes the singular `Colonial`/
-  `Warden` values emitted by `fs-sav` 0.3.0 (previously every stockpile came back
-  as neutral).
+- **Clipboard parsing** now uses a stable, language-independent stockpile
+  code instead of the localized display name.
+- **Faction parsing from `.sav` files** no longer misreads every stockpile as
+  neutral.
 
 ### Removed
-- **The GUI configuration levels** (basic/advanced/developer) and the
-  `gui.config_level` setting (dropped in the v12→v13 migration): the levels only
-  guarded the OCR/template internals that moved to `fs-ocr`/`fs-tools`, so they
-  no longer gated anything. All settings tabs are now always visible.
-- **The `notifications` config section, its GUI tab, and the Discord notifier**
-  (dropped in the v11→v12 migration): the notifier stack was never wired into the
-  scan flow, so configured notifications were never sent. Send scans to Discord
-  via a webhook output handler instead.
-- **Dead `fs scan` flags** `--language` and `--output-format`: both were accepted
-  but had no effect (the engine auto-detects languages; output format is set per
-  handler). The hidden legacy command aliases (`scanner`, `process-sav`,
-  `ui`/`app`) were also removed.
-- **The `stockpile_types` config section and its GUI tab** (dropped in the
-  v10→v11 migration): the alias list was no longer consumed — stockpile-type
-  detection happens inside the external `fs-ocr` engine.
-- **Dead scanner settings** `template_cache_size`, `debug_mode`, and
-  `extract_icons` (also dropped in v10→v11), plus the corresponding `fs scan`
-  flags. (`early_exit_threshold` is kept for `fs-tools`' candidate inspector;
-  `screenshots_folder` is kept and now saves each captured screenshot.)
-- **The FastAPI REST server and everything around it**: the `api/` package, the
-  `fs serve` command, all REST endpoints (`/ocr/scan_image`, `/health`,
-  `/memory/*`, `/scan/stats`), the Jinja web UI, Docker deployment, the
-  `api_server`/`api_auth` config sections (dropped in the v9→v10 migration), all
-  `FS_API_*` env vars, and the `fastapi`/`uvicorn`/`slowapi`/`python-multipart`/
-  `jinja2` dependencies. Scanning is now local.
+- **The GUI configuration levels** (basic/advanced/developer): all settings
+  tabs are now always visible.
+- **The `notifications` config section and the Discord notifier**, which was
+  never actually wired up. Send scans to Discord via a webhook output handler
+  instead.
+- **Dead `fs scan` flags and legacy command aliases** that had no effect.
+- **The `stockpile_types` config section**: stockpile-type detection now
+  happens inside the external OCR engine.
+- **Several dead scanner settings** and their corresponding `fs scan` flags.
+- **The REST server and everything around it** (API endpoints, web UI, Docker
+  deployment): scanning is now local-only.
 
 ## [0.4.0] - 2026-01-27
 
