@@ -75,7 +75,7 @@ class CapturePanel(QWidget):
         # One listener dispatches every configured hotkey method (OCR / manual
         # SAV / manual clipboard) — a single OS keyboard hook, not one per method.
         self._hotkey_listener: HotkeyListener | None = None
-        # Global hotkeys don't work in every environment (e.g. WSL); when
+        # Global hotkeys only work on Windows with the capture extra; when
         # unavailable, the hotkey-driven methods are disabled.
         self._hotkeys_available = global_hotkeys_supported()
 
@@ -102,7 +102,7 @@ class CapturePanel(QWidget):
 
         if not self._hotkeys_available:
             logger.warning(
-                "Global hotkeys are unavailable in this environment (e.g. WSL); "
+                "Global hotkeys require Windows with the 'capture' extra installed; "
                 "screenshot and manual-SAV capture are disabled. Use the Windows "
                 "build for hotkeys, or the File menu / SAV monitor mode instead."
             )

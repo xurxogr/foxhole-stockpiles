@@ -1,12 +1,10 @@
 """Tests for the global hotkey spec conversion and listener."""
 
-import platform
-import sys
-import types
 from unittest.mock import MagicMock
 
 import pytest
 
+from foxhole_stockpiles.gui.utils import hotkey_listener
 from foxhole_stockpiles.gui.utils.hotkey_listener import (
     HotkeyListener,
     global_hotkeys_supported,
@@ -14,42 +12,32 @@ from foxhole_stockpiles.gui.utils.hotkey_listener import (
 )
 
 
-def _set_release(monkeypatch: pytest.MonkeyPatch, release: str) -> None:
-    """Pin ``platform.uname().release`` for the supported-environment check."""
-    monkeypatch.setattr(platform, "uname", lambda: types.SimpleNamespace(release=release))
-
-
-def _fake_pynput(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
-    """Inject a fake ``pynput`` module exposing a mock ``keyboard``."""
+def _fake_keyboard(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
+    """Back the listener with a mock ``pynput.keyboard``."""
     keyboard = MagicMock()
-    module = types.ModuleType("pynput")
-    module.keyboard = keyboard  # type: ignore[attr-defined]
-    monkeypatch.setitem(sys.modules, "pynput", module)
-    monkeypatch.setitem(sys.modules, "pynput.keyboard", keyboard)
+    monkeypatch.setattr(hotkey_listener, "PYNPUT_AVAILABLE", True)
+    monkeypatch.setattr(hotkey_listener, "keyboard", keyboard, raising=False)
     return keyboard
 
 
 class TestGlobalHotkeysSupported:
     """Environment detection for global hotkeys."""
 
-    def test_false_on_wsl(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """A WSL kernel release disables global hotkeys."""
-        _set_release(monkeypatch, "5-microsoft")
-        assert global_hotkeys_supported() is False
+    def test_false_outside_windows(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Global hotkeys are never supported outside Windows."""
+        monkeypatch.setattr(hotkey_listener, "PYNPUT_AVAILABLE", True)
+        assert global_hotkeys_supported(platform="linux") is False
+        assert global_hotkeys_supported(platform="darwin") is False
 
-    def test_false_when_pynput_missing(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """No pynput backend disables global hotkeys."""
-        _set_release(monkeypatch, "6-generic")
-        monkeypatch.delenv("WSL_DISTRO_NAME", raising=False)
-        monkeypatch.setitem(sys.modules, "pynput", None)
-        assert global_hotkeys_supported() is False
+    def test_false_without_the_capture_extra(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """On Windows, global hotkeys need pynput from the capture extra."""
+        monkeypatch.setattr(hotkey_listener, "PYNPUT_AVAILABLE", False)
+        assert global_hotkeys_supported(platform="win32") is False
 
-    def test_true_when_supported(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """A non-WSL host with pynput available enables global hotkeys."""
-        _set_release(monkeypatch, "6-generic")
-        monkeypatch.delenv("WSL_DISTRO_NAME", raising=False)
-        _fake_pynput(monkeypatch)
-        assert global_hotkeys_supported() is True
+    def test_true_on_windows_with_the_extra(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Windows with pynput installed supports global hotkeys."""
+        monkeypatch.setattr(hotkey_listener, "PYNPUT_AVAILABLE", True)
+        assert global_hotkeys_supported(platform="win32") is True
 
 
 class TestHotkeyListener:
@@ -68,7 +56,7 @@ class TestHotkeyListener:
 
     def test_start_registers_hotkeys(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """start() registers all bindings with the backend and starts it."""
-        keyboard = _fake_pynput(monkeypatch)
+        keyboard = _fake_keyboard(monkeypatch)
         listener = HotkeyListener({"F9": lambda: None, "ctrl+v": lambda: None})
         listener.start()
         keyboard.GlobalHotKeys.assert_called_once()
@@ -77,15 +65,15 @@ class TestHotkeyListener:
         keyboard.GlobalHotKeys.return_value.start.assert_called_once()
 
     def test_start_raises_without_backend(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """start() raises RuntimeError when pynput cannot be loaded."""
-        monkeypatch.setitem(sys.modules, "pynput", None)
+        """start() raises RuntimeError when pynput is not installed."""
+        monkeypatch.setattr(hotkey_listener, "PYNPUT_AVAILABLE", False)
         listener = HotkeyListener({"F9": lambda: None})
         with pytest.raises(RuntimeError):
             listener.start()
 
     def test_stop_after_start(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """stop() stops the backend listener and clears it."""
-        keyboard = _fake_pynput(monkeypatch)
+        keyboard = _fake_keyboard(monkeypatch)
         listener = HotkeyListener({"F9": lambda: None})
         listener.start()
         listener.stop()

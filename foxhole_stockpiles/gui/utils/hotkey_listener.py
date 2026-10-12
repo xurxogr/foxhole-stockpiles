@@ -4,42 +4,42 @@ The listener runs in its own thread (managed by ``pynput``); the supplied
 callback is invoked from that thread, so callers that touch Qt should hand in a
 Qt signal's ``emit`` (delivered to the GUI thread via a queued connection).
 
-``pynput`` is imported lazily so importing this module never fails on a headless
-host; :meth:`HotkeyListener.start` raises if the backend cannot be loaded.
+Global hotkeys are Windows-only: ``pynput`` comes from the ``capture`` extra,
+which only installs on Windows. Elsewhere, or without the extra,
+:func:`global_hotkeys_supported` is False and :meth:`HotkeyListener.start` raises.
 """
 
 from __future__ import annotations
 
 import logging
-import os
-import platform
+import sys
 from collections.abc import Callable
 from typing import Any
 
+try:
+    from pynput import keyboard
+
+    PYNPUT_AVAILABLE = True
+except ImportError:  # the Windows-only `capture` extra is not installed
+    PYNPUT_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
+#: ``sys.platform`` value of the only platform global hotkeys are shipped for.
+HOTKEY_PLATFORM = "win32"
 
-def global_hotkeys_supported() -> bool:
-    """Best-effort check whether global hotkeys can actually be captured here.
 
-    Global hotkeys work on native Windows/macOS and on X11, but not under WSL
-    (the Linux GUI used during development, where key events aren't delivered
-    globally) nor when the ``pynput`` backend cannot be loaded (e.g. headless).
+def global_hotkeys_supported(platform: str = sys.platform) -> bool:
+    """Report whether global hotkeys can be captured on this machine.
+
+    Args:
+        platform (str): The ``sys.platform`` value to check. Defaults to the
+            running interpreter's platform.
 
     Returns:
-        bool: True if global hotkeys are expected to work in this environment.
+        bool: True on Windows with the ``capture`` extra installed.
     """
-    # WSL tags the Linux kernel release with "microsoft" and exports WSL_DISTRO_NAME.
-    if "microsoft" in platform.uname().release.lower() or os.environ.get("WSL_DISTRO_NAME"):
-        return False
-
-    try:
-        from pynput import keyboard  # noqa: F401
-    except Exception as exc:  # noqa: BLE001 - any import failure means unsupported here
-        logger.debug("pynput import failed: %s", exc)
-        return False
-
-    return True
+    return platform == HOTKEY_PLATFORM and PYNPUT_AVAILABLE
 
 
 def to_global_hotkey(key: str) -> str:
@@ -105,12 +105,12 @@ class HotkeyListener:
         """Begin listening for all bound hotkeys.
 
         Raises:
-            RuntimeError: If the ``pynput`` backend cannot be loaded.
+            RuntimeError: If the ``pynput`` backend is not installed.
         """
-        try:
-            from pynput import keyboard
-        except Exception as exc:  # ImportError or platform load failure
-            raise RuntimeError("Global hotkeys are not available on this platform.") from exc
+        if not PYNPUT_AVAILABLE:
+            raise RuntimeError(
+                "Global hotkeys are not available: they require the 'capture' extra."
+            )
 
         self._listener = keyboard.GlobalHotKeys(self._bindings)
         self._listener.start()

@@ -30,6 +30,8 @@ python -m venv venv
 # macOS / Linux:  source venv/bin/activate
 
 pip install -e .
+# Windows only: screenshot capture and global hotkeys
+pip install -e .[capture]
 ```
 
 This installs the `fs`, `fs-tools`, `fs-gui`, and `fs-tools-gui` commands. A pre-built vanilla template database (`data/fs_vanilla.h5`) and item catalog (`data/catalog.json`) are included, so scanning works immediately.

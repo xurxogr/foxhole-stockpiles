@@ -326,18 +326,18 @@ The Foxhole window must be the active window
 Click or focus the game window before pressing the hotkey so Foxhole is the
 active (foreground) window.
 
-### Screenshot Capture Is Not Available on This Platform
+### Screenshot Capture Is Not Available
 
 **Problem:**
 ```
-Screenshot capture is not available on this platform
+Screenshot capture is not available: it requires Windows with the 'capture' extra installed.
 ```
 
 **Solution:**
-Capture needs a desktop environment with window-management and screen-grab
-support — it is a Windows/desktop feature and requires `pywinctl`, `pynput`,
-and Pillow's `ImageGrab` to load. On a headless Linux host capture will not
-work. Use file-based scanning or SAV processing instead:
+Screenshot capture and global hotkeys are Windows-only. The Windows executable
+includes them; from source, install the `capture` extra on Windows
+(`pip install -e .[capture]`), which provides `pywinctl` and `pynput`. On
+other platforms use file-based scanning or SAV processing instead:
 ```bash
 fs scan --image screenshot.png
 fs sav world.sav

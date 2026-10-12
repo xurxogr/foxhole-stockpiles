@@ -33,9 +33,6 @@ dependencies = [
     "platformdirs>=4.10.0",
     # HDF5 for database storage
     "h5py>=3.16.0",
-    # Screenshot capture (window detection + global hotkey)
-    "pywinctl>=0.4",
-    "pynput>=1.7.7",
     # Clipboard access (shared by GUI and CLI clipboard scanning)
     "pyperclip>=1.8",
     # Memory profiling
@@ -72,6 +69,12 @@ dev = [
     "types-psutil",
     "h5py-stubs",
 
+]
+# Screenshot capture and global hotkeys (Windows only): game window lookup and
+# the hotkey listener. Without them both features are disabled.
+capture = [
+    "pywinctl>=0.4; sys_platform == 'win32'",
+    "pynput>=1.7.7; sys_platform == 'win32'",
 ]
 
 [project.urls]

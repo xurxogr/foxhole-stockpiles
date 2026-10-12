@@ -1,14 +1,15 @@
 """Tests for the screenshot capture service."""
 
-import sys
 import types
 from pathlib import Path
 from typing import Any
 
 import pytest
+from PIL import ImageGrab
 
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
+from foxhole_stockpiles.services import capture
 from foxhole_stockpiles.services.capture import CaptureError, capture_window, save_screenshot
 
 
@@ -34,39 +35,62 @@ def _fake_pywinctl(windows: list[Any]) -> types.ModuleType:
     return module
 
 
+def _enable_capture(monkeypatch: pytest.MonkeyPatch, windows: list[Any]) -> None:
+    """Pretend capture is supported and back it with a fake pywinctl."""
+    monkeypatch.setattr(capture, "capture_supported", lambda: True)
+    monkeypatch.setattr(capture, "pywinctl", _fake_pywinctl(windows), raising=False)
+
+
+def test_capture_supported_only_on_windows(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Capture is never supported outside Windows, even with the backend loaded."""
+    monkeypatch.setattr(capture, "PYWINCTL_AVAILABLE", True)
+    assert capture.capture_supported(platform="linux") is False
+    assert capture.capture_supported(platform="darwin") is False
+
+
+def test_capture_supported_requires_the_capture_extra(monkeypatch: pytest.MonkeyPatch) -> None:
+    """On Windows, capture needs the window backend from the capture extra."""
+    monkeypatch.setattr(capture, "PYWINCTL_AVAILABLE", False)
+    assert capture.capture_supported(platform="win32") is False
+
+
+def test_capture_supported_on_windows_with_the_extra(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Windows with the window backend installed supports capture."""
+    monkeypatch.setattr(capture, "PYWINCTL_AVAILABLE", True)
+    assert capture.capture_supported(platform="win32") is True
+
+
 def test_capture_unavailable_platform(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A missing window backend raises CaptureError."""
-    monkeypatch.setitem(sys.modules, "pywinctl", None)
+    """Capture raises CaptureError where it is not supported."""
+    monkeypatch.setattr(capture, "capture_supported", lambda: False)
     with pytest.raises(CaptureError, match="not available"):
         capture_window()
 
 
 def test_capture_no_window(monkeypatch: pytest.MonkeyPatch) -> None:
     """No matching window raises CaptureError."""
-    monkeypatch.setitem(sys.modules, "pywinctl", _fake_pywinctl([]))
+    _enable_capture(monkeypatch, windows=[])
     with pytest.raises(CaptureError, match="No window"):
         capture_window()
 
 
 def test_capture_minimized(monkeypatch: pytest.MonkeyPatch) -> None:
     """A minimized window raises CaptureError."""
-    monkeypatch.setitem(sys.modules, "pywinctl", _fake_pywinctl([_FakeWindow(minimized=True)]))
+    _enable_capture(monkeypatch, windows=[_FakeWindow(minimized=True)])
     with pytest.raises(CaptureError, match="minimized"):
         capture_window()
 
 
 def test_capture_inactive(monkeypatch: pytest.MonkeyPatch) -> None:
     """A non-active window raises CaptureError."""
-    monkeypatch.setitem(sys.modules, "pywinctl", _fake_pywinctl([_FakeWindow(active=False)]))
+    _enable_capture(monkeypatch, windows=[_FakeWindow(active=False)])
     with pytest.raises(CaptureError, match="active"):
         capture_window()
 
 
 def test_capture_success(monkeypatch: pytest.MonkeyPatch) -> None:
     """A valid active window returns the encoded PNG bytes."""
-    monkeypatch.setitem(sys.modules, "pywinctl", _fake_pywinctl([_FakeWindow()]))
-
-    from PIL import ImageGrab
+    _enable_capture(monkeypatch, windows=[_FakeWindow()])
 
     class _FakeImage:
         def save(self, buffer: Any, format: str) -> None:  # noqa: A002 - PIL kw name
