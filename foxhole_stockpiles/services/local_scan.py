@@ -13,18 +13,15 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
 
+import numpy as np
+from numpy.typing import NDArray
+
+from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.services.output_coordinator import OutputCoordinator, OutputResponse
 from foxhole_stockpiles.services.scanner import build_scanner
-
-if TYPE_CHECKING:
-    import numpy as np
-    from numpy.typing import NDArray
-
-    from foxhole_stockpiles.core.settings.app_settings import AppSettings
 
 logger = logging.getLogger(__name__)
 

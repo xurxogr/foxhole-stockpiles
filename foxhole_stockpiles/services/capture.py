@@ -18,9 +18,10 @@ import re
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from PIL import ImageGrab
+
+from foxhole_stockpiles.models.stockpile import Stockpile
 
 try:
     import pywinctl
@@ -28,9 +29,6 @@ try:
     PYWINCTL_AVAILABLE = True
 except ImportError:  # the Windows-only `capture` extra is not installed
     PYWINCTL_AVAILABLE = False
-
-if TYPE_CHECKING:
-    from foxhole_stockpiles.models.stockpile import Stockpile
 
 logger = logging.getLogger(__name__)
 

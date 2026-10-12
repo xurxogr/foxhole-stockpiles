@@ -15,10 +15,10 @@ import asyncio
 import json
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import fs_ocr
 import numpy as np
+from numpy.typing import NDArray
 
 from foxhole_stockpiles.core.image_io import decode_bgr, read_bgr
 from foxhole_stockpiles.core.settings.sections.scanner import ScannerSettings
@@ -27,9 +27,6 @@ from foxhole_stockpiles.enums.stockpile_type import StockpileType
 from foxhole_stockpiles.models.item_candidate import ItemCandidate
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
-
-if TYPE_CHECKING:
-    from numpy.typing import NDArray
 
 logger = logging.getLogger(__name__)
 
