@@ -26,50 +26,6 @@ def test_no_subcommand_launches_gui() -> None:
     assert result.exit_code == 0
 
 
-def test_build_catalog_forwards_options() -> None:
-    """``build-catalog`` forwards parsed options to ``catalog_builder.run``."""
-    with patch(
-        "fs_tools.commands.catalog_builder.catalog_builder.run", new_callable=AsyncMock
-    ) as run:
-        result = runner.invoke(
-            cli.app,
-            [
-                "build-catalog",
-                "--pak",
-                "game.pak",
-                "--extractor",
-                "repak.exe",
-                "--converter",
-                "conv.exe",
-                "--output",
-                "catalog.json",
-                "--keep-temp",
-                "--force-extract",
-                "--workers",
-                "8",
-                "--log-file",
-                "log.txt",
-                "--verbose",
-                "--extract-dir",
-                "extracted",
-            ],
-        )
-    assert result.exit_code == 0, result.output
-    run.assert_called_once_with(
-        pak=Path("game.pak"),
-        extractor=Path("repak.exe"),
-        converter=Path("conv.exe"),
-        output=Path("catalog.json"),
-        keep_temp=True,
-        force_extract=True,
-        workers=8,
-        log_file=Path("log.txt"),
-        verbose=True,
-        quiet=False,
-        extract_dir=Path("extracted"),
-    )
-
-
 def test_build_db_forwards_options() -> None:
     """``build-db`` forwards parsed options to ``database_builder.run``."""
     with patch(

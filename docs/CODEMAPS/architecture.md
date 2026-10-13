@@ -19,8 +19,8 @@ foxhole_stockpiles ──depends──> fs-ocr (external Rust PyPI pkg)
   only through `services/scanner.py`.
 - **fs_tools** — build-time tooling (catalog builder, template DB, asset extraction).
   Self-contained: own `core/settings`, `models`, `gui`, `i18n`. Owns the HDF5
-  template DB read/write code under `fs_tools/template_db/`, catalog builder in
-  `fs_tools/services/catalog_builder/` (includes field rule engine).
+  template DB read/write code under `fs_tools/template_db/`. The catalog is
+  built by the external `fs-assets` package (`fs_assets.build_catalog`).
 - **fs-ocr** — external Rust OCR engine (PyPI `fs-ocr>=1.1.0`). NOT in this repo
   (the former in-repo `fs_ocr` package was deleted in commit `b0e8b6e`).
 

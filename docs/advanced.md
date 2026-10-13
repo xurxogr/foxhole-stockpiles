@@ -65,7 +65,6 @@ Running `fs` with no subcommand launches the GUI. Run `fs <command> --help` for 
 
 ### Tooling commands (`fs-tools`)
 
-- **`fs-tools build-catalog`** — build `catalog.json` from Foxhole PAK files (extracts blueprints, converts to JSON, parses item definitions).
 - **`fs-tools extract-assets`** — extract icon assets from PAK files and convert them to PNG.
 - **`fs-tools generate-templates`** — generate resolution-specific template variants from extracted assets.
 - **`fs-tools build-db`** — compile templates into an optimized `.h5` database.
@@ -73,36 +72,15 @@ Running `fs` with no subcommand launches the GUI. Run `fs <command> --help` for 
 - **`fs-tools add-mod`** — run the full extract → templates → merge pipeline for a mod's PAK file(s).
 - **`fs-tools-gui`** — the tooling GUI (catalog & database builder).
 
-## Catalog rules (output variants)
+The item catalog is built by [fs-assets](https://pypi.org/project/fs-assets/),
+installed with fs: `fs-assets build-catalog --pak War-WindowsNoEditor.pak -o catalog.json`.
 
-The **catalog builder GUI** (`fs-tools-gui` → *Build Catalog*) can project the
-generated catalog through a **field rule set** before writing it, so you can
-produce a much smaller catalog that still drives the app. Pick a preset from the
-dropdown, or open **Edit rules…** to customise it:
+## Catalog
 
-- **Full** — keep every field (the default; identical to the `build-catalog` CLI output).
-- **FS** — keep only the fields the app actually reads (clipboard conversion +
-  template-database build). This is roughly 9% of the full size and is
-  behaviourally identical for those two consumers.
-
-Rules are an ordered list of **include/exclude** entries over dotted field
-paths, evaluated **last-match-wins** (default: keep). Patterns support segment
-globs — `*` matches one path segment, `**` matches one or more — and an ancestor
-pattern keeps the whole subtree:
-
-```
-exclude **                                # drop everything, then re-add:
-include CodeName
-include DisplayNameLocales                # keeps the whole locales subtree
-include ItemProfileData.bIsCratable       # keeps just this nested field
-```
-
-Editing a preset flips it to **Custom**; switching back to a preset warns before
-discarding custom edits. Rule sets can be **imported/exported as JSON** (they are
-not stored in the app config). If a rule set would drop a field the app needs,
-the editor and the build step show a **warning** listing the missing fields.
-
-The CLI `build-catalog` always writes the Full catalog; rules are a GUI feature.
+The catalog is read straight from the game PAK, without external tools, by
+`fs-assets build-catalog` or the **fs-tools GUI** (*Build Catalog*). By default
+it keeps the game data and drops audio, visual and engine-internal fields; tick
+**Full catalog** in the GUI (or pass `--full`) to keep everything.
 
 ## Building a custom OCR database (mods or game updates)
 
@@ -137,7 +115,6 @@ fs scan --database data/foxhole_templates.h5 --image shot.png
 
 Per-tool documentation:
 
-- [Catalog Builder](../fs_tools/commands/catalog_builder/README.md) — build `catalog.json` from PAK files
 - [Asset Extractor](../fs_tools/commands/uasset_extractor/README.md) — extract icons from PAK files
 - [Template Generator](../fs_tools/commands/generate_templates/README.md) — generate resolution-specific templates
 - [Database Builder](../fs_tools/commands/database_builder/README.md) — build optimized template databases

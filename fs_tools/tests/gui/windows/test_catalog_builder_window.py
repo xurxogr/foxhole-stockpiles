@@ -9,16 +9,8 @@ import pytest
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
-from foxhole_stockpiles.core.settings.sections.external_tools import ExternalToolsSettings
 from foxhole_stockpiles.i18n import t
 from fs_tools.gui.windows.catalog_builder_window import CatalogBuilderWindow
-from fs_tools.services.catalog_builder import (
-    CatalogPreset,
-    CatalogRule,
-    CatalogRuleSet,
-    RuleAction,
-    preset_ruleset,
-)
 
 
 # Prevent any GUI dialogs from appearing during test cleanup
@@ -33,41 +25,13 @@ def prevent_dialog_on_close() -> Generator[None, None, None]:
 
 
 @pytest.fixture
-def configured_settings(tmp_path: Path) -> AppSettings:
-    """Create configured settings for testing.
-
-    Args:
-        tmp_path: Temporary directory path
+def configured_settings() -> AppSettings:
+    """Create default settings for testing.
 
     Returns:
-        AppSettings: Configured settings
+        AppSettings: Default settings (the catalog builder needs no external tools)
     """
-    repak_path = tmp_path / "repak.exe"
-    repak_path.touch()
-    uassetgui_path = tmp_path / "uassetgui.exe"
-    uassetgui_path.touch()
-
-    return AppSettings(
-        external_tools=ExternalToolsSettings(
-            repak=repak_path,
-            uassetgui=uassetgui_path,
-        )
-    )
-
-
-@pytest.fixture
-def unconfigured_settings() -> AppSettings:
-    """Create unconfigured settings for testing.
-
-    Returns:
-        AppSettings: Unconfigured settings (missing tools)
-    """
-    return AppSettings(
-        external_tools=ExternalToolsSettings(
-            repak=None,
-            uassetgui=None,
-        )
-    )
+    return AppSettings()
 
 
 @pytest.fixture
@@ -94,30 +58,6 @@ def configured_window(
             window.build_worker.wait()
 
 
-@pytest.fixture
-def unconfigured_window(
-    qtbot: Any, unconfigured_settings: AppSettings
-) -> Generator[CatalogBuilderWindow, None, None]:
-    """Create an unconfigured CatalogBuilderWindow.
-
-    Args:
-        qtbot: PyQt test fixture
-        unconfigured_settings: Unconfigured settings
-
-    Yields:
-        CatalogBuilderWindow: Window instance
-    """
-    with patch("fs_tools.gui.windows.catalog_builder_window.get_settings") as mock_get_settings:
-        mock_get_settings.return_value = unconfigured_settings
-        window = CatalogBuilderWindow()
-        qtbot.addWidget(window)
-        yield window
-        # Cleanup: stop any running workers
-        if window.build_worker and window.build_worker.isRunning():
-            window.build_worker.stop()
-            window.build_worker.wait()
-
-
 # ===== Initialization Tests =====
 
 
@@ -129,28 +69,12 @@ def test_configured_window_initialization(configured_window: CatalogBuilderWindo
     assert configured_window.build_worker is None
 
 
-def test_unconfigured_window_shows_warning(unconfigured_window: CatalogBuilderWindow) -> None:
-    """Test unconfigured window shows configuration warning."""
-    assert CatalogBuilderWindow.requirements_met(unconfigured_window.settings) is False
-
-
 # ===== Check Configuration Tests =====
 
 
-def test_requirements_met_true(configured_window: CatalogBuilderWindow) -> None:
-    """Test requirements_met returns True when configured."""
-    assert CatalogBuilderWindow.requirements_met(configured_window.settings) is True
-
-
-def test_requirements_met_missing_tools(qtbot: Any, tmp_path: Path) -> None:
-    """Test requirements_met returns False when tools missing."""
-    settings = AppSettings(external_tools=ExternalToolsSettings(repak=None, uassetgui=None))
-
-    with patch("fs_tools.gui.windows.catalog_builder_window.get_settings") as mock_get_settings:
-        mock_get_settings.return_value = settings
-        window = CatalogBuilderWindow()
-        qtbot.addWidget(window)
-        assert CatalogBuilderWindow.requirements_met(window.settings) is False
+def test_requirements_met_needs_no_external_tools() -> None:
+    """The catalog builder is always available: it reads the PAK directly."""
+    assert CatalogBuilderWindow.requirements_met(AppSettings()) is True
 
 
 # ===== PAK File Selection Tests =====
@@ -257,76 +181,38 @@ def test_start_build_creates_worker(
         assert configured_window.start_button.isEnabled() is False
 
 
-def test_preset_combo_defaults_to_full(configured_window: CatalogBuilderWindow) -> None:
-    """The preset dropdown defaults to the FULL catalog (backwards compatible)."""
-    assert configured_window.variant_combo.currentData() == CatalogPreset.FULL
-    assert configured_window.ruleset == preset_ruleset(CatalogPreset.FULL)
+def test_full_catalog_is_off_by_default(configured_window: CatalogBuilderWindow) -> None:
+    """The default catalog drops audio, visual and engine-internal fields."""
+    assert configured_window.full_checkbox.isChecked() is False
 
 
-def test_selecting_fs_preset_updates_ruleset(configured_window: CatalogBuilderWindow) -> None:
-    """Selecting the FS preset seeds the window's rule set."""
-    fs_index = configured_window.variant_combo.findData(CatalogPreset.FS)
-    configured_window.variant_combo.setCurrentIndex(fs_index)
-    assert configured_window.ruleset == preset_ruleset(CatalogPreset.FS)
-
-
-def test_start_build_passes_ruleset(
+def test_start_build_passes_pak_output_and_full_flag(
     configured_window: CatalogBuilderWindow, tmp_path: Path
 ) -> None:
-    """start_build builds the worker with the window's current rule set."""
+    """start_build hands the PAK, the output path and the full flag to the worker."""
     pak_file = tmp_path / "test.pak"
     pak_file.touch()
+    output = tmp_path / "catalog.json"
     configured_window.pak_file = str(pak_file)
-    configured_window.output_path_input.setText(str(tmp_path / "catalog.json"))
-    configured_window.ruleset = preset_ruleset(CatalogPreset.FS)
+    configured_window.output_path_input.setText(str(output))
+    configured_window.full_checkbox.setChecked(True)
 
     with patch(
         "fs_tools.gui.windows.catalog_builder_window.CatalogBuilderWorker"
     ) as mock_worker_class:
         mock_worker_class.return_value = MagicMock()
         configured_window.start_build()
-        _, kwargs = mock_worker_class.call_args
-        assert kwargs["ruleset"] == preset_ruleset(CatalogPreset.FS)
+        mock_worker_class.assert_called_once_with(pak_file=pak_file, output_path=output, full=True)
+        assert configured_window.full_checkbox.isEnabled() is False
 
 
-def test_start_build_warns_when_required_missing(
-    configured_window: CatalogBuilderWindow, tmp_path: Path
+def test_on_build_finished_reenables_the_full_checkbox(
+    configured_window: CatalogBuilderWindow,
 ) -> None:
-    """A rule set missing required fields warns and aborts when declined."""
-    pak_file = tmp_path / "test.pak"
-    pak_file.touch()
-    configured_window.pak_file = str(pak_file)
-    configured_window.output_path_input.setText(str(tmp_path / "catalog.json"))
-    # Drops everything -> required minimum missing.
-    configured_window.ruleset = CatalogRuleSet(
-        rules=[CatalogRule(action=RuleAction.EXCLUDE, pattern="**")]
-    )
-
-    with (
-        patch(
-            "fs_tools.gui.windows.catalog_builder_window.QMessageBox.warning",
-            return_value=QMessageBox.StandardButton.No,
-        ) as mock_warning,
-        patch(
-            "fs_tools.gui.windows.catalog_builder_window.CatalogBuilderWorker"
-        ) as mock_worker_class,
-    ):
-        configured_window.start_build()
-        mock_warning.assert_called_once()
-        mock_worker_class.assert_not_called()
-
-
-def test_edit_rules_adopts_dialog_ruleset(configured_window: CatalogBuilderWindow) -> None:
-    """Accepting the rules dialog adopts its rule set."""
-    fs = preset_ruleset(CatalogPreset.FS)
-    with patch("fs_tools.gui.windows.catalog_builder_window.RulesDialog") as mock_dialog_class:
-        mock_dialog = MagicMock()
-        mock_dialog.exec.return_value = 1  # QDialog.DialogCode.Accepted
-        mock_dialog.ruleset = fs
-        mock_dialog_class.return_value = mock_dialog
-        configured_window._edit_rules()
-        assert configured_window.ruleset == fs
-        assert configured_window.variant_combo.currentData() == CatalogPreset.FS
+    """Finishing a build re-enables the full catalog option."""
+    configured_window.full_checkbox.setEnabled(False)
+    configured_window.on_build_finished(False)
+    assert configured_window.full_checkbox.isEnabled() is True
 
 
 def test_cancel_build(configured_window: CatalogBuilderWindow) -> None:

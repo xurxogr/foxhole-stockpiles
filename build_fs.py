@@ -164,7 +164,6 @@ def get_fs_tools_hidden_imports() -> list[str]:
         "fs_tools.gui",
         # Tool command modules are imported by name (importlib) from cli.py and
         # are not seen by PyInstaller's static analysis.
-        "fs_tools.commands.catalog_builder.catalog_builder",
         "fs_tools.commands.database_builder.database_builder",
         "fs_tools.commands.generate_templates.generate_templates",
         "fs_tools.commands.uasset_extractor.uasset_extractor",

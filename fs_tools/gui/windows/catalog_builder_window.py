@@ -1,7 +1,6 @@
 """Catalog builder window for building item catalog from PAK files."""
 
 import logging
-import os
 import platform
 from datetime import datetime
 from pathlib import Path
@@ -11,8 +10,7 @@ from PySide6.QtGui import QBrush, QColor, QKeyEvent, QKeySequence
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
-    QComboBox,
-    QDialog,
+    QCheckBox,
     QFileDialog,
     QGroupBox,
     QHBoxLayout,
@@ -22,7 +20,6 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
-    QSpinBox,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -34,18 +31,8 @@ from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.gui.utils.qt_log_handler import QtLogHandler
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
 from fs_tools.gui.utils.catalog_builder_worker import CatalogBuilderWorker
-from fs_tools.gui.windows.rules_dialog import RulesDialog
-from fs_tools.services.catalog_builder import (
-    CatalogPreset,
-    detect_preset,
-    missing_required_paths,
-    preset_ruleset,
-)
 
 logger = logging.getLogger(__name__)
-
-# Sentinel userData for the "Custom" preset entry (rule set matches no preset).
-_CUSTOM_PRESET = "custom"
 
 
 class CatalogBuilderWindow(QMainWindow):
@@ -60,8 +47,6 @@ class CatalogBuilderWindow(QMainWindow):
         super().__init__(parent)
         self.build_worker: CatalogBuilderWorker | None = None
         self.pak_file: str | None = None
-        # The field rule set the catalog is projected through (default: keep all).
-        self.ruleset = preset_ruleset(CatalogPreset.FULL)
 
         # The launcher only enables this window once it is configured, so the
         # full UI is always built.
@@ -78,7 +63,6 @@ class CatalogBuilderWindow(QMainWindow):
     def init_ui(self) -> None:
         """Initialize the user interface."""
         self.setGeometry(100, 100, 800, 600)
-        self._cpu_count = os.cpu_count() or 1
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -127,41 +111,11 @@ class CatalogBuilderWindow(QMainWindow):
 
         output_layout.addLayout(output_path_layout)
 
-        # Catalog rules: a preset dropdown that seeds the rule set, plus an
-        # "Edit rules…" button opening the full editor. "Custom" appears when the
-        # rule set no longer matches a preset.
-        variant_layout = QHBoxLayout()
-        self.variant_label = QLabel()
-        variant_layout.addWidget(self.variant_label)
-        self.variant_combo = QComboBox()
-        # Order matters: FULL is the default (index 0), backwards compatible.
-        self.variant_combo.addItem("", CatalogPreset.FULL)
-        self.variant_combo.addItem("", CatalogPreset.FS)
-        self.variant_combo.addItem("", _CUSTOM_PRESET)
-        self.variant_combo.currentIndexChanged.connect(self._on_preset_changed)
-        variant_layout.addWidget(self.variant_combo)
-        self.edit_rules_button = QPushButton()
-        self.edit_rules_button.clicked.connect(self._edit_rules)
-        variant_layout.addWidget(self.edit_rules_button)
-        variant_layout.addStretch()
-        output_layout.addLayout(variant_layout)
+        # Full catalog keeps audio, visual and engine-internal fields; the
+        # default catalog drops them.
+        self.full_checkbox = QCheckBox()
+        output_layout.addWidget(self.full_checkbox)
 
-        # Workers
-        workers_layout = QHBoxLayout()
-        self.workers_label = QLabel()
-        workers_layout.addWidget(self.workers_label)
-        self.workers_spinbox = QSpinBox()
-        self.workers_spinbox.setMinimum(1)
-        self.workers_spinbox.setMaximum(self._cpu_count)
-        self.workers_spinbox.setValue(self._cpu_count)
-        self.workers_spinbox.setFixedWidth(80)
-        workers_layout.addWidget(self.workers_spinbox)
-        self.workers_hint = QLabel()
-        self.workers_hint.setStyleSheet("color: gray; font-size: 11px;")
-        workers_layout.addWidget(self.workers_hint)
-        workers_layout.addStretch()
-
-        output_layout.addLayout(workers_layout)
         layout.addWidget(self.output_group)
 
         # Logs Section
@@ -247,17 +201,8 @@ class CatalogBuilderWindow(QMainWindow):
         self.catalog_file_label.setText(t("catalog_builder.catalog_file"))
         self.output_path_input.setPlaceholderText(t("catalog_builder.catalog_placeholder"))
         self.output_browse_button.setText(t("common.browse"))
-        self.variant_label.setText(t("catalog_builder.variant_label"))
-        self.variant_combo.setItemText(0, t("catalog_builder.variant_full"))
-        self.variant_combo.setItemText(1, t("catalog_builder.variant_fs"))
-        self.variant_combo.setItemText(2, t("rules_dialog.preset_custom"))
-        self.variant_combo.setToolTip(t("catalog_builder.variant_tooltip"))
-        self.edit_rules_button.setText(t("catalog_builder.edit_rules"))
-        self.workers_label.setText(t("catalog_builder.workers"))
-        self.workers_spinbox.setToolTip(t("catalog_builder.workers_tooltip"))
-        self.workers_hint.setText(
-            t("catalog_builder.cores_detected").replace("{cores}", str(self._cpu_count))
-        )
+        self.full_checkbox.setText(t("catalog_builder.full_catalog"))
+        self.full_checkbox.setToolTip(t("catalog_builder.full_catalog_tooltip"))
         self.logs_group.setTitle(t("catalog_builder.process_logs"))
         self.log_display.setHorizontalHeaderLabels(
             [
@@ -276,20 +221,15 @@ class CatalogBuilderWindow(QMainWindow):
     def requirements_met(settings: AppSettings) -> bool:
         """Return whether the catalog builder has everything it needs.
 
+        The catalog is built straight from the PAK, so nothing has to be
+        configured.
+
         Args:
             settings (AppSettings): The settings to check.
 
         Returns:
-            bool: True if repak and uassetgui are both configured and exist on
-                disk, False otherwise.
+            bool: Always True.
         """
-        external_tools = settings.external_tools
-
-        if not external_tools.repak or not external_tools.repak.exists():
-            return False
-        if not external_tools.uassetgui or not external_tools.uassetgui.exists():
-            return False
-
         return True
 
     def _get_default_pak_directory(self) -> str:
@@ -351,36 +291,6 @@ class CatalogBuilderWindow(QMainWindow):
                 file_path += ".json"
             self.output_path_input.setText(file_path)
 
-    def _on_preset_changed(self, _index: int) -> None:
-        """Seed the rule set from the chosen preset (ignores the Custom entry).
-
-        Qt coerces the StrEnum userData to a plain string, so the preset is
-        matched by value rather than by ``isinstance``.
-        """
-        data = self.variant_combo.currentData()
-        for preset in CatalogPreset:
-            if data == preset:
-                self.ruleset = preset_ruleset(preset)
-                return
-
-    def _edit_rules(self) -> None:
-        """Open the rules editor and adopt its rule set on accept."""
-        dialog = RulesDialog(self.ruleset, self)
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            self.ruleset = dialog.ruleset
-            self._sync_preset_combo()
-
-    def _sync_preset_combo(self) -> None:
-        """Reflect the current rule set in the preset dropdown (or Custom)."""
-        preset = detect_preset(self.ruleset)
-        target = preset if preset is not None else _CUSTOM_PRESET
-        index = self.variant_combo.findData(target)
-        if index < 0:
-            return
-        self.variant_combo.blockSignals(True)
-        self.variant_combo.setCurrentIndex(index)
-        self.variant_combo.blockSignals(False)
-
     def validate_inputs(self) -> tuple[bool, str]:
         """Validate user inputs before starting build.
 
@@ -406,26 +316,12 @@ class CatalogBuilderWindow(QMainWindow):
             QMessageBox.warning(self, t("common.validation_error"), error_msg)
             return
 
-        # Warn (but allow proceeding) if the rules would drop fields the app needs.
-        missing = missing_required_paths(self.ruleset)
-        if missing:
-            reply = QMessageBox.warning(
-                self,
-                t("catalog_builder.rules_warning_title"),
-                t("catalog_builder.rules_warning_message").replace("{fields}", ", ".join(missing)),
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            )
-            if reply != QMessageBox.StandardButton.Yes:
-                return
-
         # Disable inputs
         self.start_button.setEnabled(False)
         self.cancel_button.setEnabled(True)
         self.pak_browse_button.setEnabled(False)
         self.output_path_input.setEnabled(False)
-        self.variant_combo.setEnabled(False)
-        self.edit_rules_button.setEnabled(False)
-        self.workers_spinbox.setEnabled(False)
+        self.full_checkbox.setEnabled(False)
 
         # Clear logs
         self.clear_logs()
@@ -440,10 +336,7 @@ class CatalogBuilderWindow(QMainWindow):
         self.build_worker = CatalogBuilderWorker(
             pak_file=Path(self.pak_file),  # type: ignore[arg-type]
             output_path=Path(self.output_path_input.text().strip()),
-            extractor_tool=self.settings.external_tools.repak,  # type: ignore[arg-type]
-            converter_tool=self.settings.external_tools.uassetgui,  # type: ignore[arg-type]
-            workers=self.workers_spinbox.value(),
-            ruleset=self.ruleset,
+            full=self.full_checkbox.isChecked(),
         )
         self.build_worker.finished.connect(self.on_build_finished)
         self.build_worker.error.connect(self.on_build_error)
@@ -492,9 +385,7 @@ class CatalogBuilderWindow(QMainWindow):
         self.cancel_button.setEnabled(False)
         self.pak_browse_button.setEnabled(True)
         self.output_path_input.setEnabled(True)
-        self.variant_combo.setEnabled(True)
-        self.edit_rules_button.setEnabled(True)
-        self.workers_spinbox.setEnabled(True)
+        self.full_checkbox.setEnabled(True)
 
     def on_build_error(self, error_msg: str) -> None:
         """Handle build process error.
