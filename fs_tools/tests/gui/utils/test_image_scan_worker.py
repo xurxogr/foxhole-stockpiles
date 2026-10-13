@@ -5,7 +5,7 @@ using each item's icon coordinates from the engine, derives per-icon overlay
 geometry for the debug viewer.
 """
 
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
@@ -31,7 +31,7 @@ EXPECTED_BOX_SIZE = 32
 def _patch_scan(
     image: np.ndarray | None,
     stockpile: Stockpile | None,
-) -> Iterator[MagicMock]:
+) -> Generator[MagicMock, None, None]:
     """Patch read_bgr and the fs-ocr ``scan_debug`` seam used by the worker.
 
     The worker scans via ``fs_ocr.StockpileScanner.scan_debug`` and adapts the
