@@ -25,7 +25,6 @@ def get_fs_hidden_imports() -> list[str]:
     return [
         # Core dependencies
         "numpy",
-        "numpy.core._methods",
         "numpy.lib.format",
         "pydantic",
         "pydantic.json_schema",
@@ -124,7 +123,6 @@ def get_fs_hidden_imports() -> list[str]:
         "foxhole_stockpiles.gui.utils.config_manager",
         "foxhole_stockpiles.gui.utils.capture_scan_worker",
         "foxhole_stockpiles.gui.utils.hotkey_listener",
-        "foxhole_stockpiles.gui.utils.image_scan_worker",
         "foxhole_stockpiles.gui.utils.sav_workers",
         # Internationalization
         "foxhole_stockpiles.i18n",
@@ -141,7 +139,6 @@ def get_fs_tools_hidden_imports() -> list[str]:
     return [
         # Core dependencies
         "numpy",
-        "numpy.core._methods",
         "numpy.lib.format",
         "pydantic",
         "pydantic.json_schema",
@@ -467,7 +464,10 @@ def get_build_specs() -> list[BuildSpec]:
             # services (Google Sheets, screenshot capture). The tooling never
             # imports those, so drop their heavy dependencies. fs_sav stays:
             # core.utils and models.stockpile import it, and the tooling uses both.
+            # fs_tools.tests lives inside the package, so collect-submodules
+            # would bundle the test suite too.
             exclude_modules=[
+                "fs_tools.tests",
                 "google",
                 "google_auth_oauthlib",
                 "googleapiclient",
