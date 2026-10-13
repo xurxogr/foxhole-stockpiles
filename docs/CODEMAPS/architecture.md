@@ -17,11 +17,12 @@ foxhole_stockpiles ──depends──> fs-ocr (external Rust PyPI pkg)
 - **foxhole_stockpiles** — desktop runtime: CLI, PySide6 GUI, screenshot
   capture, local scan, SAV processing, output routing. Talks to the OCR engine
   only through `services/scanner.py`.
-- **fs_tools** — build-time tooling (`add-icon`, `visualize`, `debug`, catalog/icon-import GUI).
-  Self-contained: own `core/settings`, `models`, `gui`, `i18n`. Owns the HDF5
-  template DB read/write code under `fs_tools/template_db/`. The catalog and
-  icon-template DB are built by the external `fs-assets` package, which reads
-  the game PAK directly (no repak/umodel/UAssetGUI).
+- **fs_tools** — build-time tooling (`visualize`, `debug`, catalog/icon-import GUI).
+  Self-contained: own `core/settings`, `models`, `gui`, `i18n`. The catalog and
+  icon-template DB are built and edited by the external `fs-assets` package,
+  which reads the game PAK directly (no repak/umodel/UAssetGUI); the GUI windows
+  read/edit the DB through `fs_tools/core/template_store.py` (wraps
+  `fs_assets.read_templates` / `database_statistics` / `modify_icon`).
 - **fs-ocr** — external Rust OCR engine (PyPI `fs-ocr>=1.1.0`). NOT in this repo
   (the former in-repo `fs_ocr` package was deleted in commit `b0e8b6e`).
 
@@ -76,7 +77,7 @@ SAV-sourced `Stockpile`s carry map metadata (`hex`, `coords`, `is_reserve`) and 
 |---|---|---|
 | CLI `fs` | `cli/app.py` (Typer) | `scan` `gui` `sav`; no subcommand → GUI |
 | Desktop GUI | `gui/app.py` → `gui/windows/main_window.py` | capture panel + SAV tools |
-| Tooling | `fs_tools/cli.py`, `fs_tools/gui` | `add-icon` `visualize` `debug`; GUI wraps `fs-assets` |
+| Tooling | `fs_tools/cli.py`, `fs_tools/gui` | `visualize` `debug`; no subcommand → GUI; GUI wraps `fs-assets` |
 
 ## Settings architecture
 

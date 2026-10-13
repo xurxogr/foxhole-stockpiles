@@ -1,11 +1,9 @@
 """Database visualizer window for browsing template database."""
 
-import asyncio
 import logging
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QFont, QImage, QPixmap
 from PySide6.QtWidgets import (
@@ -34,11 +32,13 @@ from foxhole_stockpiles.enums.item_category import ItemCategory
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
-from fs_tools.constants import ICON_BOX_SCALE
+from fs_tools.core.template_store import (
+    delete_icon,
+    read_all_resolutions,
+    read_resolution,
+    replace_icon,
+)
 from fs_tools.models.icon_template import IconTemplate
-from fs_tools.template_db.icon_manager import IconManager
-from fs_tools.template_db.template_database import TemplateDatabase
-from fs_tools.template_db.template_manager import TemplateManager
 
 logger = logging.getLogger(__name__)
 
@@ -66,14 +66,7 @@ class DatabaseLoader(QThread):
             error: Signal with error message on failure.
         """
         try:
-            # Create TemplateManager and load all resolutions
-            db_path = Path(self.database_path)
-            manager = TemplateManager(database_path=db_path)
-
-            # Load all resolutions using TemplateManager (runs async in sync context)
-            all_databases = asyncio.run(manager.load_all_resolutions())
-
-            self.finished.emit(all_databases)
+            self.finished.emit(read_all_resolutions(Path(self.database_path)))
 
         except Exception as e:  # noqa: BLE001 - report any failure via the error signal
             logger.exception("Failed to load databases")
@@ -92,9 +85,9 @@ class DatabaseVisualizerWindow(QDialog):
         """
         super().__init__(parent)
         self.database_path = database_path
-        self.all_databases: dict[SupportedResolution, TemplateDatabase] = {}
+        self.all_databases: dict[SupportedResolution, list[IconTemplate]] = {}
         self.current_resolution: SupportedResolution | None = None
-        self.database: TemplateDatabase | None = None
+        self.current_templates: list[IconTemplate] | None = None
         self.filtered_templates: list[tuple[int, IconTemplate]] = []
         self.all_templates: list[tuple[int, IconTemplate]] = []
         self.loader_thread: DatabaseLoader | None = None
@@ -395,7 +388,7 @@ class DatabaseVisualizerWindow(QDialog):
             self.filtered_templates.clear()
             self.template_list.clear()
             self.selected_template = None
-            self.database = None
+            self.current_templates = None
             self.current_resolution = None
             # Reset resolution filter
             self.resolution_filter.blockSignals(True)
@@ -445,8 +438,8 @@ class DatabaseVisualizerWindow(QDialog):
         )
         if resolution in self.all_databases:
             self.current_resolution = resolution
-            self.database = self.all_databases[resolution]
-            self.all_templates = list(enumerate(self.database.templates))
+            self.current_templates = self.all_databases[resolution]
+            self.all_templates = list(enumerate(self.current_templates))
 
             # Update window title
             self.setWindowTitle(
@@ -489,7 +482,7 @@ class DatabaseVisualizerWindow(QDialog):
         self.loader_thread.start()
 
     def _on_databases_loaded(
-        self, all_databases: dict[SupportedResolution, TemplateDatabase]
+        self, all_databases: dict[SupportedResolution, list[IconTemplate]]
     ) -> None:
         """Handle successful database loading.
 
@@ -527,7 +520,7 @@ class DatabaseVisualizerWindow(QDialog):
 
     def _apply_filters(self) -> None:
         """Apply current filters and update the template list."""
-        if not self.database:
+        if self.current_templates is None:
             return
 
         # Get filter values (PySide6 returns enum values as strings, convert back)
@@ -623,8 +616,7 @@ class DatabaseVisualizerWindow(QDialog):
         # Find the same template in highest resolution
         highest_template = None
         if highest_resolution in self.all_databases:
-            highest_db = self.all_databases[highest_resolution]
-            for high_template in highest_db.templates:
+            for high_template in self.all_databases[highest_resolution]:
                 if (
                     high_template.code == template.code
                     and high_template.faction == template.faction
@@ -775,62 +767,14 @@ class DatabaseVisualizerWindow(QDialog):
         if not file_path:
             return
 
-        # Calculate expected icon size for this resolution
-        expected_size = int(ICON_BOX_SCALE * int(self.current_resolution.value))
-
-        # Load the image
+        # The icon is resized and composited like templates built from the game
         try:
-            loaded_image = Image.open(file_path)
-        except Exception as e:  # noqa: BLE001 - surface any load failure to the user
-            self._show_replace_error(str(e))
-            return
-
-        # Convert to RGB if necessary (handle RGBA, palette, etc.)
-        if loaded_image.mode == "RGBA":
-            background = Image.new("RGB", loaded_image.size, (0, 0, 0))
-            background.paste(loaded_image, mask=loaded_image.split()[3])
-            pil_image: Image.Image = background
-        elif loaded_image.mode != "RGB":
-            pil_image = loaded_image.convert("RGB")
-        else:
-            pil_image = loaded_image
-
-        # Resize to expected size using high-quality resampling
-        if pil_image.size != (expected_size, expected_size):
-            pil_image = pil_image.resize(
-                (expected_size, expected_size),
-                Image.Resampling.LANCZOS,
-            )
-
-        # Convert to OpenCV format (BGR)
-        rgb_array = np.array(pil_image)
-        bgr_array = swap_rb(rgb_array)
-
-        # Replace the icon in the database
-        try:
-            manager = IconManager(
-                database_path=Path(self.database_path),
-                databases=self.all_databases,
-                icon_scale=ICON_BOX_SCALE,
-            )
-            manager.add_icon_from_image(
-                icon_image=bgr_array,
-                item_code=template.code,
-                faction=template.faction,
-                category=template.category,
-                crated=template.crated,
-                mod=template.mod,
-                resolution=self.current_resolution,
-                replace=True,
-            )
-            TemplateManager.save_single_resolution(
-                database=self.all_databases[self.current_resolution],
-                resolution=self.current_resolution,
-                output_path=Path(self.database_path),
-            )
+            replace_icon(Path(self.database_path), template, Path(file_path))
         except Exception as e:  # noqa: BLE001 - surface any replace failure to the user
             self._show_replace_error(str(e))
             return
+
+        self._reload_current_resolution()
 
         # Show success message
         QMessageBox.information(
@@ -839,7 +783,14 @@ class DatabaseVisualizerWindow(QDialog):
             t("database_visualizer.replace_success_message").replace("{code}", template.code),
         )
 
-        # Update the UI without full reload
+    def _reload_current_resolution(self) -> None:
+        """Re-read the current resolution's templates after an edit and refresh the list."""
+        if not self.current_resolution or not self.database_path:
+            return
+        templates = read_resolution(Path(self.database_path), self.current_resolution)
+        self.all_databases[self.current_resolution] = templates
+        self.current_templates = templates
+        self.all_templates = list(enumerate(templates))
         self._apply_filters()
 
     def _on_save_icon(self) -> None:
@@ -903,24 +854,7 @@ class DatabaseVisualizerWindow(QDialog):
 
         # Delete the icon from the database
         try:
-            manager = IconManager(
-                database_path=Path(self.database_path),
-                databases=self.all_databases,
-                icon_scale=ICON_BOX_SCALE,
-            )
-            manager.delete_icon(
-                item_code=template.code,
-                faction=template.faction,
-                category=template.category,
-                crated=template.crated,
-                mod=template.mod,
-                resolution=self.current_resolution,
-            )
-            TemplateManager.save_single_resolution(
-                database=self.all_databases[self.current_resolution],
-                resolution=self.current_resolution,
-                output_path=Path(self.database_path),
-            )
+            delete_icon(Path(self.database_path), template)
         except Exception as e:  # noqa: BLE001 - surface any delete failure to the user
             logger.exception("Failed to delete icon")
             QMessageBox.critical(
@@ -951,9 +885,7 @@ class DatabaseVisualizerWindow(QDialog):
         self.highest_image.setText(t("database_visualizer.no_image_selected"))
 
         # Refresh template list from the modified database
-        if self.database:
-            self.all_templates = list(enumerate(self.database.templates))
-            self._apply_filters()
+        self._reload_current_resolution()
 
     def _show_replace_error(self, error: str) -> None:
         """Show error message for failed icon replacement.

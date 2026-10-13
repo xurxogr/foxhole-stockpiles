@@ -89,92 +89,35 @@ class TestIconTemplateCreation:
             )
 
 
-class TestIconTemplateOptimization:
-    """Test suite for IconTemplate optimization data computation."""
+class TestIconTemplatePhash:
+    """The perceptual hash is stored as read from the database."""
 
-    def test_compute_optimization_data_normal_image(self) -> None:
-        """Test computing optimization data for normal image."""
-        # Create image with variation
-        image = np.random.randint(0, 255, (64, 64, 3), dtype=np.uint8)
-
+    def test_phash_defaults_to_zero(self) -> None:
+        """A template built without a hash keeps the default."""
         template = IconTemplate(
-            image=image,
+            image=np.zeros((32, 32, 3), dtype=np.uint8),
             code="TestRifle",
-            crated=False,
             category=ItemCategory.Item,
             faction=ItemFaction.NEUTRAL,
             mod="vanilla",
             resolution=SupportedResolution.R_1080,
         )
 
-        # Verify optimization data was computed automatically
-        assert template.phash != 0
-
-    def test_compute_optimization_data_uniform_image(self) -> None:
-        """Test computing optimization data for uniform image."""
-        # Create completely uniform image (all same value)
-        image = np.full((64, 64, 3), 128, dtype=np.uint8)
-
-        template = IconTemplate(
-            image=image,
-            code="TestRifle",
-            crated=False,
-            category=ItemCategory.Item,
-            faction=ItemFaction.NEUTRAL,
-            mod="vanilla",
-            resolution=SupportedResolution.R_1080,
-        )
-
-        # pHash for completely uniform image will be 0 (all pixels same)
         assert template.phash == 0
 
-    def test_compute_optimization_data_varied_image(self) -> None:
-        """Test computing optimization data for image with variation."""
-        # Create image with variation
-        image = np.full((64, 64, 3), 128, dtype=np.uint8)
-        image[0, 0] = 129  # Single pixel slightly different
-
+    def test_phash_is_kept_as_given(self) -> None:
+        """The hash passed in is stored unchanged."""
         template = IconTemplate(
-            image=image,
+            image=np.zeros((32, 32, 3), dtype=np.uint8),
             code="TestRifle",
-            crated=False,
             category=ItemCategory.Item,
             faction=ItemFaction.NEUTRAL,
             mod="vanilla",
             resolution=SupportedResolution.R_1080,
+            phash=0x076C07DE07FF07FE,
         )
 
-        # Verify phash was computed automatically (will be non-zero for this image)
-        assert template.phash >= 0
-
-    def test_compute_phash_consistency(self) -> None:
-        """Test that perceptual hash is consistent for same image."""
-        # Create identical images
-        image1 = np.random.randint(0, 255, (64, 64, 3), dtype=np.uint8)
-        image2 = image1.copy()
-
-        template1 = IconTemplate(
-            image=image1,
-            code="TestRifle",
-            crated=False,
-            category=ItemCategory.Item,
-            faction=ItemFaction.NEUTRAL,
-            mod="vanilla",
-            resolution=SupportedResolution.R_1080,
-        )
-
-        template2 = IconTemplate(
-            image=image2,
-            code="TestRifle",
-            crated=False,
-            category=ItemCategory.Item,
-            faction=ItemFaction.NEUTRAL,
-            mod="vanilla",
-            resolution=SupportedResolution.R_1080,
-        )
-
-        # pHash should be identical for identical images
-        assert template1.phash == template2.phash
+        assert template.phash == 0x076C07DE07FF07FE
 
 
 class TestIconTemplateStringRepresentations:
@@ -335,7 +278,6 @@ class TestIconTemplateEdgeCases:
         )
 
         assert template.image.shape == (256, 256, 3)
-        assert template.phash != 0
 
     def test_small_image(self) -> None:
         """Test creating template with small image."""
@@ -353,4 +295,3 @@ class TestIconTemplateEdgeCases:
         )
 
         assert template.image.shape == (16, 16, 3)
-        assert template.phash != 0

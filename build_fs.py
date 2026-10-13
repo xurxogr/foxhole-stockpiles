@@ -161,9 +161,9 @@ def get_fs_tools_hidden_imports() -> list[str]:
         "fs_tools",
         "fs_tools.cli",
         "fs_tools.gui",
-        # Tool command modules are imported by name (importlib) from cli.py and
-        # are not seen by PyInstaller's static analysis.
-        "fs_tools.commands.add_icon.add_icon",
+        # Rust engine for the catalog and the template database
+        "fs_assets",
+        "fs_assets._fs_assets",
     ]
 
 

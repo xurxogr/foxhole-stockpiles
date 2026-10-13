@@ -1,6 +1,5 @@
 """Icon template model for template matching."""
 
-import fs_ocr
 import numpy as np
 from numpy.typing import NDArray
 from pydantic import BaseModel, ConfigDict, Field
@@ -21,7 +20,6 @@ class IconTemplate(BaseModel):
     mod: str = Field(description="Mod this template comes from", min_length=1)
     resolution: SupportedResolution = Field(description="Target resolution for this template")
 
-    # Computed optimization field - calculated automatically on creation
     phash: int = Field(default=0, exclude=True, description="Perceptual hash for fast filtering")
 
     model_config = ConfigDict(
@@ -40,18 +38,6 @@ class IconTemplate(BaseModel):
             }
         },
     )
-
-    def model_post_init(self, _context: object) -> None:
-        """Automatically compute the perceptual hash after model creation.
-
-        The pHash quickly filters dissimilar templates before NCC matching. It is
-        computed by the external ``fs-ocr`` engine so the stored value is exactly
-        what the engine compares against at scan time.
-
-        Args:
-            _context (object): Pydantic context (unused).
-        """
-        self.phash = fs_ocr.compute_phash(np.ascontiguousarray(self.image))
 
     def __str__(self) -> str:
         """String representation of the template."""

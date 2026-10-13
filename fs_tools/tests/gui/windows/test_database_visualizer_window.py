@@ -1,5 +1,6 @@
 """Tests for DatabaseVisualizerWindow."""
 
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -17,7 +18,8 @@ from fs_tools.gui.windows.database_visualizer_window import (
     DatabaseVisualizerWindow,
 )
 from fs_tools.models.icon_template import IconTemplate
-from fs_tools.template_db.template_database import TemplateDatabase
+
+MODULE = "fs_tools.gui.windows.database_visualizer_window"
 
 
 @pytest.fixture
@@ -59,19 +61,19 @@ def mock_crated_template() -> IconTemplate:
 
 
 @pytest.fixture
-def mock_database(mock_template: IconTemplate, mock_crated_template: IconTemplate) -> MagicMock:
-    """Create a mock template database.
+def mock_database(
+    mock_template: IconTemplate, mock_crated_template: IconTemplate
+) -> list[IconTemplate]:
+    """Create the templates of one resolution.
 
     Args:
-        mock_template: Mock template fixture.
-        mock_crated_template: Mock crated template fixture.
+        mock_template (IconTemplate): Mock template fixture.
+        mock_crated_template (IconTemplate): Mock crated template fixture.
 
     Returns:
-        MagicMock: A mock database instance.
+        list[IconTemplate]: The templates stored for one resolution.
     """
-    db = MagicMock(spec=TemplateDatabase)
-    db.templates = [mock_template, mock_crated_template]
-    return db
+    return [mock_template, mock_crated_template]
 
 
 @pytest.fixture
@@ -105,21 +107,20 @@ class TestDatabaseLoader:
         """
         loader = DatabaseLoader("/path/to/db.h5")
 
-        mock_databases = {SupportedResolution.R_1080: MagicMock()}
+        mock_databases: dict[SupportedResolution, list[IconTemplate]] = {
+            SupportedResolution.R_1080: []
+        }
 
-        with patch("fs_tools.gui.windows.database_visualizer_window.TemplateManager"):
-            with patch(
-                "fs_tools.gui.windows.database_visualizer_window.asyncio.run",
-                return_value=mock_databases,
-            ):
-                # Connect signal to capture result
-                result = []
-                loader.finished.connect(lambda x: result.append(x))
+        with patch(f"{MODULE}.read_all_resolutions", return_value=mock_databases) as mock_read:
+            # Connect signal to capture result
+            result = []
+            loader.finished.connect(lambda x: result.append(x))
 
-                loader.run()
+            loader.run()
 
-                assert len(result) == 1
-                assert result[0] == mock_databases
+            mock_read.assert_called_once_with(Path("/path/to/db.h5"))
+            assert len(result) == 1
+            assert result[0] == mock_databases
 
     def test_run_error(self, qtbot: Any) -> None:
         """Test database loading error handling.
@@ -130,7 +131,7 @@ class TestDatabaseLoader:
         loader = DatabaseLoader("/path/to/db.h5")
 
         with patch(
-            "fs_tools.gui.windows.database_visualizer_window.TemplateManager",
+            f"{MODULE}.read_all_resolutions",
             side_effect=FileNotFoundError("Database not found"),
         ):
             # Connect signal to capture error
@@ -158,7 +159,7 @@ class TestDatabaseVisualizerWindowInitialization:
         assert window.database_path is None
         assert window.all_databases == {}
         assert window.current_resolution is None
-        assert window.database is None
+        assert window.current_templates is None
         assert window.filtered_templates == []
         assert window.all_templates == []
 
@@ -316,7 +317,7 @@ class TestDatabaseVisualizerWindowFilters:
         Args:
             visualizer_window: Window fixture.
         """
-        visualizer_window.database = None
+        visualizer_window.current_templates = None
         visualizer_window._apply_filters()
         # Should not raise, just return early
 
@@ -333,7 +334,7 @@ class TestDatabaseVisualizerWindowFilters:
             mock_template: Mock template.
             mock_crated_template: Mock crated template.
         """
-        visualizer_window.database = MagicMock()
+        visualizer_window.current_templates = [mock_template, mock_crated_template]
         visualizer_window.all_templates = [(0, mock_template), (1, mock_crated_template)]
 
         # Filter by code
@@ -362,7 +363,7 @@ class TestDatabaseVisualizerWindowFilters:
             mock_template: Mock template (NEUTRAL).
             mock_crated_template: Mock crated template (COLONIALS).
         """
-        visualizer_window.database = MagicMock()
+        visualizer_window.current_templates = [mock_template, mock_crated_template]
         visualizer_window.all_templates = [(0, mock_template), (1, mock_crated_template)]
 
         # Filter by COLONIALS
@@ -388,7 +389,7 @@ class TestDatabaseVisualizerWindowFilters:
             mock_template: Mock template (not crated).
             mock_crated_template: Mock crated template.
         """
-        visualizer_window.database = MagicMock()
+        visualizer_window.current_templates = [mock_template, mock_crated_template]
         visualizer_window.all_templates = [(0, mock_template), (1, mock_crated_template)]
 
         # Show only crated
@@ -446,7 +447,7 @@ class TestDatabaseVisualizerWindowDatabaseLoading:
     def test_on_databases_loaded(
         self,
         visualizer_window: DatabaseVisualizerWindow,
-        mock_database: MagicMock,
+        mock_database: list[IconTemplate],
     ) -> None:
         """Test successful database load handling.
 
@@ -492,7 +493,7 @@ class TestDatabaseVisualizerWindowResolutionChange:
     def test_on_resolution_changed(
         self,
         visualizer_window: DatabaseVisualizerWindow,
-        mock_database: MagicMock,
+        mock_database: list[IconTemplate],
         mock_template: IconTemplate,
     ) -> None:
         """Test resolution change updates database and filters.
@@ -513,7 +514,7 @@ class TestDatabaseVisualizerWindowResolutionChange:
         visualizer_window._on_resolution_changed()
 
         assert visualizer_window.current_resolution == SupportedResolution.R_1080
-        assert visualizer_window.database == mock_database
+        assert visualizer_window.current_templates == mock_database
         assert "1080p" in visualizer_window.windowTitle()
 
 
@@ -546,7 +547,7 @@ class TestDatabaseVisualizerWindowTemplateSelection:
         self,
         visualizer_window: DatabaseVisualizerWindow,
         mock_template: IconTemplate,
-        mock_database: MagicMock,
+        mock_database: list[IconTemplate],
     ) -> None:
         """Test template selection updates info label.
 
@@ -586,7 +587,7 @@ class TestDatabaseVisualizerWindowFiltersAdvanced:
             mock_template: Mock template (Item category).
             mock_crated_template: Mock crated template (Vehicle category).
         """
-        visualizer_window.database = MagicMock()
+        visualizer_window.current_templates = [mock_template, mock_crated_template]
         visualizer_window.all_templates = [(0, mock_template), (1, mock_crated_template)]
 
         # Filter by Vehicle category
@@ -612,7 +613,7 @@ class TestDatabaseVisualizerWindowFiltersAdvanced:
             mock_template: Mock template (vanilla mod).
             mock_crated_template: Mock crated template (testmod mod).
         """
-        visualizer_window.database = MagicMock()
+        visualizer_window.current_templates = [mock_template, mock_crated_template]
         visualizer_window.all_templates = [(0, mock_template), (1, mock_crated_template)]
 
         # Add mods to filter
@@ -634,7 +635,7 @@ class TestDatabaseVisualizerWindowFiltersAdvanced:
     def test_on_resolution_changed_restores_mod_selection(
         self,
         visualizer_window: DatabaseVisualizerWindow,
-        mock_database: MagicMock,
+        mock_database: list[IconTemplate],
         mock_template: IconTemplate,
     ) -> None:
         """Test resolution change restores mod selection if available.
@@ -689,10 +690,7 @@ class TestDatabaseVisualizerWindowTemplateSelectionAdvanced:
             image=np.zeros((32, 32, 3), dtype=np.uint8),
             phash=0,
         )
-        mock_db = MagicMock(spec=TemplateDatabase)
-        mock_db.templates = [different_template]
-
-        visualizer_window.all_databases = {SupportedResolution.R_1080: mock_db}
+        visualizer_window.all_databases = {SupportedResolution.R_1080: [different_template]}
 
         # Create list item with template data
         item = QListWidgetItem("TestItem")
@@ -792,7 +790,7 @@ class TestDatabaseVisualizerWindowReplaceIcon:
         self,
         visualizer_window: DatabaseVisualizerWindow,
         mock_template: IconTemplate,
-        mock_database: MagicMock,
+        mock_database: list[IconTemplate],
     ) -> None:
         """Test selecting a template enables replace button.
 
@@ -815,7 +813,7 @@ class TestDatabaseVisualizerWindowReplaceIcon:
         self,
         visualizer_window: DatabaseVisualizerWindow,
         mock_template: IconTemplate,
-        mock_database: MagicMock,
+        mock_database: list[IconTemplate],
     ) -> None:
         """Test resolution change clears selected template.
 
@@ -866,324 +864,120 @@ class TestDatabaseVisualizerWindowReplaceIcon:
         visualizer_window.database_path = "/path/to/db.h5"
 
         with patch(
-            "fs_tools.gui.windows.database_visualizer_window.QFileDialog.getOpenFileName",
+            f"{MODULE}.QFileDialog.getOpenFileName",
             return_value=("", ""),
         ):
-            with patch("fs_tools.gui.windows.database_visualizer_window.Image") as mock_image:
+            with patch(f"{MODULE}.replace_icon") as mock_replace:
                 visualizer_window._on_replace_icon()
-                mock_image.open.assert_not_called()
+                mock_replace.assert_not_called()
 
-    def test_replace_icon_image_load_error(
+    def test_replace_icon_passes_file_path(
         self,
         visualizer_window: DatabaseVisualizerWindow,
         mock_template: IconTemplate,
     ) -> None:
-        """Test replace icon handles image load error.
+        """Test replace icon hands the chosen file to replace_icon, reloads and reports.
 
         Args:
-            visualizer_window: Window fixture.
-            mock_template: Mock template.
+            visualizer_window (DatabaseVisualizerWindow): Window fixture.
+            mock_template (IconTemplate): Mock template.
         """
         visualizer_window.selected_template = (0, mock_template)
         visualizer_window.current_resolution = SupportedResolution.R_1080
         visualizer_window.database_path = "/path/to/db.h5"
 
-        with patch(
-            "fs_tools.gui.windows.database_visualizer_window.QFileDialog.getOpenFileName",
-            return_value=("/path/to/icon.png", "PNG Files (*.png)"),
-        ):
-            with patch(
-                "fs_tools.gui.windows.database_visualizer_window.Image.open",
-                side_effect=FileNotFoundError("File not found"),
-            ):
-                with patch.object(visualizer_window, "_show_replace_error") as mock_show_error:
-                    visualizer_window._on_replace_icon()
-                    mock_show_error.assert_called_once()
-                    assert "File not found" in mock_show_error.call_args[0][0]
-
-    def test_replace_icon_success(
-        self,
-        visualizer_window: DatabaseVisualizerWindow,
-        mock_template: IconTemplate,
-    ) -> None:
-        """Test successful icon replacement.
-
-        Args:
-            visualizer_window: Window fixture.
-            mock_template: Mock template.
-        """
-        visualizer_window.selected_template = (0, mock_template)
-        visualizer_window.current_resolution = SupportedResolution.R_1080
-        visualizer_window.database_path = "/path/to/db.h5"
-        visualizer_window.all_databases = {SupportedResolution.R_1080: MagicMock()}
-
-        # Create mock PIL image
-        mock_pil_image = MagicMock()
-        mock_pil_image.mode = "RGB"
-        mock_pil_image.size = (32, 32)
-
-        with patch(
-            "fs_tools.gui.windows.database_visualizer_window.ICON_BOX_SCALE",
-            64 / 2160,
-        ):
-            with patch(
-                "fs_tools.gui.windows.database_visualizer_window.QFileDialog.getOpenFileName",
+        with (
+            patch(
+                f"{MODULE}.QFileDialog.getOpenFileName",
                 return_value=("/path/to/icon.png", "PNG Files (*.png)"),
-            ):
-                with patch(
-                    "fs_tools.gui.windows.database_visualizer_window.Image.open",
-                    return_value=mock_pil_image,
-                ):
-                    with patch(
-                        "fs_tools.gui.windows.database_visualizer_window.np.array",
-                        return_value=np.zeros((32, 32, 3), dtype=np.uint8),
-                    ):
-                        with patch(
-                            "fs_tools.gui.windows.database_visualizer_window.swap_rb",
-                            return_value=np.zeros((32, 32, 3), dtype=np.uint8),
-                        ):
-                            with patch(
-                                "fs_tools.gui.windows.database_visualizer_window.IconManager"
-                            ) as mock_manager_class:
-                                with patch(
-                                    "fs_tools.gui.windows.database_visualizer_window.TemplateManager.save_single_resolution"
-                                ):
-                                    with patch(
-                                        "fs_tools.gui.windows.database_visualizer_window.QMessageBox.information"
-                                    ):
-                                        with patch.object(visualizer_window, "_apply_filters"):
-                                            visualizer_window._on_replace_icon()
+            ),
+            patch(f"{MODULE}.replace_icon") as mock_replace,
+            patch.object(visualizer_window, "_reload_current_resolution") as mock_reload,
+            patch(f"{MODULE}.QMessageBox.information") as mock_info,
+        ):
+            visualizer_window._on_replace_icon()
 
-                                            mock_manager_class.assert_called_once()
+        mock_replace.assert_called_once_with(
+            Path("/path/to/db.h5"), mock_template, Path("/path/to/icon.png")
+        )
+        mock_reload.assert_called_once()
+        mock_info.assert_called_once()
 
-    def test_replace_icon_rgba_image(
+    def test_replace_icon_error_shows_replace_error(
         self,
         visualizer_window: DatabaseVisualizerWindow,
         mock_template: IconTemplate,
     ) -> None:
-        """Test icon replacement with RGBA image conversion.
+        """Test a replace_icon failure surfaces through _show_replace_error.
 
         Args:
-            visualizer_window: Window fixture.
-            mock_template: Mock template.
+            visualizer_window (DatabaseVisualizerWindow): Window fixture.
+            mock_template (IconTemplate): Mock template.
         """
         visualizer_window.selected_template = (0, mock_template)
         visualizer_window.current_resolution = SupportedResolution.R_1080
         visualizer_window.database_path = "/path/to/db.h5"
-        visualizer_window.all_databases = {SupportedResolution.R_1080: MagicMock()}
 
-        # Create mock PIL RGBA image
-        mock_pil_image = MagicMock()
-        mock_pil_image.mode = "RGBA"
-        mock_pil_image.size = (32, 32)
-        mock_pil_image.split.return_value = [MagicMock(), MagicMock(), MagicMock(), MagicMock()]
-
-        mock_background = MagicMock()
-
-        with patch(
-            "fs_tools.gui.windows.database_visualizer_window.ICON_BOX_SCALE",
-            64 / 2160,
-        ):
-            with patch(
-                "fs_tools.gui.windows.database_visualizer_window.QFileDialog.getOpenFileName",
+        with (
+            patch(
+                f"{MODULE}.QFileDialog.getOpenFileName",
                 return_value=("/path/to/icon.png", ""),
-            ):
-                with patch(
-                    "fs_tools.gui.windows.database_visualizer_window.Image.open",
-                    return_value=mock_pil_image,
-                ):
-                    with patch(
-                        "fs_tools.gui.windows.database_visualizer_window.Image.new",
-                        return_value=mock_background,
-                    ) as mock_new:
-                        with patch(
-                            "fs_tools.gui.windows.database_visualizer_window.np.array",
-                            return_value=np.zeros((32, 32, 3), dtype=np.uint8),
-                        ):
-                            with patch(
-                                "fs_tools.gui.windows.database_visualizer_window.swap_rb",
-                                return_value=np.zeros((32, 32, 3), dtype=np.uint8),
-                            ):
-                                with patch(
-                                    "fs_tools.gui.windows.database_visualizer_window.IconManager"
-                                ):
-                                    with patch(
-                                        "fs_tools.gui.windows.database_visualizer_window.TemplateManager.save_single_resolution"
-                                    ):
-                                        with patch(
-                                            "fs_tools.gui.windows.database_visualizer_window.QMessageBox.information"
-                                        ):
-                                            with patch.object(visualizer_window, "_apply_filters"):
-                                                visualizer_window._on_replace_icon()
-                                                # Verify RGBA conversion was used
-                                                mock_new.assert_called_once()
+            ),
+            patch(f"{MODULE}.replace_icon", side_effect=RuntimeError("Replace failed")),
+            patch.object(visualizer_window, "_show_replace_error") as mock_show_error,
+            patch.object(visualizer_window, "_reload_current_resolution") as mock_reload,
+            patch(f"{MODULE}.QMessageBox.information") as mock_info,
+        ):
+            visualizer_window._on_replace_icon()
 
-    def test_replace_icon_palette_image(
+        mock_show_error.assert_called_once_with("Replace failed")
+        mock_reload.assert_not_called()
+        mock_info.assert_not_called()
+
+    def test_reload_current_resolution(
         self,
         visualizer_window: DatabaseVisualizerWindow,
         mock_template: IconTemplate,
+        mock_crated_template: IconTemplate,
     ) -> None:
-        """Test icon replacement with palette mode image conversion.
+        """Test reloading re-reads the current resolution and refreshes the list.
 
         Args:
-            visualizer_window: Window fixture.
-            mock_template: Mock template.
+            visualizer_window (DatabaseVisualizerWindow): Window fixture.
+            mock_template (IconTemplate): Mock template.
+            mock_crated_template (IconTemplate): Mock crated template.
         """
-        visualizer_window.selected_template = (0, mock_template)
         visualizer_window.current_resolution = SupportedResolution.R_1080
         visualizer_window.database_path = "/path/to/db.h5"
-        visualizer_window.all_databases = {SupportedResolution.R_1080: MagicMock()}
+        visualizer_window.all_databases = {
+            SupportedResolution.R_1080: [mock_template, mock_crated_template]
+        }
+        reloaded = [mock_crated_template]
 
-        # Create mock PIL palette image
-        mock_pil_image = MagicMock()
-        mock_pil_image.mode = "P"  # Palette mode
-        mock_pil_image.size = (32, 32)
-        mock_converted = MagicMock()
-        mock_converted.size = (32, 32)
-        mock_pil_image.convert.return_value = mock_converted
+        with patch(f"{MODULE}.read_resolution", return_value=reloaded) as mock_read:
+            visualizer_window._reload_current_resolution()
 
-        with patch(
-            "fs_tools.gui.windows.database_visualizer_window.ICON_BOX_SCALE",
-            64 / 2160,
-        ):
-            with patch(
-                "fs_tools.gui.windows.database_visualizer_window.QFileDialog.getOpenFileName",
-                return_value=("/path/to/icon.png", ""),
-            ):
-                with patch(
-                    "fs_tools.gui.windows.database_visualizer_window.Image.open",
-                    return_value=mock_pil_image,
-                ):
-                    with patch(
-                        "fs_tools.gui.windows.database_visualizer_window.np.array",
-                        return_value=np.zeros((32, 32, 3), dtype=np.uint8),
-                    ):
-                        with patch(
-                            "fs_tools.gui.windows.database_visualizer_window.swap_rb",
-                            return_value=np.zeros((32, 32, 3), dtype=np.uint8),
-                        ):
-                            with patch(
-                                "fs_tools.gui.windows.database_visualizer_window.IconManager"
-                            ):
-                                with patch(
-                                    "fs_tools.gui.windows.database_visualizer_window.TemplateManager.save_single_resolution"
-                                ):
-                                    with patch(
-                                        "fs_tools.gui.windows.database_visualizer_window.QMessageBox.information"
-                                    ):
-                                        with patch.object(visualizer_window, "_apply_filters"):
-                                            visualizer_window._on_replace_icon()
-                                            # Verify convert was called
-                                            mock_pil_image.convert.assert_called_with("RGB")
+        mock_read.assert_called_once_with(Path("/path/to/db.h5"), SupportedResolution.R_1080)
+        assert visualizer_window.all_databases[SupportedResolution.R_1080] == reloaded
+        assert visualizer_window.current_templates == reloaded
+        assert visualizer_window.all_templates == [(0, mock_crated_template)]
+        assert visualizer_window.template_list.count() == 1
 
-    def test_replace_icon_resize(
-        self,
-        visualizer_window: DatabaseVisualizerWindow,
-        mock_template: IconTemplate,
+    def test_reload_current_resolution_without_resolution(
+        self, visualizer_window: DatabaseVisualizerWindow
     ) -> None:
-        """Test icon replacement with image resize.
+        """Test reloading does nothing without a current resolution.
 
         Args:
-            visualizer_window: Window fixture.
-            mock_template: Mock template.
+            visualizer_window (DatabaseVisualizerWindow): Window fixture.
         """
-        visualizer_window.selected_template = (0, mock_template)
-        visualizer_window.current_resolution = SupportedResolution.R_1080
+        visualizer_window.current_resolution = None
         visualizer_window.database_path = "/path/to/db.h5"
-        visualizer_window.all_databases = {SupportedResolution.R_1080: MagicMock()}
 
-        # Create mock PIL image with wrong size
-        mock_pil_image = MagicMock()
-        mock_pil_image.mode = "RGB"
-        mock_pil_image.size = (64, 64)  # Wrong size, needs resize
+        with patch(f"{MODULE}.read_resolution") as mock_read:
+            visualizer_window._reload_current_resolution()
 
-        mock_resized = MagicMock()
-        mock_resized.size = (32, 32)
-        mock_pil_image.resize.return_value = mock_resized
-
-        with patch(
-            "fs_tools.gui.windows.database_visualizer_window.ICON_BOX_SCALE",
-            64 / 2160,
-        ):
-            with patch(
-                "fs_tools.gui.windows.database_visualizer_window.QFileDialog.getOpenFileName",
-                return_value=("/path/to/icon.png", ""),
-            ):
-                with patch(
-                    "fs_tools.gui.windows.database_visualizer_window.Image.open",
-                    return_value=mock_pil_image,
-                ):
-                    with patch(
-                        "fs_tools.gui.windows.database_visualizer_window.np.array",
-                        return_value=np.zeros((32, 32, 3), dtype=np.uint8),
-                    ):
-                        with patch(
-                            "fs_tools.gui.windows.database_visualizer_window.swap_rb",
-                            return_value=np.zeros((32, 32, 3), dtype=np.uint8),
-                        ):
-                            with patch(
-                                "fs_tools.gui.windows.database_visualizer_window.IconManager"
-                            ):
-                                with patch(
-                                    "fs_tools.gui.windows.database_visualizer_window.TemplateManager.save_single_resolution"
-                                ):
-                                    with patch(
-                                        "fs_tools.gui.windows.database_visualizer_window.QMessageBox.information"
-                                    ):
-                                        with patch.object(visualizer_window, "_apply_filters"):
-                                            visualizer_window._on_replace_icon()
-                                            # Verify resize was called
-                                            mock_pil_image.resize.assert_called_once()
-
-    def test_replace_icon_manager_error(
-        self,
-        visualizer_window: DatabaseVisualizerWindow,
-        mock_template: IconTemplate,
-    ) -> None:
-        """Test icon replacement with IconManager error.
-
-        Args:
-            visualizer_window: Window fixture.
-            mock_template: Mock template.
-        """
-        visualizer_window.selected_template = (0, mock_template)
-        visualizer_window.current_resolution = SupportedResolution.R_1080
-        visualizer_window.database_path = "/path/to/db.h5"
-        visualizer_window.all_databases = {SupportedResolution.R_1080: MagicMock()}
-
-        mock_pil_image = MagicMock()
-        mock_pil_image.mode = "RGB"
-        mock_pil_image.size = (32, 32)
-
-        with patch(
-            "fs_tools.gui.windows.database_visualizer_window.ICON_BOX_SCALE",
-            64 / 2160,
-        ):
-            with patch(
-                "fs_tools.gui.windows.database_visualizer_window.QFileDialog.getOpenFileName",
-                return_value=("/path/to/icon.png", ""),
-            ):
-                with patch(
-                    "fs_tools.gui.windows.database_visualizer_window.Image.open",
-                    return_value=mock_pil_image,
-                ):
-                    with patch(
-                        "fs_tools.gui.windows.database_visualizer_window.np.array",
-                        return_value=np.zeros((32, 32, 3), dtype=np.uint8),
-                    ):
-                        with patch(
-                            "fs_tools.gui.windows.database_visualizer_window.swap_rb",
-                            return_value=np.zeros((32, 32, 3), dtype=np.uint8),
-                        ):
-                            with patch(
-                                "fs_tools.gui.windows.database_visualizer_window.IconManager",
-                                side_effect=Exception("Manager error"),
-                            ):
-                                with patch.object(
-                                    visualizer_window, "_show_replace_error"
-                                ) as mock_error:
-                                    visualizer_window._on_replace_icon()
-                                    mock_error.assert_called_once()
+        mock_read.assert_not_called()
 
     def test_show_replace_error(self, visualizer_window: DatabaseVisualizerWindow) -> None:
         """Test error display helper.
@@ -1384,7 +1178,7 @@ class TestDatabaseVisualizerWindowDeleteIcon:
         """Test delete icon returns early when user cancels confirmation.
 
         Args:
-            visualizer_window: Window fixture.
+            visualizer_window (DatabaseVisualizerWindow): Window fixture.
         """
         mock_template = MagicMock()
         mock_template.code = "TestItem"
@@ -1393,84 +1187,78 @@ class TestDatabaseVisualizerWindowDeleteIcon:
         visualizer_window.database_path = "/tmp/test.h5"
 
         with patch(
-            "fs_tools.gui.windows.database_visualizer_window.QMessageBox.question",
+            f"{MODULE}.QMessageBox.question",
             return_value=QMessageBox.StandardButton.No,
         ):
-            with patch(
-                "fs_tools.gui.windows.database_visualizer_window.IconManager"
-            ) as mock_manager:
+            with patch(f"{MODULE}.delete_icon") as mock_delete:
                 visualizer_window._on_delete_icon()
-                mock_manager.assert_not_called()
+                mock_delete.assert_not_called()
 
-    def test_delete_icon_success(self, visualizer_window: DatabaseVisualizerWindow) -> None:
-        """Test successful icon delete.
+    def test_delete_icon_success(
+        self,
+        visualizer_window: DatabaseVisualizerWindow,
+        mock_template: IconTemplate,
+    ) -> None:
+        """Test successful icon delete calls delete_icon and reloads.
 
         Args:
-            visualizer_window: Window fixture.
+            visualizer_window (DatabaseVisualizerWindow): Window fixture.
+            mock_template (IconTemplate): Mock template.
         """
-        mock_template = MagicMock()
-        mock_template.code = "TestItem"
         visualizer_window.selected_template = (0, mock_template)
         visualizer_window.current_resolution = SupportedResolution.R_1080
         visualizer_window.database_path = "/tmp/test.h5"
-        mock_database = MagicMock()
-        mock_database.templates = []
-        visualizer_window.all_databases = {SupportedResolution.R_1080: mock_database}
-        visualizer_window.database = mock_database
+        visualizer_window.all_databases = {SupportedResolution.R_1080: [mock_template]}
+        visualizer_window.current_templates = [mock_template]
 
-        with patch(
-            "fs_tools.gui.windows.database_visualizer_window.ICON_BOX_SCALE",
-            64 / 2160,
-        ):
-            with patch(
-                "fs_tools.gui.windows.database_visualizer_window.QMessageBox.question",
+        with (
+            patch(
+                f"{MODULE}.QMessageBox.question",
                 return_value=QMessageBox.StandardButton.Yes,
-            ):
-                with patch("fs_tools.gui.windows.database_visualizer_window.IconManager"):
-                    with patch(
-                        "fs_tools.gui.windows.database_visualizer_window.TemplateManager.save_single_resolution"
-                    ):
-                        with patch(
-                            "fs_tools.gui.windows.database_visualizer_window.QMessageBox.information"
-                        ):
-                            visualizer_window._on_delete_icon()
+            ),
+            patch(f"{MODULE}.delete_icon") as mock_delete,
+            patch(f"{MODULE}.read_resolution", return_value=[]) as mock_read,
+            patch(f"{MODULE}.QMessageBox.information") as mock_info,
+        ):
+            visualizer_window._on_delete_icon()
 
-                            # Verify selection was cleared and buttons disabled
-                            assert visualizer_window.selected_template is None
-                            assert not visualizer_window.save_button.isEnabled()
-                            assert not visualizer_window.replace_button.isEnabled()
-                            assert not visualizer_window.delete_button.isEnabled()
+        mock_delete.assert_called_once_with(Path("/tmp/test.h5"), mock_template)
+        mock_info.assert_called_once()
+        mock_read.assert_called_once_with(Path("/tmp/test.h5"), SupportedResolution.R_1080)
+
+        # Verify selection was cleared, buttons disabled and the list reloaded
+        assert visualizer_window.selected_template is None
+        assert not visualizer_window.save_button.isEnabled()
+        assert not visualizer_window.replace_button.isEnabled()
+        assert not visualizer_window.delete_button.isEnabled()
+        assert visualizer_window.all_databases[SupportedResolution.R_1080] == []
+        assert visualizer_window.current_templates == []
 
     def test_delete_icon_error(self, visualizer_window: DatabaseVisualizerWindow) -> None:
         """Test error handling when delete fails.
 
         Args:
-            visualizer_window: Window fixture.
+            visualizer_window (DatabaseVisualizerWindow): Window fixture.
         """
         mock_template = MagicMock()
         mock_template.code = "TestItem"
         visualizer_window.selected_template = (0, mock_template)
         visualizer_window.current_resolution = SupportedResolution.R_1080
         visualizer_window.database_path = "/tmp/test.h5"
-        visualizer_window.all_databases = {SupportedResolution.R_1080: MagicMock()}
 
-        with patch(
-            "fs_tools.gui.windows.database_visualizer_window.ICON_BOX_SCALE",
-            64 / 2160,
-        ):
-            with patch(
-                "fs_tools.gui.windows.database_visualizer_window.QMessageBox.question",
+        with (
+            patch(
+                f"{MODULE}.QMessageBox.question",
                 return_value=QMessageBox.StandardButton.Yes,
-            ):
-                with patch(
-                    "fs_tools.gui.windows.database_visualizer_window.IconManager",
-                    side_effect=Exception("Delete failed"),
-                ):
-                    with patch(
-                        "fs_tools.gui.windows.database_visualizer_window.QMessageBox.critical"
-                    ) as mock_critical:
-                        visualizer_window._on_delete_icon()
-                        mock_critical.assert_called_once()
+            ),
+            patch(f"{MODULE}.delete_icon", side_effect=Exception("Delete failed")),
+            patch(f"{MODULE}.QMessageBox.critical") as mock_critical,
+            patch.object(visualizer_window, "_reload_current_resolution") as mock_reload,
+        ):
+            visualizer_window._on_delete_icon()
+
+        mock_critical.assert_called_once()
+        mock_reload.assert_not_called()
 
 
 class TestDatabaseVisualizerWindowCloseEvent:
@@ -1559,7 +1347,7 @@ class TestDatabaseVisualizerWindowBrowseDatabase:
                 assert visualizer_window.all_templates == []
                 assert visualizer_window.filtered_templates == []
                 assert visualizer_window.selected_template is None
-                assert visualizer_window.database is None
+                assert visualizer_window.current_templates is None
                 assert visualizer_window.current_resolution is None
 
                 # load_databases should be called

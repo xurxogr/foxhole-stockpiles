@@ -22,9 +22,9 @@ repo is the desktop runtime + tooling around it. There is no REST server.
 │ (desktop runtime)                │ (asset/db tooling)           │
 ├──────────────────────────────────┼──────────────────────────────┤
 │ CLI `fs`, PySide6 GUI (capture + │ CLI `fs-tools`, tools GUI,   │
-│ SAV), screenshot capture, local  │ catalog/db/template builders,│
-│ scan, output routing, OCR seam   │ uasset extraction, template  │
-│ (services/scanner.py)            │ DB read/write (template_db/) │
+│ SAV), screenshot capture, local  │ DB visualizer/debug viewer,  │
+│ scan, output routing, OCR seam   │ fs-assets wrapper, template  │
+│ (services/scanner.py)            │ store (core/template_store)  │
 │ ~120 .py                         │ ~100 .py                     │
 └──────────────────────────────────┴──────────────────────────────┘
 ```
@@ -33,7 +33,8 @@ The in-repo `fs_ocr` package was **removed** (commit `b0e8b6e`). OCR is now the
 external `fs-ocr>=1.1.0` (Rust). The runtime's only contact point is
 `services/scanner.py`, which adapts the engine's `fs_ocr.Stockpile` to the
 runtime `Stockpile` model. The FastAPI server was **removed** in favor of local
-capture-and-scan. The HDF5 template DB code lives in `fs_tools/template_db/`.
+capture-and-scan. The HDF5 template DB is built and edited by the external
+`fs-assets` package; the tools GUI reaches it through `fs_tools/core/template_store.py`.
 
 ## Entry points (`pyproject.toml [project.scripts]`)
 

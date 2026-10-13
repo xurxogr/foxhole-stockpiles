@@ -8,8 +8,7 @@ parsing and forwarding) without executing the real pipelines.
 
 from __future__ import annotations
 
-from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 from typer.testing import CliRunner
 
@@ -24,48 +23,6 @@ def test_no_subcommand_launches_gui() -> None:
         result = runner.invoke(cli.app, [])
     run_gui.assert_called_once()
     assert result.exit_code == 0
-
-
-def test_add_icon_forwards_options() -> None:
-    """``add-icon`` forwards parsed options to ``add_icon.run``."""
-    with patch("fs_tools.commands.add_icon.add_icon.run", new_callable=AsyncMock) as run:
-        result = runner.invoke(
-            cli.app,
-            [
-                "add-icon",
-                "--database",
-                "db.h5",
-                "--icon",
-                "icon.png",
-                "--code",
-                "Rifle",
-                "--faction",
-                "c",
-                "--category",
-                "item",
-                "--mod",
-                "vanilla",
-                "--resolution",
-                "1080",
-                "--crated",
-                "--replace",
-            ],
-        )
-    assert result.exit_code == 0, result.output
-    run.assert_called_once_with(
-        icon=Path("icon.png"),
-        code="Rifle",
-        faction="c",
-        category="item",
-        mod="vanilla",
-        resolution=["1080"],
-        database=Path("db.h5"),
-        crated=True,
-        replace=True,
-        verbose=False,
-        quiet=False,
-        log_file=None,
-    )
 
 
 def test_visualize_opens_visualizer() -> None:

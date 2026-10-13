@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
-from fs_tools.template_db.template_manager import TemplateManager
+from fs_tools.core.template_store import read_statistics
 
 logger = logging.getLogger(__name__)
 
@@ -144,8 +144,7 @@ class DatabaseInfoWindow(QDialog):
             return
 
         try:
-            manager = TemplateManager(database_path=db_path_obj)
-            stats = manager.get_database_statistics()
+            stats = read_statistics(db_path_obj)
 
             # Set up table: Mod column + resolution columns
             num_cols = 1 + len(stats.resolutions)

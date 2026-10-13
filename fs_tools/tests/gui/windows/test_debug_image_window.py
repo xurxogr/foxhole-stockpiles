@@ -1,5 +1,6 @@
 """Tests for DebugImageWindow."""
 
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -22,7 +23,8 @@ from fs_tools.models.debug_candidate import DebugCandidate
 from fs_tools.models.detected_icon_info import DetectedIconInfo
 from fs_tools.models.icon_template import IconTemplate
 from fs_tools.models.scan_result import ScanResult
-from fs_tools.template_db.template_database import TemplateDatabase
+
+MODULE = "fs_tools.gui.windows.debug_image_window"
 
 
 @pytest.fixture
@@ -115,30 +117,26 @@ def mock_template() -> IconTemplate:
 
 
 @pytest.fixture
-def mock_database() -> MagicMock:
-    """Create a mock template database.
+def mock_database() -> list[IconTemplate]:
+    """Create the (empty) templates of one resolution.
 
     Returns:
-        MagicMock: A mock database instance.
+        list[IconTemplate]: An empty template list.
     """
-    db = MagicMock(spec=TemplateDatabase)
-    db.templates = []
-    return db
+    return []
 
 
 @pytest.fixture
-def mock_database_with_templates(mock_template: IconTemplate) -> MagicMock:
-    """Create a mock template database with templates.
+def mock_database_with_templates(mock_template: IconTemplate) -> list[IconTemplate]:
+    """Create the templates of one resolution.
 
     Args:
-        mock_template: Mock template fixture.
+        mock_template (IconTemplate): Mock template fixture.
 
     Returns:
-        MagicMock: A mock database instance with templates.
+        list[IconTemplate]: The templates stored for one resolution.
     """
-    db = MagicMock(spec=TemplateDatabase)
-    db.templates = [mock_template]
-    return db
+    return [mock_template]
 
 
 @pytest.fixture
@@ -172,21 +170,20 @@ class TestDatabaseLoader:
         """
         loader = DatabaseLoader("/path/to/db.h5")
 
-        mock_databases = {SupportedResolution.R_1080: MagicMock()}
+        mock_databases: dict[SupportedResolution, list[IconTemplate]] = {
+            SupportedResolution.R_1080: []
+        }
 
-        with patch("fs_tools.gui.windows.debug_image_window.TemplateManager"):
-            with patch(
-                "fs_tools.gui.windows.debug_image_window.asyncio.run",
-                return_value=mock_databases,
-            ):
-                # Connect signal to capture result
-                result: list[Any] = []
-                loader.finished.connect(lambda x: result.append(x))
+        with patch(f"{MODULE}.read_all_resolutions", return_value=mock_databases) as mock_read:
+            # Connect signal to capture result
+            result: list[Any] = []
+            loader.finished.connect(lambda x: result.append(x))
 
-                loader.run()
+            loader.run()
 
-                assert len(result) == 1
-                assert result[0] == mock_databases
+            mock_read.assert_called_once_with(Path("/path/to/db.h5"))
+            assert len(result) == 1
+            assert result[0] == mock_databases
 
     def test_run_error(self, qtbot: Any) -> None:
         """Test database loading error handling.
@@ -197,7 +194,7 @@ class TestDatabaseLoader:
         loader = DatabaseLoader("/path/to/db.h5")
 
         with patch(
-            "fs_tools.gui.windows.debug_image_window.TemplateManager",
+            f"{MODULE}.read_all_resolutions",
             side_effect=FileNotFoundError("Database not found"),
         ):
             # Connect signal to capture error
@@ -641,7 +638,7 @@ class TestDebugImageWindowComparison:
         self,
         debug_window: DebugImageWindow,
         mock_detected_icon: DetectedIconInfo,
-        mock_database: MagicMock,
+        mock_database: list[IconTemplate],
     ) -> None:
         """Test update comparison with no scan result.
 
@@ -692,8 +689,7 @@ class TestDebugImageWindowComparison:
             mock_template: Mock template.
         """
         # Create database with matching template
-        db = MagicMock(spec=TemplateDatabase)
-        db.templates = [mock_template]
+        db: list[IconTemplate] = [mock_template]
 
         debug_window.all_databases = {SupportedResolution.R_1080: db}
         debug_window.scan_result = mock_scan_result
@@ -718,8 +714,7 @@ class TestDebugImageWindowComparison:
             mock_template: Template the candidate maps back to (code 'TestItem',
                 mod 'vanilla', neutral, uncrated).
         """
-        db = MagicMock(spec=TemplateDatabase)
-        db.templates = [mock_template]
+        db: list[IconTemplate] = [mock_template]
         debug_window.all_databases = {SupportedResolution.R_1080: db}
         debug_window.scan_result = mock_scan_result
 
@@ -792,11 +787,9 @@ class TestDebugImageWindowComparison:
             image=np.zeros((48, 48, 3), dtype=np.uint8),
         )
 
-        db_1080 = MagicMock(spec=TemplateDatabase)
-        db_1080.templates = [template_1080]
+        db_1080: list[IconTemplate] = [template_1080]
 
-        db_1440 = MagicMock(spec=TemplateDatabase)
-        db_1440.templates = [template_1440]
+        db_1440: list[IconTemplate] = [template_1440]
 
         debug_window.all_databases = {
             SupportedResolution.R_1080: db_1080,
@@ -833,8 +826,7 @@ class TestDebugImageWindowComparison:
             image=np.zeros((32, 32, 3), dtype=np.uint8),
         )
 
-        db = MagicMock(spec=TemplateDatabase)
-        db.templates = [template]
+        db: list[IconTemplate] = [template]
 
         debug_window.all_databases = {SupportedResolution.R_1080: db}
         debug_window.scan_result = mock_scan_result
@@ -857,8 +849,7 @@ class TestDebugImageWindowComparison:
             mock_detected_icon: Mock detected icon.
             mock_scan_result: Mock scan result.
         """
-        db = MagicMock(spec=TemplateDatabase)
-        db.templates = []  # Empty templates
+        db: list[IconTemplate] = []  # Empty templates
 
         debug_window.all_databases = {SupportedResolution.R_1080: db}
         debug_window.scan_result = mock_scan_result
@@ -1017,7 +1008,7 @@ class TestDebugImageWindowDatabaseLoading:
     def test_on_databases_loaded(
         self,
         debug_window: DebugImageWindow,
-        mock_database: MagicMock,
+        mock_database: list[IconTemplate],
     ) -> None:
         """Test successful database load handling.
 
@@ -1025,7 +1016,7 @@ class TestDebugImageWindowDatabaseLoading:
             debug_window: Window fixture.
             mock_database: Mock database.
         """
-        all_databases: dict[SupportedResolution, TemplateDatabase] = {
+        all_databases: dict[SupportedResolution, list[IconTemplate]] = {
             SupportedResolution.R_1080: mock_database,
         }
 

@@ -118,10 +118,12 @@ v13→v14 reworks webhook `forward` auth into `header`; v14→v15 drops
 
 ## Template database (HDF5) — owned by `fs_tools`
 
-`fs_tools/template_db/template_database.py` (read/write) +
-`template_manager.py` (matching) + `icon_manager.py`. The external `fs-ocr`
-engine reads this DB at scan time; the runtime no longer touches it directly.
-The DB is built by `fs-assets add-mod` (one mod per call, re-adding replaces it).
+The DB is built by `fs-assets add-mod` (one mod per call, re-adding replaces it)
+and single icons are added/replaced/removed with `fs-assets modify-icon`. The
+external `fs-ocr` engine reads it at scan time; the runtime no longer touches it
+directly. The tools GUI reads/edits it through `fs_tools/core/template_store.py`
+(wraps `fs_assets.read_templates` / `database_statistics` / `modify_icon`);
+`IconTemplate` takes its pHash from the DB instead of computing it.
 
 ```
 database.h5
@@ -135,7 +137,7 @@ database.h5
 ```
 
 - All templates scaled relative to 1920px base; multi-mod (vanilla, airborne, community).
-- Two-phase match: pHash prefilter → NCC scoring → pixel-diff tiebreaker (inside engine/tooling).
+- Two-phase match: pHash prefilter → NCC scoring → pixel-diff tiebreaker (inside the `fs-ocr` engine).
 
 ## Catalog JSON (`data/catalog.json`)
 
@@ -156,4 +158,4 @@ populated (no `x`/`y`); change-tracking keyed by `Stockpile.to_key()`.
 2. `core/settings/app_settings.py` + `config_migrator/` package (v16)
 3. `core/settings/sections/scanner.py` — incl. `capture_key`
 4. `core/settings/sections/output/webhook_handler.py` — auth types (basic/bearer/header)
-5. `fs_tools/template_db/` — HDF5 access + matching
+5. `fs_tools/core/template_store.py` — tools-side HDF5 access via `fs-assets`

@@ -65,7 +65,6 @@ Running `fs` with no subcommand launches the GUI. Run `fs <command> --help` for 
 
 ### Tooling commands (`fs-tools`)
 
-- **`fs-tools add-icon`** — add an individual icon to an existing database without a full rebuild.
 - **`fs-tools visualize --database db.h5`** — open the database visualizer GUI.
 - **`fs-tools debug screenshot.png --database db.h5`** — open the debug image viewer for a screenshot.
 - **`fs-tools-gui`** (or `fs-tools` with no subcommand) — the tooling GUI (catalog & database builder).
@@ -110,11 +109,15 @@ fs scan --database templates.h5 --image shot.png
 `check-paks` reports how many catalog icons and overlays the PAKs contain. Pass
 `--pak` more than once for multi-file mods. Re-adding a mod replaces its
 templates; `--resolution 1080,1440` rebuilds only those resolutions.
-`fs-assets modify-icon` replaces a single icon from a PNG or `.uasset`.
 
-Per-tool documentation:
+To add, replace or remove a single icon without a full rebuild:
 
-- [Add Icon](../fs_tools/commands/add_icon/README.md) — add individual icons to databases
+```bash
+fs-assets modify-icon --db templates.h5 --code RifleW --faction wardens --category item --icon rifle.png [--resolution 1080,1440] [--replace | --remove]
+```
+
+The icon can be a PNG or a game `.uasset`; it is resized and composited like the
+game-built templates. Omit `--resolution` to apply it to all resolutions.
 
 ## Configuration
 

@@ -1,6 +1,5 @@
 """Debug image viewer window for analyzing screenshot scanning results."""
 
-import asyncio
 import logging
 from pathlib import Path
 
@@ -27,11 +26,11 @@ from PySide6.QtWidgets import (
 from foxhole_stockpiles.core.image_io import resize_bgr, swap_rb
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
+from fs_tools.core.template_store import read_all_resolutions
 from fs_tools.gui.utils.image_scan_worker import ImageScanWorker
 from fs_tools.models.detected_icon_info import DetectedIconInfo
+from fs_tools.models.icon_template import IconTemplate
 from fs_tools.models.scan_result import ScanResult
-from fs_tools.template_db.template_database import TemplateDatabase
-from fs_tools.template_db.template_manager import TemplateManager
 
 logger = logging.getLogger(__name__)
 
@@ -93,10 +92,7 @@ class DatabaseLoader(QThread):
             error: Signal with error message on failure.
         """
         try:
-            db_path = Path(self.database_path)
-            manager = TemplateManager(database_path=db_path)
-            all_databases = asyncio.run(manager.load_all_resolutions())
-            self.finished.emit(all_databases)
+            self.finished.emit(read_all_resolutions(Path(self.database_path)))
         except Exception as e:  # noqa: BLE001 - report any failure via the error signal
             logger.exception("Failed to load databases")
             self.error.emit(str(e))
@@ -121,7 +117,7 @@ class DebugImageWindow(QDialog):
         """
         super().__init__(parent)
         self.database_path = database_path
-        self.all_databases: dict[SupportedResolution, TemplateDatabase] = {}
+        self.all_databases: dict[SupportedResolution, list[IconTemplate]] = {}
         self.scan_result: ScanResult | None = None
         self.selected_icon: DetectedIconInfo | None = None
 
@@ -465,13 +461,13 @@ class DebugImageWindow(QDialog):
         if not screenshot_res or screenshot_res not in self.all_databases:
             return
 
-        screenshot_db = self.all_databases[screenshot_res]
-        target_size = screenshot_db.templates[0].image.shape[0] if screenshot_db.templates else 64
+        screenshot_templates = self.all_databases[screenshot_res]
+        target_size = screenshot_templates[0].image.shape[0] if screenshot_templates else 64
 
         # Look up each candidate's template image by identity, for display only.
         template_by_key = {
             (tmpl.code, tmpl.mod, tmpl.crated, str(tmpl.faction)): tmpl
-            for tmpl in screenshot_db.templates
+            for tmpl in screenshot_templates
         }
 
         # The engine (fs_ocr.scan_debug) already did the matching; we only filter
@@ -720,7 +716,7 @@ class DebugImageWindow(QDialog):
         self.loader_thread.start()
 
     def _on_databases_loaded(
-        self, all_databases: dict[SupportedResolution, TemplateDatabase]
+        self, all_databases: dict[SupportedResolution, list[IconTemplate]]
     ) -> None:
         """Handle successful database loading.
 

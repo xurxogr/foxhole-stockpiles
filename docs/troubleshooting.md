@@ -197,7 +197,7 @@ An item becomes "Unknown" when:
 |-------|---------|----------|
 | Resolution mismatch | Best match has confidence > 0.5 but item still Unknown | Use a screenshot whose resolution matches a database resolution (no display scaling) |
 | Mod version mismatch | Item exists but pixels differ | Rebuild database with current mod version |
-| Item not in database | No best match found | Add the item using `fs-tools add-icon` or rebuild database |
+| Item not in database | No best match found | Add the item using `fs-assets modify-icon` or rebuild database |
 | Wrong category detected | Match found but wrong category | Check if screenshot has UI artifacts |
 | Compression artifacts | Low confidence across all candidates | Use uncompressed PNG screenshots |
 
