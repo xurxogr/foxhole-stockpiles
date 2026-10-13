@@ -12,6 +12,7 @@ from typing import Any
 import fs_sav
 
 from foxhole_stockpiles.enums.item_faction import ItemFaction
+from foxhole_stockpiles.models.refinery import Refinery
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_coords import StockpileCoords
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
@@ -151,6 +152,9 @@ def _convert_to_stockpile(data: dict[str, Any]) -> Stockpile:
     except (ValueError, AttributeError):
         timestamp = datetime.now(tz=UTC)
 
+    refinery_data = data.get("refinery")
+    refinery = Refinery.model_validate(refinery_data) if refinery_data else None
+
     return Stockpile(
         name=data.get("name", ""),
         type=stockpile_type,
@@ -159,6 +163,7 @@ def _convert_to_stockpile(data: dict[str, Any]) -> Stockpile:
         coords=coords,
         is_reserve=data.get("is_reserve", False),
         items=items,
+        refinery=refinery,
         timestamp=timestamp,
         raw_timestamp=None,  # fs-sav doesn't expose raw ticks
     )

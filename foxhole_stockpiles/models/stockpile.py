@@ -1,12 +1,13 @@
 """Stockpile model."""
 
 from datetime import datetime
-from typing import Any, cast
+from typing import Any, Self, cast
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.stockpile_type import StockpileType
+from foxhole_stockpiles.models.refinery import Refinery
 from foxhole_stockpiles.models.stockpile_coords import StockpileCoords
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
 
@@ -27,6 +28,10 @@ class Stockpile(BaseModel):
     shard: str | None = Field(description="Shard name", default=None)
     ingame_timestamp: str | None = Field(description="In game timestamp", default=None)
     resolution: str | None = Field(description="Resolution of the screenshot", default=None)
+    refinery: Refinery | None = Field(
+        description="Refinery orders and storages (main Refinery stockpile only), if provided",
+        default=None,
+    )
     errors: list[str] | None = Field(
         description="List of errors encountered during processing", default=None
     )
@@ -47,6 +52,24 @@ class Stockpile(BaseModel):
         """
         coords_key = self.coords.to_key() if self.coords else "0,0"
         return f"{self.type}:{self.hex}:{coords_key}:{self.name}"
+
+    @model_validator(mode="after")
+    def check_refinery(self) -> Self:
+        """Reject refinery data outside a non-reserve Refinery stockpile.
+
+        Returns:
+            Self: The validated model.
+
+        Raises:
+            ValueError: If refinery is set on a non-Refinery or reserve stockpile.
+        """
+        if self.refinery is None:
+            return self
+        if self.type != StockpileType.REFINERY:
+            raise ValueError(f"refinery is only allowed on Refinery stockpiles, got '{self.type}'")
+        if self.is_reserve:
+            raise ValueError("refinery is not allowed on reserve stockpiles")
+        return self
 
     @field_serializer("timestamp")
     def serialize_timestamp(self, value: datetime) -> str:

@@ -149,6 +149,34 @@ class TestConvertToStockpile:
 
         assert result.type == "UnknownType"
 
+    def test_convert_refinery(self) -> None:
+        """The refinery block from fs-sav is kept on the stockpile."""
+        refinery_data: dict[str, Any] = {
+            "orders_access": {"level": "public"},
+            "orders": [{"slot": 0, "code": "Cloth", "source": 0, "refined": 50, "duration": 0}],
+            "storages": [
+                {
+                    "access": {"level": "squad", "squad_id": 1},
+                    "slot": 1,
+                    "code": "Diesel",
+                    "refined": 5309,
+                }
+            ],
+        }
+        data: dict[str, Any] = {"type": "Refinery", "refinery": refinery_data}
+
+        result = _convert_to_stockpile(data)
+
+        assert result.refinery is not None
+        assert result.refinery.model_dump(exclude_none=True) == refinery_data
+
+    def test_convert_refinery_absent(self) -> None:
+        """A Refinery without the refinery block converts with refinery None."""
+        result = _convert_to_stockpile({"type": "Refinery"})
+
+        assert result.type == StockpileType.REFINERY
+        assert result.refinery is None
+
 
 class TestParseSave:
     """Test suite for parse_save function."""
