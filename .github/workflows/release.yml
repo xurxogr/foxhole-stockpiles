@@ -15,6 +15,7 @@ permissions:
 jobs:
   release:
     name: Build and publish Windows executables
+    timeout-minutes: 30
     runs-on: windows-latest
     permissions:
       contents: write  # needed to create the release and upload assets

@@ -12,6 +12,9 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+# Upper bound for each smoke-test run of a built executable.
+SMOKE_TEST_TIMEOUT_SECONDS = 120
+
 
 def get_fs_hidden_imports() -> list[str]:
     """Get all hidden imports for the ``fs`` runtime build.
@@ -387,22 +390,49 @@ def build_executable(project_root: Path, spec: BuildSpec) -> bool:
 
     # Smoke-test the executable.
     print("\n  Testing executable...")
-    for args in spec.test_args:
+    return all(smoke_test(exe_path=exe_path, args=args) for args in spec.test_args)
+
+
+def smoke_test(exe_path: Path, args: list[str]) -> bool:
+    """Run the built executable once and check that it exits cleanly.
+
+    A windowed executable that crashes on startup shows a blocking error
+    dialog instead of exiting, so the run is bounded by a timeout.
+
+    Args:
+        exe_path (Path): Path to the built executable.
+        args (list[str]): Arguments to pass to the executable.
+
+    Returns:
+        bool: True if the executable exited with code 0 within the timeout.
+    """
+    label = " ".join(args) or "(no args)"
+    print(f"  Running '{label}'...", flush=True)
+    try:
         result = subprocess.run(
             [str(exe_path), *args],
             capture_output=True,
             text=True,
             encoding="utf-8",
             errors="replace",
+            timeout=SMOKE_TEST_TIMEOUT_SECONDS,
         )
-        label = " ".join(args) or "(no args)"
-        if result.returncode == 0:
-            print(f"  [OK] '{label}' works")
-        else:
-            print(f"  [FAIL] '{label}' failed")
-            return False
+    except subprocess.TimeoutExpired:
+        print(
+            f"  [FAIL] '{label}' did not exit within {SMOKE_TEST_TIMEOUT_SECONDS}s "
+            "(likely a startup crash blocked on an error dialog)",
+            flush=True,
+        )
+        return False
 
-    return True
+    if result.returncode == 0:
+        print(f"  [OK] '{label}' works", flush=True)
+        return True
+
+    print(f"  [FAIL] '{label}' failed with exit code {result.returncode}")
+    print(f"  stdout:\n{result.stdout}")
+    print(f"  stderr:\n{result.stderr}", flush=True)
+    return False
 
 
 def get_build_specs() -> list[BuildSpec]:

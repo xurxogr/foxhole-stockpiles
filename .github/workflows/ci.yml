@@ -102,6 +102,7 @@ jobs:
 
   build-windows-exe:
     name: Build Windows Executable
+    timeout-minutes: 30
     runs-on: windows-latest
     steps:
       - name: Check out code
