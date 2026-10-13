@@ -3,6 +3,7 @@
 from datetime import datetime
 from typing import Any, Self, cast
 
+import fs_sav
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 
 from foxhole_stockpiles.enums.item_faction import ItemFaction
@@ -12,6 +13,9 @@ from foxhole_stockpiles.models.refinery import Refinery
 from foxhole_stockpiles.models.stockpile_coords import StockpileCoords
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
 from foxhole_stockpiles.models.stockpile_tech import StockpileTech
+
+# Fields fs-sav builds the stockpile key from.
+_KEY_FIELDS = {"type", "hex", "coords", "name"}
 
 
 class Stockpile(BaseModel):
@@ -54,14 +58,15 @@ class Stockpile(BaseModel):
     def to_key(self) -> str:
         """Generate a unique key for this stockpile.
 
-        The key is based on type, hex, coords, and name (for reserves).
+        Delegates to fs-sav (type:hex:x,y:name, coordinates rounded to 4
+        decimals) so the key matches the one fs-sav uses to track stockpiles.
         Used for tracking changes in the savefile monitor.
 
         Returns:
             str: Unique key for this stockpile.
         """
-        coords_key = self.coords.to_key() if self.coords else "0,0"
-        return f"{self.type}:{self.hex}:{coords_key}:{self.name}"
+        key: str = fs_sav.stockpile_key(self.model_dump(mode="json", include=_KEY_FIELDS))
+        return key
 
     @model_validator(mode="after")
     def check_type_specific_data(self) -> Self:

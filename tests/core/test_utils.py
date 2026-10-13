@@ -5,6 +5,7 @@ including catalog loading, frequency analysis, hash distance calculations,
 and perceptual hash computation for images.
 """
 
+import os
 from pathlib import Path
 from unittest.mock import patch
 
@@ -12,7 +13,6 @@ from foxhole_stockpiles.core.utils import (
     auto_detect_savefile,
     find_mapdata_file,
     get_bundled_resource_path,
-    get_default_savefile_dir,
     is_frozen,
 )
 
@@ -79,62 +79,6 @@ class TestGetBundledResourcePath:
                 del sys._MEIPASS
 
 
-class TestGetDefaultSavefileDir:
-    """Test suite for the get_default_savefile_dir function."""
-
-    def test_windows_with_appdata(self, tmp_path: Path) -> None:
-        """Test finding save directory on Windows with LOCALAPPDATA set.
-
-        Args:
-            tmp_path (Path): Temporary directory path from pytest fixture.
-        """
-        # Create fake Windows save directory structure
-        save_dir = tmp_path / "Foxhole" / "Saved" / "SaveGames"
-        save_dir.mkdir(parents=True)
-
-        with (
-            patch("foxhole_stockpiles.core.utils.sys.platform", "win32"),
-            patch.dict("os.environ", {"LOCALAPPDATA": str(tmp_path)}),
-        ):
-            result = get_default_savefile_dir()
-            assert result == save_dir
-
-    def test_windows_no_appdata(self) -> None:
-        """Test Windows without LOCALAPPDATA environment variable."""
-        with (
-            patch("foxhole_stockpiles.core.utils.sys.platform", "win32"),
-            patch.dict("os.environ", {}, clear=True),
-        ):
-            result = get_default_savefile_dir()
-            assert result is None
-
-    def test_windows_dir_not_exists(self, tmp_path: Path) -> None:
-        """Test Windows with LOCALAPPDATA but no save directory.
-
-        Args:
-            tmp_path (Path): Temporary directory path from pytest fixture.
-        """
-        with (
-            patch("foxhole_stockpiles.core.utils.sys.platform", "win32"),
-            patch.dict("os.environ", {"LOCALAPPDATA": str(tmp_path)}),
-        ):
-            result = get_default_savefile_dir()
-            assert result is None
-
-    def test_unsupported_platform(self) -> None:
-        """Test with unsupported platform."""
-        with patch("foxhole_stockpiles.core.utils.sys.platform", "darwin"):
-            result = get_default_savefile_dir()
-            assert result is None
-
-    def test_linux_no_wsl_no_proton(self) -> None:
-        """Test Linux when neither WSL nor Proton paths exist."""
-        with patch("foxhole_stockpiles.core.utils.sys.platform", "linux"):
-            result = get_default_savefile_dir()
-            # Should return None since paths don't exist
-            assert result is None or isinstance(result, Path)
-
-
 class TestFindMapdataFile:
     """Test suite for the find_mapdata_file function."""
 
@@ -150,20 +94,23 @@ class TestFindMapdataFile:
         result = find_mapdata_file(tmp_path)
         assert result == mapdata_file
 
-    def test_find_first_mapdata(self, tmp_path: Path) -> None:
-        """Test finding first MapData.sav when multiple exist.
+    def test_find_most_recent_mapdata(self, tmp_path: Path) -> None:
+        """Test that the most recently written MapData.sav wins when several exist.
 
         Args:
             tmp_path (Path): Temporary directory path from pytest fixture.
         """
-        mapdata1 = tmp_path / "User1_MapData.sav"
-        mapdata2 = tmp_path / "User2_MapData.sav"
-        mapdata1.touch()
-        mapdata2.touch()
+        older = tmp_path / "76561198000000001_MapData.sav"
+        newer = tmp_path / "76561198000000002_MapData.sav"
+        older.touch()
+        newer.touch()
+        os.utime(older, (1_000_000, 1_000_000))
+        os.utime(newer, (2_000_000, 2_000_000))
 
-        result = find_mapdata_file(tmp_path)
-        # Should return one of them (first found)
-        assert result in (mapdata1, mapdata2)
+        assert find_mapdata_file(tmp_path) == newer
+
+        os.utime(older, (3_000_000, 3_000_000))
+        assert find_mapdata_file(tmp_path) == older
 
     def test_no_mapdata_found(self, tmp_path: Path) -> None:
         """Test when no MapData.sav exists.
@@ -191,36 +138,27 @@ class TestFindMapdataFile:
 class TestAutoDetectSavefile:
     """Test suite for the auto_detect_savefile function."""
 
-    def test_auto_detect_success(self, tmp_path: Path) -> None:
-        """Test successful auto-detection of save file.
-
-        Args:
-            tmp_path (Path): Temporary directory path from pytest fixture.
-        """
-        save_dir = tmp_path / "SaveGames"
-        save_dir.mkdir()
-        mapdata = save_dir / "User_MapData.sav"
-        mapdata.touch()
-
-        with patch("foxhole_stockpiles.core.utils.get_default_savefile_dir", return_value=save_dir):
+    def test_auto_detect_uses_newest(self) -> None:
+        """The first (newest) save fs-sav finds is returned."""
+        saves = [
+            {
+                "path": "/saves/76561198000000002_MapData.sav",
+                "steam_id": "76561198000000002",
+                "modified": "2026-10-13T10:00:00Z",
+                "size_bytes": 2048,
+            },
+            {
+                "path": "/saves/76561198000000001_MapData.sav",
+                "steam_id": "76561198000000001",
+                "modified": "2026-10-12T10:00:00Z",
+                "size_bytes": 1024,
+            },
+        ]
+        with patch("foxhole_stockpiles.core.utils.fs_sav.find_save_files", return_value=saves):
             result = auto_detect_savefile()
-            assert result == mapdata
+        assert result == Path("/saves/76561198000000002_MapData.sav")
 
-    def test_auto_detect_no_save_dir(self) -> None:
-        """Test auto-detection when no save directory found."""
-        with patch("foxhole_stockpiles.core.utils.get_default_savefile_dir", return_value=None):
-            result = auto_detect_savefile()
-            assert result is None
-
-    def test_auto_detect_no_mapdata_file(self, tmp_path: Path) -> None:
-        """Test auto-detection when save dir exists but no MapData file.
-
-        Args:
-            tmp_path (Path): Temporary directory path from pytest fixture.
-        """
-        save_dir = tmp_path / "SaveGames"
-        save_dir.mkdir()
-
-        with patch("foxhole_stockpiles.core.utils.get_default_savefile_dir", return_value=save_dir):
-            result = auto_detect_savefile()
-            assert result is None
+    def test_auto_detect_none_found(self) -> None:
+        """No save found by fs-sav yields None."""
+        with patch("foxhole_stockpiles.core.utils.fs_sav.find_save_files", return_value=[]):
+            assert auto_detect_savefile() is None

@@ -22,6 +22,16 @@ from foxhole_stockpiles.models.stockpile_tech import StockpileTech
 
 logger = logging.getLogger(__name__)
 
+# Text of the fs-sav error raised when the game kept writing the file while it was read.
+_FILE_BUSY_MARKER = "kept changing while being read"
+
+
+class SaveFileBusyError(RuntimeError):
+    """Raised when the save file kept changing while being read.
+
+    The game was writing it; this is transient and the read can be retried.
+    """
+
 
 def parse_save(
     path: Path | str,
@@ -46,19 +56,26 @@ def parse_save(
         list[Stockpile]: List of parsed stockpiles.
 
     Raises:
+        SaveFileBusyError: If the game kept writing the file while it was read.
         RuntimeError: If parsing fails.
     """
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        raw_stockpiles = fs_sav.parse_save(
-            str(path),
-            public=public,
-            reserves=reserves,
-            hex=hex_filter,
-            stockpile_type=stockpile_type,
-            with_items=with_items,
-        )
-    _log_warnings(caught)
+        try:
+            raw_stockpiles = fs_sav.parse_save(
+                str(path),
+                public=public,
+                reserves=reserves,
+                hex=hex_filter,
+                stockpile_type=stockpile_type,
+                with_items=with_items,
+            )
+        except RuntimeError as e:
+            if _FILE_BUSY_MARKER in str(e):
+                raise SaveFileBusyError(str(e)) from e
+            raise
+        finally:
+            _log_warnings(caught)
 
     if not isinstance(raw_stockpiles, list):
         raise RuntimeError(f"fs_sav.parse_save returned unexpected type: {type(raw_stockpiles)}")

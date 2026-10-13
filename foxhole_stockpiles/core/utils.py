@@ -1,8 +1,9 @@
 """Utility functions for the stockpile system."""
 
-import os
 import sys
 from pathlib import Path
+
+import fs_sav
 
 
 def is_frozen() -> bool:
@@ -43,80 +44,31 @@ def get_bundled_resource_path(relative_path: str) -> Path:
 # ==================== Savefile Locator Utilities ====================
 
 
-def get_default_savefile_dir() -> Path | None:
-    """Get the default Foxhole save file directory based on OS.
-
-    Returns:
-        Path | None: Default save games directory or None if not found.
-    """
-    if sys.platform == "win32":
-        local_appdata = os.environ.get("LOCALAPPDATA")
-        if local_appdata:
-            save_dir = Path(local_appdata) / "Foxhole" / "Saved" / "SaveGames"
-            if save_dir.exists():
-                return save_dir
-    elif sys.platform == "linux":
-        # WSL path - try common WSL mount points
-        wsl_users = Path("/mnt/c/Users")
-        if wsl_users.exists():
-            try:
-                for user_dir in wsl_users.iterdir():
-                    try:
-                        wsl_path = (
-                            user_dir / "AppData" / "Local" / "Foxhole" / "Saved" / "SaveGames"
-                        )
-                        if wsl_path.exists():
-                            return wsl_path
-                    except PermissionError:
-                        continue
-            except PermissionError:
-                pass
-
-        # Native Linux (Proton/Wine)
-        home = Path.home()
-        proton_path = (
-            home
-            / ".steam"
-            / "steam"
-            / "steamapps"
-            / "compatdata"
-            / "505460"
-            / "pfx"
-            / "drive_c"
-            / "users"
-            / "steamuser"
-            / "AppData"
-            / "Local"
-            / "Foxhole"
-            / "Saved"
-            / "SaveGames"
-        )
-        if proton_path.exists():
-            return proton_path
-    return None
-
-
 def find_mapdata_file(save_dir: Path) -> Path | None:
-    """Find the MapData.sav file in the save directory.
+    """Find the most recent MapData.sav file in a save directory.
+
+    Several Steam accounts can leave one <SteamID64>_MapData.sav each in
+    the same folder; the most recently written one is picked.
 
     Args:
         save_dir (Path): Save games directory.
 
     Returns:
-        Path | None: Path to MapData.sav or None if not found.
+        Path | None: Path to the newest MapData.sav or None if not found.
     """
-    for f in save_dir.glob("*_MapData.sav"):
-        return f
-    return None
+    return max(save_dir.glob("*_MapData.sav"), key=lambda f: f.stat().st_mtime, default=None)
 
 
 def auto_detect_savefile() -> Path | None:
     """Auto-detect the Foxhole MapData.sav file.
 
+    Delegates the search to fs-sav, which looks in every known save location
+    (Windows, WSL users and Steam/Proton libraries) and sorts newest first.
+
     Returns:
-        Path | None: Path to the detected save file, or None if not found.
+        Path | None: Path to the most recent save file, or None if not found.
     """
-    save_dir = get_default_savefile_dir()
-    if save_dir:
-        return find_mapdata_file(save_dir)
-    return None
+    saves = fs_sav.find_save_files()
+    if not saves:
+        return None
+    return Path(saves[0]["path"])

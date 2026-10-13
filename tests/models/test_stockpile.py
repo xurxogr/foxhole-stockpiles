@@ -8,6 +8,7 @@ from datetime import datetime
 
 from foxhole_stockpiles.enums.stockpile_type import StockpileType
 from foxhole_stockpiles.models.stockpile import Stockpile
+from foxhole_stockpiles.models.stockpile_coords import StockpileCoords
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
 
 
@@ -127,3 +128,17 @@ class TestStockpile:
         assert updated.name == "Updated"
         assert updated.shard == "NEW"
         assert stockpile.name == "Original"  # Original unchanged
+
+    def test_to_key_matches_fs_sav(self) -> None:
+        """The key is fs-sav's: type:hex:x,y:name with 4-decimal coordinates."""
+        stockpile = Stockpile(
+            name="Logi",
+            type=StockpileType.SEAPORT,
+            hex="Westgate",
+            coords=StockpileCoords(x=0.4577456, y=0.66),
+        )
+        assert stockpile.to_key() == "Seaport:Westgate:0.4577,0.6600:Logi"
+
+    def test_to_key_without_location(self) -> None:
+        """Missing hex and coords fall back to empty hex and 0,0."""
+        assert Stockpile(type=StockpileType.SEAPORT).to_key() == "Seaport::0,0:"

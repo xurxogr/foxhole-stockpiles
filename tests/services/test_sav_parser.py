@@ -14,6 +14,7 @@ from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.stockpile_type import StockpileType
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.services.sav_parser import (
+    SaveFileBusyError,
     _convert_to_stockpile,
     info,
     parse_save,
@@ -92,6 +93,27 @@ class TestParseSaveWarnings:
 
         assert len(result) == 1
         assert [r.getMessage() for r in caplog.records] == [f"fs-sav: {self.SKIPPED}"]
+
+
+class TestParseSaveBusy:
+    """A save file the game kept writing is reported as SaveFileBusyError."""
+
+    def test_busy_file_raises_save_file_busy(self) -> None:
+        """fs-sav's 'kept changing' RuntimeError becomes SaveFileBusyError."""
+        with patch("foxhole_stockpiles.services.sav_parser.fs_sav") as mock_fs_sav:
+            mock_fs_sav.parse_save.side_effect = RuntimeError(
+                "x.sav kept changing while being read"
+            )
+            with pytest.raises(SaveFileBusyError, match="kept changing"):
+                parse_save("x.sav")
+
+    def test_other_runtime_error_unchanged(self) -> None:
+        """Any other RuntimeError from fs-sav propagates as is."""
+        with patch("foxhole_stockpiles.services.sav_parser.fs_sav") as mock_fs_sav:
+            mock_fs_sav.parse_save.side_effect = RuntimeError("corrupt save")
+            with pytest.raises(RuntimeError, match="corrupt save") as exc_info:
+                parse_save("x.sav")
+        assert not isinstance(exc_info.value, SaveFileBusyError)
 
 
 class TestConvertTimestampFallback:

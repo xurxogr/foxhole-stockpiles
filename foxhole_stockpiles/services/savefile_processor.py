@@ -7,7 +7,7 @@ from pathlib import Path
 
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.services.output_coordinator import OutputCoordinator, OutputResponse
-from foxhole_stockpiles.services.sav_parser import parse_save
+from foxhole_stockpiles.services.sav_parser import SaveFileBusyError, parse_save
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +149,8 @@ class SaveFileProcessor:
             list[Stockpile]: List of changed stockpiles that were output.
 
         Raises:
-            Exception: If processing fails and suppress_errors is False.
+            Exception: If processing fails and suppress_errors is False. A busy
+                save file (SaveFileBusyError) is otherwise retried on the next poll.
         """
         logger.info("Processing file...")
 
@@ -195,6 +196,13 @@ class SaveFileProcessor:
 
             return changed_stockpiles
 
+        except SaveFileBusyError as e:
+            if not suppress_errors:
+                raise
+            # The game was writing the file: forget its mtime so the next poll retries.
+            logger.warning("Save file busy, retrying on the next poll: %s", e)
+            self._last_mtime = None
+            return []
         except Exception as e:  # noqa: BLE001 - re-raised unless suppress_errors is set
             if not suppress_errors:
                 raise

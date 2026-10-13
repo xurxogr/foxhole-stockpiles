@@ -17,6 +17,7 @@ from unittest.mock import patch
 from foxhole_stockpiles.enums.stockpile_type import StockpileType
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_coords import StockpileCoords
+from foxhole_stockpiles.services.sav_parser import SaveFileBusyError
 from foxhole_stockpiles.services.savefile_processor import SaveFileProcessor
 
 _PARSE = "foxhole_stockpiles.services.savefile_processor.parse_save"
@@ -220,6 +221,25 @@ class TestProcessFile:
             result = await proc._process_file(is_initial=False, suppress_errors=True)
         assert result == []
 
+    async def test_busy_file_retried_next_poll(self, tmp_path: Path) -> None:
+        """A busy save file is forgotten (mtime reset) so the next poll retries it."""
+        proc, _ = make_processor(tmp_path)
+        proc._last_mtime = 123.0
+        with patch(_PARSE, side_effect=SaveFileBusyError("kept changing while being read")):
+            result = await proc._process_file(is_initial=False)
+        assert result == []
+        assert proc._last_mtime is None
+
+    async def test_busy_file_raised_without_suppress(self, tmp_path: Path) -> None:
+        """run_once surfaces a busy save file instead of retrying."""
+        proc, _ = make_processor(tmp_path)
+        with (
+            patch(_PARSE, side_effect=SaveFileBusyError("kept changing while being read")),
+            contextlib.suppress(SaveFileBusyError),
+        ):
+            await proc.run_once()
+            raise AssertionError("expected SaveFileBusyError")
+
 
 class TestRunWatchMode:
     """Watch-mode polling loop."""
@@ -257,6 +277,25 @@ class TestRunWatchMode:
             await asyncio.wait_for(task, timeout=2)
         assert state["n"] >= 2
         assert len(coord.calls) >= 2
+
+    async def test_busy_file_retried_without_mtime_change(self, tmp_path: Path) -> None:
+        """A busy read is retried on the next poll even if the file is not touched again."""
+        proc, coord = make_processor(tmp_path, poll_interval=0.01, emit_all_on_start=True)
+        state = {"n": 0}
+
+        def fake_parse(_path: Path) -> list[Stockpile]:
+            state["n"] += 1
+            if state["n"] == 1:
+                raise SaveFileBusyError("kept changing while being read")
+            return [make_stockpile()]
+
+        with patch(_PARSE, side_effect=fake_parse):
+            task = asyncio.create_task(proc.run())
+            await asyncio.sleep(0.05)
+            proc.stop()
+            await asyncio.wait_for(task, timeout=2)
+        assert state["n"] == 2
+        assert len(coord.calls) == 1
 
     async def test_missing_file_skips_initial_load(self, tmp_path: Path) -> None:
         """run() tolerates a missing file (no initial load, loop continues)."""
