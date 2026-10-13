@@ -1,24 +1,8 @@
 """Utility functions for the stockpile system."""
 
 import os
-import subprocess
 import sys
 from pathlib import Path
-from typing import Any
-
-
-def get_subprocess_kwargs() -> dict[str, Any]:
-    """Get platform-specific kwargs for subprocess calls to hide console windows.
-
-    On Windows, this returns kwargs to prevent CMD windows from appearing
-    when spawning subprocesses in GUI mode.
-
-    Returns:
-        dict[str, Any]: Kwargs to pass to subprocess.run() or create_subprocess_exec()
-    """
-    if sys.platform == "win32":
-        return {"creationflags": subprocess.CREATE_NO_WINDOW}
-    return {}
 
 
 def is_frozen() -> bool:

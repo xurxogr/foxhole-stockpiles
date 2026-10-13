@@ -36,8 +36,6 @@ def test_database_builder_tab_initialization(database_builder_tab: DatabaseBuild
     Args:
         database_builder_tab: DatabaseBuilderTab instance
     """
-    # Note: extractor_tool_input and converter_tool_input are now in ExternalToolsTab
-    # Note: workers is no longer edited here; it is configured per-build.
     assert database_builder_tab.catalog_file_input is not None
     assert database_builder_tab.resolution_list is not None
 
@@ -96,10 +94,6 @@ def test_database_builder_tab_default_all_resolutions_checked(
 # ===== Browse Tests =====
 
 
-# Note: browse_extractor_tool and browse_converter_tool tests removed -
-# these methods are now in ExternalToolsTab
-
-
 def test_database_builder_tab_browse_catalog_file(
     qtbot: Any, database_builder_tab: DatabaseBuilderTab
 ) -> None:
@@ -132,7 +126,6 @@ def test_database_builder_tab_set_values_all_fields(
     Args:
         database_builder_tab: DatabaseBuilderTab instance
     """
-    # Note: extractor_tool and converter_tool are now in ExternalToolsSettings
     settings = DatabaseBuilderSettings(
         catalog_file=Path("C:\\foxhole\\catalog.json"),
         target_resolutions=None,  # None means all
@@ -179,7 +172,6 @@ def test_database_builder_tab_get_values_all_fields_set(
     Args:
         database_builder_tab: DatabaseBuilderTab instance
     """
-    # Note: extractor_tool and converter_tool are now in ExternalToolsTab
     database_builder_tab.catalog_file_input.setText("C:\\foxhole\\catalog.json")
 
     settings = database_builder_tab.get_values()
@@ -195,7 +187,6 @@ def test_database_builder_tab_get_values_empty_fields(
     Args:
         database_builder_tab: DatabaseBuilderTab instance
     """
-    # Note: extractor_tool and converter_tool are now in ExternalToolsTab
     database_builder_tab.catalog_file_input.setText("")
 
     settings = database_builder_tab.get_values()
@@ -226,7 +217,6 @@ def test_database_builder_tab_roundtrip_specific_resolutions(
     Args:
         database_builder_tab: DatabaseBuilderTab instance
     """
-    # Note: extractor_tool and converter_tool are now in ExternalToolsTab
     target_resolutions = ["720", "1080", "1440"]
     original_settings = DatabaseBuilderSettings(
         catalog_file=Path("/data/catalog.json"),
@@ -441,38 +431,3 @@ def test_database_builder_tab_set_values_on_fresh_instance(qtbot: Any) -> None:
 # Workers is no longer edited in this tab (it is configured per-build in the
 # build-database window and via the CLI). The tab must preserve whatever value
 # was loaded so that saving the general config never wipes it.
-
-
-def test_database_builder_tab_workers_default_none(
-    database_builder_tab: DatabaseBuilderTab,
-) -> None:
-    """Test that the carried-through workers value defaults to None.
-
-    Args:
-        database_builder_tab: DatabaseBuilderTab instance
-    """
-    assert database_builder_tab.get_values().workers is None
-
-
-def test_database_builder_tab_preserves_workers_value(
-    database_builder_tab: DatabaseBuilderTab,
-) -> None:
-    """Test that a configured workers value survives a load/save round-trip.
-
-    Args:
-        database_builder_tab: DatabaseBuilderTab instance
-    """
-    database_builder_tab.set_values(DatabaseBuilderSettings(workers=4))
-    assert database_builder_tab.get_values().workers == 4
-
-
-def test_database_builder_tab_preserves_workers_none(
-    database_builder_tab: DatabaseBuilderTab,
-) -> None:
-    """Test that a None workers value is preserved (not coerced).
-
-    Args:
-        database_builder_tab: DatabaseBuilderTab instance
-    """
-    database_builder_tab.set_values(DatabaseBuilderSettings(workers=None))
-    assert database_builder_tab.get_values().workers is None

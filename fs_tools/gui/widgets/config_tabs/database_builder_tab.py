@@ -23,10 +23,7 @@ from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
 
 
 class DatabaseBuilderTab(QWidget):
-    """Tab for Database Builder configuration.
-
-    Note: External tools (repak, umodel) are configured in ExternalToolsTab.
-    """
+    """Tab for Database Builder configuration."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the Database Builder tab.
@@ -35,10 +32,6 @@ class DatabaseBuilderTab(QWidget):
             parent (QWidget | None): Parent widget. Defaults to None.
         """
         super().__init__(parent)
-        # The worker count is no longer edited here (it is chosen per-build in
-        # the build-database window and via the CLI ``--workers`` flag). The
-        # configured value is preserved across a save so those defaults survive.
-        self._workers: int | None = None
         self.init_ui()
 
     def init_ui(self) -> None:
@@ -139,7 +132,7 @@ class DatabaseBuilderTab(QWidget):
         self.catalog_label.setText(t("database_builder_tab.catalog_file"))
         self.catalog_label.setToolTip(t("database_builder_tab.catalog_tooltip"))
         self.catalog_file_input.setPlaceholderText(t("database_builder_tab.catalog_placeholder"))
-        self.catalog_download_btn.setText(t("external_tools_tab.download"))
+        self.catalog_download_btn.setText(t("common.download"))
         self.catalog_browse_btn.setText(t("common.browse"))
 
         self.resolutions_group.setTitle(t("database_builder_tab.resolutions_group"))
@@ -227,8 +220,6 @@ class DatabaseBuilderTab(QWidget):
                 values from.
         """
         self.catalog_file_input.setText(str(settings.catalog_file) if settings.catalog_file else "")
-        # Preserved unchanged: workers is configured per-build, not in this tab.
-        self._workers = settings.workers
 
         # Set resolution checkboxes
         # Disconnect to avoid triggering events during setup
@@ -327,5 +318,4 @@ class DatabaseBuilderTab(QWidget):
             catalog_file=Path(catalog_text) if catalog_text else None,
             target_resolutions=target_resolutions,
             # Carried through from the loaded settings (not edited in this tab).
-            workers=self._workers,
         )

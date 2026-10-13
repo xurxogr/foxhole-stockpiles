@@ -39,13 +39,13 @@ class StockpileItem(BaseModel):
 Custom `model_serializer` emits `candidates` only when non-empty.
 
 ### Other runtime models (`models/`)
-- `catalog_item.py` `CatalogItem` — item metadata (`cratable`, faction, category, icon)
 - `item_candidate.py` `ItemCandidate` — alternative match (code, confidence)
 - `stockpile_coords.py` `StockpileCoords` — `{x, y}` normalized map coords (`to_key()`)
 - `memory_snapshot.py`, `request_memory_stats.py` — memory monitoring
 
-(Matching/template/mod-import models — `MatchResult`, `IconTemplate`,
-`mod_import_*`, etc. — now live in `fs_tools/models/`, not the runtime. The old
+(Matching/template models — `IconTemplate`, `DatabaseStatistics`, etc. — live in
+`fs_tools/models/`, not the runtime. Catalog entries are produced by `fs-assets`;
+there is no `CatalogItem` model in the repo. The old
 `ScanResult` model was dropped; `fs scan` returns the output handlers' dict.)
 
 ### External engine models (`fs_ocr` — Rust PyPI pkg, NOT in repo)
@@ -70,11 +70,10 @@ The external `fs-ocr` exposes `StockpileScanner`, `ScanConfig`,
 
 ## Configuration (`core/settings/`)
 
-### AppSettings root (schema **v15**)
+### AppSettings root (schema **v16**)
 ```python
 class AppSettings(BaseSettings):
-    config_version: int        # CURRENT_VERSION = 15
-    external_tools: ExternalToolsSettings
+    config_version: int        # CURRENT_VERSION = 16
     logging: LoggingSettings
     output: OutputSettings
     scanner: ScannerSettings
@@ -87,9 +86,10 @@ class AppSettings(BaseSettings):
 `notifications` in v12; `gui.config_level` in v13; v13→v14 reworks webhook
 `forward` auth into `header` (`client_auth_header` → `auth_header`); v14→v15
 drops `scanner.early_exit_threshold` and `sav_processing.emit_all_on_start`,
-both dead fields with no consumer.)
-`sections/templates.py` (`TemplateSettings`) is consumed by mod-import models —
-not a top-level field. (The old `OCRSettings` icon-geometry model was removed; its
+both dead fields with no consumer; v15→v16 drops `external_tools`
+(repak/umodel/uassetgui) and `database_builder.workers` — `DatabaseBuilderSettings`
+keeps `catalog_file` + `target_resolutions`.)
+(The old `OCRSettings` icon-geometry model was removed; its
 one live value is `fs_tools/constants.py:ICON_BOX_SCALE = 64/2160` (fs_tools-only).)
 
 ### ScannerSettings (`sections/scanner.py`)
@@ -110,16 +110,18 @@ discriminated-union wrapper.
 ### Sources & migration
 Priority: env `FS_<SECTION>__<KEY>` → JSON file (platform config dir,
 `json_settings_source.py`) → defaults. Stepwise upgrade via `config_migrator/` package
-(v1 → … → 15). v9→v10 drops `api_server`/`api_auth`; v10→v11 drops
+(v1 → … → 16). v9→v10 drops `api_server`/`api_auth`; v10→v11 drops
 `stockpile_types`; v11→v12 drops `notifications`; v12→v13 drops `gui.config_level`;
 v13→v14 reworks webhook `forward` auth into `header`; v14→v15 drops
-`scanner.early_exit_threshold` and `sav_processing.emit_all_on_start`.
+`scanner.early_exit_threshold` and `sav_processing.emit_all_on_start`; v15→v16 drops
+`external_tools` and `database_builder.workers`.
 
 ## Template database (HDF5) — owned by `fs_tools`
 
 `fs_tools/template_db/template_database.py` (read/write) +
 `template_manager.py` (matching) + `icon_manager.py`. The external `fs-ocr`
 engine reads this DB at scan time; the runtime no longer touches it directly.
+The DB is built by `fs-assets add-mod` (one mod per call, re-adding replaces it).
 
 ```
 database.h5
@@ -137,6 +139,7 @@ database.h5
 
 ## Catalog JSON (`data/catalog.json`)
 
+Built from the game PAK by `fs-assets build-catalog`.
 Item metadata: `code`, `name`, `category`, `faction`, `cratable`, icon ref.
 `cratable` ← `ItemProfileData.bIsCratable` (items) or presence of
 `MassProductionFactory` in `ProductionCategories` (vehicles). Read via
@@ -150,7 +153,7 @@ populated (no `x`/`y`); change-tracking keyed by `Stockpile.to_key()`.
 
 ## Key files
 1. `models/stockpile.py`, `models/stockpile_item.py`
-2. `core/settings/app_settings.py` + `config_migrator/` package (v15)
+2. `core/settings/app_settings.py` + `config_migrator/` package (v16)
 3. `core/settings/sections/scanner.py` — incl. `capture_key`
 4. `core/settings/sections/output/webhook_handler.py` — auth types (basic/bearer/header)
 5. `fs_tools/template_db/` — HDF5 access + matching

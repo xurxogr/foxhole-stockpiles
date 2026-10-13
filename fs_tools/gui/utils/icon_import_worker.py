@@ -1,168 +1,116 @@
-"""Background worker for icon import process."""
+"""Background worker that imports a mod's icons into the template database."""
 
-import asyncio
 import logging
-import traceback
 from pathlib import Path
 
+import fs_assets
 from PySide6.QtCore import QThread, Signal
 
-from foxhole_stockpiles.core.settings import get_settings
-from fs_tools.core.settings.sections.templates import TemplateSettings
-from fs_tools.models.mod_import_config import ModImportConfig
-from fs_tools.models.mod_import_progress import ModImportProgress
-from fs_tools.services.mod_importer import ModImporter
+from fs_tools.core.mod_name import validate_mod_name
 
 logger = logging.getLogger(__name__)
 
+# Progress message shown when each fs-assets import stage starts.
+_STAGE_MESSAGES = {
+    "extracting_icons": "Extracting the mod's icons ({total} files)...",
+    "extracting_vanilla_icons": "Extracting fallback icons from the game PAK ({total} files)...",
+    "building_templates": "Building templates for {total} catalog items...",
+}
+
 
 class IconImportWorker(QThread):
-    """Worker thread for icon import process.
+    """Worker thread that runs ``fs_assets.add_mod`` for one mod.
 
-    Runs the complete pipeline using the ModImporter service:
-    1. Extract assets from PAK files (uasset_extractor)
-    2. Generate templates (generate_templates)
-    3. Build/update database (database_builder)
-
-    All intermediate files are stored in temporary directories and cleaned up automatically.
+    The import runs in Rust with the GIL released. It reads the PAK files
+    directly and replaces the mod's previous templates in the database.
     """
 
-    finished = Signal(bool)  # Emits True on success, False on failure/cancel
+    finished = Signal(bool)  # Emits True on success, False on failure
     error = Signal(str)  # Emits error message
-    progress = Signal(int, str)  # Emits (step_number, message) for UI updates
+    progress = Signal(str)  # Emits progress message for UI updates
 
     def __init__(
         self,
         mod_pak_files: list[str],
         mod_name: str,
         catalog_path: Path,
-        overwrite: bool = False,
+        database_path: Path,
         vanilla_pak_file: str | None = None,
-        database_path: Path | None = None,
-        database_workers: int | None = None,
+        resolutions: list[int] | None = None,
     ) -> None:
         """Initialize the icon import worker.
 
         Args:
-            mod_pak_files (list[str]): List of mod PAK file paths
-            mod_name (str): Name of the mod
-            catalog_path (Path): Path to catalog.json file
-            overwrite (bool): Whether to overwrite existing data
-            vanilla_pak_file (str | None): Optional vanilla PAK file for dependencies
-            database_path (Path | None): Optional database path (uses settings if None)
-            database_workers (int | None): Number of workers for database building.
-                Set to 1 to disable multiprocessing (recommended for GUI on Windows).
+            mod_pak_files (list[str]): The mod's PAK files; later ones override
+                earlier ones.
+            mod_name (str): Name recorded against the imported templates.
+            catalog_path (Path): Catalog listing the items whose icons are imported.
+            database_path (Path): Template database to create or update.
+            vanilla_pak_file (str | None): The game PAK, used for the subtype and
+                crate icons the mod lacks. Defaults to None.
+            resolutions (list[int] | None): Resolutions to rebuild; all supported
+                resolutions when None. Defaults to None.
 
         Raises:
-            ValueError: If mod_name is invalid or contains unsafe characters
+            ValueError: If mod_name is invalid or contains unsafe characters.
         """
         super().__init__()
         self.mod_pak_files = mod_pak_files
-        # Validate mod name early (fail fast)
-        self.mod_name = ModImporter._validate_mod_name(mod_name)
+        self.mod_name = validate_mod_name(mod_name)
         self.catalog_path = catalog_path
-        self.overwrite = overwrite
-        self.vanilla_pak_file = vanilla_pak_file
         self.database_path = database_path
-        self.database_workers = database_workers
-        self._should_stop = False
-
-        # Get settings
-        self.settings = get_settings()
+        self.vanilla_pak_file = vanilla_pak_file
+        self.resolutions = resolutions
 
         logger.debug(
             "IconImportWorker initialized: mod=%s, paks=%d, vanilla=%s, db=%s",
             self.mod_name,
             len(mod_pak_files),
             "Yes" if vanilla_pak_file else "No",
-            database_path or "default",
+            database_path,
         )
 
-    def stop(self) -> None:
-        """Request the worker to stop."""
-        self._should_stop = True
-
-    def _on_progress(self, progress_info: ModImportProgress) -> None:
-        """Handle progress updates from ModImporter.
-
-        Args:
-            progress_info: Progress information from the importer
-        """
-        # Emit progress signal for UI updates
-        self.progress.emit(progress_info.current_step, progress_info.message)
-
-    def _check_cancel(self) -> bool:
-        """Check if worker should be cancelled.
-
-        Returns:
-            bool: True if worker should stop
-        """
-        return self._should_stop
-
     def run(self) -> None:
-        """Run the icon import process in background thread."""
+        """Import the mod and report the outcome through the signals."""
         try:
-            # Run async operations
-            asyncio.run(self._run_import())
+            self.database_path.parent.mkdir(parents=True, exist_ok=True)
+            stats = fs_assets.add_mod(
+                catalog=str(self.catalog_path),
+                pak=self.mod_pak_files,
+                db=str(self.database_path),
+                mod_name=self.mod_name,
+                vanilla_pak=self.vanilla_pak_file,
+                resolution=self.resolutions,
+                progress=self._on_progress,
+            )
         except Exception as e:  # noqa: BLE001 - report any failure via the error signal
-            logger.exception("Icon import failed with exception")
+            logger.error("Icon import failed: %s", e)
             self.error.emit(str(e))
             self.finished.emit(False)
+            return
 
-    async def _run_import(self) -> None:
-        """Run the import using ModImporter service."""
-        success = False
+        logger.info(
+            "Imported mod %s: %d of %d items embedded, %d icons missing, %d decode errors",
+            self.mod_name,
+            stats["items_embedded"],
+            stats["total_items"],
+            stats["icons_missing"],
+            stats["decode_errors"],
+        )
+        self.progress.emit(
+            f"Imported {stats['items_embedded']} of {stats['total_items']} catalog items "
+            f"into {self.database_path} as '{self.mod_name}'"
+        )
+        self.finished.emit(True)
 
-        try:
-            # Build configuration from settings
-            external_tools = self.settings.external_tools
-            db_builder = self.settings.database_builder
-            # Use custom database path if provided, otherwise fall back to settings
-            database_path = self.database_path or self.settings.scanner.database_path
-            config = ModImportConfig(
-                mod_pak_files=self.mod_pak_files,
-                mod_name=self.mod_name,
-                catalog_path=self.catalog_path,
-                overwrite=self.overwrite,
-                vanilla_pak_file=self.vanilla_pak_file,
-                extractor_tool=external_tools.repak,
-                converter_tool=external_tools.umodel,
-                database_path=database_path,
-                target_resolutions=db_builder.target_resolutions,
-                template_settings=TemplateSettings(),
-                database_workers=self.database_workers,
-            )
+    def _on_progress(self, stage: str, done: int, total: int) -> None:
+        """Relay the start of each import stage.
 
-            # Create importer with callbacks
-            importer = ModImporter(
-                config=config,
-                progress_callback=self._on_progress,
-                cancel_check=self._check_cancel,
-            )
-
-            # Run the import
-            result = await importer.run()
-
-            if result.success:
-                success = True
-                logger.info("Icon import completed successfully")
-            else:
-                # Emit detailed error message
-                error_msg = result.error_message or "Unknown error"
-                self.error.emit(error_msg)
-                logger.error("Icon import failed: %s", error_msg)
-
-            # Log any warnings
-            for warning in result.warnings:
-                logger.warning("Import warning: %s", warning)
-
-        except Exception as e:
-            logger.exception("Error in import pipeline")
-            error_type = type(e).__name__
-            error_msg = str(e) if str(e) else "No error message provided"
-            tb = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-            detailed_error = f"{error_type}: {error_msg}\n\nTraceback:\n{tb}"
-            self.error.emit(detailed_error)
-
-        finally:
-            self.finished.emit(success and not self._should_stop)
+        Args:
+            stage (str): The fs-assets import stage name.
+            done (int): Steps completed in the stage.
+            total (int): Total steps in the stage.
+        """
+        if done == 0:
+            message = _STAGE_MESSAGES.get(stage, stage)
+            self.progress.emit(message.replace("{total}", str(total)))

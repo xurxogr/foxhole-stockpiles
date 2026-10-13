@@ -18,7 +18,7 @@ Source of truth: `pyproject.toml`. Python **3.12+**.
 | **pynput** | **1.7.7** | **global capture hotkey; Windows-only `capture` extra** |
 | **fs-ocr** | 1.1.0 | external Rust OCR engine (replaces in-repo `fs_ocr`) |
 | **fs-sav** | 0.3.0 | Rust `.sav` parser |
-| **fs-assets** | 0.1.0 | Rust game-asset tools: catalog + icon-template DB (being wired into `fs_tools`) |
+| **fs-assets** | 0.1.0 | Rust game-asset tools: catalog + icon-template DB (CLI `fs-assets`; backs the `fs_tools` GUI) |
 | google-api-python-client | 2.196.0 | Google Sheets output handler |
 | google-auth-httplib2 | 0.4.0 | Google auth transport |
 | google-auth-oauthlib | 1.4.0 | Google OAuth installed-app flow |
@@ -40,20 +40,19 @@ into the `fs-ocr` Rust engine), `discord-webhook` (notifications stack dropped).
 - **fs-assets** (PyPI `fs-assets>=0.1.0`) — reads the game `.pak` directly to
   build the catalog (`build_catalog`) and the icon-template DB (`add_mod`,
   `modify_icon`, `read_templates`, `database_statistics`, `pak_coverage`).
-  Result shapes are in `fs_assets.types`. Replaces the Python engine in
-  `fs_tools`.
+  Result shapes are in `fs_assets.types`. Replaced the Python engine in
+  `fs_tools` (the `fs-tools` `extract-assets`/`generate-templates`/`build-db`/`add-mod`
+  subcommands are gone).
+  CLI: `build-catalog`, `add-mod`, `check-paks`, `modify-icon`.
 
 ## External binaries
 
 | Tool | Required for | Platform | Integration |
 |---|---|---|---|
 | **Tesseract OCR** (5.x) | **Chinese OCR only** — `fs-ocr` handles quantities and all other languages itself; install Tesseract + `chi_sim` data to scan Chinese | any | optional (Chinese only) |
-| **repak** | PAK extraction (`fs-tools`) | Win/Linux | `connectors/` + `fs_tools` |
-| **umodel(.exe)** | UE asset conversion (`fs-tools`) | Windows | `connectors/` + `fs_tools` |
 
-`ExternalToolsSettings`: `repak_path`, `umodel_path`. Extractor/converter
-detected as Windows or Linux independently; Linux extractor + Windows converter
-is valid.
+No PAK/asset tools are needed: repak, umodel and UAssetGUI are no longer used
+(the `external_tools` config section was dropped in v16).
 
 ## Capture & platform notes
 
@@ -125,4 +124,3 @@ Project MIT. Deps MIT/BSD/Apache; PySide6 LGPLv3.
 2. `services/scanner.py` — external `fs-ocr` binding
 3. `services/capture.py` — pywinctl/Pillow window capture
 4. `handlers/sheets.py` — Google Sheets integration
-5. `core/settings/sections/external_tools.py` — tool paths

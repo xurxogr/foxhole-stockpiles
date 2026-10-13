@@ -19,22 +19,6 @@
     },
     "image_filter": "Images (*.png *.jpg *.jpeg);;All Files (*)"
   },
-  "external_tools_tab": {
-    "title": "External Tools",
-    "repak_label": "Extractor Tool (repak):",
-    "repak_tooltip": "Path to repak executable for extracting PAK files.\n\nRequired for extracting game assets from PAK files.\nDownload from: https://github.com/trumank/repak",
-    "repak_placeholder": "Path to repak executable",
-    "umodel_label": "Converter Tool (umodel):",
-    "umodel_tooltip": "Path to umodel executable for converting UAsset files to PNG.\n\nRequired for the 'Build Database' feature.\nDownload from: https://www.gildor.org/en/projects/umodel",
-    "umodel_placeholder": "Path to umodel executable",
-    "uassetgui_label": "JSON Converter (UAssetGUI):",
-    "uassetgui_tooltip": "Path to UAssetGUI executable for converting UAsset files to JSON.\n\nRequired for the 'Build Catalog' feature.\nDownload from: https://github.com/atenfyr/UAssetGUI",
-    "uassetgui_placeholder": "Path to UAssetGUI executable",
-    "download": "Download",
-    "select_repak": "Select Extractor Tool (repak)",
-    "select_umodel": "Select Converter Tool (umodel)",
-    "select_uassetgui": "Select JSON Converter (UAssetGUI)"
-  },
   "database_builder_tab": {
     "settings_group": "Database Builder Settings",
     "catalog_file": "Catalog File (catalog.json):",
@@ -43,7 +27,7 @@
     "resolutions_group": "Target Resolutions",
     "resolutions_info": "Select which resolutions to generate when importing icons. Check 'All Resolutions' to generate all supported resolutions.",
     "all_resolutions": "All Resolutions",
-    "status_note": "<b>Note:</b> The catalog file and external tools (repak, umodel) must be configured for the 'Build Database' feature to work.",
+    "status_note": "<b>Note:</b> The catalog file must be configured for the 'Build Database' feature to work.",
     "select_catalog": "Select Catalog File (catalog.json)"
   },
   "tools_window": {
@@ -75,7 +59,7 @@
   },
   "settings_dialog": {
     "title": "FS Tools Configuration",
-    "info": "Configure the database path, external tools and database builder settings used by FS Tools. Changes are saved to the shared configuration file.",
+    "info": "Configure the database path and database builder settings used by FS Tools. Changes are saved to the shared configuration file.",
     "language_group": "Language",
     "language": "Language:",
     "language_tooltip": "Select the language for the interface.",
@@ -129,14 +113,9 @@
     "configuration_group": "Configuration",
     "mod_name": "Mod Name:",
     "mod_name_placeholder": "e.g., vanilla, mymod",
-    "overwrite": "Overwrite existing data",
-    "overwrite_tooltip": "If checked, existing templates with the same item-resolution will be overwritten",
     "destination_database": "Destination Database:",
     "destination_placeholder": "Select database file (.h5)",
     "destination_tooltip": "Database file where templates will be saved",
-    "workers": "Workers:",
-    "workers_tooltip": "Number of parallel processes for database building.\nSet to 1 to disable multiprocessing.",
-    "cores_detected": "({cores} cores detected)",
     "process_logs": "Process Logs",
     "start_import": "Start Import",
     "validation": {
@@ -151,7 +130,9 @@
       "enter_mod_name": "Please enter a mod name",
       "select_database": "Please select a destination database file",
       "mod_missing_assets": "The mod PAK files are missing required assets. Please select the vanilla game PAK file.",
-      "vanilla_invalid": "The selected vanilla PAK file does not contain the required assets. Please select the correct vanilla game PAK file (War-WindowsNoEditor.pak)."
+      "vanilla_invalid": "The selected vanilla PAK file does not contain the required assets. Please select the correct vanilla game PAK file (War-WindowsNoEditor.pak).",
+      "no_catalog_icons": "None of the PAK files contain icons from the catalog",
+      "check_failed": "Could not check the PAK files: {error}"
     },
     "invalid_vanilla_title": "Invalid Vanilla PAK",
     "invalid_vanilla_message": "The selected PAK file does not contain the required assets ({missing}).\n\nPlease select the correct vanilla game PAK file:\nWar-WindowsNoEditor.pak\n\nThis file is typically located in:\nSteam/steamapps/common/Foxhole/War/Content/Paks/",

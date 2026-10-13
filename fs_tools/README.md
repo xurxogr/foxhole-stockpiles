@@ -13,29 +13,29 @@ users use `fs-tools`.
 fs-tools
 
 # CLI commands
-fs-tools build-catalog --pak War.pak --output ./catalog.json
-fs-tools build-db --pak War.pak --catalog catalog.json --output ./db.h5
-fs-tools generate-templates --help
-fs-tools extract-assets --help
 fs-tools add-icon --database db.h5 --icon icon.png --code MyItem --faction n --category item --mod vanilla --resolution 1080
-fs-tools add-mod --help
 
 # GUI tools
 fs-tools visualize --database db.h5
 fs-tools debug screenshot.png --database db.h5
 ```
 
-Each subcommand forwards its arguments to the underlying tool, so
-`fs-tools <command> --help` shows that tool's full option list.
+Run `fs-tools <command> --help` for the full option list of each command.
 
-## External tool requirements
+## Catalog and template database
 
-- `repak` — PAK file extraction
-- `umodel` — UE asset conversion
-- `uassetgui` — uasset JSON conversion
+The catalog and the icon-template database are built by the external
+[`fs-assets`](https://pypi.org/project/fs-assets/) package (installed with fs),
+which reads the game PAK directly — no external tools are needed. The tools GUI
+(*Build Catalog* and *Database Builder (Icon Import)*) is backed by it; from the
+command line:
 
-Configure their paths via the fs configuration or the corresponding
-environment variables.
+```bash
+fs-assets build-catalog --pak War-WindowsNoEditor.pak -o catalog.json
+fs-assets add-mod --pak War-WindowsNoEditor.pak --catalog catalog.json --db templates.h5
+fs-assets check-paks --catalog catalog.json --pak Mod.pak
+fs-assets add-mod --pak Mod.pak --vanilla-pak War-WindowsNoEditor.pak --catalog catalog.json --db templates.h5 --mod-name my-mod
+```
 
 ## Relationship to the main package
 

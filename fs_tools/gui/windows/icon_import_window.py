@@ -1,17 +1,16 @@
 """Icon import window for importing new icons to the database."""
 
 import logging
-import os
 import platform
 from datetime import datetime
 from pathlib import Path
 
+from fs_assets.types import PakCoverage
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QDragEnterEvent, QDropEvent, QKeyEvent, QKeySequence
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
-    QCheckBox,
     QFileDialog,
     QGroupBox,
     QHBoxLayout,
@@ -22,7 +21,6 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
-    QSpinBox,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -34,8 +32,12 @@ from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.gui.utils.qt_log_handler import QtLogHandler
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
 from fs_tools.gui.utils.icon_import_worker import IconImportWorker
-from fs_tools.gui.utils.pak_validation_worker import PakValidationWorker
-from fs_tools.models.pak_validation_result import PakValidationResult
+from fs_tools.gui.utils.pak_coverage_status import (
+    covers_all_overlays,
+    has_catalog_icons,
+    missing_overlays,
+)
+from fs_tools.gui.utils.pak_coverage_worker import PakCoverageWorker
 
 logger = logging.getLogger(__name__)
 
@@ -54,18 +56,19 @@ class IconImportWindow(QMainWindow):
         """
         super().__init__(parent)
         self.import_worker: IconImportWorker | None = None
-        self.validation_worker: PakValidationWorker | None = None
+        self.validation_worker: PakCoverageWorker | None = None
         self.vanilla_pak_file: str | None = None
         self.mod_pak_files: list[str] = []
 
-        # Validation state for mod PAK files
-        self._validation_result: PakValidationResult | None = None
+        # Coverage of the catalog's icons by the mod PAK files
+        self._validation_result: PakCoverage | None = None
+        self._validation_failed = False
         self._is_validating = False
 
-        # Validation state for vanilla PAK file
-        self._vanilla_validation_result: PakValidationResult | None = None
+        # Coverage of the catalog's overlays by the vanilla PAK file
+        self._vanilla_validation_result: PakCoverage | None = None
         self._is_validating_vanilla = False
-        self.vanilla_validation_worker: PakValidationWorker | None = None
+        self.vanilla_validation_worker: PakCoverageWorker | None = None
 
         # The launcher only enables this window once it is configured, so the
         # full UI is always built.
@@ -83,7 +86,6 @@ class IconImportWindow(QMainWindow):
     def init_ui(self) -> None:
         """Initialize the user interface."""
         self.setGeometry(100, 100, 900, 700)
-        self._cpu_count = os.cpu_count() or 1
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -205,7 +207,7 @@ class IconImportWindow(QMainWindow):
         layout.addWidget(self.mod_pak_group)
 
     def _build_config_section(self, layout: QVBoxLayout) -> None:
-        """Build the configuration section (mod name, overwrite, DB path, workers).
+        """Build the configuration section (mod name and destination database).
 
         Args:
             layout (QVBoxLayout): Parent layout to add the section to.
@@ -223,10 +225,6 @@ class IconImportWindow(QMainWindow):
         mod_name_layout.addWidget(self.mod_name_input)
         config_layout.addLayout(mod_name_layout)
 
-        # Overwrite option
-        self.overwrite_checkbox = QCheckBox()
-        config_layout.addWidget(self.overwrite_checkbox)
-
         # Database path row
         db_path_layout = QHBoxLayout()
         self.db_path_label = QLabel()
@@ -240,24 +238,6 @@ class IconImportWindow(QMainWindow):
         self.db_browse_button.clicked.connect(self.select_database_path)
         db_path_layout.addWidget(self.db_browse_button)
         config_layout.addLayout(db_path_layout)
-
-        # Workers row
-        configured_workers = self.settings.database_builder.workers
-        default_workers = configured_workers if configured_workers is not None else self._cpu_count
-        workers_layout = QHBoxLayout()
-        self.workers_label = QLabel()
-        workers_layout.addWidget(self.workers_label)
-        self.workers_spinbox = QSpinBox()
-        self.workers_spinbox.setMinimum(1)
-        self.workers_spinbox.setMaximum(self._cpu_count)
-        self.workers_spinbox.setValue(min(default_workers, self._cpu_count))
-        self.workers_spinbox.setFixedWidth(80)
-        workers_layout.addWidget(self.workers_spinbox)
-        self.workers_hint = QLabel()
-        self.workers_hint.setStyleSheet("color: gray; font-size: 11px;")
-        workers_layout.addWidget(self.workers_hint)
-        workers_layout.addStretch()
-        config_layout.addLayout(workers_layout)
 
         layout.addWidget(self.config_group)
 
@@ -318,11 +298,6 @@ class IconImportWindow(QMainWindow):
         self.start_button.clicked.connect(self.start_import)
         action_buttons_layout.addWidget(self.start_button)
 
-        self.cancel_button = QPushButton()
-        self.cancel_button.clicked.connect(self.cancel_import)
-        self.cancel_button.setEnabled(False)
-        action_buttons_layout.addWidget(self.cancel_button)
-
         # Validation status label (shows validation state)
         self.validation_status_label = QLabel("")
         self.validation_status_label.setStyleSheet("font-size: 11px;")
@@ -360,17 +335,10 @@ class IconImportWindow(QMainWindow):
         self.config_group.setTitle(t("database_builder.configuration_group"))
         self.mod_name_label.setText(t("database_builder.mod_name"))
         self.mod_name_input.setPlaceholderText(t("database_builder.mod_name_placeholder"))
-        self.overwrite_checkbox.setText(t("database_builder.overwrite"))
-        self.overwrite_checkbox.setToolTip(t("database_builder.overwrite_tooltip"))
         self.db_path_label.setText(t("database_builder.destination_database"))
         self.db_path_input.setPlaceholderText(t("database_builder.destination_placeholder"))
         self.db_path_input.setToolTip(t("database_builder.destination_tooltip"))
         self.db_browse_button.setText(t("common.browse"))
-        self.workers_label.setText(t("database_builder.workers"))
-        self.workers_spinbox.setToolTip(t("database_builder.workers_tooltip"))
-        self.workers_hint.setText(
-            t("database_builder.cores_detected").replace("{cores}", str(self._cpu_count))
-        )
         self.logs_group.setTitle(t("database_builder.process_logs"))
         self.log_display.setHorizontalHeaderLabels(
             [
@@ -381,32 +349,23 @@ class IconImportWindow(QMainWindow):
             ]
         )
         self.start_button.setText(t("database_builder.start_import"))
-        self.cancel_button.setText(t("common.cancel"))
         self.clear_logs_button.setText(t("common.clear_logs"))
         self.close_button.setText(t("common.close"))
 
     @staticmethod
     def requirements_met(settings: AppSettings) -> bool:
-        """Return whether the database builder has everything it needs.
+        """Return whether the icon importer has everything it needs.
+
+        The PAK files are read directly, so only the catalog is required.
 
         Args:
             settings (AppSettings): The settings to check.
 
         Returns:
-            bool: True if repak, umodel and the catalog file are all configured
-                and exist on disk, False otherwise.
+            bool: True if the catalog file is configured and exists on disk.
         """
-        external_tools = settings.external_tools
-        db_builder = settings.database_builder
-
-        if not external_tools.repak or not external_tools.repak.exists():
-            return False
-        if not external_tools.umodel or not external_tools.umodel.exists():
-            return False
-        if not db_builder.catalog_file or not db_builder.catalog_file.exists():
-            return False
-
-        return True
+        catalog_file = settings.database_builder.catalog_file
+        return bool(catalog_file and catalog_file.exists())
 
     def _get_default_pak_directory(self) -> str:
         """Get default directory for PAK files based on platform.
@@ -463,8 +422,8 @@ class IconImportWindow(QMainWindow):
         self.vanilla_pak_display.clear()
         self._vanilla_validation_result = None
 
-        # If mod PAK validation showed missing assets, restore the warning state
-        if self._validation_result and not self._validation_result.is_valid:
+        # If the mod PAK files lack overlays, restore the warning state
+        if self._mod_needs_vanilla():
             self.vanilla_info.setVisible(True)
             self.validation_status_label.setText(t("database_builder.validation.missing_assets"))
             self.validation_status_label.setStyleSheet("color: #FF9800; font-size: 11px;")
@@ -525,6 +484,7 @@ class IconImportWindow(QMainWindow):
         self.mod_pak_files.clear()
         # Clear validation state and hide vanilla section
         self._validation_result = None
+        self._validation_failed = False
         self._vanilla_validation_result = None
         self.vanilla_pak_file = None
         self.vanilla_pak_display.clear()
@@ -576,69 +536,84 @@ class IconImportWindow(QMainWindow):
             self._trigger_validation()
 
     def _trigger_validation(self) -> None:
-        """Trigger PAK file validation in a background thread."""
-        # Don't validate if no PAK files or already validating
+        """Check in a background thread which catalog icons the mod PAK files contain."""
         if not self.mod_pak_files:
             return
 
-        # Cancel any existing validation
+        # Let any previous check finish before starting a new one
         if self.validation_worker and self.validation_worker.isRunning():
             self.validation_worker.wait()
 
-        # Check if extractor tool is configured
-        extractor_tool = self.settings.external_tools.repak
-        if not extractor_tool or not extractor_tool.exists():
+        catalog_path = self.settings.database_builder.catalog_file
+        if not catalog_path:
             return
 
         # Disable PAK controls while validating
         self._set_pak_controls_enabled(False)
         self._is_validating = True
+        self._validation_failed = False
         self.validation_status_label.setText(t("database_builder.validation.validating_pak"))
         self.validation_status_label.setStyleSheet("color: #2196F3; font-size: 11px;")
         self._update_start_button_state()
 
-        # Start validation worker
-        self.validation_worker = PakValidationWorker(
+        self.validation_worker = PakCoverageWorker(
+            catalog_path=catalog_path,
             pak_files=self.mod_pak_files.copy(),
-            extractor_tool=extractor_tool,
             parent=self,
         )
-        self.validation_worker.validation_complete.connect(self._on_validation_complete)
+        self.validation_worker.coverage_ready.connect(self._on_validation_complete)
+        self.validation_worker.failed.connect(self._on_validation_failed)
         self.validation_worker.start()
 
-    def _on_validation_complete(self, result: PakValidationResult) -> None:
-        """Handle validation completion.
+    def _on_validation_complete(self, result: PakCoverage) -> None:
+        """Handle the coverage report of the mod PAK files.
 
         Args:
-            result: The validation result
+            result (PakCoverage): Which catalog icons the mod PAK files contain.
         """
         self._is_validating = False
         self._validation_result = result
         self._set_pak_controls_enabled(True)
 
-        if result.is_valid:
+        if not has_catalog_icons(result):
+            # Nothing to import: none of the catalog's icons are in these files
+            self.validation_status_label.setText(t("database_builder.validation.no_catalog_icons"))
+            self.validation_status_label.setStyleSheet("color: #F44336; font-size: 11px;")
+            self.vanilla_group.setVisible(False)
+        elif covers_all_overlays(result):
             # PAK files have all required assets - hide vanilla section
             self.validation_status_label.setText(t("database_builder.validation.all_assets_found"))
             self.validation_status_label.setStyleSheet("color: #4CAF50; font-size: 11px;")
             self.vanilla_group.setVisible(False)
             self.clear_vanilla_pak()
         else:
-            # PAK files are missing required assets - show vanilla section
+            # PAK files lack overlays - show vanilla section
             self.validation_status_label.setText(t("database_builder.validation.missing_assets"))
             self.validation_status_label.setStyleSheet("color: #FF9800; font-size: 11px;")
             self.vanilla_group.setVisible(True)
-
-            # Update the info label with specific missing assets
-            missing = []
-            if not result.has_crate_icon:
-                missing.append("crate icon")
-            if not result.has_subicons:
-                missing.append("subicons")
-            missing_text = " and ".join(missing)
             self.vanilla_info.setText(
-                t("database_builder.vanilla_warning_missing").replace("{missing}", missing_text)
+                t("database_builder.vanilla_warning_missing").replace(
+                    "{missing}", " and ".join(missing_overlays(result))
+                )
             )
 
+        self._update_start_button_state()
+
+    def _on_validation_failed(self, error_msg: str) -> None:
+        """Handle a mod PAK check that could not run (e.g. an unreadable file).
+
+        Args:
+            error_msg (str): The error message.
+        """
+        self._is_validating = False
+        self._validation_result = None
+        self._validation_failed = True
+        self._set_pak_controls_enabled(True)
+        self.validation_status_label.setText(
+            t("database_builder.validation.check_failed").replace("{error}", error_msg)
+        )
+        self.validation_status_label.setStyleSheet("color: #F44336; font-size: 11px;")
+        self.vanilla_group.setVisible(False)
         self._update_start_button_state()
 
     def _set_pak_controls_enabled(self, enabled: bool) -> None:
@@ -653,12 +628,12 @@ class IconImportWindow(QMainWindow):
         self.mod_pak_list_widget.setAcceptDrops(enabled)
 
     def _trigger_vanilla_validation(self) -> None:
-        """Trigger validation of the vanilla PAK file."""
+        """Check in a background thread that the vanilla PAK has every overlay."""
         if not self.vanilla_pak_file:
             return
 
-        extractor_tool = self.settings.external_tools.repak
-        if not extractor_tool or not extractor_tool.exists():
+        catalog_path = self.settings.database_builder.catalog_file
+        if not catalog_path:
             return
 
         # Disable vanilla PAK controls while validating
@@ -668,53 +643,62 @@ class IconImportWindow(QMainWindow):
         self.validation_status_label.setStyleSheet("color: #2196F3; font-size: 11px;")
         self._update_start_button_state()
 
-        # Start validation worker for vanilla PAK only
-        self.vanilla_validation_worker = PakValidationWorker(
+        self.vanilla_validation_worker = PakCoverageWorker(
+            catalog_path=catalog_path,
             pak_files=[self.vanilla_pak_file],
-            extractor_tool=extractor_tool,
             parent=self,
         )
-        self.vanilla_validation_worker.validation_complete.connect(
-            self._on_vanilla_validation_complete
-        )
+        self.vanilla_validation_worker.coverage_ready.connect(self._on_vanilla_validation_complete)
+        self.vanilla_validation_worker.failed.connect(self._on_vanilla_validation_failed)
         self.vanilla_validation_worker.start()
 
-    def _on_vanilla_validation_complete(self, result: PakValidationResult) -> None:
-        """Handle vanilla PAK validation completion.
+    def _on_vanilla_validation_complete(self, result: PakCoverage) -> None:
+        """Handle the coverage report of the vanilla PAK file.
 
         Args:
-            result: The validation result
+            result (PakCoverage): Which catalog icons the vanilla PAK contains.
         """
         self._is_validating_vanilla = False
         self._vanilla_validation_result = result
         self._set_vanilla_controls_enabled(True)
 
-        if result.is_valid:
+        if covers_all_overlays(result):
             # Vanilla PAK has all required assets - hide warning and show success
             self.vanilla_info.setVisible(False)
             self.validation_status_label.setText(t("database_builder.validation.all_assets_found"))
             self.validation_status_label.setStyleSheet("color: #4CAF50; font-size: 11px;")
         else:
-            # Vanilla PAK is missing required assets - this is the wrong file!
-            self.vanilla_info.setVisible(True)
-            self.validation_status_label.setText(t("database_builder.validation.invalid_vanilla"))
-            self.validation_status_label.setStyleSheet("color: #F44336; font-size: 11px;")
-
-            # Show specific error message
-            missing = []
-            if not result.has_crate_icon:
-                missing.append("crate icon")
-            if not result.has_subicons:
-                missing.append("subicons")
-            missing_text = " and ".join(missing)
-
-            QMessageBox.warning(
-                self,
-                t("database_builder.invalid_vanilla_title"),
-                t("database_builder.invalid_vanilla_message").replace("{missing}", missing_text),
-            )
+            # Vanilla PAK lacks overlays - this is the wrong file
+            self._show_invalid_vanilla(" and ".join(missing_overlays(result)))
 
         self._update_start_button_state()
+
+    def _on_vanilla_validation_failed(self, error_msg: str) -> None:
+        """Handle a vanilla PAK check that could not run.
+
+        Args:
+            error_msg (str): The error message.
+        """
+        self._is_validating_vanilla = False
+        self._vanilla_validation_result = None
+        self._set_vanilla_controls_enabled(True)
+        self._show_invalid_vanilla(error_msg)
+        self._update_start_button_state()
+
+    def _show_invalid_vanilla(self, reason: str) -> None:
+        """Flag the selected vanilla PAK as unusable.
+
+        Args:
+            reason (str): What is missing, or why it could not be checked.
+        """
+        self.vanilla_info.setVisible(True)
+        self.validation_status_label.setText(t("database_builder.validation.invalid_vanilla"))
+        self.validation_status_label.setStyleSheet("color: #F44336; font-size: 11px;")
+        QMessageBox.warning(
+            self,
+            t("database_builder.invalid_vanilla_title"),
+            t("database_builder.invalid_vanilla_message").replace("{missing}", reason),
+        )
 
     def _set_vanilla_controls_enabled(self, enabled: bool) -> None:
         """Enable or disable vanilla PAK file controls.
@@ -728,20 +712,35 @@ class IconImportWindow(QMainWindow):
     def _re_enable_inputs(self) -> None:
         """Re-enable input controls after import completes or fails."""
         self.start_button.setEnabled(True)
-        self.cancel_button.setEnabled(False)
         self.mod_name_input.setEnabled(True)
-        self.overwrite_checkbox.setEnabled(True)
         self.db_path_input.setEnabled(True)
-        self.workers_spinbox.setEnabled(True)
+
+    def _mod_needs_vanilla(self) -> bool:
+        """Return whether the mod PAK files have catalog icons but lack overlays.
+
+        Returns:
+            bool: True if the vanilla PAK is needed for the missing overlays.
+        """
+        result = self._validation_result
+        return bool(result and has_catalog_icons(result) and not covers_all_overlays(result))
+
+    def _vanilla_is_valid(self) -> bool:
+        """Return whether the vanilla PAK was checked and has every overlay.
+
+        Returns:
+            bool: True if the vanilla PAK can supply the missing overlays.
+        """
+        result = self._vanilla_validation_result
+        return bool(result and covers_all_overlays(result))
 
     def _update_start_button_state(self) -> None:
         """Update the start button enabled state based on validation results.
 
         The start button is disabled when:
         - Validation is in progress (mod or vanilla)
-        - Mod PAK validation failed and no valid vanilla PAK is selected
+        - The mod PAK files could not be checked or hold no catalog icon
+        - The mod PAK files lack overlays and no valid vanilla PAK is selected
         """
-        # Disable if any validation is in progress
         if self._is_validating or self._is_validating_vanilla:
             self.start_button.setEnabled(False)
             return
@@ -751,22 +750,20 @@ class IconImportWindow(QMainWindow):
             self.start_button.setEnabled(True)
             return
 
-        # If mod PAK validation passed, enable
-        if self._validation_result and self._validation_result.is_valid:
+        if self._validation_failed:
+            self.start_button.setEnabled(False)
+            return
+
+        result = self._validation_result
+        if result is None:
+            # Not checked yet
             self.start_button.setEnabled(True)
-            return
-
-        # If mod PAK validation failed, check vanilla PAK status
-        if self._validation_result and not self._validation_result.is_valid:
-            # Vanilla PAK must be valid to proceed
-            if self._vanilla_validation_result and self._vanilla_validation_result.is_valid:
-                self.start_button.setEnabled(True)
-            else:
-                self.start_button.setEnabled(False)
-            return
-
-        # Default: enable (no validation result yet means we haven't validated)
-        self.start_button.setEnabled(True)
+        elif not has_catalog_icons(result):
+            self.start_button.setEnabled(False)
+        elif covers_all_overlays(result):
+            self.start_button.setEnabled(True)
+        else:
+            self.start_button.setEnabled(self._vanilla_is_valid())
 
     def validate_inputs(self) -> tuple[bool, str]:
         """Validate user inputs before starting import.
@@ -784,16 +781,21 @@ class IconImportWindow(QMainWindow):
         if self._is_validating_vanilla:
             return False, t("database_builder.validation.wait_vanilla_validation")
 
+        if self._validation_failed:
+            return False, t("database_builder.validation.check_failed").replace("{error}", "")
+
+        if self._validation_result and not has_catalog_icons(self._validation_result):
+            return False, t("database_builder.validation.no_catalog_icons")
+
         # Check if vanilla PAK is required but not selected or invalid
-        if self._validation_result and not self._validation_result.is_valid:
+        if self._mod_needs_vanilla():
             if not self.vanilla_pak_file:
                 return False, t("database_builder.validation.mod_missing_assets")
-            # Check if vanilla PAK was validated and is valid
-            if self._vanilla_validation_result and not self._vanilla_validation_result.is_valid:
-                return False, t("database_builder.validation.vanilla_invalid")
             # If vanilla PAK selected but not validated yet, wait
             if not self._vanilla_validation_result:
                 return False, t("database_builder.validation.wait_vanilla_validation")
+            if not self._vanilla_is_valid():
+                return False, t("database_builder.validation.vanilla_invalid")
 
         mod_name = self.mod_name_input.text().strip()
         if not mod_name:
@@ -819,11 +821,8 @@ class IconImportWindow(QMainWindow):
 
         # Disable inputs and start button
         self.start_button.setEnabled(False)
-        self.cancel_button.setEnabled(True)
         self.mod_name_input.setEnabled(False)
-        self.overwrite_checkbox.setEnabled(False)
         self.db_path_input.setEnabled(False)
-        self.workers_spinbox.setEnabled(False)
 
         # Clear logs
         self.clear_logs()
@@ -848,10 +847,9 @@ class IconImportWindow(QMainWindow):
                 mod_pak_files=self.mod_pak_files,
                 mod_name=mod_name,
                 catalog_path=catalog_path,
-                overwrite=self.overwrite_checkbox.isChecked(),
-                vanilla_pak_file=self.vanilla_pak_file,
                 database_path=db_path,
-                database_workers=self.workers_spinbox.value(),
+                vanilla_pak_file=self.vanilla_pak_file,
+                resolutions=self._target_resolutions(),
             )
         except ValueError as e:
             QMessageBox.critical(self, t("database_builder.invalid_mod_name_title"), str(e))
@@ -862,17 +860,19 @@ class IconImportWindow(QMainWindow):
 
         self.import_worker.finished.connect(self.on_import_finished)
         self.import_worker.error.connect(self.on_import_error)
+        self.import_worker.progress.connect(self.on_import_progress)
         self.import_worker.start()
 
         logger.info("Icon import process started for mod: %s", mod_name)
 
-    def cancel_import(self) -> None:
-        """Cancel the running import process."""
-        if self.import_worker and self.import_worker.isRunning():
-            logger.warning("User requested import cancellation")
-            self.import_worker.stop()
-            self.import_worker.wait()
-            self.on_import_finished(False)
+    def _target_resolutions(self) -> list[int] | None:
+        """Return the resolutions configured for imports.
+
+        Returns:
+            list[int] | None: The configured resolutions, or None for all of them.
+        """
+        configured = self.settings.database_builder.target_resolutions
+        return [int(resolution) for resolution in configured] if configured else None
 
     def on_import_finished(self, success: bool) -> None:
         """Handle import process completion.
@@ -927,6 +927,22 @@ class IconImportWindow(QMainWindow):
             "color": "#FF0000",  # Red
         }
         self.append_log(error_log)
+
+    def on_import_progress(self, message: str) -> None:
+        """Handle import progress update.
+
+        Args:
+            message (str): Progress message
+        """
+        self.append_log(
+            {
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "level": "INFO",
+                "module": "icon_import",
+                "message": message,
+                "color": "#2196F3",  # Blue
+            }
+        )
 
     def append_log(self, log_data: dict[str, str]) -> None:
         """Append a log entry to the log display.
@@ -1035,7 +1051,7 @@ class IconImportWindow(QMainWindow):
             )
 
             if reply == QMessageBox.StandardButton.Yes:
-                self.import_worker.stop()
+                # The import cannot be interrupted safely; let it finish first
                 self.import_worker.wait()
                 self._cleanup_and_accept(event)
             else:

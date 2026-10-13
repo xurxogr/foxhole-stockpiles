@@ -18,7 +18,6 @@ from foxhole_stockpiles.core.settings.json_settings_source import Utf8JsonConfig
 from foxhole_stockpiles.core.settings.sections import (
     ClipboardSettings,
     DatabaseBuilderSettings,
-    ExternalToolsSettings,
     GUISettings,
     LoggingSettings,
     OutputSettings,
@@ -36,9 +35,6 @@ class AppSettings(BaseSettings):
     config_version: int = Field(
         default=ConfigMigrator.CURRENT_VERSION,
         description="Configuration format version for migration purposes",
-    )
-    external_tools: ExternalToolsSettings = Field(
-        description="External tools settings", default_factory=ExternalToolsSettings
     )
     logging: LoggingSettings = Field(
         description="Logging settings", default_factory=LoggingSettings

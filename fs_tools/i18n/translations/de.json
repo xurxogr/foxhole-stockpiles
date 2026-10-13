@@ -19,22 +19,6 @@
     },
     "image_filter": "Bilder (*.png *.jpg *.jpeg);;Alle Dateien (*)"
   },
-  "external_tools_tab": {
-    "title": "Externe Werkzeuge",
-    "repak_label": "Extraktor-Werkzeug (repak):",
-    "repak_tooltip": "Pfad zur repak-Ausführungsdatei zum Extrahieren von PAK-Dateien.\n\nErforderlich zum Extrahieren von Spiel-Assets aus PAK-Dateien.\nDownload von: https://github.com/trumank/repak",
-    "repak_placeholder": "Pfad zur repak-Ausführungsdatei",
-    "umodel_label": "Konverter-Werkzeug (umodel):",
-    "umodel_tooltip": "Pfad zur umodel-Ausführungsdatei zum Konvertieren von UAsset-Dateien zu PNG.\n\nErforderlich für die 'Datenbank erstellen'-Funktion.\nDownload von: https://www.gildor.org/en/projects/umodel",
-    "umodel_placeholder": "Pfad zur umodel-Ausführungsdatei",
-    "uassetgui_label": "JSON-Konverter (UAssetGUI):",
-    "uassetgui_tooltip": "Pfad zur UAssetGUI-Ausführungsdatei zum Konvertieren von UAsset-Dateien zu JSON.\n\nErforderlich für die 'Katalog erstellen'-Funktion.\nDownload von: https://github.com/atenfyr/UAssetGUI",
-    "uassetgui_placeholder": "Pfad zur UAssetGUI-Ausführungsdatei",
-    "download": "Herunterladen",
-    "select_repak": "Extraktor-Werkzeug (repak) auswählen",
-    "select_umodel": "Konverter-Werkzeug (umodel) auswählen",
-    "select_uassetgui": "JSON-Konverter (UAssetGUI) auswählen"
-  },
   "database_builder_tab": {
     "settings_group": "Datenbank-Builder-Einstellungen",
     "catalog_file": "Katalogdatei (catalog.json):",
@@ -43,7 +27,7 @@
     "resolutions_group": "Zielauflösungen",
     "resolutions_info": "Wählen Sie welche Auflösungen beim Importieren von Icons generiert werden sollen. Markieren Sie 'Alle Auflösungen' um alle unterstützten Auflösungen zu generieren.",
     "all_resolutions": "Alle Auflösungen",
-    "status_note": "<b>Hinweis:</b> Die Katalogdatei und externe Werkzeuge (repak, umodel) müssen konfiguriert sein damit die 'Datenbank erstellen'-Funktion funktioniert.",
+    "status_note": "<b>Hinweis:</b> Die Katalogdatei muss konfiguriert sein, damit die 'Datenbank erstellen'-Funktion funktioniert.",
     "select_catalog": "Katalogdatei (catalog.json) auswählen"
   },
   "tools_window": {
@@ -75,7 +59,7 @@
   },
   "settings_dialog": {
     "title": "FS Tools-Konfiguration",
-    "info": "Konfigurieren Sie den Datenbankpfad, externe Tools und die Datenbank-Builder-Einstellungen, die von FS Tools verwendet werden. Änderungen werden in der gemeinsamen Konfigurationsdatei gespeichert.",
+    "info": "Konfigurieren Sie den Datenbankpfad und die Datenbank-Builder-Einstellungen, die von FS Tools verwendet werden. Änderungen werden in der gemeinsamen Konfigurationsdatei gespeichert.",
     "language_group": "Sprache",
     "language": "Sprache:",
     "language_tooltip": "Sprache für die Oberfläche auswählen.",
@@ -129,14 +113,9 @@
     "configuration_group": "Konfiguration",
     "mod_name": "Mod-Name:",
     "mod_name_placeholder": "z.B. vanilla, meinmod",
-    "overwrite": "Vorhandene Daten überschreiben",
-    "overwrite_tooltip": "Wenn aktiviert, werden vorhandene Vorlagen mit demselben Objekt-Auflösung überschrieben",
     "destination_database": "Zieldatenbank:",
     "destination_placeholder": "Datenbankdatei auswählen (.h5)",
     "destination_tooltip": "Datenbankdatei, in der Vorlagen gespeichert werden",
-    "workers": "Workers:",
-    "workers_tooltip": "Anzahl paralleler Prozesse für Datenbankaufbau.\nSetzen Sie 1 um Multiprocessing zu deaktivieren.",
-    "cores_detected": "({cores} Kerne erkannt)",
     "process_logs": "Prozessprotokolle",
     "start_import": "Import starten",
     "validation": {
@@ -151,7 +130,9 @@
       "enter_mod_name": "Bitte geben Sie einen Mod-Namen ein",
       "select_database": "Bitte wählen Sie eine Ziel-Datenbankdatei",
       "mod_missing_assets": "Den Mod-PAK-Dateien fehlen erforderliche Assets. Bitte wählen Sie die Vanilla-Spiel-PAK-Datei.",
-      "vanilla_invalid": "Die ausgewählte Vanilla-PAK-Datei enthält nicht die erforderlichen Assets. Bitte wählen Sie die korrekte Vanilla-Spiel-PAK-Datei (War-WindowsNoEditor.pak)."
+      "vanilla_invalid": "Die ausgewählte Vanilla-PAK-Datei enthält nicht die erforderlichen Assets. Bitte wählen Sie die korrekte Vanilla-Spiel-PAK-Datei (War-WindowsNoEditor.pak).",
+      "no_catalog_icons": "Keine der PAK-Dateien enthält Symbole aus dem Katalog",
+      "check_failed": "Die PAK-Dateien konnten nicht geprüft werden: {error}"
     },
     "invalid_vanilla_title": "Ungültige Vanilla-PAK",
     "invalid_vanilla_message": "Die ausgewählte PAK-Datei enthält nicht die erforderlichen Assets ({missing}).\n\nBitte wählen Sie die korrekte Vanilla-Spiel-PAK-Datei:\nWar-WindowsNoEditor.pak\n\nDiese Datei befindet sich typischerweise in:\nSteam/steamapps/common/Foxhole/War/Content/Paks/",

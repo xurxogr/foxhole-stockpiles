@@ -19,22 +19,6 @@
     },
     "image_filter": "Imagens (*.png *.jpg *.jpeg);;Todos os ficheiros (*)"
   },
-  "external_tools_tab": {
-    "title": "Ferramentas externas",
-    "repak_label": "Ferramenta extratora (repak):",
-    "repak_tooltip": "Caminho para o executável repak para extrair ficheiros PAK.\n\nNecessário para extrair recursos do jogo de ficheiros PAK.\nDescarregar de: https://github.com/trumank/repak",
-    "repak_placeholder": "Caminho para o executável repak",
-    "umodel_label": "Ferramenta conversora (umodel):",
-    "umodel_tooltip": "Caminho para o executável umodel para converter ficheiros UAsset para PNG.\n\nNecessário para a função 'Construir base de dados'.\nDescarregar de: https://www.gildor.org/en/projects/umodel",
-    "umodel_placeholder": "Caminho para o executável umodel",
-    "uassetgui_label": "Conversor JSON (UAssetGUI):",
-    "uassetgui_tooltip": "Caminho para o executável UAssetGUI para converter ficheiros UAsset para JSON.\n\nNecessário para a função 'Construir catálogo'.\nDescarregar de: https://github.com/atenfyr/UAssetGUI",
-    "uassetgui_placeholder": "Caminho para o executável UAssetGUI",
-    "download": "Descarregar",
-    "select_repak": "Selecionar ferramenta extratora (repak)",
-    "select_umodel": "Selecionar ferramenta conversora (umodel)",
-    "select_uassetgui": "Selecionar conversor JSON (UAssetGUI)"
-  },
   "database_builder_tab": {
     "settings_group": "Configuração do construtor de base de dados",
     "catalog_file": "Ficheiro de catálogo (catalog.json):",
@@ -43,7 +27,7 @@
     "resolutions_group": "Resoluções alvo",
     "resolutions_info": "Selecione quais resoluções gerar ao importar ícones. Marque 'Todas as resoluções' para gerar todas as resoluções suportadas.",
     "all_resolutions": "Todas as resoluções",
-    "status_note": "<b>Nota:</b> O ficheiro de catálogo e as ferramentas externas (repak, umodel) devem estar configurados para que a função 'Construir base de dados' funcione.",
+    "status_note": "<b>Nota:</b> O ficheiro de catálogo deve estar configurado para que a função 'Construir base de dados' funcione.",
     "select_catalog": "Selecionar ficheiro de catálogo (catalog.json)"
   },
   "tools_window": {
@@ -75,7 +59,7 @@
   },
   "settings_dialog": {
     "title": "Configuração do FS Tools",
-    "info": "Configure o caminho da base de dados, as ferramentas externas e as definições do construtor de base de dados usadas pelo FS Tools. As alterações são guardadas no ficheiro de configuração partilhado.",
+    "info": "Configure o caminho da base de dados e as definições do construtor de base de dados usadas pelo FS Tools. As alterações são guardadas no ficheiro de configuração partilhado.",
     "language_group": "Idioma",
     "language": "Idioma:",
     "language_tooltip": "Selecione o idioma da interface.",
@@ -129,14 +113,9 @@
     "configuration_group": "Configuração",
     "mod_name": "Nome do mod:",
     "mod_name_placeholder": "ex., vanilla, meumod",
-    "overwrite": "Sobrescrever dados existentes",
-    "overwrite_tooltip": "Se marcado, os modelos existentes com o mesmo objeto-resolução serão sobrescritos",
     "destination_database": "Base de dados de destino:",
     "destination_placeholder": "Selecionar ficheiro de base de dados (.h5)",
     "destination_tooltip": "Ficheiro de base de dados onde os modelos serão guardados",
-    "workers": "Workers:",
-    "workers_tooltip": "Número de processos paralelos para construção da base de dados.\nDefina como 1 para desativar multiprocessamento.",
-    "cores_detected": "({cores} núcleos detetados)",
     "process_logs": "Registos do processo",
     "start_import": "Iniciar importação",
     "validation": {
@@ -151,7 +130,9 @@
       "enter_mod_name": "Por favor, introduza um nome de mod",
       "select_database": "Por favor, selecione um ficheiro de base de dados de destino",
       "mod_missing_assets": "Os ficheiros PAK do mod carecem de recursos necessários. Por favor, selecione o ficheiro PAK do jogo vanilla.",
-      "vanilla_invalid": "O ficheiro PAK vanilla selecionado não contém os recursos necessários. Por favor, selecione o ficheiro PAK vanilla correto (War-WindowsNoEditor.pak)."
+      "vanilla_invalid": "O ficheiro PAK vanilla selecionado não contém os recursos necessários. Por favor, selecione o ficheiro PAK vanilla correto (War-WindowsNoEditor.pak).",
+      "no_catalog_icons": "Nenhum dos ficheiros PAK contém ícones do catálogo",
+      "check_failed": "Não foi possível verificar os ficheiros PAK: {error}"
     },
     "invalid_vanilla_title": "PAK vanilla inválido",
     "invalid_vanilla_message": "O ficheiro PAK selecionado não contém os recursos necessários ({missing}).\n\nPor favor, selecione o ficheiro PAK vanilla correto do jogo:\nWar-WindowsNoEditor.pak\n\nEste ficheiro tipicamente encontra-se em:\nSteam/steamapps/common/Foxhole/War/Content/Paks/",

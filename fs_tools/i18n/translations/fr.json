@@ -19,22 +19,6 @@
     },
     "image_filter": "Images (*.png *.jpg *.jpeg);;Tous les fichiers (*)"
   },
-  "external_tools_tab": {
-    "title": "Outils externes",
-    "repak_label": "Outil d'extraction (repak) :",
-    "repak_tooltip": "Chemin vers l'exécutable repak pour extraire les fichiers PAK.\n\nRequis pour extraire les ressources du jeu des fichiers PAK.\nTélécharger depuis : https://github.com/trumank/repak",
-    "repak_placeholder": "Chemin vers l'exécutable repak",
-    "umodel_label": "Outil de conversion (umodel) :",
-    "umodel_tooltip": "Chemin vers l'exécutable umodel pour convertir les fichiers UAsset en PNG.\n\nRequis pour la fonction 'Construire la base de données'.\nTélécharger depuis : https://www.gildor.org/en/projects/umodel",
-    "umodel_placeholder": "Chemin vers l'exécutable umodel",
-    "uassetgui_label": "Convertisseur JSON (UAssetGUI) :",
-    "uassetgui_tooltip": "Chemin vers l'exécutable UAssetGUI pour convertir les fichiers UAsset en JSON.\n\nRequis pour la fonction 'Construire le catalogue'.\nTélécharger depuis : https://github.com/atenfyr/UAssetGUI",
-    "uassetgui_placeholder": "Chemin vers l'exécutable UAssetGUI",
-    "download": "Télécharger",
-    "select_repak": "Sélectionner l'outil d'extraction (repak)",
-    "select_umodel": "Sélectionner l'outil de conversion (umodel)",
-    "select_uassetgui": "Sélectionner le convertisseur JSON (UAssetGUI)"
-  },
   "database_builder_tab": {
     "settings_group": "Paramètres du Constructeur de Base de Données",
     "catalog_file": "Fichier catalogue (catalog.json) :",
@@ -43,7 +27,7 @@
     "resolutions_group": "Résolutions cibles",
     "resolutions_info": "Sélectionnez quelles résolutions générer lors de l'importation des icônes. Cochez 'Toutes les résolutions' pour générer toutes les résolutions supportées.",
     "all_resolutions": "Toutes les résolutions",
-    "status_note": "<b>Note :</b> Le fichier catalogue et les outils externes (repak, umodel) doivent être configurés pour que la fonction 'Construire la base de données' fonctionne.",
+    "status_note": "<b>Note :</b> Le fichier catalogue doit être configuré pour que la fonction 'Construire la base de données' fonctionne.",
     "select_catalog": "Sélectionner le fichier catalogue (catalog.json)"
   },
   "tools_window": {
@@ -75,7 +59,7 @@
   },
   "settings_dialog": {
     "title": "Configuration de FS Tools",
-    "info": "Configurez le chemin de la base de données, les outils externes et les paramètres du constructeur de base de données utilisés par FS Tools. Les modifications sont enregistrées dans le fichier de configuration partagé.",
+    "info": "Configurez le chemin de la base de données et les paramètres du constructeur de base de données utilisés par FS Tools. Les modifications sont enregistrées dans le fichier de configuration partagé.",
     "language_group": "Langue",
     "language": "Langue :",
     "language_tooltip": "Sélectionnez la langue de l'interface.",
@@ -129,14 +113,9 @@
     "configuration_group": "Configuration",
     "mod_name": "Nom du mod :",
     "mod_name_placeholder": "ex. vanilla, monmod",
-    "overwrite": "Écraser les données existantes",
-    "overwrite_tooltip": "Si coché, les modèles existants avec le même objet-résolution seront écrasés",
     "destination_database": "Base de données de destination :",
     "destination_placeholder": "Sélectionner un fichier de base de données (.h5)",
     "destination_tooltip": "Fichier de base de données où les modèles seront enregistrés",
-    "workers": "Workers :",
-    "workers_tooltip": "Nombre de processus parallèles pour la construction de la base de données.\nMettez 1 pour désactiver le multitraitement.",
-    "cores_detected": "({cores} cœurs détectés)",
     "process_logs": "Journaux du processus",
     "start_import": "Démarrer l'importation",
     "validation": {
@@ -151,7 +130,9 @@
       "enter_mod_name": "Veuillez entrer un nom de mod",
       "select_database": "Veuillez sélectionner un fichier de base de données de destination",
       "mod_missing_assets": "Les fichiers PAK du mod manquent des ressources requises. Veuillez sélectionner le fichier PAK du jeu vanilla.",
-      "vanilla_invalid": "Le fichier PAK vanilla sélectionné ne contient pas les ressources requises. Veuillez sélectionner le fichier PAK vanilla correct (War-WindowsNoEditor.pak)."
+      "vanilla_invalid": "Le fichier PAK vanilla sélectionné ne contient pas les ressources requises. Veuillez sélectionner le fichier PAK vanilla correct (War-WindowsNoEditor.pak).",
+      "no_catalog_icons": "Aucun des fichiers PAK ne contient d'icônes du catalogue",
+      "check_failed": "Impossible de vérifier les fichiers PAK : {error}"
     },
     "invalid_vanilla_title": "PAK vanilla invalide",
     "invalid_vanilla_message": "Le fichier PAK sélectionné ne contient pas les ressources requises ({missing}).\n\nVeuillez sélectionner le fichier PAK vanilla correct du jeu :\nWar-WindowsNoEditor.pak\n\nCe fichier se trouve généralement dans :\nSteam/steamapps/common/Foxhole/War/Content/Paks/",

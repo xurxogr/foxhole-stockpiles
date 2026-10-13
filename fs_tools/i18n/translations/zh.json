@@ -19,22 +19,6 @@
     },
     "image_filter": "图片 (*.png *.jpg *.jpeg);;所有文件 (*)"
   },
-  "external_tools_tab": {
-    "title": "外部工具",
-    "repak_label": "提取工具 (repak)：",
-    "repak_tooltip": "用于提取 PAK 文件的 repak 可执行文件路径。\n\n从 PAK 文件提取游戏资源所必需。\n下载：https://github.com/trumank/repak",
-    "repak_placeholder": "repak 可执行文件路径",
-    "umodel_label": "转换工具 (umodel)：",
-    "umodel_tooltip": "用于将 UAsset 文件转换为 PNG 的 umodel 可执行文件路径。\n\n「构建数据库」功能所必需。\n下载：https://www.gildor.org/en/projects/umodel",
-    "umodel_placeholder": "umodel 可执行文件路径",
-    "uassetgui_label": "JSON 转换器 (UAssetGUI)：",
-    "uassetgui_tooltip": "用于将 UAsset 文件转换为 JSON 的 UAssetGUI 可执行文件路径。\n\n「构建目录」功能所必需。\n下载：https://github.com/atenfyr/UAssetGUI",
-    "uassetgui_placeholder": "UAssetGUI 可执行文件路径",
-    "download": "下载",
-    "select_repak": "选择提取工具 (repak)",
-    "select_umodel": "选择转换工具 (umodel)",
-    "select_uassetgui": "选择 JSON 转换器 (UAssetGUI)"
-  },
   "database_builder_tab": {
     "settings_group": "数据库构建器设置",
     "catalog_file": "目录文件 (catalog.json)：",
@@ -43,7 +27,7 @@
     "resolutions_group": "目标分辨率",
     "resolutions_info": "选择导入图标时要生成的分辨率。选中「所有分辨率」以生成所有支持的分辨率。",
     "all_resolutions": "所有分辨率",
-    "status_note": "<b>注意：</b>必须配置目录文件和外部工具（repak、umodel）才能使「构建数据库」功能正常工作。",
+    "status_note": "<b>注意：</b>必须配置目录文件才能使「构建数据库」功能正常工作。",
     "select_catalog": "选择目录文件 (catalog.json)"
   },
   "tools_window": {
@@ -75,7 +59,7 @@
   },
   "settings_dialog": {
     "title": "FS Tools 配置",
-    "info": "配置 FS Tools 使用的数据库路径、外部工具和数据库构建器设置。更改将保存到共享配置文件。",
+    "info": "配置 FS Tools 使用的数据库路径和数据库构建器设置。更改将保存到共享配置文件。",
     "language_group": "语言",
     "language": "语言：",
     "language_tooltip": "选择界面语言。",
@@ -129,14 +113,9 @@
     "configuration_group": "配置",
     "mod_name": "模组名称：",
     "mod_name_placeholder": "例如：vanilla、mymod",
-    "overwrite": "覆盖现有数据",
-    "overwrite_tooltip": "如果选中，具有相同物品-分辨率的现有模板将被覆盖",
     "destination_database": "目标数据库：",
     "destination_placeholder": "选择数据库文件 (.h5)",
     "destination_tooltip": "保存模板的数据库文件",
-    "workers": "工作进程：",
-    "workers_tooltip": "数据库构建的并行进程数。\n设置为 1 禁用多进程处理。",
-    "cores_detected": "（检测到 {cores} 个核心）",
     "process_logs": "进程日志",
     "start_import": "开始导入",
     "validation": {
@@ -151,7 +130,9 @@
       "enter_mod_name": "请输入模组名称",
       "select_database": "请选择目标数据库文件",
       "mod_missing_assets": "模组 PAK 文件缺少必需资源。请选择原版游戏 PAK 文件。",
-      "vanilla_invalid": "选定的原版 PAK 文件不包含必需资源。请选择正确的原版游戏 PAK 文件 (War-WindowsNoEditor.pak)。"
+      "vanilla_invalid": "选定的原版 PAK 文件不包含必需资源。请选择正确的原版游戏 PAK 文件 (War-WindowsNoEditor.pak)。",
+      "no_catalog_icons": "所有 PAK 文件都不包含目录中的图标",
+      "check_failed": "无法检查 PAK 文件：{error}"
     },
     "invalid_vanilla_title": "无效的原版 PAK",
     "invalid_vanilla_message": "选定的 PAK 文件不包含必需资源 ({missing})。\n\n请选择正确的原版游戏 PAK 文件：\nWar-WindowsNoEditor.pak\n\n此文件通常位于：\nSteam/steamapps/common/Foxhole/War/Content/Paks/",

@@ -65,15 +65,13 @@ Running `fs` with no subcommand launches the GUI. Run `fs <command> --help` for 
 
 ### Tooling commands (`fs-tools`)
 
-- **`fs-tools extract-assets`** — extract icon assets from PAK files and convert them to PNG.
-- **`fs-tools generate-templates`** — generate resolution-specific template variants from extracted assets.
-- **`fs-tools build-db`** — compile templates into an optimized `.h5` database.
 - **`fs-tools add-icon`** — add an individual icon to an existing database without a full rebuild.
-- **`fs-tools add-mod`** — run the full extract → templates → merge pipeline for a mod's PAK file(s).
-- **`fs-tools-gui`** — the tooling GUI (catalog & database builder).
+- **`fs-tools visualize --database db.h5`** — open the database visualizer GUI.
+- **`fs-tools debug screenshot.png --database db.h5`** — open the debug image viewer for a screenshot.
+- **`fs-tools-gui`** (or `fs-tools` with no subcommand) — the tooling GUI (catalog & database builder).
 
-The item catalog is built by [fs-assets](https://pypi.org/project/fs-assets/),
-installed with fs: `fs-assets build-catalog --pak War-WindowsNoEditor.pak -o catalog.json`.
+The item catalog and the icon-template database are built by
+[fs-assets](https://pypi.org/project/fs-assets/), installed with fs (CLI `fs-assets`).
 
 ## Catalog
 
@@ -82,50 +80,47 @@ The catalog is read straight from the game PAK, without external tools, by
 it keeps the game data and drops audio, visual and engine-internal fields; tick
 **Full catalog** in the GUI (or pass `--full`) to keep everything.
 
+```bash
+fs-assets build-catalog --pak War-WindowsNoEditor.pak -o catalog.json
+```
+
 ## Building a custom OCR database (mods or game updates)
 
-> **Recommended: use the GUI.** The **fs-tools GUI** (`fs-tools-gui`, or the GUI from `fs-tools.exe`) has a **Database Builder** that runs the whole pipeline — extract → generate templates → build — with validation, progress, and sensible defaults. It is much easier and less error-prone than chaining the CLI commands by hand.
+> **Recommended: use the GUI.** The **fs-tools GUI** (`fs-tools-gui`, or the GUI from `fs-tools.exe`) has a **Database Builder (Icon Import)** window backed by fs-assets. It checks the mod PAKs against the catalog and asks for the game PAK only when the mod lacks the subtype/crate overlays.
 
-You'll need the external tools `repak.exe` (PAK extraction) and `umodel.exe` (asset conversion), plus your game's PAK files (and any mod PAKs).
+No external tools are needed: fs-assets reads the PAK files directly. You only need your game's PAK (and any mod PAKs) plus a catalog.
 
-Manual CLI pipeline (best for scripting / automation):
+CLI (best for scripting / automation):
 
 ```bash
-# 1. Extract assets from game PAK files
-fs-tools extract-assets \
-  --catalog data/catalog.json \
-  --pak "C:/Program Files (x86)/Steam/steamapps/common/Foxhole/War/Content/Paks/War-WindowsNoEditor.pak" \
-  --output raw_assets/
+# 1. Build the catalog from the game PAK
+fs-assets build-catalog --pak War-WindowsNoEditor.pak -o catalog.json
 
-# 2. Generate resolution-specific templates
-fs-tools generate-templates \
-  --catalog data/catalog.json \
-  --assets raw_assets/ \
-  --templates processed_templates/
+# 2. Add the base game icons (mod name defaults to "vanilla")
+fs-assets add-mod --pak War-WindowsNoEditor.pak --catalog catalog.json --db templates.h5
 
-# 3. Build the optimized binary database
-fs-tools build-db \
-  --catalog data/catalog.json \
-  --templates processed_templates/ \
-  --database data/foxhole_templates.h5
+# 3. Optional: add a mod (the game PAK supplies the overlays the mod lacks)
+fs-assets check-paks --catalog catalog.json --pak Mod.pak
+fs-assets add-mod --pak Mod.pak --vanilla-pak War-WindowsNoEditor.pak --catalog catalog.json --db templates.h5 --mod-name my-mod
 
 # 4. Scan with your custom database
-fs scan --database data/foxhole_templates.h5 --image shot.png
+fs scan --database templates.h5 --image shot.png
 ```
+
+`check-paks` reports how many catalog icons and overlays the PAKs contain. Pass
+`--pak` more than once for multi-file mods. Re-adding a mod replaces its
+templates; `--resolution 1080,1440` rebuilds only those resolutions.
+`fs-assets modify-icon` replaces a single icon from a PNG or `.uasset`.
 
 Per-tool documentation:
 
-- [Asset Extractor](../fs_tools/commands/uasset_extractor/README.md) — extract icons from PAK files
-- [Template Generator](../fs_tools/commands/generate_templates/README.md) — generate resolution-specific templates
-- [Database Builder](../fs_tools/commands/database_builder/README.md) — build optimized template databases
 - [Add Icon](../fs_tools/commands/add_icon/README.md) — add individual icons to databases
-- [Add Mod](../fs_tools/commands/add_mod/README.md) — add mod icons to databases
 
 ## Configuration
 
-Settings are stored as JSON in the platform config directory (`~/.fs_config`). The schema is **v15** and is migrated to the latest format automatically whenever settings are loaded — no manual migration step.
+Settings are stored as JSON in the platform config directory (`~/.fs_config`). The schema is **v16** and is migrated to the latest format automatically whenever settings are loaded — no manual migration step.
 
-**Top-level sections:** `external_tools`, `logging`, `output`, `scanner`, `database_builder`, `gui`, `sav_processing`, `clipboard`. The capture hotkey lives at `scanner.capture_key` (e.g. `"F9"`).
+**Top-level sections:** `logging`, `output`, `scanner`, `database_builder`, `gui`, `sav_processing`, `clipboard`. The capture hotkey lives at `scanner.capture_key` (e.g. `"F9"`).
 
 Any value can be overridden with an environment variable in `FS_<SECTION>__<KEY>` form:
 

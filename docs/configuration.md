@@ -26,7 +26,7 @@ export FS_LOGGING__LOG_FILE=/var/log/foxhole-scanner.log
 
 Create a file at `~/.fs_config` with JSON configuration:
 
-**Note on Config Versioning:** The configuration includes a `config_version` field (current: **15**). Old configs are automatically migrated when loaded via `ConfigMigrator` - no manual action required. V5 introduced the `output.handlers` array structure (multiple output destinations); later versions added the `sav_processing` section for Foxhole save-file processing; V10 removed the obsolete `api_server` and `api_auth` sections (the FastAPI server was removed in favor of local screenshot capture); V11 removed the `stockpile_types` section (type detection now happens inside the external `fs-ocr` engine, so the aliases had no effect); V12 removed the `notifications` section (the notifier stack was never wired into the scan flow); V13 removed `gui.config_level` (the basic/advanced/developer setting no longer gated anything after OCR/template settings moved to `fs-ocr`/`fs-tools`); V14 reworked the webhook `forward` auth type into `header` (`client_auth_header` → `auth_header`); V15 dropped two dead fields, `scanner.early_exit_threshold` and `sav_processing.emit_all_on_start`.
+**Note on Config Versioning:** The configuration includes a `config_version` field (current: **16**). Old configs are automatically migrated when loaded via `ConfigMigrator` - no manual action required. V5 introduced the `output.handlers` array structure (multiple output destinations); later versions added the `sav_processing` section for Foxhole save-file processing; V10 removed the obsolete `api_server` and `api_auth` sections (the FastAPI server was removed in favor of local screenshot capture); V11 removed the `stockpile_types` section (type detection now happens inside the external `fs-ocr` engine, so the aliases had no effect); V12 removed the `notifications` section (the notifier stack was never wired into the scan flow); V13 removed `gui.config_level` (the basic/advanced/developer setting no longer gated anything after OCR/template settings moved to `fs-ocr`/`fs-tools`); V14 reworked the webhook `forward` auth type into `header` (`client_auth_header` → `auth_header`); V15 dropped two dead fields, `scanner.early_exit_threshold` and `sav_processing.emit_all_on_start`; V16 removed the `external_tools` section (`repak`/`umodel`/`uassetgui`) and `database_builder.workers` (the catalog and template database are now built by the external `fs-assets` package, which reads the PAK directly).
 
 ```json
 {
@@ -195,38 +195,19 @@ Configure application logging behavior.
 | `log_file` | string\|null | `null` | Path to log file, or `null` for console only |
 | `loggers` | object | `{}` | Per-logger level overrides (e.g., `{"foxhole_stockpiles": "DEBUG"}`) |
 
-### External Tools (`external_tools`)
-
-Paths to external tools used by database and catalog builders.
-
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `repak` | string\|null | `null` | Path to repak executable for extracting PAK files |
-| `umodel` | string\|null | `null` | Path to umodel executable for converting UAsset files to PNG |
-| `uassetgui` | string\|null | `null` | Path to UAssetGUI executable for converting UAsset files to JSON |
-
-**Example:**
-```bash
-export FS_EXTERNAL_TOOLS__REPAK=/path/to/repak
-export FS_EXTERNAL_TOOLS__UMODEL=/path/to/umodel.exe
-export FS_EXTERNAL_TOOLS__UASSETGUI=/path/to/UAssetGUI.exe
-```
-
 ### Database Builder (`database_builder`)
 
-Settings for building the template database.
+Settings for building the template database (used by the fs-tools GUI, backed by `fs-assets`).
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
 | `catalog_file` | string\|null | `null` | Path to catalog.json file for building the database |
 | `target_resolutions` | array[string]\|null | `null` | Resolutions to generate (null = all supported) |
-| `workers` | integer\|null | `null` | Worker processes for building (null = auto-detect CPU count) |
 
 **Example:**
 ```bash
 export FS_DATABASE_BUILDER__CATALOG_FILE=/path/to/catalog.json
 export FS_DATABASE_BUILDER__TARGET_RESOLUTIONS='["1080", "1440", "2160"]'
-export FS_DATABASE_BUILDER__WORKERS=4
 ```
 
 ### GUI (`gui`)
@@ -355,15 +336,9 @@ This example shows all available settings with their default values:
     "early_exit_threshold": 0.0,
     "confidence_gap": 0.0
   },
-  "external_tools": {
-    "repak": null,
-    "umodel": null,
-    "uassetgui": null
-  },
   "database_builder": {
     "catalog_file": null,
-    "target_resolutions": null,
-    "workers": null
+    "target_resolutions": null
   },
   "gui": {
     "minimize_to_tray": false,
@@ -399,14 +374,9 @@ This table lists all available environment variables with their default values:
 | `FS_SCANNER__EARLY_EXIT_THRESHOLD` | float | `0.0` | Early exit threshold (used by `fs-tools`) |
 | `FS_SCANNER__CONFIDENCE_GAP` | float | `0.0` | Confidence gap for alternative candidates |
 | `FS_SCANNER__SCREENSHOTS_FOLDER` | string | `""` | Folder to save screenshots (empty to disable) |
-| **External Tools** | | | |
-| `FS_EXTERNAL_TOOLS__REPAK` | string\|null | `null` | Path to repak executable |
-| `FS_EXTERNAL_TOOLS__UMODEL` | string\|null | `null` | Path to umodel executable |
-| `FS_EXTERNAL_TOOLS__UASSETGUI` | string\|null | `null` | Path to UAssetGUI executable |
 | **Database Builder** | | | |
 | `FS_DATABASE_BUILDER__CATALOG_FILE` | string\|null | `null` | Path to catalog.json |
 | `FS_DATABASE_BUILDER__TARGET_RESOLUTIONS` | JSON array\|null | `null` | Resolutions to generate |
-| `FS_DATABASE_BUILDER__WORKERS` | integer\|null | `null` | Worker processes (null = auto) |
 | **GUI** | | | |
 | `FS_GUI__MINIMIZE_TO_TRAY` | boolean | `false` | Minimize to tray on close |
 | `FS_GUI__LANGUAGE` | string | `"en"` | GUI language code |

@@ -36,7 +36,6 @@ def test_dialog_initialization(dialog: SettingsDialog) -> None:
     """
     assert t("settings_dialog.title") in dialog.windowTitle()
     assert dialog.database_path_input is not None
-    assert dialog.external_tools_tab is not None
     assert dialog.db_builder_tab is not None
     assert dialog.config_manager is not None
 

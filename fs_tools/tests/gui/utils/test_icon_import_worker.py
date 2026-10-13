@@ -1,499 +1,131 @@
-"""Tests for IconImportWorker.
-
-The IconImportWorker is a thin wrapper around ModImporter that provides
-Qt signals and threading. The actual import logic is tested in
-tests/services/test_mod_importer.py.
-"""
+"""Tests for IconImportWorker."""
 
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from typing import Any
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from foxhole_stockpiles.core.settings.app_settings import AppSettings
-from foxhole_stockpiles.core.settings.sections.database_builder import DatabaseBuilderSettings
-from foxhole_stockpiles.core.settings.sections.external_tools import ExternalToolsSettings
-from foxhole_stockpiles.core.settings.sections.scanner import ScannerSettings
 from fs_tools.gui.utils.icon_import_worker import IconImportWorker
-from fs_tools.models.mod_import_progress import ModImportProgress
-from fs_tools.models.mod_import_result import ModImportResult
+
+_ADD_MOD = "fs_tools.gui.utils.icon_import_worker.fs_assets.add_mod"
+_STATS = {
+    "total_items": 380,
+    "items_embedded": 120,
+    "missing_code": 0,
+    "icons_missing": 260,
+    "decode_errors": 0,
+}
 
 
-@pytest.fixture
-def mock_settings(tmp_path: Path) -> AppSettings:
-    """Create mock settings for testing.
+def make_worker(tmp_path: Path, **overrides: Any) -> IconImportWorker:
+    """Create a worker importing two mod paks into a not-yet-existing folder.
 
     Args:
-        tmp_path: Temporary directory path
+        tmp_path (Path): Temporary directory path.
+        **overrides (Any): Constructor arguments to override.
 
     Returns:
-        AppSettings: Mock settings
+        IconImportWorker: Worker instance.
     """
-    catalog_file = tmp_path / "catalog.json"
-    catalog_file.write_text("{}")
-
-    extractor_tool = tmp_path / "repak.exe"
-    extractor_tool.write_text("")
-
-    converter_tool = tmp_path / "umodel.exe"
-    converter_tool.write_text("")
-
-    database_path = tmp_path / "database.h5"
-
-    return AppSettings(
-        database_builder=DatabaseBuilderSettings(
-            catalog_file=catalog_file,
-            target_resolutions=None,
-        ),
-        external_tools=ExternalToolsSettings(
-            repak=extractor_tool,
-            umodel=converter_tool,
-        ),
-        scanner=ScannerSettings(
-            database_path=database_path,
-        ),
-    )
+    kwargs: dict[str, Any] = {
+        "mod_pak_files": ["Mod_1.pak", "Mod_2.pak"],
+        "mod_name": "  clean icons ",
+        "catalog_path": tmp_path / "catalog.json",
+        "database_path": tmp_path / "db" / "templates.h5",
+        "vanilla_pak_file": "War.pak",
+        "resolutions": [1080, 1440],
+    }
+    kwargs.update(overrides)
+    return IconImportWorker(**kwargs)
 
 
-@pytest.fixture
-def worker(tmp_path: Path, mock_settings: AppSettings) -> IconImportWorker:
-    """Create an IconImportWorker instance.
+def _listen(worker: IconImportWorker) -> tuple[MagicMock, MagicMock, MagicMock]:
+    """Connect mocks to the worker's signals.
 
     Args:
-        tmp_path: Temporary directory path
-        mock_settings: Mock settings
+        worker (IconImportWorker): The worker to listen to.
 
     Returns:
-        IconImportWorker: Worker instance
+        tuple[MagicMock, MagicMock, MagicMock]: finished, error and progress slots.
     """
-    pak_file = tmp_path / "test.pak"
-    pak_file.write_text("")
-
-    catalog_path = tmp_path / "catalog.json"
-
-    with patch("fs_tools.gui.utils.icon_import_worker.get_settings", return_value=mock_settings):
-        worker = IconImportWorker(
-            mod_pak_files=[str(pak_file)],
-            mod_name="test_mod",
-            catalog_path=catalog_path,
-            overwrite=False,
-        )
-
-    return worker
+    finished, error, progress = MagicMock(), MagicMock(), MagicMock()
+    worker.finished.connect(finished)
+    worker.error.connect(error)
+    worker.progress.connect(progress)
+    return finished, error, progress
 
 
-# ===== Initialization Tests =====
+def test_invalid_mod_name_is_rejected_up_front(tmp_path: Path) -> None:
+    """An unsafe mod name fails when the worker is created."""
+    with pytest.raises(ValueError):
+        make_worker(tmp_path, mod_name="../vanilla")
 
 
-def test_initialization(worker: IconImportWorker, tmp_path: Path) -> None:
-    """Test IconImportWorker initialization.
+def test_run_adds_the_mod_with_fs_assets(tmp_path: Path) -> None:
+    """run() passes every input to fs_assets.add_mod and reports success."""
+    worker = make_worker(tmp_path)
+    finished, error, progress = _listen(worker)
 
-    Args:
-        worker: IconImportWorker instance
-        tmp_path: Temporary directory path
-    """
-    assert worker.mod_pak_files == [str(tmp_path / "test.pak")]
-    assert worker.mod_name == "test_mod"
-    assert worker.catalog_path == tmp_path / "catalog.json"
-    assert worker.overwrite is False
-    assert worker.vanilla_pak_file is None
-    assert worker._should_stop is False
-    assert worker.settings is not None
-
-
-def test_initialization_with_vanilla_pak(tmp_path: Path, mock_settings: AppSettings) -> None:
-    """Test IconImportWorker initialization with vanilla PAK file.
-
-    Args:
-        tmp_path: Temporary directory path
-        mock_settings: Mock settings
-    """
-    pak_file = tmp_path / "test.pak"
-    pak_file.write_text("")
-
-    vanilla_pak = tmp_path / "vanilla.pak"
-    vanilla_pak.write_text("")
-
-    catalog_path = tmp_path / "catalog.json"
-
-    with patch("fs_tools.gui.utils.icon_import_worker.get_settings", return_value=mock_settings):
-        worker = IconImportWorker(
-            mod_pak_files=[str(pak_file)],
-            mod_name="test_mod",
-            catalog_path=catalog_path,
-            overwrite=False,
-            vanilla_pak_file=str(vanilla_pak),
-        )
-
-    assert worker.vanilla_pak_file == str(vanilla_pak)
-
-
-def test_initialization_with_overwrite(tmp_path: Path, mock_settings: AppSettings) -> None:
-    """Test IconImportWorker initialization with overwrite flag.
-
-    Args:
-        tmp_path: Temporary directory path
-        mock_settings: Mock settings
-    """
-    pak_file = tmp_path / "test.pak"
-    pak_file.write_text("")
-
-    catalog_path = tmp_path / "catalog.json"
-
-    with patch("fs_tools.gui.utils.icon_import_worker.get_settings", return_value=mock_settings):
-        worker = IconImportWorker(
-            mod_pak_files=[str(pak_file)],
-            mod_name="test_mod",
-            catalog_path=catalog_path,
-            overwrite=True,
-        )
-
-    assert worker.overwrite is True
-
-
-def test_initialization_with_custom_database_path(
-    tmp_path: Path, mock_settings: AppSettings
-) -> None:
-    """Test IconImportWorker initialization with custom database path.
-
-    Args:
-        tmp_path: Temporary directory path
-        mock_settings: Mock settings
-    """
-    pak_file = tmp_path / "test.pak"
-    pak_file.write_text("")
-
-    catalog_path = tmp_path / "catalog.json"
-    custom_db_path = tmp_path / "custom_database.h5"
-
-    with patch("fs_tools.gui.utils.icon_import_worker.get_settings", return_value=mock_settings):
-        worker = IconImportWorker(
-            mod_pak_files=[str(pak_file)],
-            mod_name="test_mod",
-            catalog_path=catalog_path,
-            database_path=custom_db_path,
-        )
-
-    assert worker.database_path == custom_db_path
-
-
-# ===== Mod Name Validation Tests =====
-# Note: Full validation tests are in test_mod_importer.py
-# These tests verify the worker delegates validation correctly
-
-
-def test_mod_name_validation_invalid_raises(tmp_path: Path, mock_settings: AppSettings) -> None:
-    """Test that invalid mod names raise ValueError.
-
-    Args:
-        tmp_path: Temporary directory path
-        mock_settings: Mock settings
-    """
-    pak_file = tmp_path / "test.pak"
-    pak_file.write_text("")
-
-    catalog_path = tmp_path / "catalog.json"
-
-    with patch("fs_tools.gui.utils.icon_import_worker.get_settings", return_value=mock_settings):
-        with pytest.raises(ValueError, match="can only contain alphanumeric"):
-            IconImportWorker(
-                mod_pak_files=[str(pak_file)],
-                mod_name="../etc/passwd",
-                catalog_path=catalog_path,
-            )
-
-
-def test_mod_name_validation_empty_raises(tmp_path: Path, mock_settings: AppSettings) -> None:
-    """Test that empty mod names raise ValueError.
-
-    Args:
-        tmp_path: Temporary directory path
-        mock_settings: Mock settings
-    """
-    pak_file = tmp_path / "test.pak"
-    pak_file.write_text("")
-
-    catalog_path = tmp_path / "catalog.json"
-
-    with patch("fs_tools.gui.utils.icon_import_worker.get_settings", return_value=mock_settings):
-        with pytest.raises(ValueError, match="Mod name cannot be empty"):
-            IconImportWorker(
-                mod_pak_files=[str(pak_file)],
-                mod_name="",
-                catalog_path=catalog_path,
-            )
-
-
-# ===== Stop Tests =====
-
-
-def test_stop(worker: IconImportWorker) -> None:
-    """Test stop method sets the flag.
-
-    Args:
-        worker: IconImportWorker instance
-    """
-    assert worker._should_stop is False
-    worker.stop()
-    assert worker._should_stop is True
-
-
-# ===== Progress Callback Tests =====
-
-
-def test_on_progress_emits_signal(worker: IconImportWorker) -> None:
-    """Test that _on_progress emits the progress signal.
-
-    Args:
-        worker: IconImportWorker instance
-    """
-    worker.progress = MagicMock()
-
-    progress = ModImportProgress(
-        current_step=1,
-        step_name="Extracting",
-        message="Test message",
-    )
-
-    worker._on_progress(progress)
-
-    worker.progress.emit.assert_called_once_with(1, "Test message")
-
-
-def test_check_cancel_returns_should_stop(worker: IconImportWorker) -> None:
-    """Test that _check_cancel returns _should_stop value.
-
-    Args:
-        worker: IconImportWorker instance
-    """
-    assert worker._check_cancel() is False
-    worker._should_stop = True
-    assert worker._check_cancel() is True
-
-
-# ===== Run Method Tests =====
-
-
-def test_run_calls_asyncio_run(worker: IconImportWorker) -> None:
-    """Test the run method calls asyncio.run.
-
-    Args:
-        worker: IconImportWorker instance
-    """
-    with patch("asyncio.run") as mock_asyncio_run:
+    with patch(_ADD_MOD, return_value=_STATS) as add_mod:
         worker.run()
 
-        mock_asyncio_run.assert_called_once()
+    kwargs = add_mod.call_args.kwargs
+    assert kwargs["catalog"] == str(tmp_path / "catalog.json")
+    assert kwargs["pak"] == ["Mod_1.pak", "Mod_2.pak"]
+    assert kwargs["db"] == str(tmp_path / "db" / "templates.h5")
+    assert kwargs["mod_name"] == "clean icons"
+    assert kwargs["vanilla_pak"] == "War.pak"
+    assert kwargs["resolution"] == [1080, 1440]
+    assert callable(kwargs["progress"])
+    assert (tmp_path / "db").is_dir()
+    finished.assert_called_once_with(True)
+    error.assert_not_called()
+    assert "120" in progress.call_args.args[0]
 
 
-def test_run_exception_handling(worker: IconImportWorker) -> None:
-    """Test run method handles exceptions.
+def test_run_without_vanilla_pak_or_resolutions(tmp_path: Path) -> None:
+    """Omitted optional inputs are passed as None (all resolutions, no fallback)."""
+    worker = make_worker(tmp_path, vanilla_pak_file=None, resolutions=None)
 
-    Args:
-        worker: IconImportWorker instance
-    """
-    mock_error = MagicMock()
-    mock_finished = MagicMock()
+    with patch(_ADD_MOD, return_value=_STATS) as add_mod:
+        worker.run()
 
-    with patch.object(worker, "error", mock_error):
-        with patch.object(worker, "finished", mock_finished):
-            with patch("asyncio.run", side_effect=Exception("Test error")):
-                worker.run()
-
-                mock_error.emit.assert_called_once_with("Test error")
-                mock_finished.emit.assert_called_once_with(False)
+    assert add_mod.call_args.kwargs["vanilla_pak"] is None
+    assert add_mod.call_args.kwargs["resolution"] is None
 
 
-# ===== Import Pipeline Tests =====
+def test_stage_starts_are_reported_as_progress(tmp_path: Path) -> None:
+    """Each stage reports once when it starts, not on every step."""
+    worker = make_worker(tmp_path)
+    _, _, progress = _listen(worker)
+
+    def fake_add_mod(**kwargs: Any) -> dict[str, int]:
+        report = kwargs["progress"]
+        report("extracting_icons", 0, 40)
+        report("extracting_icons", 40, 40)
+        report("extracting_vanilla_icons", 0, 33)
+        report("building_templates", 0, 380)
+        report("building_templates", 200, 380)
+        return _STATS
+
+    with patch(_ADD_MOD, side_effect=fake_add_mod):
+        worker.run()
+
+    messages = [call.args[0] for call in progress.call_args_list]
+    assert len(messages) == 4
+    assert "40" in messages[0]
+    assert "33" in messages[1]
+    assert "380" in messages[2]
 
 
-@pytest.mark.asyncio
-async def test_run_import_success(worker: IconImportWorker) -> None:
-    """Test successful import execution.
+def test_import_failure_is_reported(tmp_path: Path) -> None:
+    """An fs_assets error is emitted and the run ends unsuccessfully."""
+    worker = make_worker(tmp_path)
+    finished, error, _ = _listen(worker)
 
-    Args:
-        worker: IconImportWorker instance
-    """
-    mock_finished = MagicMock()
-    mock_result = ModImportResult(success=True, templates_added=10)
+    with patch(_ADD_MOD, side_effect=RuntimeError("Mod_1.pak has none of the catalog's icons")):
+        worker.run()
 
-    with patch.object(worker, "finished", mock_finished):
-        with patch("fs_tools.gui.utils.icon_import_worker.ModImporter") as mock_importer_class:
-            mock_importer = MagicMock()
-            mock_importer.run = AsyncMock(return_value=mock_result)
-            mock_importer_class.return_value = mock_importer
-
-            await worker._run_import()
-
-            mock_finished.emit.assert_called_once_with(True)
-
-
-@pytest.mark.asyncio
-async def test_run_import_failure(worker: IconImportWorker) -> None:
-    """Test import failure handling.
-
-    Args:
-        worker: IconImportWorker instance
-    """
-    mock_finished = MagicMock()
-    mock_error = MagicMock()
-    mock_result = ModImportResult(success=False, error_message="Test failure")
-
-    with patch.object(worker, "finished", mock_finished):
-        with patch.object(worker, "error", mock_error):
-            with patch("fs_tools.gui.utils.icon_import_worker.ModImporter") as mock_importer_class:
-                mock_importer = MagicMock()
-                mock_importer.run = AsyncMock(return_value=mock_result)
-                mock_importer_class.return_value = mock_importer
-
-                await worker._run_import()
-
-                mock_error.emit.assert_called_once_with("Test failure")
-                mock_finished.emit.assert_called_once_with(False)
-
-
-@pytest.mark.asyncio
-async def test_run_import_cancelled(worker: IconImportWorker) -> None:
-    """Test import cancelled handling.
-
-    Args:
-        worker: IconImportWorker instance
-    """
-    mock_finished = MagicMock()
-    worker._should_stop = True
-    mock_result = ModImportResult(success=True)
-
-    with patch.object(worker, "finished", mock_finished):
-        with patch("fs_tools.gui.utils.icon_import_worker.ModImporter") as mock_importer_class:
-            mock_importer = MagicMock()
-            mock_importer.run = AsyncMock(return_value=mock_result)
-            mock_importer_class.return_value = mock_importer
-
-            await worker._run_import()
-
-            # Should emit False due to cancellation
-            mock_finished.emit.assert_called_once_with(False)
-
-
-@pytest.mark.asyncio
-async def test_run_import_exception(worker: IconImportWorker) -> None:
-    """Test import exception handling.
-
-    Args:
-        worker: IconImportWorker instance
-    """
-    mock_finished = MagicMock()
-    mock_error = MagicMock()
-
-    with patch.object(worker, "finished", mock_finished):
-        with patch.object(worker, "error", mock_error):
-            with patch("fs_tools.gui.utils.icon_import_worker.ModImporter") as mock_importer_class:
-                mock_importer_class.side_effect = Exception("Unexpected error")
-
-                await worker._run_import()
-
-                # Should emit error with traceback
-                mock_error.emit.assert_called_once()
-                error_msg = mock_error.emit.call_args[0][0]
-                assert "Unexpected error" in error_msg
-                assert "Exception:" in error_msg
-
-                mock_finished.emit.assert_called_once_with(False)
-
-
-@pytest.mark.asyncio
-async def test_run_import_creates_correct_config(
-    worker: IconImportWorker, mock_settings: AppSettings
-) -> None:
-    """Test that run_import creates correct ModImportConfig.
-
-    Args:
-        worker: IconImportWorker instance
-        mock_settings: Mock settings
-    """
-    mock_finished = MagicMock()
-    mock_result = ModImportResult(success=True)
-
-    with patch.object(worker, "finished", mock_finished):
-        with patch("fs_tools.gui.utils.icon_import_worker.ModImporter") as mock_importer_class:
-            mock_importer = MagicMock()
-            mock_importer.run = AsyncMock(return_value=mock_result)
-            mock_importer_class.return_value = mock_importer
-
-            await worker._run_import()
-
-            # Verify ModImporter was called with correct config
-            call_kwargs = mock_importer_class.call_args[1]
-            config = call_kwargs["config"]
-
-            assert config.mod_pak_files == worker.mod_pak_files
-            assert config.mod_name == worker.mod_name
-            assert config.catalog_path == worker.catalog_path
-            assert config.overwrite == worker.overwrite
-            assert config.vanilla_pak_file == worker.vanilla_pak_file
-
-
-@pytest.mark.asyncio
-async def test_run_import_passes_callbacks(worker: IconImportWorker) -> None:
-    """Test that run_import passes progress and cancel callbacks.
-
-    Args:
-        worker: IconImportWorker instance
-    """
-    mock_finished = MagicMock()
-    mock_result = ModImportResult(success=True)
-
-    with patch.object(worker, "finished", mock_finished):
-        with patch("fs_tools.gui.utils.icon_import_worker.ModImporter") as mock_importer_class:
-            mock_importer = MagicMock()
-            mock_importer.run = AsyncMock(return_value=mock_result)
-            mock_importer_class.return_value = mock_importer
-
-            await worker._run_import()
-
-            # Verify callbacks were passed
-            call_kwargs = mock_importer_class.call_args[1]
-
-            assert call_kwargs["progress_callback"] == worker._on_progress
-            assert call_kwargs["cancel_check"] == worker._check_cancel
-
-
-@pytest.mark.asyncio
-async def test_run_import_uses_custom_database_path(
-    tmp_path: Path, mock_settings: AppSettings
-) -> None:
-    """Test that run_import uses custom database path when provided.
-
-    Args:
-        tmp_path: Temporary directory path
-        mock_settings: Mock settings
-    """
-    pak_file = tmp_path / "test.pak"
-    pak_file.write_text("")
-
-    catalog_path = tmp_path / "catalog.json"
-    custom_db_path = tmp_path / "custom_database.h5"
-
-    with patch("fs_tools.gui.utils.icon_import_worker.get_settings", return_value=mock_settings):
-        worker = IconImportWorker(
-            mod_pak_files=[str(pak_file)],
-            mod_name="test_mod",
-            catalog_path=catalog_path,
-            database_path=custom_db_path,
-        )
-
-    mock_finished = MagicMock()
-    mock_result = ModImportResult(success=True)
-
-    with patch.object(worker, "finished", mock_finished):
-        with patch("fs_tools.gui.utils.icon_import_worker.ModImporter") as mock_importer_class:
-            mock_importer = MagicMock()
-            mock_importer.run = AsyncMock(return_value=mock_result)
-            mock_importer_class.return_value = mock_importer
-
-            await worker._run_import()
-
-            # Verify custom database path was used
-            call_kwargs = mock_importer_class.call_args[1]
-            config = call_kwargs["config"]
-            assert config.database_path == custom_db_path
+    error.assert_called_once_with("Mod_1.pak has none of the catalog's icons")
+    finished.assert_called_once_with(False)

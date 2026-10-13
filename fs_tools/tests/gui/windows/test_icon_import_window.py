@@ -6,16 +6,39 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PySide6.QtCore import QMimeData, QUrl
-from PySide6.QtGui import QDragEnterEvent, QDropEvent
+from fs_assets.types import PakCoverage
+from PySide6.QtCore import QMimeData, Qt, QUrl
+from PySide6.QtGui import QDragEnterEvent, QDropEvent, QKeyEvent
 from PySide6.QtWidgets import QMessageBox, QTableWidget
 
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.core.settings.sections.database_builder import DatabaseBuilderSettings
-from foxhole_stockpiles.core.settings.sections.external_tools import ExternalToolsSettings
 from foxhole_stockpiles.i18n import t
 from fs_tools.gui.utils.icon_import_worker import IconImportWorker
 from fs_tools.gui.windows.icon_import_window import IconImportWindow
+
+MAIN_ICONS_TOTAL = 10
+OVERLAYS_TOTAL = 4  # The crate icon plus three subtype icons
+
+
+def coverage(main: int = 10, overlays: int = 4, crate: bool = True) -> PakCoverage:
+    """Build a PAK coverage report.
+
+    Args:
+        main (int): Catalog main icons found. Defaults to 10 (all of them).
+        overlays (int): Overlays found, crate icon included. Defaults to 4 (all of them).
+        crate (bool): Whether the crate icon was found. Defaults to True.
+
+    Returns:
+        PakCoverage: The coverage report.
+    """
+    return PakCoverage(
+        main_icons_found=main,
+        main_icons_total=MAIN_ICONS_TOTAL,
+        overlays_found=overlays,
+        overlays_total=OVERLAYS_TOTAL,
+        has_crate_icon=crate,
+    )
 
 
 # Prevent any GUI dialogs from appearing during test cleanup
@@ -37,22 +60,12 @@ def mock_configured_settings(tmp_path: Path) -> AppSettings:
         tmp_path: Temporary directory path
 
     Returns:
-        AppSettings: Mock settings with all required tools configured
+        AppSettings: Mock settings with an existing catalog file
     """
     catalog_file = tmp_path / "catalog.json"
     catalog_file.write_text("{}")
 
-    extractor_tool = tmp_path / "repak.exe"
-    extractor_tool.write_text("")
-
-    converter_tool = tmp_path / "umodel.exe"
-    converter_tool.write_text("")
-
     return AppSettings(
-        external_tools=ExternalToolsSettings(
-            repak=extractor_tool,
-            umodel=converter_tool,
-        ),
         database_builder=DatabaseBuilderSettings(
             catalog_file=catalog_file,
         ),
@@ -64,10 +77,9 @@ def mock_unconfigured_settings() -> AppSettings:
     """Create mock settings without configuration.
 
     Returns:
-        AppSettings: Mock settings with missing tools
+        AppSettings: Mock settings without a catalog file
     """
     return AppSettings(
-        external_tools=ExternalToolsSettings(),
         database_builder=DatabaseBuilderSettings(),
     )
 
@@ -92,9 +104,8 @@ def configured_window(
         window = IconImportWindow()
         qtbot.addWidget(window)
         yield window
-        # Cleanup: stop any running workers
+        # Cleanup: let any running import finish
         if window.import_worker and window.import_worker.isRunning():
-            window.import_worker.stop()
             window.import_worker.wait()
 
 
@@ -118,9 +129,8 @@ def unconfigured_window(
         window = IconImportWindow()
         qtbot.addWidget(window)
         yield window
-        # Cleanup: stop any running workers
+        # Cleanup: let any running import finish
         if window.import_worker and window.import_worker.isRunning():
-            window.import_worker.stop()
             window.import_worker.wait()
 
 
@@ -162,164 +172,47 @@ def test_icon_import_window_widgets_exist(configured_window: IconImportWindow) -
     assert configured_window.vanilla_pak_display is not None
     assert configured_window.mod_pak_list_widget is not None
     assert configured_window.mod_name_input is not None
-    assert configured_window.overwrite_checkbox is not None
     assert configured_window.start_button is not None
-    assert configured_window.cancel_button is not None
     assert configured_window.log_display is not None
-
-
-def test_icon_import_window_cancel_button_disabled(configured_window: IconImportWindow) -> None:
-    """Test cancel button is disabled initially.
-
-    Args:
-        configured_window: Configured window instance
-    """
-    assert configured_window.cancel_button.isEnabled() is False
 
 
 # ===== Configuration Check Tests =====
 
 
-def test_requirements_met_all_present(qtbot: Any, tmp_path: Path) -> None:
-    """Test configuration check when all tools are present.
+def test_requirements_met_catalog_exists(tmp_path: Path) -> None:
+    """Test configuration check when the catalog is configured and exists.
 
     Args:
-        qtbot: PyQt test fixture
-        tmp_path: Temporary directory path
+        tmp_path (Path): Temporary directory path
     """
     catalog_file = tmp_path / "catalog.json"
     catalog_file.write_text("{}")
 
-    extractor_tool = tmp_path / "repak.exe"
-    extractor_tool.write_text("")
-
-    converter_tool = tmp_path / "umodel.exe"
-    converter_tool.write_text("")
-
     settings = AppSettings(
-        external_tools=ExternalToolsSettings(
-            repak=extractor_tool,
-            umodel=converter_tool,
-        ),
-        database_builder=DatabaseBuilderSettings(
-            catalog_file=catalog_file,
-        ),
+        database_builder=DatabaseBuilderSettings(catalog_file=catalog_file),
     )
 
-    with patch("fs_tools.gui.windows.icon_import_window.get_settings", return_value=settings):
-        window = IconImportWindow()
-        qtbot.addWidget(window)
-        assert IconImportWindow.requirements_met(window.settings) is True
+    assert IconImportWindow.requirements_met(settings) is True
 
 
-def test_requirements_met_missing_extractor(qtbot: Any, tmp_path: Path) -> None:
-    """Test configuration check when extractor tool is missing.
-
-    Args:
-        qtbot: PyQt test fixture
-        tmp_path: Temporary directory path
-    """
-    catalog_file = tmp_path / "catalog.json"
-    catalog_file.write_text("{}")
-
-    converter_tool = tmp_path / "umodel.exe"
-    converter_tool.write_text("")
-
+def test_requirements_met_missing_catalog() -> None:
+    """Test configuration check when the catalog file is not configured."""
     settings = AppSettings(
-        external_tools=ExternalToolsSettings(
-            repak=None,
-            umodel=converter_tool,
-        ),
-        database_builder=DatabaseBuilderSettings(
-            catalog_file=catalog_file,
-        ),
+        database_builder=DatabaseBuilderSettings(catalog_file=None),
     )
 
-    with patch("fs_tools.gui.windows.icon_import_window.get_settings", return_value=settings):
-        window = IconImportWindow()
-        qtbot.addWidget(window)
-        assert IconImportWindow.requirements_met(window.settings) is False
+    assert IconImportWindow.requirements_met(settings) is False
 
 
-def test_requirements_met_missing_converter(qtbot: Any, tmp_path: Path) -> None:
-    """Test configuration check when converter tool is missing.
-
-    Args:
-        qtbot: PyQt test fixture
-        tmp_path: Temporary directory path
-    """
-    catalog_file = tmp_path / "catalog.json"
-    catalog_file.write_text("{}")
-
-    extractor_tool = tmp_path / "repak.exe"
-    extractor_tool.write_text("")
-
+def test_requirements_met_catalog_not_exists() -> None:
+    """Test configuration check when the catalog path does not exist."""
     settings = AppSettings(
-        external_tools=ExternalToolsSettings(
-            repak=extractor_tool,
-            umodel=None,
-        ),
-        database_builder=DatabaseBuilderSettings(
-            catalog_file=catalog_file,
-        ),
-    )
-
-    with patch("fs_tools.gui.windows.icon_import_window.get_settings", return_value=settings):
-        window = IconImportWindow()
-        qtbot.addWidget(window)
-        assert IconImportWindow.requirements_met(window.settings) is False
-
-
-def test_requirements_met_missing_catalog(qtbot: Any, tmp_path: Path) -> None:
-    """Test configuration check when catalog file is missing.
-
-    Args:
-        qtbot: PyQt test fixture
-        tmp_path: Temporary directory path
-    """
-    extractor_tool = tmp_path / "repak.exe"
-    extractor_tool.write_text("")
-
-    converter_tool = tmp_path / "umodel.exe"
-    converter_tool.write_text("")
-
-    settings = AppSettings(
-        external_tools=ExternalToolsSettings(
-            repak=extractor_tool,
-            umodel=converter_tool,
-        ),
-        database_builder=DatabaseBuilderSettings(
-            catalog_file=None,
-        ),
-    )
-
-    with patch("fs_tools.gui.windows.icon_import_window.get_settings", return_value=settings):
-        window = IconImportWindow()
-        qtbot.addWidget(window)
-        assert IconImportWindow.requirements_met(window.settings) is False
-
-
-def test_requirements_met_file_not_exists(qtbot: Any, tmp_path: Path) -> None:
-    """Test configuration check when files don't exist.
-
-    Args:
-        qtbot: PyQt test fixture
-        tmp_path: Temporary directory path
-    """
-    settings = AppSettings(
-        external_tools=ExternalToolsSettings(
-            repak=Path("/nonexistent/repak.exe"),
-            umodel=Path("/nonexistent/umodel.exe"),
-        ),
         database_builder=DatabaseBuilderSettings(
             catalog_file=Path("/nonexistent/catalog.json"),
         ),
     )
 
-    with patch("fs_tools.gui.windows.icon_import_window.get_settings", return_value=settings):
-        window = IconImportWindow()
-        qtbot.addWidget(window)
-        assert IconImportWindow.requirements_met(window.settings) is False
+    assert IconImportWindow.requirements_met(settings) is False
 
 
 # ===== PAK File Management Tests =====
@@ -629,10 +522,81 @@ def test_start_import_success(
         assert configured_window.import_worker is not None
         mock_worker.start.assert_called_once()
 
-        # Buttons should be updated
+        # Inputs should be disabled while importing
         assert configured_window.start_button.isEnabled() is False
-        assert configured_window.cancel_button.isEnabled() is True
         assert configured_window.mod_name_input.isEnabled() is False
+        assert configured_window.db_path_input.isEnabled() is False
+        mock_worker.progress.connect.assert_called_once_with(configured_window.on_import_progress)
+
+
+def test_start_import_passes_worker_arguments(configured_window: IconImportWindow) -> None:
+    """Test start import builds the worker from the window state and settings.
+
+    Args:
+        configured_window (IconImportWindow): Configured window instance
+    """
+    configured_window.mod_pak_files = ["mod1.pak", "mod2.pak"]
+    configured_window.vanilla_pak_file = "vanilla.pak"
+    configured_window._validation_result = coverage(overlays=0, crate=False)
+    configured_window._vanilla_validation_result = coverage()
+    configured_window.mod_name_input.setText("test_mod")
+    configured_window.db_path_input.setText("/tmp/test.h5")
+    configured_window.settings.database_builder.target_resolutions = ["1080", "1440"]
+
+    with patch("fs_tools.gui.windows.icon_import_window.IconImportWorker") as mock_worker_class:
+        configured_window.start_import()
+
+    mock_worker_class.assert_called_once_with(
+        mod_pak_files=["mod1.pak", "mod2.pak"],
+        mod_name="test_mod",
+        catalog_path=configured_window.settings.database_builder.catalog_file,
+        database_path=Path("/tmp/test.h5"),
+        vanilla_pak_file="vanilla.pak",
+        resolutions=[1080, 1440],
+    )
+
+
+def test_start_import_all_resolutions(configured_window: IconImportWindow) -> None:
+    """Test start import passes None resolutions when none are configured.
+
+    Args:
+        configured_window (IconImportWindow): Configured window instance
+    """
+    configured_window.mod_pak_files = ["mod.pak"]
+    configured_window.mod_name_input.setText("test_mod")
+    configured_window.db_path_input.setText("/tmp/test.h5")
+    configured_window.settings.database_builder.target_resolutions = None
+
+    with patch("fs_tools.gui.windows.icon_import_window.IconImportWorker") as mock_worker_class:
+        configured_window.start_import()
+
+    assert mock_worker_class.call_args.kwargs["resolutions"] is None
+    assert mock_worker_class.call_args.kwargs["vanilla_pak_file"] is None
+
+
+@pytest.mark.parametrize(
+    ("configured", "expected"),
+    [
+        (["1080", "1440"], [1080, 1440]),
+        ([], None),
+        (None, None),
+    ],
+)
+def test_target_resolutions(
+    configured_window: IconImportWindow,
+    configured: list[str] | None,
+    expected: list[int] | None,
+) -> None:
+    """Test configured resolutions are converted to integers, or None for all.
+
+    Args:
+        configured_window (IconImportWindow): Configured window instance
+        configured (list[str] | None): Resolutions set in the settings
+        expected (list[int] | None): Expected resolutions passed to the worker
+    """
+    configured_window.settings.database_builder.target_resolutions = configured
+
+    assert configured_window._target_resolutions() == expected
 
 
 def test_start_import_no_catalog(qtbot: Any, configured_window: IconImportWindow) -> None:
@@ -659,39 +623,6 @@ def test_start_import_no_catalog(qtbot: Any, configured_window: IconImportWindow
             assert "Catalog file not configured" in args[2]
 
 
-def test_cancel_import_not_running(qtbot: Any, configured_window: IconImportWindow) -> None:
-    """Test cancel import when worker is not running.
-
-    Args:
-        qtbot: PyQt test fixture
-        configured_window: Configured window instance
-    """
-    # Should not raise exception
-    configured_window.cancel_import()
-
-
-def test_cancel_import_user_confirms(qtbot: Any, configured_window: IconImportWindow) -> None:
-    """Test cancel import when user confirms.
-
-    Args:
-        qtbot: PyQt test fixture
-        configured_window: Configured window instance
-    """
-    # Create mock worker
-    mock_worker = MagicMock(spec=IconImportWorker)
-    mock_worker.isRunning.return_value = True
-    configured_window.import_worker = mock_worker
-
-    with patch(
-        "fs_tools.gui.windows.icon_import_window.QMessageBox.question",
-        return_value=QMessageBox.StandardButton.Yes,
-    ):
-        configured_window.cancel_import()
-
-        mock_worker.stop.assert_called_once()
-        mock_worker.wait.assert_called_once()
-
-
 def test_on_import_finished_success(qtbot: Any, configured_window: IconImportWindow) -> None:
     """Test import finished handler on success.
 
@@ -699,22 +630,20 @@ def test_on_import_finished_success(qtbot: Any, configured_window: IconImportWin
         qtbot: PyQt test fixture
         configured_window: Configured window instance
     """
-    # Disable buttons as if import was running
+    # Disable inputs as if import was running
     configured_window.start_button.setEnabled(False)
-    configured_window.cancel_button.setEnabled(True)
     configured_window.mod_name_input.setEnabled(False)
-    configured_window.overwrite_checkbox.setEnabled(False)
+    configured_window.db_path_input.setEnabled(False)
 
     # Clear logs before test
     configured_window.clear_logs()
 
     configured_window.on_import_finished(True)
 
-    # Buttons should be re-enabled
+    # Inputs should be re-enabled
     assert configured_window.start_button.isEnabled() is True
-    assert configured_window.cancel_button.isEnabled() is False
     assert configured_window.mod_name_input.isEnabled() is True
-    assert configured_window.overwrite_checkbox.isEnabled() is True
+    assert configured_window.db_path_input.isEnabled() is True
 
     # Should add success log message
     assert configured_window.log_display.rowCount() == 1
@@ -731,15 +660,15 @@ def test_on_import_finished_failure(qtbot: Any, configured_window: IconImportWin
         qtbot: PyQt test fixture
         configured_window: Configured window instance
     """
-    # Disable buttons as if import was running
+    # Disable inputs as if import was running
     configured_window.start_button.setEnabled(False)
-    configured_window.cancel_button.setEnabled(True)
+    configured_window.mod_name_input.setEnabled(False)
 
     configured_window.on_import_finished(False)
 
-    # Buttons should be re-enabled
+    # Inputs should be re-enabled
     assert configured_window.start_button.isEnabled() is True
-    assert configured_window.cancel_button.isEnabled() is False
+    assert configured_window.mod_name_input.isEnabled() is True
 
 
 def test_on_import_error(qtbot: Any, configured_window: IconImportWindow) -> None:
@@ -760,6 +689,25 @@ def test_on_import_error(qtbot: Any, configured_window: IconImportWindow) -> Non
     message_item = configured_window.log_display.item(0, 3)
     assert level_item is not None and level_item.text() == "ERROR"
     assert message_item is not None and "Test error message" in message_item.text()
+
+
+def test_on_import_progress(configured_window: IconImportWindow) -> None:
+    """Test import progress handler appends an INFO log row.
+
+    Args:
+        configured_window (IconImportWindow): Configured window instance
+    """
+    configured_window.clear_logs()
+
+    configured_window.on_import_progress("Importing 1080p templates")
+
+    assert configured_window.log_display.rowCount() == 1
+    level_item = configured_window.log_display.item(0, 1)
+    module_item = configured_window.log_display.item(0, 2)
+    message_item = configured_window.log_display.item(0, 3)
+    assert level_item is not None and level_item.text() == "INFO"
+    assert module_item is not None and module_item.text() == "icon_import"
+    assert message_item is not None and message_item.text() == "Importing 1080p templates"
 
 
 # ===== Log Display Tests =====
@@ -905,7 +853,6 @@ def test_close_event_worker_running_user_confirms(
     ):
         configured_window.closeEvent(mock_event)
 
-        mock_worker.stop.assert_called_once()
         mock_worker.wait.assert_called_once()
         mock_event.accept.assert_called_once()
         mock_event.ignore.assert_not_called()
@@ -931,7 +878,7 @@ def test_close_event_worker_running_user_declines(
 
         configured_window.closeEvent(mock_event)
 
-        mock_worker.stop.assert_not_called()
+        mock_worker.wait.assert_not_called()
         mock_event.accept.assert_not_called()
         mock_event.ignore.assert_called_once()
 
@@ -961,11 +908,8 @@ def test_start_import_invalid_mod_name(qtbot: Any, configured_window: IconImport
 
         # Verify inputs are re-enabled so user can fix the error
         assert configured_window.mod_name_input.isEnabled() is True
-        assert configured_window.workers_spinbox.isEnabled() is True
         assert configured_window.db_path_input.isEnabled() is True
-        assert configured_window.overwrite_checkbox.isEnabled() is True
         assert configured_window.start_button.isEnabled() is True
-        assert configured_window.cancel_button.isEnabled() is False
 
 
 def test_clear_vanilla_pak(qtbot: Any, configured_window: IconImportWindow) -> None:
@@ -1362,14 +1306,12 @@ def test_trigger_validation_no_pak_files(configured_window: IconImportWindow) ->
         mock_set.assert_not_called()
 
 
-def test_trigger_validation_no_extractor_tool(
-    qtbot: Any, mock_unconfigured_settings: AppSettings
-) -> None:
-    """Test _trigger_validation does nothing when extractor not configured.
+def test_trigger_validation_no_catalog(qtbot: Any, mock_unconfigured_settings: AppSettings) -> None:
+    """Test _trigger_validation does nothing when the catalog is not configured.
 
     Args:
         qtbot: PyQt test fixture
-        mock_unconfigured_settings: Mock unconfigured settings
+        mock_unconfigured_settings (AppSettings): Mock unconfigured settings
     """
     with patch(
         "fs_tools.gui.windows.icon_import_window.get_settings",
@@ -1380,13 +1322,17 @@ def test_trigger_validation_no_extractor_tool(
 
         window.mod_pak_files = ["test.pak"]
 
-        with patch.object(window, "_set_pak_controls_enabled") as mock_set:
+        with (
+            patch("fs_tools.gui.windows.icon_import_window.PakCoverageWorker") as mock_worker_class,
+            patch.object(window, "_set_pak_controls_enabled") as mock_set,
+        ):
             window._trigger_validation()
             mock_set.assert_not_called()
+            mock_worker_class.assert_not_called()
 
 
 def test_trigger_validation_starts_worker(qtbot: Any, configured_window: IconImportWindow) -> None:
-    """Test _trigger_validation starts a validation worker.
+    """Test _trigger_validation starts a coverage worker for the mod PAK files.
 
     Args:
         qtbot: PyQt test fixture
@@ -1394,35 +1340,39 @@ def test_trigger_validation_starts_worker(qtbot: Any, configured_window: IconImp
     """
     configured_window.mod_pak_files = ["test.pak"]
 
-    with patch("fs_tools.gui.windows.icon_import_window.PakValidationWorker") as mock_worker_class:
+    with patch("fs_tools.gui.windows.icon_import_window.PakCoverageWorker") as mock_worker_class:
         mock_worker = MagicMock()
         mock_worker.isRunning.return_value = False
         mock_worker_class.return_value = mock_worker
 
         configured_window._trigger_validation()
 
-        mock_worker_class.assert_called_once()
-        mock_worker.validation_complete.connect.assert_called_once()
+        mock_worker_class.assert_called_once_with(
+            catalog_path=configured_window.settings.database_builder.catalog_file,
+            pak_files=["test.pak"],
+            parent=configured_window,
+        )
+        mock_worker.coverage_ready.connect.assert_called_once_with(
+            configured_window._on_validation_complete
+        )
+        mock_worker.failed.connect.assert_called_once_with(configured_window._on_validation_failed)
         mock_worker.start.assert_called_once()
         assert configured_window._is_validating is True
+        assert configured_window.start_button.isEnabled() is False
 
 
 def test_on_validation_complete_valid(configured_window: IconImportWindow) -> None:
-    """Test _on_validation_complete when validation passes.
+    """Test _on_validation_complete when the mod PAK files cover every overlay.
 
     Args:
         configured_window: Configured window instance
     """
-    from fs_tools.models.pak_validation_result import PakValidationResult
-
-    result = PakValidationResult()
-    result.is_valid = True
-    result.has_crate_icon = True
-    result.has_subicons = True
-    result.subicons_count = 10
-
+    result = coverage()
+    configured_window.mod_pak_files = ["test.pak"]
     configured_window._is_validating = True
     configured_window.vanilla_group.setVisible(True)
+    configured_window.vanilla_pak_file = "vanilla.pak"
+    configured_window.vanilla_pak_display.setText("vanilla.pak")
 
     configured_window._on_validation_complete(result)
 
@@ -1430,10 +1380,33 @@ def test_on_validation_complete_valid(configured_window: IconImportWindow) -> No
     assert configured_window._validation_result == result
     # Use isHidden() since window isn't shown
     assert configured_window.vanilla_group.isHidden() is True
+    assert configured_window.vanilla_pak_file is None
+    assert configured_window.vanilla_pak_display.text() == ""
     assert (
         t("database_builder.validation.all_assets_found")
         in configured_window.validation_status_label.text()
     )
+    assert configured_window.start_button.isEnabled() is True
+
+
+def test_on_validation_complete_no_catalog_icons(configured_window: IconImportWindow) -> None:
+    """Test _on_validation_complete when the mod PAK files hold no catalog icon.
+
+    Args:
+        configured_window: Configured window instance
+    """
+    configured_window.mod_pak_files = ["test.pak"]
+    configured_window._is_validating = True
+    configured_window.vanilla_group.setVisible(True)
+
+    configured_window._on_validation_complete(coverage(main=0))
+
+    assert configured_window._is_validating is False
+    assert configured_window.vanilla_group.isHidden() is True
+    assert configured_window.validation_status_label.text() == t(
+        "database_builder.validation.no_catalog_icons"
+    )
+    assert configured_window.start_button.isEnabled() is False
 
 
 def test_on_validation_complete_missing_crate(configured_window: IconImportWindow) -> None:
@@ -1442,18 +1415,11 @@ def test_on_validation_complete_missing_crate(configured_window: IconImportWindo
     Args:
         configured_window: Configured window instance
     """
-    from fs_tools.models.pak_validation_result import PakValidationResult
-
-    result = PakValidationResult()
-    result.is_valid = False
-    result.has_crate_icon = False
-    result.has_subicons = True
-    result.subicons_count = 10
-
+    configured_window.mod_pak_files = ["test.pak"]
     configured_window._is_validating = True
     configured_window.vanilla_group.setVisible(False)
 
-    configured_window._on_validation_complete(result)
+    configured_window._on_validation_complete(coverage(overlays=3, crate=False))
 
     assert configured_window._is_validating is False
     # Use isHidden() since window isn't shown
@@ -1462,7 +1428,10 @@ def test_on_validation_complete_missing_crate(configured_window: IconImportWindo
         t("database_builder.validation.missing_assets")
         in configured_window.validation_status_label.text()
     )
-    assert "crate icon" in configured_window.vanilla_info.text()
+    assert configured_window.vanilla_info.text() == t(
+        "database_builder.vanilla_warning_missing"
+    ).replace("{missing}", "crate icon")
+    assert configured_window.start_button.isEnabled() is False
 
 
 def test_on_validation_complete_missing_subicons(configured_window: IconImportWindow) -> None:
@@ -1471,21 +1440,15 @@ def test_on_validation_complete_missing_subicons(configured_window: IconImportWi
     Args:
         configured_window: Configured window instance
     """
-    from fs_tools.models.pak_validation_result import PakValidationResult
-
-    result = PakValidationResult()
-    result.is_valid = False
-    result.has_crate_icon = True
-    result.has_subicons = False
-    result.subicons_count = 0
-
+    configured_window.mod_pak_files = ["test.pak"]
     configured_window._is_validating = True
 
-    configured_window._on_validation_complete(result)
+    configured_window._on_validation_complete(coverage(overlays=1, crate=True))
 
     # Use isHidden() since window isn't shown
     assert configured_window.vanilla_group.isHidden() is False
     assert "subicons" in configured_window.vanilla_info.text()
+    assert "crate icon" not in configured_window.vanilla_info.text()
 
 
 def test_on_validation_complete_missing_both(configured_window: IconImportWindow) -> None:
@@ -1494,22 +1457,40 @@ def test_on_validation_complete_missing_both(configured_window: IconImportWindow
     Args:
         configured_window: Configured window instance
     """
-    from fs_tools.models.pak_validation_result import PakValidationResult
-
-    result = PakValidationResult()
-    result.is_valid = False
-    result.has_crate_icon = False
-    result.has_subicons = False
-    result.subicons_count = 0
-
+    configured_window.mod_pak_files = ["test.pak"]
     configured_window._is_validating = True
 
-    configured_window._on_validation_complete(result)
+    configured_window._on_validation_complete(coverage(overlays=0, crate=False))
 
     # Use isHidden() since window isn't shown
     assert configured_window.vanilla_group.isHidden() is False
-    assert "crate icon" in configured_window.vanilla_info.text()
-    assert "subicons" in configured_window.vanilla_info.text()
+    assert configured_window.vanilla_info.text() == t(
+        "database_builder.vanilla_warning_missing"
+    ).replace("{missing}", "crate icon and subicons")
+
+
+def test_on_validation_failed(configured_window: IconImportWindow) -> None:
+    """Test _on_validation_failed flags the check as failed and disables start.
+
+    Args:
+        configured_window (IconImportWindow): Configured window instance
+    """
+    configured_window.mod_pak_files = ["test.pak"]
+    configured_window._is_validating = True
+    configured_window._set_pak_controls_enabled(False)
+    configured_window.vanilla_group.setVisible(True)
+
+    configured_window._on_validation_failed("unreadable PAK")
+
+    assert configured_window._is_validating is False
+    assert configured_window._validation_failed is True
+    assert configured_window._validation_result is None
+    assert configured_window.add_mod_pak_button.isEnabled() is True
+    assert configured_window.vanilla_group.isHidden() is True
+    assert configured_window.validation_status_label.text() == t(
+        "database_builder.validation.check_failed"
+    ).replace("{error}", "unreadable PAK")
+    assert configured_window.start_button.isEnabled() is False
 
 
 def test_set_pak_controls_enabled_disable(configured_window: IconImportWindow) -> None:
@@ -1560,6 +1541,40 @@ def test_validate_inputs_while_validating(configured_window: IconImportWindow) -
     assert error_msg == t("database_builder.validation.wait_validation")
 
 
+def test_validate_inputs_check_failed(configured_window: IconImportWindow) -> None:
+    """Test validation fails when the mod PAK check could not run.
+
+    Args:
+        configured_window (IconImportWindow): Configured window instance
+    """
+    configured_window.mod_pak_files = ["test.pak"]
+    configured_window.mod_name_input.setText("test_mod")
+    configured_window.db_path_input.setText("/tmp/test.h5")
+    configured_window._validation_failed = True
+
+    is_valid, error_msg = configured_window.validate_inputs()
+
+    assert is_valid is False
+    assert error_msg == t("database_builder.validation.check_failed").replace("{error}", "")
+
+
+def test_validate_inputs_no_catalog_icons(configured_window: IconImportWindow) -> None:
+    """Test validation fails when the mod PAK files hold no catalog icon.
+
+    Args:
+        configured_window (IconImportWindow): Configured window instance
+    """
+    configured_window.mod_pak_files = ["test.pak"]
+    configured_window.mod_name_input.setText("test_mod")
+    configured_window.db_path_input.setText("/tmp/test.h5")
+    configured_window._validation_result = coverage(main=0)
+
+    is_valid, error_msg = configured_window.validate_inputs()
+
+    assert is_valid is False
+    assert error_msg == t("database_builder.validation.no_catalog_icons")
+
+
 def test_validate_inputs_vanilla_required_but_missing(
     configured_window: IconImportWindow,
 ) -> None:
@@ -1568,14 +1583,9 @@ def test_validate_inputs_vanilla_required_but_missing(
     Args:
         configured_window: Configured window instance
     """
-    from fs_tools.models.pak_validation_result import PakValidationResult
-
     configured_window.mod_pak_files = ["test.pak"]
     configured_window.mod_name_input.setText("test_mod")
-
-    result = PakValidationResult()
-    result.is_valid = False
-    configured_window._validation_result = result
+    configured_window._validation_result = coverage(overlays=0, crate=False)
     configured_window.vanilla_pak_file = None
 
     is_valid, error_msg = configured_window.validate_inputs()
@@ -1592,26 +1602,21 @@ def test_validate_inputs_vanilla_required_and_provided(
     Args:
         configured_window: Configured window instance
     """
-    from fs_tools.models.pak_validation_result import PakValidationResult
-
     configured_window.mod_pak_files = ["test.pak"]
     configured_window.mod_name_input.setText("test_mod")
     configured_window.db_path_input.setText("/tmp/test.h5")
 
-    # Mod PAK validation shows missing assets
-    mod_result = PakValidationResult()
-    mod_result.is_valid = False
-    configured_window._validation_result = mod_result
+    # Mod PAK files lack the overlays
+    configured_window._validation_result = coverage(overlays=0, crate=False)
 
-    # Vanilla PAK is provided and validated as valid
+    # Vanilla PAK is provided and covers every overlay
     configured_window.vanilla_pak_file = "vanilla.pak"
-    vanilla_result = PakValidationResult()
-    vanilla_result.is_valid = True
-    configured_window._vanilla_validation_result = vanilla_result
+    configured_window._vanilla_validation_result = coverage()
 
     is_valid, error_msg = configured_window.validate_inputs()
 
     assert is_valid is True
+    assert error_msg == ""
 
 
 def test_validate_inputs_vanilla_provided_but_invalid(
@@ -1622,21 +1627,15 @@ def test_validate_inputs_vanilla_provided_but_invalid(
     Args:
         configured_window: Configured window instance
     """
-    from fs_tools.models.pak_validation_result import PakValidationResult
-
     configured_window.mod_pak_files = ["test.pak"]
     configured_window.mod_name_input.setText("test_mod")
 
-    # Mod PAK validation shows missing assets
-    mod_result = PakValidationResult()
-    mod_result.is_valid = False
-    configured_window._validation_result = mod_result
+    # Mod PAK files lack the overlays
+    configured_window._validation_result = coverage(overlays=0, crate=False)
 
-    # Vanilla PAK is provided but validation shows it's also invalid
+    # Vanilla PAK is provided but lacks overlays too
     configured_window.vanilla_pak_file = "wrong.pak"
-    vanilla_result = PakValidationResult()
-    vanilla_result.is_valid = False
-    configured_window._vanilla_validation_result = vanilla_result
+    configured_window._vanilla_validation_result = coverage(overlays=3, crate=False)
 
     is_valid, error_msg = configured_window.validate_inputs()
 
@@ -1652,15 +1651,11 @@ def test_validate_inputs_vanilla_provided_not_validated(
     Args:
         configured_window: Configured window instance
     """
-    from fs_tools.models.pak_validation_result import PakValidationResult
-
     configured_window.mod_pak_files = ["test.pak"]
     configured_window.mod_name_input.setText("test_mod")
 
-    # Mod PAK validation shows missing assets
-    mod_result = PakValidationResult()
-    mod_result.is_valid = False
-    configured_window._validation_result = mod_result
+    # Mod PAK files lack the overlays
+    configured_window._validation_result = coverage(overlays=0, crate=False)
 
     # Vanilla PAK is provided but not yet validated
     configured_window.vanilla_pak_file = "vanilla.pak"
@@ -1704,58 +1699,62 @@ def test_trigger_vanilla_validation_no_file(configured_window: IconImportWindow)
     assert configured_window._is_validating_vanilla is False
 
 
-def test_trigger_vanilla_validation_no_extractor(configured_window: IconImportWindow) -> None:
-    """Test vanilla validation logs warning when extractor not configured.
+def test_trigger_vanilla_validation_no_catalog(configured_window: IconImportWindow) -> None:
+    """Test vanilla validation does nothing when the catalog is not configured.
 
     Args:
         configured_window: Configured window instance
     """
     configured_window.vanilla_pak_file = "test.pak"
-    configured_window.settings.external_tools.repak = None
+    configured_window.settings.database_builder.catalog_file = None
 
-    # Should return early without starting validation
-    configured_window._trigger_vanilla_validation()
+    with patch("fs_tools.gui.windows.icon_import_window.PakCoverageWorker") as mock_worker_class:
+        configured_window._trigger_vanilla_validation()
 
     assert configured_window._is_validating_vanilla is False
+    mock_worker_class.assert_not_called()
 
 
 def test_trigger_vanilla_validation_starts_worker(
     configured_window: IconImportWindow, tmp_path: Path
 ) -> None:
-    """Test vanilla validation starts worker when properly configured.
+    """Test vanilla validation starts a coverage worker for the vanilla PAK.
 
     Args:
         configured_window: Configured window instance
         tmp_path: Temporary directory path
     """
-    extractor = tmp_path / "repak.exe"
-    extractor.touch()
-    configured_window.settings.external_tools.repak = extractor
-    configured_window.vanilla_pak_file = str(tmp_path / "vanilla.pak")
+    vanilla_pak = str(tmp_path / "vanilla.pak")
+    configured_window.vanilla_pak_file = vanilla_pak
 
-    with patch("fs_tools.gui.windows.icon_import_window.PakValidationWorker") as mock_worker_class:
+    with patch("fs_tools.gui.windows.icon_import_window.PakCoverageWorker") as mock_worker_class:
         mock_worker = MagicMock()
         mock_worker_class.return_value = mock_worker
 
         configured_window._trigger_vanilla_validation()
 
         assert configured_window._is_validating_vanilla is True
+        mock_worker_class.assert_called_once_with(
+            catalog_path=configured_window.settings.database_builder.catalog_file,
+            pak_files=[vanilla_pak],
+            parent=configured_window,
+        )
+        mock_worker.coverage_ready.connect.assert_called_once_with(
+            configured_window._on_vanilla_validation_complete
+        )
+        mock_worker.failed.connect.assert_called_once_with(
+            configured_window._on_vanilla_validation_failed
+        )
         mock_worker.start.assert_called_once()
 
 
 def test_on_vanilla_validation_complete_valid(configured_window: IconImportWindow) -> None:
-    """Test handling valid vanilla PAK validation result.
+    """Test handling a vanilla PAK that covers every overlay.
 
     Args:
         configured_window: Configured window instance
     """
-    from fs_tools.models.pak_validation_result import PakValidationResult
-
-    result = PakValidationResult()
-    result.is_valid = True
-    result.has_crate_icon = True
-    result.has_subicons = True
-    result.subicons_count = 25
+    result = coverage()
 
     configured_window._is_validating_vanilla = True
     configured_window._on_vanilla_validation_complete(result)
@@ -1773,17 +1772,12 @@ def test_on_vanilla_validation_complete_valid(configured_window: IconImportWindo
 def test_on_vanilla_validation_complete_invalid(
     configured_window: IconImportWindow,
 ) -> None:
-    """Test handling invalid vanilla PAK validation result.
+    """Test handling a vanilla PAK that lacks overlays.
 
     Args:
         configured_window: Configured window instance
     """
-    from fs_tools.models.pak_validation_result import PakValidationResult
-
-    result = PakValidationResult()
-    result.is_valid = False
-    result.has_crate_icon = False
-    result.has_subicons = False
+    result = coverage(overlays=0, crate=False)
 
     configured_window._is_validating_vanilla = True
 
@@ -1799,6 +1793,33 @@ def test_on_vanilla_validation_complete_invalid(
     # Warning message should be visible when invalid
     assert configured_window.vanilla_info.isHidden() is False
     mock_warning.assert_called_once()
+    assert "crate icon and subicons" in mock_warning.call_args[0][2]
+
+
+def test_on_vanilla_validation_failed(configured_window: IconImportWindow) -> None:
+    """Test a vanilla PAK check that could not run shows a warning.
+
+    Args:
+        configured_window (IconImportWindow): Configured window instance
+    """
+    configured_window.mod_pak_files = ["test.pak"]
+    configured_window._validation_result = coverage(overlays=0, crate=False)
+    configured_window._is_validating_vanilla = True
+    configured_window._set_vanilla_controls_enabled(False)
+
+    with patch("fs_tools.gui.windows.icon_import_window.QMessageBox.warning") as mock_warning:
+        configured_window._on_vanilla_validation_failed("unreadable PAK")
+
+    assert configured_window._is_validating_vanilla is False
+    assert configured_window._vanilla_validation_result is None
+    assert configured_window.vanilla_browse_button.isEnabled() is True
+    assert configured_window.vanilla_info.isHidden() is False
+    assert configured_window.validation_status_label.text() == t(
+        "database_builder.validation.invalid_vanilla"
+    )
+    mock_warning.assert_called_once()
+    assert "unreadable PAK" in mock_warning.call_args[0][2]
+    assert configured_window.start_button.isEnabled() is False
 
 
 def test_set_vanilla_controls_enabled(configured_window: IconImportWindow) -> None:
@@ -1818,18 +1839,12 @@ def test_set_vanilla_controls_enabled(configured_window: IconImportWindow) -> No
     assert configured_window.vanilla_clear_button.isEnabled() is True
 
 
-def test_trigger_validation_cancels_existing(
-    configured_window: IconImportWindow, tmp_path: Path
-) -> None:
+def test_trigger_validation_waits_for_existing(configured_window: IconImportWindow) -> None:
     """Test that triggering validation waits for existing worker.
 
     Args:
         configured_window: Configured window instance
-        tmp_path: Temporary directory path
     """
-    extractor = tmp_path / "repak.exe"
-    extractor.touch()
-    configured_window.settings.external_tools.repak = extractor
     configured_window.mod_pak_files = ["test.pak"]
 
     # Create a mock worker that appears to be running
@@ -1837,7 +1852,7 @@ def test_trigger_validation_cancels_existing(
     mock_existing_worker.isRunning.return_value = True
     configured_window.validation_worker = mock_existing_worker
 
-    with patch("fs_tools.gui.windows.icon_import_window.PakValidationWorker") as mock_worker_class:
+    with patch("fs_tools.gui.windows.icon_import_window.PakCoverageWorker") as mock_worker_class:
         mock_new_worker = MagicMock()
         mock_worker_class.return_value = mock_new_worker
 
@@ -1883,9 +1898,6 @@ def test_log_key_press_event_other_key(configured_window: IconImportWindow) -> N
     Args:
         configured_window: Configured window instance
     """
-    from PySide6.QtCore import Qt
-    from PySide6.QtGui import QKeyEvent
-
     # Create a key event for a non-copy key (e.g., Enter)
     event = QKeyEvent(
         QKeyEvent.Type.KeyPress,
@@ -1905,9 +1917,6 @@ def test_log_key_press_event_copy_key(configured_window: IconImportWindow) -> No
     Args:
         configured_window: Configured window instance
     """
-    from PySide6.QtCore import Qt
-    from PySide6.QtGui import QKeyEvent
-
     # Create a key event for Ctrl+C (Copy)
     event = QKeyEvent(
         QKeyEvent.Type.KeyPress,
@@ -1996,12 +2005,10 @@ def test_clear_all_paks_clears_validation_state(
         configured_window: Configured window instance
         tmp_path: Temporary directory path
     """
-    from fs_tools.models.pak_validation_result import PakValidationResult
-
     # Set up some state
     configured_window.mod_pak_files = ["test.pak"]
     configured_window.mod_pak_list_widget.addItem("test.pak")
-    configured_window._validation_result = PakValidationResult()
+    configured_window._validation_result = coverage(overlays=0, crate=False)
     configured_window.validation_status_label.setText("Some status")
     configured_window.vanilla_group.setVisible(True)
     configured_window.vanilla_pak_file = "vanilla.pak"
@@ -2077,36 +2084,58 @@ def test_update_start_button_state_no_mod_files(
 def test_update_start_button_state_mod_validation_passed(
     configured_window: IconImportWindow,
 ) -> None:
-    """Test start button enabled when mod PAK validation passed.
+    """Test start button enabled when the mod PAK files cover every overlay.
 
     Args:
         configured_window: Configured window instance
     """
-    from fs_tools.models.pak_validation_result import PakValidationResult
-
     configured_window.mod_pak_files = ["test.pak"]
-    result = PakValidationResult()
-    result.is_valid = True
-    configured_window._validation_result = result
+    configured_window._validation_result = coverage()
 
     configured_window._update_start_button_state()
     assert configured_window.start_button.isEnabled() is True
 
 
+def test_update_start_button_state_no_catalog_icons(
+    configured_window: IconImportWindow,
+) -> None:
+    """Test start button disabled when the mod PAK files hold no catalog icon.
+
+    Args:
+        configured_window (IconImportWindow): Configured window instance
+    """
+    configured_window.mod_pak_files = ["test.pak"]
+    configured_window._validation_result = coverage(main=0)
+
+    configured_window._update_start_button_state()
+    assert configured_window.start_button.isEnabled() is False
+
+
+def test_update_start_button_state_check_failed(
+    configured_window: IconImportWindow,
+) -> None:
+    """Test start button disabled when the mod PAK check could not run.
+
+    Args:
+        configured_window (IconImportWindow): Configured window instance
+    """
+    configured_window.mod_pak_files = ["test.pak"]
+    configured_window._validation_failed = True
+
+    configured_window._update_start_button_state()
+    assert configured_window.start_button.isEnabled() is False
+
+
 def test_update_start_button_state_mod_validation_failed_no_vanilla(
     configured_window: IconImportWindow,
 ) -> None:
-    """Test start button disabled when mod PAK validation failed and no vanilla PAK.
+    """Test start button disabled when the mod lacks overlays and no vanilla PAK.
 
     Args:
         configured_window: Configured window instance
     """
-    from fs_tools.models.pak_validation_result import PakValidationResult
-
     configured_window.mod_pak_files = ["test.pak"]
-    result = PakValidationResult()
-    result.is_valid = False
-    configured_window._validation_result = result
+    configured_window._validation_result = coverage(overlays=0, crate=False)
     configured_window._vanilla_validation_result = None
 
     configured_window._update_start_button_state()
@@ -2116,22 +2145,14 @@ def test_update_start_button_state_mod_validation_failed_no_vanilla(
 def test_update_start_button_state_mod_validation_failed_vanilla_valid(
     configured_window: IconImportWindow,
 ) -> None:
-    """Test start button enabled when mod failed but vanilla is valid.
+    """Test start button enabled when the mod lacks overlays but vanilla is valid.
 
     Args:
         configured_window: Configured window instance
     """
-    from fs_tools.models.pak_validation_result import PakValidationResult
-
     configured_window.mod_pak_files = ["test.pak"]
-
-    mod_result = PakValidationResult()
-    mod_result.is_valid = False
-    configured_window._validation_result = mod_result
-
-    vanilla_result = PakValidationResult()
-    vanilla_result.is_valid = True
-    configured_window._vanilla_validation_result = vanilla_result
+    configured_window._validation_result = coverage(overlays=0, crate=False)
+    configured_window._vanilla_validation_result = coverage()
 
     configured_window._update_start_button_state()
     assert configured_window.start_button.isEnabled() is True
@@ -2140,22 +2161,14 @@ def test_update_start_button_state_mod_validation_failed_vanilla_valid(
 def test_update_start_button_state_mod_validation_failed_vanilla_invalid(
     configured_window: IconImportWindow,
 ) -> None:
-    """Test start button disabled when both mod and vanilla validation failed.
+    """Test start button disabled when both the mod and vanilla PAKs lack overlays.
 
     Args:
         configured_window: Configured window instance
     """
-    from fs_tools.models.pak_validation_result import PakValidationResult
-
     configured_window.mod_pak_files = ["test.pak"]
-
-    mod_result = PakValidationResult()
-    mod_result.is_valid = False
-    configured_window._validation_result = mod_result
-
-    vanilla_result = PakValidationResult()
-    vanilla_result.is_valid = False
-    configured_window._vanilla_validation_result = vanilla_result
+    configured_window._validation_result = coverage(overlays=0, crate=False)
+    configured_window._vanilla_validation_result = coverage(overlays=1, crate=True)
 
     configured_window._update_start_button_state()
     assert configured_window.start_button.isEnabled() is False
@@ -2179,26 +2192,20 @@ def test_update_start_button_state_no_validation_result(
 def test_clear_vanilla_pak_restores_warning_state(
     configured_window: IconImportWindow,
 ) -> None:
-    """Test clearing vanilla PAK restores warning state when mod validation failed.
+    """Test clearing vanilla PAK restores warning state when the mod lacks overlays.
 
     Args:
         configured_window: Configured window instance
     """
-    from fs_tools.models.pak_validation_result import PakValidationResult
-
     # Set up mod PAK files (required for start button state logic)
     configured_window.mod_pak_files = ["test.pak"]
 
-    # Set up invalid mod validation result
-    mod_result = PakValidationResult()
-    mod_result.is_valid = False
-    configured_window._validation_result = mod_result
+    # Mod PAK files lack the overlays
+    configured_window._validation_result = coverage(overlays=0, crate=False)
 
     # Set up valid vanilla PAK
     configured_window.vanilla_pak_file = "vanilla.pak"
-    vanilla_result = PakValidationResult()
-    vanilla_result.is_valid = True
-    configured_window._vanilla_validation_result = vanilla_result
+    configured_window._vanilla_validation_result = coverage()
     configured_window.vanilla_info.setVisible(False)
     configured_window.validation_status_label.setText("All required assets found")
 

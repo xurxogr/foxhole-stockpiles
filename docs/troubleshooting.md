@@ -49,12 +49,10 @@ FileNotFoundError: Database file not found: foxhole_templates.h5
 ```
 
 **Solution:**
-1. Build the database first:
+1. Build the database first (with `fs-assets`, or the fs-tools GUI *Database Builder*):
    ```bash
-   fs-tools build-db \
-     --catalog catalog.json \
-     --templates processed_templates/ \
-     --database foxhole_templates.h5
+   fs-assets build-catalog --pak War-WindowsNoEditor.pak -o catalog.json
+   fs-assets add-mod --pak War-WindowsNoEditor.pak --catalog catalog.json --db foxhole_templates.h5
    ```
 
 2. Or specify the correct path:
@@ -353,46 +351,28 @@ The scanner needs a valid `database_path` (the template DB) to start capture.
 See [Database Not Found](#database-not-found) for building or pointing at a
 database.
 
-## Template Generation Issues
+## Template Database Build Issues
 
-### Missing Game Assets
-
-**Problem:**
-```
-FileNotFoundError: Asset not found: path/to/icon.png
-```
-
-**Solution:**
-1. Verify assets were extracted:
-   ```bash
-   ls raw_assets/  # Should contain PNG files
-   ```
-
-2. Re-run asset extraction:
-   ```bash
-   fs-tools extract-assets \
-     --catalog catalog.json \
-     --pak /path/to/game.pak \
-     --output raw_assets/
-   ```
-
-### Template Generation Fails
+### Mod Icons Missing From the Database
 
 **Problem:**
-Template generation completes but produces no templates.
+After adding a mod, some of its items are not detected.
 
 **Solution:**
-1. Check catalog.json is valid:
+1. Check how many catalog icons and overlays the mod PAKs contain:
    ```bash
-   python -m json.tool catalog.json > /dev/null
+   fs-assets check-paks --catalog catalog.json --pak Mod.pak
    ```
 
-2. Verify asset paths in catalog match extracted files
-
-3. Check for errors in logs:
+2. If the mod lacks the subtype/crate overlays, pass the game PAK so it can supply them:
    ```bash
-   export FS_LOGGING__LOG_LEVEL=DEBUG
-   fs-tools generate-templates --catalog catalog.json --assets raw_assets/ --templates output/
+   fs-assets add-mod --pak Mod.pak --vanilla-pak War-WindowsNoEditor.pak --catalog catalog.json --db templates.h5 --mod-name my-mod
+   ```
+   Re-adding a mod replaces its templates.
+
+3. Make sure the catalog was built from the same game version:
+   ```bash
+   fs-assets build-catalog --pak War-WindowsNoEditor.pak -o catalog.json
    ```
 
 ## Configuration Issues
@@ -430,7 +410,7 @@ Settings in `~/.fs_config` are not being used.
    ls -la ~/.fs_config
    ```
 
-2. Check JSON syntax is valid (the config file is schema v10):
+2. Check JSON syntax is valid (the config file is schema v16):
    ```bash
    python -m json.tool ~/.fs_config
    ```

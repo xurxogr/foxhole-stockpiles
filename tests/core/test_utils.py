@@ -13,47 +13,8 @@ from foxhole_stockpiles.core.utils import (
     find_mapdata_file,
     get_bundled_resource_path,
     get_default_savefile_dir,
-    get_subprocess_kwargs,
     is_frozen,
 )
-
-
-class TestGetSubprocessKwargs:
-    """Test suite for the get_subprocess_kwargs function."""
-
-    def test_returns_dict(self) -> None:
-        """Test that get_subprocess_kwargs returns a dictionary."""
-        result = get_subprocess_kwargs()
-        assert isinstance(result, dict)
-
-    def test_returns_creationflags_on_windows(self) -> None:
-        """Test that creationflags is returned on Windows."""
-        # CREATE_NO_WINDOW only exists on Windows, so we need to mock it
-        mock_create_no_window = 0x08000000  # Actual value on Windows
-
-        with (
-            patch("foxhole_stockpiles.core.utils.sys.platform", "win32"),
-            patch(
-                "foxhole_stockpiles.core.utils.subprocess.CREATE_NO_WINDOW",
-                mock_create_no_window,
-                create=True,
-            ),
-        ):
-            result = get_subprocess_kwargs()
-            assert "creationflags" in result
-            assert result["creationflags"] == mock_create_no_window
-
-    def test_returns_empty_dict_on_linux(self) -> None:
-        """Test that empty dict is returned on Linux."""
-        with patch("foxhole_stockpiles.core.utils.sys.platform", "linux"):
-            result = get_subprocess_kwargs()
-            assert result == {}
-
-    def test_returns_empty_dict_on_darwin(self) -> None:
-        """Test that empty dict is returned on macOS."""
-        with patch("foxhole_stockpiles.core.utils.sys.platform", "darwin"):
-            result = get_subprocess_kwargs()
-            assert result == {}
 
 
 class TestIsFrozen:

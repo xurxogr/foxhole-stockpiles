@@ -1,0 +1,917 @@
+{
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "description": "Response for ``GET /health``.\n\nAttributes:\n    status (Literal[\"ok\"]): Liveness marker.\n    version (str): Server version string.\n    ocr_enabled (bool): Whether ``/api/v1/scan`` can serve requests.\n    features (list[str]): Enabled feature identifiers.\n    uptime_seconds (float): Seconds since the process started serving.",
+        "properties": {
+          "features": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Features",
+            "type": "array"
+          },
+          "ocr_enabled": {
+            "title": "Ocr Enabled",
+            "type": "boolean"
+          },
+          "status": {
+            "const": "ok",
+            "title": "Status",
+            "type": "string"
+          },
+          "uptime_seconds": {
+            "title": "Uptime Seconds",
+            "type": "number"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "version",
+          "ocr_enabled",
+          "features",
+          "uptime_seconds"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "ItemCandidate-Input": {
+        "additionalProperties": false,
+        "description": "Alternative candidate for an item match.",
+        "example": {
+          "code": "RifleAlternative",
+          "confidence": 0.92
+        },
+        "properties": {
+          "code": {
+            "description": "Code of the alternative candidate item",
+            "title": "Code",
+            "type": "string"
+          },
+          "confidence": {
+            "description": "Confidence score of the alternative candidate",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          }
+        },
+        "required": [
+          "code",
+          "confidence"
+        ],
+        "title": "ItemCandidate",
+        "type": "object"
+      },
+      "ItemCandidate-Output": {
+        "additionalProperties": false,
+        "description": "Alternative candidate for an item match.",
+        "example": {
+          "code": "RifleAlternative",
+          "confidence": 0.92
+        },
+        "properties": {
+          "code": {
+            "description": "Code of the alternative candidate item",
+            "title": "Code",
+            "type": "string"
+          },
+          "confidence": {
+            "description": "Confidence score of the alternative candidate",
+            "title": "Confidence",
+            "type": "number"
+          }
+        },
+        "required": [
+          "code",
+          "confidence"
+        ],
+        "title": "ItemCandidate",
+        "type": "object"
+      },
+      "OutputEmissionReport": {
+        "description": "Per-branch outcome of flushing stockpiles through the server's outputs.\n\nAttributes:\n    branch (str): The branch name.\n    status (Literal[\"ok\", \"skipped\", \"failed\"]): Delivery outcome.\n    error (str | None): Failure message or skip reason. Defaults to None.\n    response (SinkResult | None): The sink's downstream response (e.g. the\n        webhook reply) when one exists. Defaults to None.",
+        "properties": {
+          "branch": {
+            "title": "Branch",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "response": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SinkResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "skipped",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "branch",
+          "status"
+        ],
+        "title": "OutputEmissionReport",
+        "type": "object"
+      },
+      "ScanResponse": {
+        "description": "Response for ``POST /api/v1/scan``.\n\nAttributes:\n    capture_id (str | None): Echoed client correlation token.\n    stockpile (Stockpile): The single stockpile detected in the image.\n    server_outputs (list[OutputEmissionReport]): Per-branch delivery results.",
+        "properties": {
+          "capture_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capture Id"
+          },
+          "server_outputs": {
+            "items": {
+              "$ref": "#/components/schemas/OutputEmissionReport"
+            },
+            "title": "Server Outputs",
+            "type": "array"
+          },
+          "stockpile": {
+            "$ref": "#/components/schemas/Stockpile-Output"
+          }
+        },
+        "required": [
+          "stockpile",
+          "server_outputs"
+        ],
+        "title": "ScanResponse",
+        "type": "object"
+      },
+      "SchemaResponse": {
+        "description": "Response for ``GET /api/v1/schema``.\n\nAttributes:\n    stockpile (dict[str, Any]): JSON schema of :class:`Stockpile`.\n    scan_response (dict[str, Any]): JSON schema of :class:`ScanResponse`.\n    stockpiles_request (dict[str, Any]): JSON schema of :class:`StockpilesRequest`.",
+        "properties": {
+          "scan_response": {
+            "additionalProperties": true,
+            "title": "Scan Response",
+            "type": "object"
+          },
+          "stockpile": {
+            "additionalProperties": true,
+            "title": "Stockpile",
+            "type": "object"
+          },
+          "stockpiles_request": {
+            "additionalProperties": true,
+            "title": "Stockpiles Request",
+            "type": "object"
+          }
+        },
+        "required": [
+          "stockpile",
+          "scan_response",
+          "stockpiles_request"
+        ],
+        "title": "SchemaResponse",
+        "type": "object"
+      },
+      "SinkResult": {
+        "description": "The downstream response a sink received while delivering output.\n\nNetwork-backed sinks (webhook, http-upload) populate this from the remote\nreply so callers (notably ``POST /api/v1/scan``) can surface it. Local sinks\n(file, stdout) have no meaningful response and return ``None`` instead.\n\nAttributes:\n    status_code (int | None): The downstream HTTP status code, if any.\n    body (str | None): The downstream response body as text, if any.\n    content_type (str | None): The downstream response Content-Type, if any.",
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "content_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Type"
+          },
+          "status_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Code"
+          }
+        },
+        "title": "SinkResult",
+        "type": "object"
+      },
+      "Stockpile-Input": {
+        "additionalProperties": false,
+        "description": "Stockpile model.",
+        "example": {
+          "coords": {
+            "x": 0.457745,
+            "y": 0.664469
+          },
+          "errors": [
+            "No icon detected in group 1, index 67 with confidence 0.75"
+          ],
+          "hex": "Westgate",
+          "ingame_timestamp": "Day 1,293, 1906 Hours",
+          "is_reserve": false,
+          "items": [
+            {
+              "candidates": [
+                {
+                  "code": "GrenadeLauncherW",
+                  "confidence": 0.92
+                },
+                {
+                  "code": "GrenadeLauncher",
+                  "confidence": 0.9
+                }
+              ],
+              "code": "GrenadeLauncherC",
+              "confidence": 0.95,
+              "crated": false,
+              "quantity": 3
+            }
+          ],
+          "name": "Logi",
+          "resolution": "1920x1080",
+          "shard": "ABLE",
+          "timestamp": "2024-01-04T09:00:00Z",
+          "type": "Seaport"
+        },
+        "properties": {
+          "coords": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StockpileCoords"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Map coordinates"
+          },
+          "errors": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "List of errors encountered during processing",
+            "title": "Errors"
+          },
+          "hex": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Hex region name",
+            "title": "Hex"
+          },
+          "ingame_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "In game timestamp",
+            "title": "Ingame Timestamp"
+          },
+          "is_reserve": {
+            "default": false,
+            "description": "Whether this is a reserve stockpile",
+            "title": "Is Reserve",
+            "type": "boolean"
+          },
+          "items": {
+            "description": "List of items",
+            "items": {
+              "$ref": "#/components/schemas/StockpileItem-Input"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "name": {
+            "default": "",
+            "description": "Name of the stockpile",
+            "title": "Name",
+            "type": "string"
+          },
+          "raw_timestamp": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Raw timestamp ticks from save file (for change tracking)",
+            "title": "Raw Timestamp"
+          },
+          "resolution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Resolution of the screenshot",
+            "title": "Resolution"
+          },
+          "shard": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Shard name",
+            "title": "Shard"
+          },
+          "timestamp": {
+            "description": "last update datetime",
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/StockpileType",
+            "default": "Undefined",
+            "description": "Type of stockpile"
+          }
+        },
+        "title": "Stockpile",
+        "type": "object"
+      },
+      "Stockpile-Output": {
+        "additionalProperties": false,
+        "description": "Stockpile model.",
+        "example": {
+          "coords": {
+            "x": 0.457745,
+            "y": 0.664469
+          },
+          "errors": [
+            "No icon detected in group 1, index 67 with confidence 0.75"
+          ],
+          "hex": "Westgate",
+          "ingame_timestamp": "Day 1,293, 1906 Hours",
+          "is_reserve": false,
+          "items": [
+            {
+              "candidates": [
+                {
+                  "code": "GrenadeLauncherW",
+                  "confidence": 0.92
+                },
+                {
+                  "code": "GrenadeLauncher",
+                  "confidence": 0.9
+                }
+              ],
+              "code": "GrenadeLauncherC",
+              "confidence": 0.95,
+              "crated": false,
+              "quantity": 3
+            }
+          ],
+          "name": "Logi",
+          "resolution": "1920x1080",
+          "shard": "ABLE",
+          "timestamp": "2024-01-04T09:00:00Z",
+          "type": "Seaport"
+        },
+        "properties": {
+          "coords": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StockpileCoords"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Map coordinates"
+          },
+          "errors": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "List of errors encountered during processing",
+            "title": "Errors"
+          },
+          "hex": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Hex region name",
+            "title": "Hex"
+          },
+          "ingame_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "In game timestamp",
+            "title": "Ingame Timestamp"
+          },
+          "is_reserve": {
+            "default": false,
+            "description": "Whether this is a reserve stockpile",
+            "title": "Is Reserve",
+            "type": "boolean"
+          },
+          "items": {
+            "description": "List of items",
+            "items": {
+              "$ref": "#/components/schemas/StockpileItem-Output"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "name": {
+            "default": "",
+            "description": "Name of the stockpile",
+            "title": "Name",
+            "type": "string"
+          },
+          "resolution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Resolution of the screenshot",
+            "title": "Resolution"
+          },
+          "shard": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Shard name",
+            "title": "Shard"
+          },
+          "timestamp": {
+            "description": "last update datetime",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/StockpileType",
+            "default": "Undefined",
+            "description": "Type of stockpile"
+          }
+        },
+        "title": "Stockpile",
+        "type": "object"
+      },
+      "StockpileCoords": {
+        "additionalProperties": false,
+        "description": "Normalized map coordinates for a stockpile location.",
+        "example": {
+          "x": 0.457745,
+          "y": 0.664469
+        },
+        "properties": {
+          "x": {
+            "description": "Normalized X coordinate on the map (0.0 to 1.0)",
+            "title": "X",
+            "type": "number"
+          },
+          "y": {
+            "description": "Normalized Y coordinate on the map (0.0 to 1.0)",
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ],
+        "title": "StockpileCoords",
+        "type": "object"
+      },
+      "StockpileItem-Input": {
+        "additionalProperties": false,
+        "description": "Stockpile item model.",
+        "example": {
+          "candidates": [
+            {
+              "code": "GrenadeLauncherW",
+              "confidence": 0.92
+            },
+            {
+              "code": "GrenadeLauncher",
+              "confidence": 0.9
+            }
+          ],
+          "code": "GrenadeLauncherC",
+          "confidence": 0.95,
+          "crated": false,
+          "quantity": 3
+        },
+        "properties": {
+          "candidates": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ItemCandidate-Input"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Alternative candidates within the confidence gap. Only included if confidence_gap > 0 and alternatives exist. Candidates have the same category, crated status, and mod as the matched item.",
+            "title": "Candidates"
+          },
+          "code": {
+            "description": "Code of item detected from the icon",
+            "title": "Code",
+            "type": "string"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Confidence of the item detection",
+            "title": "Confidence"
+          },
+          "crated": {
+            "default": false,
+            "description": "Is the item crated?",
+            "title": "Crated",
+            "type": "boolean"
+          },
+          "quantity": {
+            "default": -1,
+            "description": "Quantity of the item",
+            "minimum": -1.0,
+            "title": "Quantity",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "StockpileItem",
+        "type": "object"
+      },
+      "StockpileItem-Output": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "StockpileType": {
+        "description": "Stockpile type enum.\n\nValues are the in-game CodeNames used in save files.\nDisplay names are available via STOCKPILE_TYPE_TEXTS[type][0].",
+        "enum": [
+          "GarrisonStation",
+          "Keep",
+          "ForwardBase1",
+          "RelicBase1",
+          "FortBaseT1",
+          "FortBaseT2",
+          "FortBaseT3",
+          "BorderBase",
+          "TownBase1",
+          "TownBase2",
+          "TownBase3",
+          "FortGarrisonStation",
+          "LargeShipBaseShip",
+          "LargeShipStorageShip",
+          "StorageFacility",
+          "Seaport",
+          "AircraftDepot",
+          "Hospital",
+          "Refinery",
+          "MaintenanceTunnel",
+          "FacilityFactorySmallArms",
+          "FacilityModificationCenter",
+          "FacilityTransferLiquid",
+          "FacilityTransferMaterial",
+          "FacilityTransferResource",
+          "FacilityVehicleFactory1",
+          "FacilityVehicleFactory2",
+          "FacilityVehicleFactory3",
+          "Undefined"
+        ],
+        "title": "StockpileType",
+        "type": "string"
+      },
+      "StockpilesRequest": {
+        "additionalProperties": false,
+        "description": "Request body for ``POST /api/v1/stockpiles``.\n\nAttributes:\n    capture_id (str | None): Optional client correlation token.\n    source (Literal[\"sav\", \"clipboard\", \"manual\"]): How the client produced\n        these stockpiles.\n    stockpiles (list[Stockpile]): The pre-processed stockpiles to deliver.",
+        "properties": {
+          "capture_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capture Id"
+          },
+          "source": {
+            "enum": [
+              "sav",
+              "clipboard",
+              "manual"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "stockpiles": {
+            "items": {
+              "$ref": "#/components/schemas/Stockpile-Input"
+            },
+            "title": "Stockpiles",
+            "type": "array"
+          }
+        },
+        "required": [
+          "source",
+          "stockpiles"
+        ],
+        "title": "StockpilesRequest",
+        "type": "object"
+      },
+      "StockpilesResponse": {
+        "description": "Response for ``POST /api/v1/stockpiles``.\n\nAttributes:\n    capture_id (str | None): Echoed client correlation token.\n    accepted (int): Number of stockpiles accepted (the request list length).\n    server_outputs (list[OutputEmissionReport]): Per-branch delivery results.",
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "integer"
+          },
+          "capture_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capture Id"
+          },
+          "server_outputs": {
+            "items": {
+              "$ref": "#/components/schemas/OutputEmissionReport"
+            },
+            "title": "Server Outputs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "accepted",
+          "server_outputs"
+        ],
+        "title": "StockpilesResponse",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Foxhole Stockpiles Server",
+    "version": "0.4.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/scan": {
+      "post": {
+        "description": "Run server-side OCR on uploaded image bytes and deliver the result.\n\nArgs:\n    request (Request): The request; body is the raw image bytes, with\n        ``Content-Type: image/*`` and optional ``X-Foxhole-Capture-Id`` /\n        ``X-Foxhole-Language`` headers.\n\nReturns:\n    ScanResponse: The detected stockpile plus per-branch delivery reports.\n\nRaises:\n    HTTPException: 503 ``ocr_disabled``; 400 ``invalid_content_type`` /\n        ``image_too_large`` / ``invalid_image``; 500 ``ocr_failed``.",
+        "operationId": "scan_api_v1_scan_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Scan"
+      }
+    },
+    "/api/v1/schema": {
+      "get": {
+        "description": "Return the wire JSON schemas.\n\nReturns:\n    SchemaResponse: Cached schemas for Stockpile and the request/response models.",
+        "operationId": "schema_api_v1_schema_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Schema"
+      }
+    },
+    "/api/v1/stockpiles": {
+      "post": {
+        "description": "Run the server's output branches over pre-processed stockpiles.\n\nArgs:\n    request (Request): The incoming request.\n    payload (StockpilesRequest): The validated request body.\n\nReturns:\n    StockpilesResponse: Acceptance count and per-branch delivery reports.",
+        "operationId": "stockpiles_api_v1_stockpiles_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StockpilesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockpilesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stockpiles"
+      }
+    },
+    "/health": {
+      "get": {
+        "description": "Report liveness, version, and enabled features.\n\nArgs:\n    request (Request): The incoming request.\n\nReturns:\n    HealthResponse: The liveness payload.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    }
+  }
+}

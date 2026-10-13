@@ -19,22 +19,6 @@
     },
     "image_filter": "Изображения (*.png *.jpg *.jpeg);;Все файлы (*)"
   },
-  "external_tools_tab": {
-    "title": "Внешние инструменты",
-    "repak_label": "Инструмент извлечения (repak):",
-    "repak_tooltip": "Путь к исполняемому файлу repak для извлечения PAK файлов.\n\nНеобходим для извлечения игровых ресурсов из PAK файлов.\nСкачать: https://github.com/trumank/repak",
-    "repak_placeholder": "Путь к исполняемому файлу repak",
-    "umodel_label": "Инструмент конвертации (umodel):",
-    "umodel_tooltip": "Путь к исполняемому файлу umodel для конвертации UAsset файлов в PNG.\n\nНеобходим для функции 'Создание базы данных'.\nСкачать: https://www.gildor.org/en/projects/umodel",
-    "umodel_placeholder": "Путь к исполняемому файлу umodel",
-    "uassetgui_label": "JSON конвертер (UAssetGUI):",
-    "uassetgui_tooltip": "Путь к исполняемому файлу UAssetGUI для конвертации UAsset файлов в JSON.\n\nНеобходим для функции 'Создание каталога'.\nСкачать: https://github.com/atenfyr/UAssetGUI",
-    "uassetgui_placeholder": "Путь к исполняемому файлу UAssetGUI",
-    "download": "Скачать",
-    "select_repak": "Выберите инструмент извлечения (repak)",
-    "select_umodel": "Выберите инструмент конвертации (umodel)",
-    "select_uassetgui": "Выберите JSON конвертер (UAssetGUI)"
-  },
   "database_builder_tab": {
     "settings_group": "Настройки сборщика базы данных",
     "catalog_file": "Файл каталога (catalog.json):",
@@ -43,7 +27,7 @@
     "resolutions_group": "Целевые разрешения",
     "resolutions_info": "Выберите, какие разрешения генерировать при импорте иконок. Отметьте 'Все разрешения' для генерации всех поддерживаемых разрешений.",
     "all_resolutions": "Все разрешения",
-    "status_note": "<b>Примечание:</b> Файл каталога и внешние инструменты (repak, umodel) должны быть настроены для работы функции 'Создание базы данных'.",
+    "status_note": "<b>Примечание:</b> Файл каталога должен быть настроен для работы функции 'Создание базы данных'.",
     "select_catalog": "Выберите файл каталога (catalog.json)"
   },
   "tools_window": {
@@ -75,7 +59,7 @@
   },
   "settings_dialog": {
     "title": "Настройки FS Tools",
-    "info": "Настройте путь к базе данных, внешние инструменты и параметры конструктора базы данных, используемые FS Tools. Изменения сохраняются в общий файл конфигурации.",
+    "info": "Настройте путь к базе данных и параметры конструктора базы данных, используемые FS Tools. Изменения сохраняются в общий файл конфигурации.",
     "language_group": "Язык",
     "language": "Язык:",
     "language_tooltip": "Выберите язык интерфейса.",
@@ -129,14 +113,9 @@
     "configuration_group": "Конфигурация",
     "mod_name": "Название мода:",
     "mod_name_placeholder": "напр., vanilla, mymod",
-    "overwrite": "Перезаписывать существующие данные",
-    "overwrite_tooltip": "Если отмечено, существующие шаблоны с тем же предметом-разрешением будут перезаписаны",
     "destination_database": "Целевая база данных:",
     "destination_placeholder": "Выберите файл базы данных (.h5)",
     "destination_tooltip": "Файл базы данных, куда будут сохранены шаблоны",
-    "workers": "Воркеры:",
-    "workers_tooltip": "Количество параллельных процессов для создания базы данных.\nУстановите 1 для отключения многопоточности.",
-    "cores_detected": "(обнаружено {cores} ядер)",
     "process_logs": "Журнал процесса",
     "start_import": "Начать импорт",
     "validation": {
@@ -151,7 +130,9 @@
       "enter_mod_name": "Пожалуйста, введите название мода",
       "select_database": "Пожалуйста, выберите целевой файл базы данных",
       "mod_missing_assets": "PAK файлы модов не содержат необходимых ресурсов. Пожалуйста, выберите ванильный PAK файл игры.",
-      "vanilla_invalid": "Выбранный ванильный PAK файл не содержит необходимых ресурсов. Пожалуйста, выберите правильный ванильный PAK файл игры (War-WindowsNoEditor.pak)."
+      "vanilla_invalid": "Выбранный ванильный PAK файл не содержит необходимых ресурсов. Пожалуйста, выберите правильный ванильный PAK файл игры (War-WindowsNoEditor.pak).",
+      "no_catalog_icons": "Ни один из PAK-файлов не содержит значков из каталога",
+      "check_failed": "Не удалось проверить PAK-файлы: {error}"
     },
     "invalid_vanilla_title": "Недействительный ванильный PAK",
     "invalid_vanilla_message": "Выбранный PAK файл не содержит необходимых ресурсов ({missing}).\n\nПожалуйста, выберите правильный ванильный PAK файл игры:\nWar-WindowsNoEditor.pak\n\nЭтот файл обычно находится в:\nSteam/steamapps/common/Foxhole/War/Content/Paks/",

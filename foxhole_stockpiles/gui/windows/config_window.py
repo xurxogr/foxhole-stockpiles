@@ -173,11 +173,10 @@ class ConfigWindow(QMainWindow):
     def collect_settings(self) -> AppSettings:
         """Collect settings from all tabs.
 
-        The external_tools section and the rest of database_builder are not
-        edited in the scanner app (their UI lives in fs_tools), so they are
-        preserved from the currently loaded settings. The one exception is
-        database_builder.catalog_file, which the clipboard tab exposes here
-        because clipboard scanning needs it.
+        The rest of database_builder is not edited in the scanner app (its UI
+        lives in fs_tools), so it is preserved from the currently loaded
+        settings. The one exception is database_builder.catalog_file, which the
+        clipboard tab exposes here because clipboard scanning needs it.
 
         Returns:
             AppSettings: AppSettings instance with current values from tabs
@@ -186,7 +185,6 @@ class ConfigWindow(QMainWindow):
         return AppSettings(
             scanner=self.scanner_tab.get_values(),
             output=self.output_tab.get_values(),
-            external_tools=defaults.external_tools,
             database_builder=defaults.database_builder.model_copy(
                 update={"catalog_file": self.clipboard_tab.get_catalog_file()}
             ),

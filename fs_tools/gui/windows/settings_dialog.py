@@ -33,7 +33,6 @@ from foxhole_stockpiles.i18n import (
     t,
 )
 from fs_tools.gui.widgets.config_tabs.database_builder_tab import DatabaseBuilderTab
-from fs_tools.gui.widgets.config_tabs.external_tools_tab import ExternalToolsTab
 
 logger = logging.getLogger(__name__)
 
@@ -110,8 +109,7 @@ class SettingsDialog(QDialog):
         self.database_path_input = QLineEdit()
         self.database_path_input.textChanged.connect(self._update_db_download_visibility)
         database_path_layout.addWidget(self.database_path_input)
-        # Download button (shown only while the field is empty), mirroring the
-        # External Tools tab convention.
+        # Download button (shown only while the field is empty).
         self.database_download_btn = QPushButton()
         self.database_download_btn.setMaximumWidth(80)
         self.database_download_btn.clicked.connect(self._open_data_url)
@@ -123,26 +121,17 @@ class SettingsDialog(QDialog):
 
         layout.addWidget(self.database_group)
 
-        # External tools (all three tools fs-tools may use)
-        self.external_tools_tab = ExternalToolsTab(
-            show_repak=True,
-            show_umodel=True,
-            show_uassetgui=True,
-        )
-        layout.addWidget(self.external_tools_tab)
-
         # Database builder settings
         self.db_builder_tab = DatabaseBuilderTab()
         layout.addWidget(self.db_builder_tab)
 
-        # The two tab widgets wrap their group boxes in a layout that adds its
-        # own margins, which would make those sections narrower than the
+        # The tab widget wraps its group box in a layout that adds its own
+        # margins, which would make that section narrower than the
         # directly-added Language/Database boxes. Drop the wrapper margins so
         # every section rectangle spans the same width.
-        for tab in (self.external_tools_tab, self.db_builder_tab):
-            tab_layout = tab.layout()
-            if tab_layout is not None:
-                tab_layout.setContentsMargins(0, 0, 0, 0)
+        tab_layout = self.db_builder_tab.layout()
+        if tab_layout is not None:
+            tab_layout.setContentsMargins(0, 0, 0, 0)
 
         layout.addStretch()
 
@@ -257,7 +246,6 @@ class SettingsDialog(QDialog):
         self.database_path_input.setText(
             str(settings.scanner.database_path) if settings.scanner.database_path else ""
         )
-        self.external_tools_tab.set_values(settings.external_tools)
         self.db_builder_tab.set_values(settings.database_builder)
 
     def _save_and_accept(self) -> None:
@@ -270,16 +258,12 @@ class SettingsDialog(QDialog):
         new_scanner = current_settings.scanner.model_copy(
             update={"database_path": Path(database_text) if database_text else None}
         )
-        new_external_tools = self.external_tools_tab.merge_with_existing(
-            current_settings.external_tools
-        )
         new_db_builder_settings = self.db_builder_tab.get_values()
 
         updated_settings = current_settings.model_copy(
             update={
                 "gui": new_gui,
                 "scanner": new_scanner,
-                "external_tools": new_external_tools,
                 "database_builder": new_db_builder_settings,
             }
         )

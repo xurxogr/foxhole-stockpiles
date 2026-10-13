@@ -3,7 +3,7 @@
 # Architecture & Design Patterns
 
 **Type:** multi-package Python workspace (flat layout), **2 installable packages**.
-Config schema **v15**. Desktop app — **no REST server**.
+Config schema **v16**. Desktop app — **no REST server**.
 
 ## Package boundaries
 
@@ -17,10 +17,11 @@ foxhole_stockpiles ──depends──> fs-ocr (external Rust PyPI pkg)
 - **foxhole_stockpiles** — desktop runtime: CLI, PySide6 GUI, screenshot
   capture, local scan, SAV processing, output routing. Talks to the OCR engine
   only through `services/scanner.py`.
-- **fs_tools** — build-time tooling (catalog builder, template DB, asset extraction).
+- **fs_tools** — build-time tooling (`add-icon`, `visualize`, `debug`, catalog/icon-import GUI).
   Self-contained: own `core/settings`, `models`, `gui`, `i18n`. Owns the HDF5
-  template DB read/write code under `fs_tools/template_db/`. The catalog is
-  built by the external `fs-assets` package (`fs_assets.build_catalog`).
+  template DB read/write code under `fs_tools/template_db/`. The catalog and
+  icon-template DB are built by the external `fs-assets` package, which reads
+  the game PAK directly (no repak/umodel/UAssetGUI).
 - **fs-ocr** — external Rust OCR engine (PyPI `fs-ocr>=1.1.0`). NOT in this repo
   (the former in-repo `fs_ocr` package was deleted in commit `b0e8b6e`).
 
@@ -75,23 +76,23 @@ SAV-sourced `Stockpile`s carry map metadata (`hex`, `coords`, `is_reserve`) and 
 |---|---|---|
 | CLI `fs` | `cli/app.py` (Typer) | `scan` `gui` `sav`; no subcommand → GUI |
 | Desktop GUI | `gui/app.py` → `gui/windows/main_window.py` | capture panel + SAV tools |
-| Tooling | `fs_tools/cli.py`, `fs_tools/gui` | builders/extractors |
+| Tooling | `fs_tools/cli.py`, `fs_tools/gui` | `add-icon` `visualize` `debug`; GUI wraps `fs-assets` |
 
 ## Settings architecture
 
-`core/settings/app_settings.py` → `AppSettings(BaseSettings)`, schema **v15**.
-Top-level sections: `external_tools`, `logging`, `output`, `scanner`,
-`database_builder`, `gui`, `sav_processing`, `clipboard`.
-(The capture hotkey is `scanner.capture_key`. `TemplateSettings` is consumed by
-mod-import models, not a top-level field. Icon geometry is the single constant
+`core/settings/app_settings.py` → `AppSettings(BaseSettings)`, schema **v16**.
+Top-level sections: `logging`, `output`, `scanner`, `database_builder`
+(`catalog_file`, `target_resolutions`), `gui`, `sav_processing`, `clipboard`.
+(The capture hotkey is `scanner.capture_key`. Icon geometry is the single constant
 `fs_tools/constants.py:ICON_BOX_SCALE` (fs_tools-only) — the former `OCRSettings` model was removed.)
 
 Source priority (highest→lowest): env (`FS_<SECTION>__<KEY>`) → JSON file in
 platform config dir → defaults. Stepwise migration via `config_migrator/` package
-(`CURRENT_VERSION = 15`; v9→v10 drops `api_server`/`api_auth`, v10→v11 drops
+(`CURRENT_VERSION = 16`; v9→v10 drops `api_server`/`api_auth`, v10→v11 drops
 `stockpile_types`, v11→v12 drops `notifications`, v12→v13 drops `gui.config_level`,
 v13→v14 reworks webhook `forward` auth into `header`, v14→v15 drops
-`scanner.early_exit_threshold` and `sav_processing.emit_all_on_start`).
+`scanner.early_exit_threshold` and `sav_processing.emit_all_on_start`, v15→v16 drops
+`external_tools` and `database_builder.workers`).
 
 ## GUI structure
 
@@ -128,4 +129,4 @@ capture hotkey), Output, SAV Processing, Logging, GUI.
 2. `services/capture.py` + `services/local_scan.py` — capture + local scan→output
 3. `gui/widgets/capture_panel.py` — capture UI + hotkey
 4. `services/output_coordinator.py` — output routing (list-based)
-5. `core/settings/app_settings.py` — configuration (v15)
+5. `core/settings/app_settings.py` — configuration (v16)

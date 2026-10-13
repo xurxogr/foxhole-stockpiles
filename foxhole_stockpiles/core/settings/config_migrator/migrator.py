@@ -8,7 +8,7 @@ from foxhole_stockpiles.core.settings.config_migrator import steps_early, steps_
 class ConfigMigrator:
     """Handles migration of configuration data between versions."""
 
-    CURRENT_VERSION = 15
+    CURRENT_VERSION = 16
 
     @classmethod
     def apply_migrations(cls, data: dict[str, Any]) -> dict[str, Any]:
@@ -98,5 +98,10 @@ class ConfigMigrator:
         if version == 14:
             data = steps_late.migrate_v14_to_v15(data)
             data["config_version"] = 15
+            version = 15
+
+        if version == 15:
+            data = steps_late.migrate_v15_to_v16(data)
+            data["config_version"] = 16
 
         return data

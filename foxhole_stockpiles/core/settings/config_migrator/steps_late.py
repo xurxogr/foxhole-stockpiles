@@ -236,3 +236,30 @@ def migrate_v14_to_v15(data: dict[str, Any]) -> dict[str, Any]:
         data["sav_processing"].pop("emit_all_on_start", None)
 
     return data
+
+
+def migrate_v15_to_v16(data: dict[str, Any]) -> dict[str, Any]:
+    """Migrate from v15 to v16 (drop the external tools and builder workers).
+
+    The catalog and the icon-template database are now built by the
+    ``fs-assets`` package, which reads the game PAK directly, so:
+
+    * ``external_tools`` (repak, umodel, UAssetGUI paths) has no consumer.
+    * ``database_builder.workers`` sized a Python process pool that no longer
+      exists.
+
+    Any stored values are dropped so they do not linger in the config file
+    (the settings models forbid unknown fields).
+
+    Args:
+        data (dict[str, Any]): V15 configuration data.
+
+    Returns:
+        dict[str, Any]: V16 configuration data.
+    """
+    data.pop("external_tools", None)
+
+    if "database_builder" in data and isinstance(data["database_builder"], dict):
+        data["database_builder"].pop("workers", None)
+
+    return data

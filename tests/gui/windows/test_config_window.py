@@ -12,7 +12,6 @@ from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.core.settings.sections import (
     ClipboardSettings,
     DatabaseBuilderSettings,
-    ExternalToolsSettings,
     LoggingSettings,
     OutputSettings,
     SavProcessingSettings,
@@ -49,7 +48,6 @@ def mock_config_manager() -> Any:
         default_settings.gui = GUISettings()
         default_settings.scanner = ScannerSettings()
         default_settings.output = OutputSettings()
-        default_settings.external_tools = ExternalToolsSettings()
         default_settings.database_builder = DatabaseBuilderSettings()
         default_settings.logging = LoggingSettings()
         default_settings.sav_processing = SavProcessingSettings()
