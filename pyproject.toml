@@ -49,7 +49,7 @@ dependencies = [
     # SAV file parsing (Rust implementation)
     "fs-sav>=0.3.0",
     # OCR engine (Rust implementation)
-    "fs-ocr>=1.0.4",
+    "fs-ocr>=1.1.0",
 ]
 
 [project.optional-dependencies]

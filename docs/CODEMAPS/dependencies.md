@@ -16,7 +16,7 @@ Source of truth: `pyproject.toml`. Python **3.12+**.
 | typer | 0.12.0 | CLI framework (`fs`, `fs-tools`) |
 | **pywinctl** | **0.4** | **window detection (find the Foxhole window)** |
 | **pynput** | **1.7.7** | **global capture hotkey** |
-| **fs-ocr** | 1.0.4 | external Rust OCR engine (replaces in-repo `fs_ocr`) |
+| **fs-ocr** | 1.1.0 | external Rust OCR engine (replaces in-repo `fs_ocr`) |
 | **fs-sav** | 0.2.0 | Rust `.sav` parser |
 | google-api-python-client | 2.196.0 | Google Sheets output handler |
 | google-auth-httplib2 | 0.4.0 | Google auth transport |
@@ -33,7 +33,7 @@ into the `fs-ocr` Rust engine), `discord-webhook` (notifications stack dropped).
 
 ## Sibling / external Rust packages
 
-- **fs-ocr** (PyPI `fs-ocr>=1.0.4`) — the OCR engine. `StockpileScanner`,
+- **fs-ocr** (PyPI `fs-ocr>=1.1.0`) — the OCR engine. `StockpileScanner`,
   `ScanConfig`, `Stockpile`, `StockpileItem`. Backs `services/scanner.py`.
 - **fs-sav** (PyPI) — backs `services/sav_parser.py`.
 

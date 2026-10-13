@@ -30,7 +30,7 @@ repo is the desktop runtime + tooling around it. There is no REST server.
 ```
 
 The in-repo `fs_ocr` package was **removed** (commit `b0e8b6e`). OCR is now the
-external `fs-ocr>=1.0.4` (Rust). The runtime's only contact point is
+external `fs-ocr>=1.1.0` (Rust). The runtime's only contact point is
 `services/scanner.py`, which adapts the engine's `fs_ocr.Stockpile` to the
 runtime `Stockpile` model. The FastAPI server was **removed** in favor of local
 capture-and-scan. The HDF5 template DB code lives in `fs_tools/template_db/`.
