@@ -5,6 +5,7 @@ converting its output to internal Stockpile models.
 """
 
 import logging
+import warnings
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -12,10 +13,12 @@ from typing import Any
 import fs_sav
 
 from foxhole_stockpiles.enums.item_faction import ItemFaction
+from foxhole_stockpiles.models.factory_order import FactoryOrder
 from foxhole_stockpiles.models.refinery import Refinery
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_coords import StockpileCoords
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
+from foxhole_stockpiles.models.stockpile_tech import StockpileTech
 
 logger = logging.getLogger(__name__)
 
@@ -45,14 +48,17 @@ def parse_save(
     Raises:
         RuntimeError: If parsing fails.
     """
-    raw_stockpiles = fs_sav.parse_save(
-        str(path),
-        public=public,
-        reserves=reserves,
-        hex=hex_filter,
-        stockpile_type=stockpile_type,
-        with_items=with_items,
-    )
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        raw_stockpiles = fs_sav.parse_save(
+            str(path),
+            public=public,
+            reserves=reserves,
+            hex=hex_filter,
+            stockpile_type=stockpile_type,
+            with_items=with_items,
+        )
+    _log_warnings(caught)
 
     if not isinstance(raw_stockpiles, list):
         raise RuntimeError(f"fs_sav.parse_save returned unexpected type: {type(raw_stockpiles)}")
@@ -85,14 +91,17 @@ def parse_save_bytes(
     Raises:
         RuntimeError: If parsing fails.
     """
-    raw_stockpiles = fs_sav.parse_save_bytes(
-        data,
-        public=public,
-        reserves=reserves,
-        hex=hex_filter,
-        stockpile_type=stockpile_type,
-        with_items=with_items,
-    )
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        raw_stockpiles = fs_sav.parse_save_bytes(
+            data,
+            public=public,
+            reserves=reserves,
+            hex=hex_filter,
+            stockpile_type=stockpile_type,
+            with_items=with_items,
+        )
+    _log_warnings(caught)
 
     if not isinstance(raw_stockpiles, list):
         raise RuntimeError(
@@ -110,6 +119,19 @@ def info() -> dict[str, str]:
     """
     result: dict[str, str] = fs_sav.info()
     return result
+
+
+def _log_warnings(caught: list[warnings.WarningMessage]) -> None:
+    """Log the warnings fs-sav emitted while parsing instead of printing them to stderr.
+
+    fs-sav warns about each pinned tooltip it skips (e.g. a structure of the
+    other faction, or one the game had no details for).
+
+    Args:
+        caught (list[warnings.WarningMessage]): Warnings recorded during the parse.
+    """
+    for warning in caught:
+        logger.warning("fs-sav: %s", warning.message)
 
 
 def _convert_to_stockpile(data: dict[str, Any]) -> Stockpile:
@@ -152,8 +174,18 @@ def _convert_to_stockpile(data: dict[str, Any]) -> Stockpile:
     except (ValueError, AttributeError):
         timestamp = datetime.now(tz=UTC)
 
+    tech_data = data.get("tech")
+    tech = StockpileTech.model_validate(tech_data) if tech_data else None
+
     refinery_data = data.get("refinery")
     refinery = Refinery.model_validate(refinery_data) if refinery_data else None
+
+    factory_orders_data = data.get("factory_orders")
+    factory_orders = (
+        [FactoryOrder.model_validate(order) for order in factory_orders_data]
+        if factory_orders_data
+        else None
+    )
 
     return Stockpile(
         name=data.get("name", ""),
@@ -163,7 +195,9 @@ def _convert_to_stockpile(data: dict[str, Any]) -> Stockpile:
         coords=coords,
         is_reserve=data.get("is_reserve", False),
         items=items,
+        tech=tech,
         refinery=refinery,
+        factory_orders=factory_orders,
         timestamp=timestamp,
         raw_timestamp=None,  # fs-sav doesn't expose raw ticks
     )

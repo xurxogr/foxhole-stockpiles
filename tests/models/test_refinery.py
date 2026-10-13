@@ -142,7 +142,7 @@ class TestStockpileRefinery:
 
     def test_refinery_on_seaport_rejected(self) -> None:
         """Refinery data on another stockpile type is rejected."""
-        with pytest.raises(ValidationError, match="only allowed on Refinery"):
+        with pytest.raises(ValidationError, match="refinery is not allowed on 'Seaport'"):
             Stockpile(type=StockpileType.SEAPORT, refinery=Refinery())
 
     def test_refinery_on_reserve_rejected(self) -> None:

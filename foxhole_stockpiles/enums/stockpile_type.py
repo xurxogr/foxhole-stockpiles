@@ -32,6 +32,10 @@ class StockpileType(StrEnum):
     SEAPORT = "Seaport"
     AIRCRAFT_DEPOT = "AircraftDepot"
 
+    # Factories (in-game CodeNames)
+    FACTORY = "Factory"
+    MASS_PRODUCTION_FACTORY = "MassProduction"
+
     # Facilities (in-game CodeNames)
     HOSPITAL = "Hospital"
     REFINERY = "Refinery"
@@ -46,3 +50,48 @@ class StockpileType(StrEnum):
     VEHICLE_FACTORY_3 = "FacilityVehicleFactory3"
 
     UNDEFINED = "Undefined"
+
+    @staticmethod
+    def has_tech(value: str) -> bool:
+        """Tell whether a stockpile type has a garrison/upgrade tech tree.
+
+        Args:
+            value (str): Stockpile type CodeName (may be unknown).
+
+        Returns:
+            bool: True for the base types with a tech tree.
+        """
+        return value in _TECH_TYPES
+
+    @staticmethod
+    def has_factory_orders(value: str) -> bool:
+        """Tell whether a stockpile type takes factory orders.
+
+        Args:
+            value (str): Stockpile type CodeName (may be unknown).
+
+        Returns:
+            bool: True for Factory and Mass Production Factory.
+        """
+        return value in _FACTORY_ORDER_TYPES
+
+
+_TECH_TYPES: frozenset[str] = frozenset(
+    {
+        StockpileType.SAFE_HOUSE,
+        StockpileType.KEEP,
+        StockpileType.BORDER_BASE,
+        StockpileType.RELIC_BASE,
+        StockpileType.ENCAMPMENT,
+        StockpileType.TOWN_BASE_1,
+        StockpileType.TOWN_BASE_2,
+        StockpileType.TOWN_BASE_3,
+        StockpileType.BUNKER_BASE_1,
+        StockpileType.BUNKER_BASE_2,
+        StockpileType.BUNKER_BASE_3,
+    }
+)
+
+_FACTORY_ORDER_TYPES: frozenset[str] = frozenset(
+    {StockpileType.FACTORY, StockpileType.MASS_PRODUCTION_FACTORY}
+)

@@ -7,9 +7,11 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_valid
 
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.stockpile_type import StockpileType
+from foxhole_stockpiles.models.factory_order import FactoryOrder
 from foxhole_stockpiles.models.refinery import Refinery
 from foxhole_stockpiles.models.stockpile_coords import StockpileCoords
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
+from foxhole_stockpiles.models.stockpile_tech import StockpileTech
 
 
 class Stockpile(BaseModel):
@@ -28,8 +30,16 @@ class Stockpile(BaseModel):
     shard: str | None = Field(description="Shard name", default=None)
     ingame_timestamp: str | None = Field(description="In game timestamp", default=None)
     resolution: str | None = Field(description="Resolution of the screenshot", default=None)
+    tech: StockpileTech | None = Field(
+        description="Garrison/upgrade tech build progress (main stockpile of a base only)",
+        default=None,
+    )
     refinery: Refinery | None = Field(
         description="Refinery orders and storages (main Refinery stockpile only), if provided",
+        default=None,
+    )
+    factory_orders: list[FactoryOrder] | None = Field(
+        description="Factory orders of the player who opened the tooltip (main stockpile only)",
         default=None,
     )
     errors: list[str] | None = Field(
@@ -54,21 +64,30 @@ class Stockpile(BaseModel):
         return f"{self.type}:{self.hex}:{coords_key}:{self.name}"
 
     @model_validator(mode="after")
-    def check_refinery(self) -> Self:
-        """Reject refinery data outside a non-reserve Refinery stockpile.
+    def check_type_specific_data(self) -> Self:
+        """Reject type-specific data on the wrong type or on a reserve stockpile.
+
+        Tech, refinery and factory orders only belong to the main stockpile of
+        the structure types that have them. All of them are optional.
 
         Returns:
             Self: The validated model.
 
         Raises:
-            ValueError: If refinery is set on a non-Refinery or reserve stockpile.
+            ValueError: If a type-specific field is set on another type or on a reserve.
         """
-        if self.refinery is None:
-            return self
-        if self.type != StockpileType.REFINERY:
-            raise ValueError(f"refinery is only allowed on Refinery stockpiles, got '{self.type}'")
-        if self.is_reserve:
-            raise ValueError("refinery is not allowed on reserve stockpiles")
+        rules = (
+            ("tech", self.tech, StockpileType.has_tech(self.type)),
+            ("refinery", self.refinery, self.type == StockpileType.REFINERY),
+            ("factory_orders", self.factory_orders, StockpileType.has_factory_orders(self.type)),
+        )
+        for name, value, allowed in rules:
+            if value is None:
+                continue
+            if not allowed:
+                raise ValueError(f"{name} is not allowed on '{self.type}' stockpiles")
+            if self.is_reserve:
+                raise ValueError(f"{name} is not allowed on reserve stockpiles")
         return self
 
     @field_serializer("timestamp")

@@ -1,5 +1,8 @@
 """Tests for services.sav_parser module."""
 
+import logging
+import warnings
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -44,6 +47,51 @@ class TestParseSaveErrors:
             mock_fs_sav.parse_save_bytes.return_value = None
             with pytest.raises(RuntimeError, match="unexpected type"):
                 parse_save_bytes(b"data")
+
+
+class TestParseSaveWarnings:
+    """fs-sav warnings are logged instead of reaching stderr."""
+
+    SKIPPED = (
+        "TownBase1 at DeadLandsHex skipped: the game had no details for it when it was last updated"
+    )
+
+    def _warn_and_return(self, *_args: Any, **_kwargs: Any) -> list[dict[str, Any]]:
+        """Emit an fs-sav style warning and return one stockpile.
+
+        Args:
+            *_args (Any): Ignored positional arguments.
+            **_kwargs (Any): Ignored keyword arguments.
+
+        Returns:
+            list[dict[str, Any]]: One raw stockpile.
+        """
+        warnings.warn(self.SKIPPED, UserWarning, stacklevel=1)
+        return [{"type": "Seaport"}]
+
+    @pytest.mark.parametrize(
+        ("fs_sav_function", "call"),
+        [
+            ("parse_save", lambda: parse_save("x.sav")),
+            ("parse_save_bytes", lambda: parse_save_bytes(b"data")),
+        ],
+    )
+    def test_warnings_logged(
+        self,
+        fs_sav_function: str,
+        call: Callable[[], list[Stockpile]],
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Each fs-sav warning becomes a logger warning and is not re-raised."""
+        with patch("foxhole_stockpiles.services.sav_parser.fs_sav") as mock_fs_sav:
+            getattr(mock_fs_sav, fs_sav_function).side_effect = self._warn_and_return
+            with warnings.catch_warnings():
+                warnings.simplefilter("error")
+                with caplog.at_level(logging.WARNING, logger="foxhole_stockpiles.services"):
+                    result = call()
+
+        assert len(result) == 1
+        assert [r.getMessage() for r in caplog.records] == [f"fs-sav: {self.SKIPPED}"]
 
 
 class TestConvertTimestampFallback:
@@ -169,6 +217,68 @@ class TestConvertToStockpile:
 
         assert result.refinery is not None
         assert result.refinery.model_dump(exclude_none=True) == refinery_data
+
+    def test_convert_factory_orders(self) -> None:
+        """The factory_orders block from fs-sav is kept on the stockpile."""
+        orders: list[dict[str, Any]] = [
+            {
+                "queue": 0,
+                "queue_type": "SmallArms",
+                "duration": 0,
+                "items": [{"slot": 16, "code": "RifleC"}],
+            },
+            {
+                "queue": 6,
+                "queue_type": "Uniforms",
+                "duration": 90,
+                "items": [{"slot": 13, "code": "ScoutUniformC"}],
+            },
+        ]
+
+        result = _convert_to_stockpile({"type": "Factory", "factory_orders": orders})
+
+        assert result.factory_orders is not None
+        assert [o.model_dump(exclude_none=True) for o in result.factory_orders] == orders
+
+    def test_convert_factory_order_item_without_code(self) -> None:
+        """An order item without code converts with code None."""
+        orders = [{"queue": 1, "duration": 30, "items": [{"slot": 255}]}]
+
+        result = _convert_to_stockpile({"type": "MassProduction", "factory_orders": orders})
+
+        assert result.factory_orders is not None
+        assert result.factory_orders[0].queue_type is None
+        assert result.factory_orders[0].items[0].slot == 255
+        assert result.factory_orders[0].items[0].code is None
+
+    def test_convert_factory_orders_absent(self) -> None:
+        """A factory without the factory_orders block converts with None."""
+        result = _convert_to_stockpile({"type": "Factory"})
+
+        assert result.type == StockpileType.FACTORY
+        assert result.factory_orders is None
+
+    def test_convert_tech(self) -> None:
+        """The tech block from fs-sav is kept on the stockpile."""
+        data: dict[str, Any] = {
+            "type": "FortBaseT1",
+            "tech": {"ProvisionalGarrison": 100, "SmallGarrison": 40, "T1Garrison": 0},
+        }
+
+        result = _convert_to_stockpile(data)
+
+        assert result.tech is not None
+        assert result.tech.model_dump(exclude_none=True) == {
+            "provisional_garrison": 100,
+            "small_garrison": 40,
+            "t1_garrison": 0,
+        }
+
+    def test_convert_tech_absent(self) -> None:
+        """A base without the tech block converts with tech None."""
+        result = _convert_to_stockpile({"type": "FortBaseT1"})
+
+        assert result.tech is None
 
     def test_convert_refinery_absent(self) -> None:
         """A Refinery without the refinery block converts with refinery None."""
