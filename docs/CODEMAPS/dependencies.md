@@ -10,7 +10,6 @@ Source of truth: `pyproject.toml`. Python **3.12+**.
 |---|---|---|
 | numpy | 2.4.5 | arrays / image buffers |
 | pillow | 12.2.0 | image I/O + **screen grab** (`ImageGrab`) |
-| h5py | 3.16.0 | HDF5 template DB (built/read by `fs_tools`) |
 | pydantic | 2.13.4 | models / validation |
 | pydantic-settings | 2.14.1 | env + file config |
 | typer | 0.12.0 | CLI framework (`fs`, `fs-tools`) |
@@ -73,7 +72,7 @@ OAuth installed-app flow; token cached at `~/.fs_token`. Config in
 ## Dev dependencies (`[project.optional-dependencies] dev`)
 
 pytest 9.0.3 (+ asyncio 1.2, cov 7.1, xdist 3.8, qt 4.5), mypy 2.1 (strict),
-ruff 0.15.13, pre-commit 4.6, type stubs (types-requests, types-psutil, h5py-stubs).
+ruff 0.15.13, pre-commit 4.6, type stubs (types-requests, types-psutil).
 
 **Quality gates:** `ruff check` / `ruff format`; `mypy foxhole_stockpiles fs_tools`
 (strict, pydantic plugin); `pytest` (≥80% coverage, `--cov=foxhole_stockpiles --cov=fs_tools`).

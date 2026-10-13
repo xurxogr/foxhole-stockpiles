@@ -1,7 +1,6 @@
 """Qt application entry points for the fs-tools desktop application."""
 
 import logging
-import multiprocessing
 import sys
 from pathlib import Path
 
@@ -23,9 +22,6 @@ def _bootstrap() -> QApplication:
     Returns:
         QApplication: The (possibly pre-existing) Qt application instance.
     """
-    # Required for multiprocessing to work in frozen executables (PyInstaller).
-    multiprocessing.freeze_support()
-
     language = "en"
     try:
         settings = AppSettings()

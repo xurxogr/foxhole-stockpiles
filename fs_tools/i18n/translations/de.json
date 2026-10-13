@@ -96,10 +96,6 @@
     "pak_filter": "PAK-Dateien (*.pak);;Alle Dateien (*)",
     "json_filter": "JSON-Dateien (*.json);;Alle Dateien (*)"
   },
-  "catalog_builder_settings": {
-    "title": "Katalog-Builder-Einstellungen",
-    "info": "Konfigurieren Sie die Werkzeuge die für den Aufbau des Objektkatalogs aus PAK-Dateien erforderlich sind."
-  },
   "database_builder": {
     "title": "Datenbank erstellen",
     "vanilla_group": "Vanilla PAK-Datei (Erforderlich)",
@@ -146,10 +142,6 @@
     "select_mod_pak": "Mod-PAK-Dateien auswählen",
     "select_database": "Datenbankdatei auswählen",
     "pak_filter": "PAK-Dateien (*.pak);;Alle Dateien (*)"
-  },
-  "database_builder_settings": {
-    "title": "Datenbank-Builder-Einstellungen",
-    "info": "Konfigurieren Sie die Werkzeuge und Einstellungen die für den Aufbau der Vorlagen-Datenbank erforderlich sind."
   },
   "database_info_window": {
     "title": "Datenbankinformationen",

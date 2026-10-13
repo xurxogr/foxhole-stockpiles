@@ -27,7 +27,6 @@ def get_fs_hidden_imports() -> list[str]:
         "pydantic",
         "pydantic.json_schema",
         "pydantic_settings",
-        "h5py",
         "httpx",
         "PIL",
         "PIL.ImageGrab",
@@ -144,7 +143,6 @@ def get_fs_tools_hidden_imports() -> list[str]:
         "pydantic",
         "pydantic.json_schema",
         "pydantic_settings",
-        "h5py",
         "PIL",
         "typer",
         # PySide6 dependencies (for the tooling GUI)

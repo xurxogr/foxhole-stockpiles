@@ -96,10 +96,6 @@
     "pak_filter": "Ficheiros PAK (*.pak);;Todos os ficheiros (*)",
     "json_filter": "Ficheiros JSON (*.json);;Todos os ficheiros (*)"
   },
-  "catalog_builder_settings": {
-    "title": "Configuração do construtor de catálogo",
-    "info": "Configure as ferramentas necessárias para construir o catálogo de objetos a partir de ficheiros PAK."
-  },
   "database_builder": {
     "title": "Construir base de dados",
     "vanilla_group": "Ficheiro PAK vanilla (Obrigatório)",
@@ -146,10 +142,6 @@
     "select_mod_pak": "Selecionar ficheiros PAK de mod",
     "select_database": "Selecionar ficheiro de base de dados",
     "pak_filter": "Ficheiros PAK (*.pak);;Todos os ficheiros (*)"
-  },
-  "database_builder_settings": {
-    "title": "Configuração do construtor de base de dados",
-    "info": "Configure as ferramentas e definições necessárias para construir a base de dados de modelos."
   },
   "database_info_window": {
     "title": "Informações da base de dados",

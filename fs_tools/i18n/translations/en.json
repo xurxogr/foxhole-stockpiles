@@ -96,10 +96,6 @@
     "pak_filter": "PAK Files (*.pak);;All Files (*)",
     "json_filter": "JSON Files (*.json);;All Files (*)"
   },
-  "catalog_builder_settings": {
-    "title": "Catalog Builder Settings",
-    "info": "Configure the tools required for building the item catalog from PAK files."
-  },
   "database_builder": {
     "title": "Build Database",
     "vanilla_group": "Vanilla PAK File (Required)",
@@ -146,10 +142,6 @@
     "select_mod_pak": "Select Mod PAK Files",
     "select_database": "Select Database File",
     "pak_filter": "PAK Files (*.pak);;All Files (*)"
-  },
-  "database_builder_settings": {
-    "title": "Database Builder Settings",
-    "info": "Configure the tools and settings required for building the template database."
   },
   "database_info_window": {
     "title": "Database Information",

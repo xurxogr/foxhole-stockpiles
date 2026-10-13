@@ -31,8 +31,6 @@ dependencies = [
     "pydantic_settings>=2.14.2",
     # Platform-appropriate config directory resolution
     "platformdirs>=4.10.0",
-    # HDF5 for database storage
-    "h5py>=3.16.0",
     # Clipboard access (shared by GUI and CLI clipboard scanning)
     "pyperclip>=1.8",
     # Memory profiling
@@ -69,7 +67,6 @@ dev = [
     "pre-commit>=4.6.0",
     "types-requests",
     "types-psutil",
-    "h5py-stubs",
 
 ]
 # Screenshot capture and global hotkeys (Windows only): game window lookup and

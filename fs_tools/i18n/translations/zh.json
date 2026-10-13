@@ -96,10 +96,6 @@
     "pak_filter": "PAK 文件 (*.pak);;所有文件 (*)",
     "json_filter": "JSON 文件 (*.json);;所有文件 (*)"
   },
-  "catalog_builder_settings": {
-    "title": "目录构建器设置",
-    "info": "配置从 PAK 文件构建物品目录所需的工具。"
-  },
   "database_builder": {
     "title": "构建数据库",
     "vanilla_group": "原版 PAK 文件（必需）",
@@ -146,10 +142,6 @@
     "select_mod_pak": "选择模组 PAK 文件",
     "select_database": "选择数据库文件",
     "pak_filter": "PAK 文件 (*.pak);;所有文件 (*)"
-  },
-  "database_builder_settings": {
-    "title": "数据库构建器设置",
-    "info": "配置构建模板数据库所需的工具和设置。"
   },
   "database_info_window": {
     "title": "数据库信息",
