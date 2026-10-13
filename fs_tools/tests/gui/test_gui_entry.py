@@ -31,7 +31,7 @@ def test_run_gui(qtbot: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """run_gui builds the main window and enters the event loop."""
     monkeypatch.setattr(QApplication, "exec", lambda self: 0)
     with (
-        patch("fs_tools.gui.main_window.ToolsMainWindow") as window,
+        patch("fs_tools.gui.ToolsMainWindow") as window,
         pytest.raises(SystemExit),
     ):
         gui_mod.run_gui()
@@ -43,7 +43,7 @@ def test_run_visualizer(qtbot: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """run_visualizer opens the visualizer window for the given database."""
     monkeypatch.setattr(QApplication, "exec", lambda self: 0)
     with (
-        patch("fs_tools.gui.windows.database_visualizer_window.DatabaseVisualizerWindow") as window,
+        patch("fs_tools.gui.DatabaseVisualizerWindow") as window,
         pytest.raises(SystemExit),
     ):
         gui_mod.run_visualizer(Path("db.h5"))
@@ -54,7 +54,7 @@ def test_run_debug_viewer(qtbot: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """run_debug_viewer opens the debug window and loads the image."""
     monkeypatch.setattr(QApplication, "exec", lambda self: 0)
     with (
-        patch("fs_tools.gui.windows.debug_image_window.DebugImageWindow") as window,
+        patch("fs_tools.gui.DebugImageWindow") as window,
         pytest.raises(SystemExit),
     ):
         gui_mod.run_debug_viewer(Path("shot.png"), Path("db.h5"))

@@ -453,7 +453,7 @@ def get_build_specs() -> list[BuildSpec]:
                     os.path.join("fs_tools", "i18n", "translations"),
                 ),
             ],
-            test_args=[["--help"], ["build-db", "--help"]],
+            test_args=[["--help"], ["visualize", "--help"]],
         ),
     ]
 

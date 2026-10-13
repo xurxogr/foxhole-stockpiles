@@ -10,6 +10,9 @@ from foxhole_stockpiles import __version__
 from foxhole_stockpiles.core.logging import setup_logging
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.i18n import get_translator, set_translations_resource
+from fs_tools.gui.main_window import ToolsMainWindow
+from fs_tools.gui.windows.database_visualizer_window import DatabaseVisualizerWindow
+from fs_tools.gui.windows.debug_image_window import DebugImageWindow
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +47,6 @@ def _bootstrap() -> QApplication:
 
 def run_gui() -> None:
     """Launch the fs-tools launcher window."""
-    from fs_tools.gui.main_window import ToolsMainWindow
-
     app = _bootstrap()
     window = ToolsMainWindow()
     window.show()
@@ -58,8 +59,6 @@ def run_visualizer(database: Path | None = None) -> None:
     Args:
         database (Path | None): Path to the template database to open.
     """
-    from fs_tools.gui.windows.database_visualizer_window import DatabaseVisualizerWindow
-
     app = _bootstrap()
     window = DatabaseVisualizerWindow(
         parent=None,
@@ -76,8 +75,6 @@ def run_debug_viewer(image: Path, database: Path) -> None:
         image (Path): Screenshot to inspect.
         database (Path): Path to the template database.
     """
-    from fs_tools.gui.windows.debug_image_window import DebugImageWindow
-
     app = _bootstrap()
     window = DebugImageWindow(parent=None, database_path=str(database))
     if hasattr(window, "load_image"):
