@@ -49,7 +49,7 @@ dependencies = [
     # OCR engine (Rust implementation)
     "fs-ocr>=1.1.0",
     # Game asset tools: catalog and icon-template database (Rust implementation)
-    "fs-assets>=0.1.0",
+    "fs-assets>=0.1.1",
 ]
 
 [project.optional-dependencies]

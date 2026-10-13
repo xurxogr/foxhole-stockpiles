@@ -17,7 +17,7 @@ Source of truth: `pyproject.toml`. Python **3.12+**.
 | **pynput** | **1.7.7** | **global capture hotkey; Windows-only `capture` extra** |
 | **fs-ocr** | 1.1.0 | external Rust OCR engine (replaces in-repo `fs_ocr`) |
 | **fs-sav** | 0.3.0 | Rust `.sav` parser |
-| **fs-assets** | 0.1.0 | Rust game-asset tools: catalog + icon-template DB (CLI `fs-assets`; backs the `fs_tools` GUI) |
+| **fs-assets** | 0.1.1 | Rust game-asset tools: catalog + icon-template DB (CLI `fs-assets`; backs the `fs_tools` GUI) |
 | google-api-python-client | 2.196.0 | Google Sheets output handler |
 | google-auth-httplib2 | 0.4.0 | Google auth transport |
 | google-auth-oauthlib | 1.4.0 | Google OAuth installed-app flow |
@@ -36,7 +36,7 @@ into the `fs-ocr` Rust engine), `discord-webhook` (notifications stack dropped).
 - **fs-ocr** (PyPI `fs-ocr>=1.1.0`) — the OCR engine. `StockpileScanner`,
   `ScanConfig`, `Stockpile`, `StockpileItem`. Backs `services/scanner.py`.
 - **fs-sav** (PyPI) — backs `services/sav_parser.py`.
-- **fs-assets** (PyPI `fs-assets>=0.1.0`) — reads the game `.pak` directly to
+- **fs-assets** (PyPI `fs-assets>=0.1.1`) — reads the game `.pak` directly to
   build the catalog (`build_catalog`) and the icon-template DB (`add_mod`,
   `modify_icon`, `read_templates`, `database_statistics`, `pak_coverage`).
   Result shapes are in `fs_assets.types`. Replaced the Python engine in
