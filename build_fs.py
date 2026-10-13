@@ -464,15 +464,15 @@ def get_build_specs() -> list[BuildSpec]:
             hidden_imports=get_fs_tools_hidden_imports(),
             # The tooling reuses foxhole_stockpiles' settings/i18n/models, but
             # --collect-submodules also drags in the runtime-only handlers and
-            # services (Google Sheets, screenshot capture, SAV parsing). The
-            # tooling never imports those, so drop their heavy dependencies.
+            # services (Google Sheets, screenshot capture). The tooling never
+            # imports those, so drop their heavy dependencies. fs_sav stays:
+            # core.utils and models.stockpile import it, and the tooling uses both.
             exclude_modules=[
                 "google",
                 "google_auth_oauthlib",
                 "googleapiclient",
                 "pywinctl",
                 "pynput",
-                "fs_sav",
                 "httpx",
                 "pytesseract",
                 *get_unused_qt_modules(),
