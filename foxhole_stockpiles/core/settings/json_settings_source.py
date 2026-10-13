@@ -1,6 +1,7 @@
 """Custom pydantic-settings sources for configuration loading."""
 
 import json
+from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Any
 
@@ -17,11 +18,11 @@ class Utf8JsonConfigSettingsSource(JsonConfigSettingsSource):
     'output_format' would trigger validation errors otherwise.
     """
 
-    def _read_file(self, file_path: Path) -> dict[str, Any]:
+    def _read_file(self, file_path: Path | Traversable) -> dict[str, Any]:
         """Read and parse a JSON file with UTF-8 encoding.
 
         Args:
-            file_path: Path to the JSON file
+            file_path (Path | Traversable): Path to the JSON file.
 
         Returns:
             dict[str, Any]: The parsed JSON data with migrations applied
