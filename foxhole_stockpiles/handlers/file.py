@@ -17,30 +17,40 @@ from foxhole_stockpiles.core.settings.sections.output.csv_format import (
 from foxhole_stockpiles.core.settings.sections.output.json_format import JsonFormatSettings
 from foxhole_stockpiles.enums.output_format import OutputFormat
 from foxhole_stockpiles.handlers.base_handler import BaseOutputDestinationHandler
+from foxhole_stockpiles.handlers.formula_guard import neutralize_formula
 from foxhole_stockpiles.handlers.stockpile_json import stockpiles_to_json_payload
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
 
 FormatSettings = JsonFormatSettings | CsvFormatSettings
 
-_PATH_SEPARATORS = re.compile(r"[\\/]")
+# Path separators, control characters and what else Windows refuses in a name.
+_UNSAFE_PATH_CHARS = re.compile(r'[\\/<>:"|?*\x00-\x1f]')
+# Windows device names, reserved with or without an extension.
+_RESERVED_NAME = re.compile(r"^(con|prn|aux|nul|com\d|lpt\d)(\..*)?$", re.IGNORECASE)
 
 
 def _sanitize_placeholder_value(value: str) -> str:
-    r"""Strip path separators from a value substituted into a path template.
+    """Make a value substituted into a path template safe as one path segment.
 
     Stockpile-derived placeholders (name, hex, type) originate from OCR-read
-    in-game text or `.sav` data, which is player-controlled. Without this,
-    a stockpile named e.g. "../../etc/foo" could escape the configured
-    output directory when substituted into the file path template.
+    in-game text, `.sav` data or the clipboard, which others can control. Without
+    this, a stockpile named e.g. ".." or "../../etc/foo" could escape the configured
+    output directory, and "a:b" would write to an NTFS alternate data stream.
 
     Args:
         value (str): The raw placeholder value.
 
     Returns:
-        str: Value with `/` and `\\` replaced, safe for use as a path segment.
+        str: A non-empty value that is neither a relative segment nor a reserved
+            name. Letters of any alphabet are kept.
     """
-    return _PATH_SEPARATORS.sub("_", value)
+    cleaned = _UNSAFE_PATH_CHARS.sub("_", value).strip(" .")
+    if not cleaned:
+        return "_"
+    if _RESERVED_NAME.match(cleaned):
+        return f"_{cleaned}"
+    return cleaned
 
 
 class FileOutputHandler(BaseOutputDestinationHandler):
@@ -108,11 +118,10 @@ class FileOutputHandler(BaseOutputDestinationHandler):
             "{hex}": hex_name,
             "{coords}": coords_str,
         }
+        # Fix the extension first: a dot in a substituted value is not an extension.
+        file = self._fix_extension(file)
         for placeholder, value in placeholders.items():
             file = file.replace(placeholder, _sanitize_placeholder_value(value))
-
-        # Ensure correct file extension based on format
-        file = self._fix_extension(file)
 
         output_path = Path(file)
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -247,14 +256,10 @@ class FileOutputHandler(BaseOutputDestinationHandler):
         Returns:
             str: Escaped value
         """
-        # Neutralize formula injection (CWE-1236): stockpile/item names originate
-        # from OCR/.sav data, which is effectively player-controlled input, and a
-        # leading =/+/-/@ would execute as a formula when opened in Excel/Sheets.
-        if value.startswith(("=", "+", "-", "@")):
-            value = "'" + value
+        value = neutralize_formula(value)
 
-        # Quote if value contains separator, quotes, or newlines
-        if separator in value or '"' in value or "\n" in value:
+        # Quote if value contains separator, quotes, or line breaks
+        if separator in value or '"' in value or "\n" in value or "\r" in value:
             return '"' + value.replace('"', '""') + '"'
         return value
 
