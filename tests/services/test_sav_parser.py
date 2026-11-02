@@ -21,6 +21,8 @@ from foxhole_stockpiles.services.sav_parser import (
     parse_save_bytes,
 )
 
+_SAV_MODULE = "foxhole_stockpiles.services.sav_parser"
+
 
 class TestParseSaveErrors:
     """Error and bytes paths for the fs-sav wrapper."""
@@ -363,3 +365,71 @@ class TestParseSave:
                 stockpile_type="Seaport",
                 with_items=False,
             )
+
+
+class TestUnreadableStockpile:
+    """A stockpile that can't be fully read doesn't stop the others."""
+
+    _GOOD: dict[str, Any] = {"name": "Good", "type": "Seaport", "hex": "TerminusHex"}
+    # A Seaport has no tech tree, so the model rejects this tech.
+    _BAD_TECH: dict[str, Any] = {
+        "name": "Bad",
+        "type": "Seaport",
+        "hex": "TerminusHex",
+        "coords": {"x": 0.25, "y": 0.5},
+        "items": [{"code": "Rifle", "quantity": 3}],
+        "tech": {"SmallGarrison": 100},
+    }
+
+    def test_parse_save_keeps_the_others_and_adds_an_error(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """The failing stockpile keeps its valid data and reports the error."""
+        with (
+            patch(f"{_SAV_MODULE}.fs_sav.parse_save", return_value=[self._BAD_TECH, self._GOOD]),
+            caplog.at_level(logging.ERROR),
+        ):
+            bad, good = parse_save("MapData.sav")
+
+        assert good.name == "Good"
+        assert good.errors is None
+        assert bad.name == "Bad"
+        assert bad.tech is None
+        assert bad.coords is not None
+        assert [item.code for item in bad.items] == ["Rifle"]
+        assert bad.errors is not None
+        assert len(bad.errors) == 1
+        assert "tech is not allowed on 'Seaport'" in bad.errors[0]
+        assert "Bad" in caplog.text
+        assert "tech is not allowed" in caplog.text
+
+    def test_parse_save_bytes_keeps_the_others_and_adds_an_error(self) -> None:
+        """Parsing from bytes handles a failing stockpile the same way."""
+        with patch(
+            f"{_SAV_MODULE}.fs_sav.parse_save_bytes", return_value=[self._BAD_TECH, self._GOOD]
+        ):
+            bad, good = parse_save_bytes(b"data")
+
+        assert good.errors is None
+        assert bad.errors is not None
+
+    def test_unreadable_items_keep_only_the_identity(self) -> None:
+        """Without valid items, the stockpile keeps what identifies it and the error."""
+        data = {"name": "N", "type": "Seaport", "hex": "H", "items": [{"quantity": "many"}]}
+        with patch(f"{_SAV_MODULE}.fs_sav.parse_save", return_value=[data]):
+            stockpile = parse_save("MapData.sav")[0]
+
+        assert (stockpile.name, stockpile.type, stockpile.hex) == ("N", "Seaport", "H")
+        assert stockpile.items == []
+        assert stockpile.errors is not None
+
+    def test_malformed_identity_is_still_reported(self) -> None:
+        """Malformed identity fields don't stop the stockpile from being reported."""
+        data = {"name": 5, "hex": 7, "items": "not-a-list"}
+        with patch(f"{_SAV_MODULE}.fs_sav.parse_save", return_value=[data]):
+            stockpile = parse_save("MapData.sav")[0]
+
+        assert stockpile.name == "5"
+        assert stockpile.type == StockpileType.UNDEFINED
+        assert stockpile.hex is None
+        assert stockpile.errors is not None

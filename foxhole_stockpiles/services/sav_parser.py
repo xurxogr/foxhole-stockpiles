@@ -11,8 +11,10 @@ from pathlib import Path
 from typing import Any
 
 import fs_sav
+from pydantic import ValidationError
 
 from foxhole_stockpiles.enums.item_faction import ItemFaction
+from foxhole_stockpiles.enums.stockpile_type import StockpileType
 from foxhole_stockpiles.models.factory_order import FactoryOrder
 from foxhole_stockpiles.models.refinery import Refinery
 from foxhole_stockpiles.models.stockpile import Stockpile
@@ -24,6 +26,12 @@ logger = logging.getLogger(__name__)
 
 # Text of the fs-sav error raised when the game kept writing the file while it was read.
 _FILE_BUSY_MARKER = "kept changing while being read"
+
+# Fields that only some structure types can hold.
+_TYPE_SPECIFIC_FIELDS = frozenset({"tech", "refinery", "factory_orders"})
+
+# What converting unexpected fs-sav data can raise (ValidationError is a ValueError).
+_CONVERSION_ERRORS = (ValueError, TypeError, AttributeError)
 
 
 class SaveFileBusyError(RuntimeError):
@@ -80,7 +88,7 @@ def parse_save(
     if not isinstance(raw_stockpiles, list):
         raise RuntimeError(f"fs_sav.parse_save returned unexpected type: {type(raw_stockpiles)}")
 
-    return [_convert_to_stockpile(s) for s in raw_stockpiles]
+    return [_convert_or_report(s) for s in raw_stockpiles]
 
 
 def parse_save_bytes(
@@ -125,7 +133,7 @@ def parse_save_bytes(
             f"fs_sav.parse_save_bytes returned unexpected type: {type(raw_stockpiles)}"
         )
 
-    return [_convert_to_stockpile(s) for s in raw_stockpiles]
+    return [_convert_or_report(s) for s in raw_stockpiles]
 
 
 def info() -> dict[str, str]:
@@ -149,6 +157,72 @@ def _log_warnings(caught: list[warnings.WarningMessage]) -> None:
     """
     for warning in caught:
         logger.warning("fs-sav: %s", warning.message)
+
+
+def _describe_error(error: Exception) -> str:
+    """Describe a conversion error in one line.
+
+    Args:
+        error (Exception): The error raised by the conversion.
+
+    Returns:
+        str: The reason, without pydantic's multi-line layout.
+    """
+    if isinstance(error, ValidationError):
+        return "; ".join(detail["msg"] for detail in error.errors())
+    return str(error)
+
+
+def _convert_valid_data(data: dict[str, Any]) -> Stockpile:
+    """Convert what is valid of a stockpile that failed to convert.
+
+    Args:
+        data (dict[str, Any]): Raw stockpile data from fs-sav.
+
+    Returns:
+        Stockpile: The stockpile without its type-specific data or, if the rest
+            is invalid too, with only what identifies it.
+    """
+    try:
+        return _convert_to_stockpile(
+            {key: value for key, value in data.items() if key not in _TYPE_SPECIFIC_FIELDS}
+        )
+    except _CONVERSION_ERRORS:
+        hex_name = data.get("hex")
+        return Stockpile(
+            name=str(data.get("name", "")),
+            type=str(data.get("type", StockpileType.UNDEFINED)),
+            hex=hex_name if isinstance(hex_name, str) else None,
+        )
+
+
+def _convert_or_report(data: dict[str, Any]) -> Stockpile:
+    """Convert fs-sav output, reporting a failure on the stockpile itself.
+
+    One unexpected stockpile must not lose all the others in the save file, so
+    the error is logged and added to the stockpile's ``errors``.
+
+    Args:
+        data (dict[str, Any]): Raw stockpile data from fs-sav.
+
+    Returns:
+        Stockpile: The converted stockpile or, on failure, its valid data and the error.
+    """
+    try:
+        return _convert_to_stockpile(data)
+    except _CONVERSION_ERRORS as e:
+        reason = _describe_error(e)
+
+    logger.error(
+        "Could not fully read stockpile '%s' (%s) in %s: %s",
+        data.get("name"),
+        data.get("type"),
+        data.get("hex"),
+        reason,
+    )
+    return _convert_valid_data(data).model_copy(
+        update={"errors": [f"Could not fully read this stockpile: {reason}"]}
+    )
 
 
 def _convert_to_stockpile(data: dict[str, Any]) -> Stockpile:
