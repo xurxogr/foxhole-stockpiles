@@ -188,11 +188,11 @@ class MainWindow(QMainWindow):
 
     def scan_screenshot(self) -> None:
         """Open file dialog to scan a screenshot."""
-        self.capture_panel.scan_screenshot_from_menu()
+        self.capture_panel.ocr_pipeline.scan_screenshot_from_menu()
 
     def scan_sav(self) -> None:
         """Scan the configured SAV file once."""
-        self.capture_panel.scan_sav_from_menu()
+        self.capture_panel.sav_pipeline.scan_from_menu()
 
     def show_configuration(self) -> None:
         """Show configuration window as modal dialog centered on main window."""

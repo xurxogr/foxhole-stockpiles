@@ -20,7 +20,7 @@ def window(qtbot: Any) -> MainWindow:
     Returns:
         MainWindow: Window instance
     """
-    with patch("foxhole_stockpiles.gui.widgets.capture_panel.LocalScanService"):
+    with patch("foxhole_stockpiles.gui.controllers.ocr_pipeline.LocalScanService"):
         window = MainWindow()
         qtbot.addWidget(window)
         return window
@@ -127,7 +127,7 @@ def test_window_scan_screenshot(qtbot: Any, window: MainWindow) -> None:
         qtbot: PyQt test fixture
         window (MainWindow): Window instance
     """
-    with patch.object(window.capture_panel, "scan_screenshot_from_menu") as mock_scan:
+    with patch.object(window.capture_panel.ocr_pipeline, "scan_screenshot_from_menu") as mock_scan:
         window.scan_screenshot()
 
         mock_scan.assert_called_once()
@@ -158,7 +158,7 @@ def test_tray_icon_creation_when_available(qtbot: Any) -> None:
 
     from foxhole_stockpiles.core.settings.sections.gui import GUISettings
 
-    with patch("foxhole_stockpiles.gui.widgets.capture_panel.LocalScanService"):
+    with patch("foxhole_stockpiles.gui.controllers.ocr_pipeline.LocalScanService"):
         with patch.object(QSystemTrayIcon, "isSystemTrayAvailable", return_value=True):
             with patch("foxhole_stockpiles.gui.windows.main_window.AppSettings") as mock_settings:
                 # Default config has minimize_to_tray=False
@@ -180,7 +180,7 @@ def test_tray_icon_creation_when_not_available(qtbot: Any) -> None:
     """
     from PySide6.QtWidgets import QSystemTrayIcon
 
-    with patch("foxhole_stockpiles.gui.widgets.capture_panel.LocalScanService"):
+    with patch("foxhole_stockpiles.gui.controllers.ocr_pipeline.LocalScanService"):
         with patch.object(QSystemTrayIcon, "isSystemTrayAvailable", return_value=False):
             window = MainWindow()
             qtbot.addWidget(window)
@@ -243,7 +243,7 @@ def test_load_minimize_to_tray_from_config(qtbot: Any) -> None:
 
     from foxhole_stockpiles.core.settings.sections.gui import GUISettings
 
-    with patch("foxhole_stockpiles.gui.widgets.capture_panel.LocalScanService"):
+    with patch("foxhole_stockpiles.gui.controllers.ocr_pipeline.LocalScanService"):
         with patch.object(QSystemTrayIcon, "isSystemTrayAvailable", return_value=True):
             with patch("foxhole_stockpiles.gui.windows.main_window.AppSettings") as mock_settings:
                 mock_settings.return_value.gui = GUISettings(minimize_to_tray=True)
@@ -260,7 +260,7 @@ def test_load_minimize_to_tray_default_on_error(qtbot: Any) -> None:
     Args:
         qtbot: PyQt test fixture
     """
-    with patch("foxhole_stockpiles.gui.widgets.capture_panel.LocalScanService"):
+    with patch("foxhole_stockpiles.gui.controllers.ocr_pipeline.LocalScanService"):
         with patch(
             "foxhole_stockpiles.gui.windows.main_window.AppSettings",
             side_effect=OSError("Config error"),
@@ -297,7 +297,7 @@ def test_close_event_minimize_to_tray_enabled(qtbot: Any) -> None:
     from PySide6.QtGui import QCloseEvent
     from PySide6.QtWidgets import QSystemTrayIcon
 
-    with patch("foxhole_stockpiles.gui.widgets.capture_panel.LocalScanService"):
+    with patch("foxhole_stockpiles.gui.controllers.ocr_pipeline.LocalScanService"):
         with patch.object(QSystemTrayIcon, "isSystemTrayAvailable", return_value=True):
             window = MainWindow()
             qtbot.addWidget(window)
@@ -342,7 +342,7 @@ def test_close_event_minimize_to_tray_enabled_no_tray_icon(qtbot: Any) -> None:
     from PySide6.QtGui import QCloseEvent
     from PySide6.QtWidgets import QApplication, QSystemTrayIcon
 
-    with patch("foxhole_stockpiles.gui.widgets.capture_panel.LocalScanService"):
+    with patch("foxhole_stockpiles.gui.controllers.ocr_pipeline.LocalScanService"):
         with patch.object(QSystemTrayIcon, "isSystemTrayAvailable", return_value=False):
             window = MainWindow()
             qtbot.addWidget(window)
@@ -409,7 +409,7 @@ def test_quit_application_hides_tray_icon(qtbot: Any) -> None:
     """
     from PySide6.QtWidgets import QApplication, QSystemTrayIcon
 
-    with patch("foxhole_stockpiles.gui.widgets.capture_panel.LocalScanService"):
+    with patch("foxhole_stockpiles.gui.controllers.ocr_pipeline.LocalScanService"):
         with patch.object(QSystemTrayIcon, "isSystemTrayAvailable", return_value=True):
             window = MainWindow()
             qtbot.addWidget(window)
