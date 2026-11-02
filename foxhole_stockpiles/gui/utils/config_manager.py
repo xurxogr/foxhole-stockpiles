@@ -2,11 +2,11 @@
 
 import json
 import logging
-import os
 
 from foxhole_stockpiles.core.settings import get_settings
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.core.settings.config_path import default_config_path
+from foxhole_stockpiles.core.utils import write_private_file
 
 logger = logging.getLogger(__name__)
 
@@ -47,11 +47,10 @@ class ConfigManager:
 
             # Save to file with pretty printing, restricted to the owner since
             # this config can hold a plaintext webhook auth token.
-            self.config_path.parent.mkdir(parents=True, exist_ok=True)
-            fd = os.open(self.config_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-            with os.fdopen(fd, "w", encoding="utf-8") as f:
-                json.dump(config_dict, f, indent=2, ensure_ascii=False)
-            self.config_path.chmod(0o600)
+            write_private_file(
+                path=self.config_path,
+                content=json.dumps(config_dict, indent=2, ensure_ascii=False),
+            )
 
             # Clear the settings cache so next load reads from file
             get_settings.cache_clear()

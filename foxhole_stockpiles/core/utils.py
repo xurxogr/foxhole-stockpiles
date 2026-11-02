@@ -1,6 +1,8 @@
 """Utility functions for the stockpile system."""
 
+import os
 import sys
+import tempfile
 from pathlib import Path
 
 import fs_sav
@@ -39,6 +41,29 @@ def get_bundled_resource_path(relative_path: str) -> Path:
         base_path = Path.cwd()
 
     return base_path / relative_path
+
+
+def write_private_file(path: Path, content: str) -> None:
+    """Atomically replace a text file with one only its owner can read.
+
+    The content goes to a temporary file in the same directory first, so a crash
+    or a full disk leaves the previous file intact. On Windows the permission bits
+    have little effect and the file relies on the ACLs of the user profile.
+
+    Args:
+        path (Path): The file to create or replace.
+        content (str): The text to store, encoded as UTF-8.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    # mkstemp creates the file with mode 0600.
+    fd, temp_name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(content)
+        os.replace(temp_name, path)
+    except BaseException:
+        Path(temp_name).unlink(missing_ok=True)
+        raise
 
 
 # ==================== Savefile Locator Utilities ====================
