@@ -22,7 +22,7 @@ class CatalogEntry(BaseModel):
 class CatalogService:
     """Service for loading and querying item catalog data.
 
-    Provides code-to-display-name lookups for the web interface.
+    Provides code-to-display-name lookups.
     """
 
     def __init__(self, catalog_path: Path | None = None) -> None:

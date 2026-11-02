@@ -20,7 +20,7 @@ class LoggingSettings(BaseModel):
         extra="forbid",
         json_schema_extra={
             "example": {
-                "loggers": {"foxhole_stockpiles": "DEBUG", "uvicorn": "INFO"},
+                "loggers": {"foxhole_stockpiles": "DEBUG", "httpx": "WARNING"},
                 "log_level": "INFO",
                 "log_format": "[%(asctime)s] %(levelname)s [%(name)s] %(message)s",
                 "date_format": "%Y-%m-%d %H:%M:%S",

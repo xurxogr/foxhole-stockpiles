@@ -1,6 +1,6 @@
 """Local scan service: run the OCR scanner and route the result to outputs.
 
-This replaces the former HTTP round-trip to the FastAPI server. The OCR engine
+The OCR engine
 runs in-process (``services.scanner.Scanner`` over the external ``fs_ocr`` Rust
 engine) and the resulting :class:`Stockpile` is fanned out to the configured
 output handlers via :class:`OutputCoordinator`.
