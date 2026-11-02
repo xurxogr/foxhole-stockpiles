@@ -2,7 +2,6 @@
 
 import asyncio
 import logging
-import re
 from collections.abc import Callable
 from typing import Any, Final
 
@@ -14,7 +13,10 @@ from foxhole_stockpiles.connectors.credentials_unavailable_error import (
     CredentialsUnavailableError,
 )
 from foxhole_stockpiles.connectors.google_credentials import GoogleCredentialsProvider
-from foxhole_stockpiles.core.settings.sections.output.sheets_handler import SheetsHandlerSettings
+from foxhole_stockpiles.core.settings.sections.output.sheets_handler import (
+    SPREADSHEET_URL_PATTERN,
+    SheetsHandlerSettings,
+)
 from foxhole_stockpiles.handlers.base_handler import BaseOutputDestinationHandler
 from foxhole_stockpiles.handlers.formula_guard import neutralize_formula
 from foxhole_stockpiles.models.stockpile import Stockpile
@@ -22,9 +24,6 @@ from foxhole_stockpiles.models.stockpile_item import StockpileItem
 from foxhole_stockpiles.services.catalog_service import get_catalog_service
 
 _SCOPES: Final[list[str]] = ["https://www.googleapis.com/auth/spreadsheets"]
-_SPREADSHEET_ID: Final[re.Pattern[str]] = re.compile(
-    r"^https://docs\.google\.com/spreadsheets/d/([^/?#]+)"
-)
 
 CellValue = Callable[[Stockpile, StockpileItem], Any]
 
@@ -71,7 +70,7 @@ class SheetsOutputHandler(BaseOutputDestinationHandler):
         """
         if self._spreadsheet_url is None:
             return "Spreadsheet URL missing"
-        if _SPREADSHEET_ID.search(self._spreadsheet_url) is None:
+        if SPREADSHEET_URL_PATTERN.search(self._spreadsheet_url) is None:
             return "Spreadsheet URL invalid"
         if self._sheet_id is None or not self._sheet_id.strip():
             return "Sheet ID missing"
@@ -88,7 +87,7 @@ class SheetsOutputHandler(BaseOutputDestinationHandler):
             creds (Credentials): Valid Google credentials.
             rows (list[Any] | None): The rows to append.
         """
-        match = _SPREADSHEET_ID.search(self._spreadsheet_url or "")
+        match = SPREADSHEET_URL_PATTERN.search(self._spreadsheet_url or "")
         spreadsheet_id = match.group(1) if match else ""
         # A1 notation doubles an apostrophe inside a quoted sheet name.
         sheet = (self._sheet_id or "").replace("'", "''")

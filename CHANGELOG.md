@@ -45,6 +45,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with "War", such as Warframe, is ignored.
 - **The SAV monitor no longer reports unchanged stockpiles as changed**, nor every
   stockpile as new after failing to read the save file when it starts.
+- **The Google Sheets dialog accepts a link without a trailing slash**, saves it
+  without surrounding spaces, and focuses the credentials field when that path is
+  invalid.
 
 ### Security
 - **Pillow updated to 13.0**, which fixes several image decoding vulnerabilities.

@@ -1,8 +1,16 @@
 """Sheets handler settings."""
 
+import re
+from typing import Final
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from foxhole_stockpiles.enums.output_handler_type import OutputHandlerType
+
+# Group 1 is the spreadsheet ID.
+SPREADSHEET_URL_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"^https://docs\.google\.com/spreadsheets/d/([^/?#]+)"
+)
 
 
 class SheetsHandlerSettings(BaseModel):

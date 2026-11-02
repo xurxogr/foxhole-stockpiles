@@ -29,6 +29,7 @@ from foxhole_stockpiles.core.settings.sections.output import (
     SheetsHandlerSettings,
     WebhookHandlerSettings,
 )
+from foxhole_stockpiles.core.settings.sections.output.sheets_handler import SPREADSHEET_URL_PATTERN
 from foxhole_stockpiles.enums.auth_type import AuthType
 from foxhole_stockpiles.enums.output_format import OutputFormat
 from foxhole_stockpiles.enums.output_handler_type import OutputHandlerType
@@ -367,14 +368,13 @@ class OutputHandlerDialog(QDialog):
             bool: True if every value is valid, False if a warning was shown.
         """
         if not os.path.exists(self.creds_path_input.text()):
-            self._warn("output_tab.handler_dialog.creds_path_invalid", self.spreadsheet_url_input)
+            self._warn(
+                message_key="output_tab.handler_dialog.creds_path_invalid",
+                widget=self.creds_path_input,
+            )
             return False
 
-        id_match = re.search(
-            r"(?<=https://docs.google.com/spreadsheets/d/).*(?=/)",
-            self.spreadsheet_url_input.text(),
-        )
-        if id_match is None:
+        if SPREADSHEET_URL_PATTERN.search(self.spreadsheet_url_input.text().strip()) is None:
             self._warn(
                 "output_tab.handler_dialog.spreadsheet_url_invalid", self.spreadsheet_url_input
             )
@@ -456,7 +456,7 @@ class OutputHandlerDialog(QDialog):
             case OutputHandlerType.SHEETS:
                 handler_settings = SheetsHandlerSettings(
                     creds_path=self.creds_path_input.text(),
-                    spreadsheet_url=self.spreadsheet_url_input.text(),
+                    spreadsheet_url=self.spreadsheet_url_input.text().strip(),
                     sheet_id=self.sheet_id_input.text(),
                     start_cell=self.start_cell_input.text(),
                     row_format=self.row_format_input.text(),

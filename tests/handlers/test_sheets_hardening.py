@@ -8,6 +8,9 @@ from foxhole_stockpiles.connectors.credentials_unavailable_error import (
     CredentialsUnavailableError,
 )
 from foxhole_stockpiles.core.settings.sections import SheetsHandlerSettings
+from foxhole_stockpiles.core.settings.sections.output.sheets_handler import (
+    SPREADSHEET_URL_PATTERN,
+)
 from foxhole_stockpiles.handlers import sheets as sheets_mod
 from foxhole_stockpiles.handlers.sheets import SheetsOutputHandler
 from foxhole_stockpiles.models.stockpile import Stockpile
@@ -130,3 +133,42 @@ async def test_apostrophe_in_sheet_name_is_escaped() -> None:
 
     append = service.spreadsheets.return_value.values.return_value.append
     assert append.call_args.kwargs["range"] == "'Bob''s'!A1"
+
+
+@pytest.mark.parametrize(
+    ("url", "spreadsheet_id"),
+    [
+        ("https://docs.google.com/spreadsheets/d/ABC-123", "ABC-123"),
+        ("https://docs.google.com/spreadsheets/d/ABC-123/", "ABC-123"),
+        ("https://docs.google.com/spreadsheets/d/ABC-123/edit?gid=0#gid=0", "ABC-123"),
+        ("https://docs.google.com/spreadsheets/d/ABC-123?usp=sharing", "ABC-123"),
+    ],
+)
+def test_spreadsheet_id_comes_from_any_link_form(url: str, spreadsheet_id: str) -> None:
+    """The ID is the path segment after /d/, whatever follows it.
+
+    Args:
+        url (str): The link.
+        spreadsheet_id (str): The expected ID.
+    """
+    match = SPREADSHEET_URL_PATTERN.search(url)
+
+    assert match is not None
+    assert match.group(1) == spreadsheet_id
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://docs.google.com.example.org/spreadsheets/d/ABC/",
+        "http://docs.google.com/spreadsheets/d/ABC/",
+        "https://example.org/?u=https://docs.google.com/spreadsheets/d/ABC/",
+    ],
+)
+def test_other_links_are_not_spreadsheets(url: str) -> None:
+    """Links outside the Google Sheets address are refused.
+
+    Args:
+        url (str): The link.
+    """
+    assert SPREADSHEET_URL_PATTERN.search(url) is None
