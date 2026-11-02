@@ -664,9 +664,9 @@
       "StockpileType": {
         "description": "Stockpile type enum.\n\nValues are the in-game CodeNames used in save files.\nDisplay names are available via STOCKPILE_TYPE_TEXTS[type][0].",
         "enum": [
-          "GarrisonStation",
-          "Keep",
           "ForwardBase1",
+          "Keep",
+          "GarrisonStation",
           "RelicBase1",
           "FortBaseT1",
           "FortBaseT2",

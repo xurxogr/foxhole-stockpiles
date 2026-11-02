@@ -12,9 +12,9 @@ class StockpileType(StrEnum):
     """
 
     # Bases (in-game CodeNames)
-    ENCAMPMENT = "GarrisonStation"
+    ENCAMPMENT = "ForwardBase1"
     KEEP = "Keep"
-    SAFE_HOUSE = "ForwardBase1"
+    SAFE_HOUSE = "GarrisonStation"
     RELIC_BASE = "RelicBase1"
     BUNKER_BASE_1 = "FortBaseT1"
     BUNKER_BASE_2 = "FortBaseT2"

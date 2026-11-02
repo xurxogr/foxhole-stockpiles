@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Encampment and Safe House no longer have each other's type code.** Screenshots
+  and clipboard data reported Encampment as `GarrisonStation` and Safe House as
+  `ForwardBase1`. They now use the same codes as the game and save files, so the
+  `type` and the stockpile key of these two structures change in the output.
+
 ## [1.1.0] - 2026-07-14
 
 ### Added
