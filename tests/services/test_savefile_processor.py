@@ -241,6 +241,118 @@ class TestProcessFile:
             raise AssertionError("expected SaveFileBusyError")
 
 
+class TestPrime:
+    """Filling the change-detection cache without emitting."""
+
+    async def test_fills_cache_without_emitting(self, tmp_path: Path) -> None:
+        """Prime caches every stockpile and routes nothing to the outputs."""
+        proc, coord = make_processor(tmp_path, emit_all_on_start=False)
+        with patch(_PARSE, return_value=[make_stockpile()]):
+            count = await proc.prime()
+        assert count == 1
+        assert coord.calls == []
+
+    async def test_same_instant_in_other_offset_is_unchanged(self, tmp_path: Path) -> None:
+        """A primed non-UTC timestamp is not reported as an update on re-read."""
+        proc, coord = make_processor(tmp_path, emit_all_on_start=False)
+        offset = timezone(timedelta(hours=2))
+        stockpile = make_stockpile(ts=datetime(2026, 1, 1, 14, 0, 0, tzinfo=offset))
+        with patch(_PARSE, return_value=[stockpile]):
+            await proc.prime()
+            changed = await proc._process_file(is_initial=False)
+        assert changed == []
+        assert coord.calls == []
+
+    async def test_missing_file_returns_none(self, tmp_path: Path) -> None:
+        """Priming a file that does not exist reads nothing."""
+        coord = FakeCoordinator()
+        proc = SaveFileProcessor(tmp_path / "nope.sav", coord)  # type: ignore[arg-type]
+        with patch(_PARSE) as parse:
+            assert await proc.prime() is None
+        parse.assert_not_called()
+
+    async def test_busy_read_forgets_mtime(self, tmp_path: Path) -> None:
+        """A busy read leaves no mtime, so the next poll reads again."""
+        proc, _ = make_processor(tmp_path, emit_all_on_start=False)
+        with patch(_PARSE, side_effect=SaveFileBusyError("busy")):
+            assert await proc.prime() is None
+        assert proc._last_mtime is None
+
+    async def test_other_failure_keeps_mtime(self, tmp_path: Path) -> None:
+        """A non-busy failure waits for the next write instead of re-reading each poll."""
+        proc, _ = make_processor(tmp_path, emit_all_on_start=False)
+        with patch(_PARSE, side_effect=RuntimeError("corrupt")):
+            assert await proc.prime() is None
+        assert proc._last_mtime == proc.file_path.stat().st_mtime
+
+    async def test_run_after_prime_skips_initial_load(self, tmp_path: Path) -> None:
+        """A primed processor does not read or emit again until the file changes."""
+        proc, coord = make_processor(tmp_path, poll_interval=0.01, emit_all_on_start=True)
+        with patch(_PARSE, return_value=[make_stockpile()]) as parse:
+            await proc.prime()
+            task = asyncio.create_task(proc.run())
+            await asyncio.sleep(0.03)
+            proc.stop()
+            await asyncio.wait_for(task, timeout=2)
+        assert parse.call_count == 1
+        assert coord.calls == []
+
+    async def test_busy_prime_retries_silently_in_run(self, tmp_path: Path) -> None:
+        """The retry after a busy prime sets the baseline and emits nothing."""
+        proc, coord = make_processor(tmp_path, poll_interval=0.01, emit_all_on_start=False)
+        results = [SaveFileBusyError("busy"), [make_stockpile()]]
+        with patch(_PARSE, side_effect=results) as parse:
+            await proc.prime()
+            task = asyncio.create_task(proc.run())
+            await asyncio.sleep(0.05)
+            proc.stop()
+            await asyncio.wait_for(task, timeout=2)
+        assert parse.call_count == 2
+        assert coord.calls == []
+
+
+class TestRunOnChanged:
+    """The on_changed callback of the watch loop."""
+
+    async def test_called_with_changed_stockpiles(self, tmp_path: Path) -> None:
+        """A modification hands the changed stockpiles to the callback."""
+        proc, _ = make_processor(tmp_path, poll_interval=0.01, emit_all_on_start=False)
+        sp1 = make_stockpile(ts=datetime(2026, 1, 1, 12, 0, 0))
+        sp2 = make_stockpile(ts=datetime(2026, 1, 1, 13, 0, 0))
+        changed: list[list[Stockpile]] = []
+        with patch(_PARSE, side_effect=[[sp1], [sp2]]):
+            await proc.prime()
+            task = asyncio.create_task(proc.run(on_changed=changed.append))
+            await asyncio.sleep(0.02)
+            future = proc.file_path.stat().st_mtime + 1000
+            os.utime(proc.file_path, (future, future))
+            await asyncio.sleep(0.05)
+            proc.stop()
+            await asyncio.wait_for(task, timeout=2)
+        assert changed == [[sp2]]
+
+    async def test_not_called_without_changes(self, tmp_path: Path) -> None:
+        """An untouched file never reaches the callback."""
+        proc, _ = make_processor(tmp_path, poll_interval=0.01, emit_all_on_start=False)
+        changed: list[list[Stockpile]] = []
+        with patch(_PARSE, return_value=[make_stockpile()]):
+            await proc.prime()
+            task = asyncio.create_task(proc.run(on_changed=changed.append))
+            await asyncio.sleep(0.03)
+            proc.stop()
+            await asyncio.wait_for(task, timeout=2)
+        assert changed == []
+
+    async def test_stop_before_run_wins(self, tmp_path: Path) -> None:
+        """A stop requested before run() starts keeps the loop from running."""
+        proc, _ = make_processor(tmp_path, poll_interval=0.01)
+        proc.stop()
+        with patch(_PARSE) as parse:
+            await asyncio.wait_for(proc.run(), timeout=2)
+        parse.assert_not_called()
+        assert proc._running is False
+
+
 class TestRunWatchMode:
     """Watch-mode polling loop."""
 

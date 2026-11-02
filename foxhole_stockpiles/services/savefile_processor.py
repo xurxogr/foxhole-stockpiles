@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -10,6 +11,8 @@ from foxhole_stockpiles.services.output_coordinator import OutputCoordinator, Ou
 from foxhole_stockpiles.services.sav_parser import SaveFileBusyError, parse_save
 
 logger = logging.getLogger(__name__)
+
+OnChanged = Callable[[list[Stockpile]], None]
 
 
 class SaveFileProcessor:
@@ -36,6 +39,9 @@ class SaveFileProcessor:
         self._emit_all_on_start = emit_all_on_start
         self._last_mtime: float | None = None
         self._running = False
+        self._stop_requested = False
+        self._primed = False
+        self._baseline_pending = False
         # The output handlers' response from the most recent routed batch,
         # surfaced so the GUI can show it. None when nothing was routed.
         self.last_output: OutputResponse = None
@@ -220,39 +226,107 @@ class SaveFileProcessor:
         """
         return await self._process_file(is_initial=True, suppress_errors=False)
 
-    async def run(self) -> None:
-        """Run the file processor in watch mode."""
+    async def prime(self) -> int | None:
+        """Fill the change-detection cache from the file without emitting anything.
+
+        Call before ``run`` to report only changes made after this point. When
+        the read fails, the next successful read in ``run`` becomes the baseline
+        instead of reporting every stockpile as new.
+
+        Returns:
+            int | None: The number of stockpiles cached, or None if the file is
+                missing or could not be read.
+        """
+        self._primed = True
+        if not self._file_path.exists():
+            return None
+
+        self._baseline_pending = True
+        try:
+            self._last_mtime = self._file_path.stat().st_mtime
+            stockpiles = await asyncio.to_thread(parse_save, self._file_path)
+        except SaveFileBusyError as e:
+            logger.warning("Save file busy, retrying on the next poll: %s", e)
+            self._last_mtime = None
+            return None
+        except Exception as e:  # noqa: BLE001 - the watch loop retries on the next write
+            logger.warning("Could not read initial state: %s", e)
+            return None
+
+        self._stockpile_cache = {
+            stockpile.to_key(): self._timestamp_key(stockpile.timestamp) for stockpile in stockpiles
+        }
+        self._baseline_pending = False
+        logger.info("Cached %d stockpile(s). Monitoring for changes...", len(stockpiles))
+        return len(stockpiles)
+
+    async def _poll_once(self, on_changed: OnChanged | None) -> None:
+        """Process the file if it was modified since the last read.
+
+        Args:
+            on_changed (OnChanged | None): Called with the changed stockpiles.
+        """
+        if not self._file_path.exists():
+            return
+
+        current_mtime = self._file_path.stat().st_mtime
+        if self._last_mtime is not None and current_mtime <= self._last_mtime:
+            return
+
+        if self._baseline_pending:
+            await self.prime()
+            return
+
+        self._last_mtime = current_mtime
+        await self._process_and_notify(is_initial=False, on_changed=on_changed)
+
+    async def _process_and_notify(self, is_initial: bool, on_changed: OnChanged | None) -> None:
+        """Process the file and pass any changed stockpiles to the callback.
+
+        Args:
+            is_initial (bool): Whether this is the initial load.
+            on_changed (OnChanged | None): Called with the changed stockpiles.
+        """
+        changed = await self._process_file(is_initial=is_initial)
+        if changed and on_changed is not None:
+            on_changed(changed)
+
+    async def run(self, on_changed: OnChanged | None = None) -> None:
+        """Run the file processor in watch mode.
+
+        A processor that was primed skips the initial load.
+
+        Args:
+            on_changed (OnChanged | None): Called with the changed stockpiles
+                after they were routed to the outputs. Defaults to None.
+        """
+        if self._stop_requested:
+            self._stop_requested = False
+            return
+
         self._running = True
         logger.info("Watching: %s", self._file_path)
         logger.info("Poll interval: %ss", self._poll_interval)
 
         try:
-            # Process once immediately (initial load)
-            if self._file_path.exists():
+            if not self._primed and self._file_path.exists():
                 self._last_mtime = self._file_path.stat().st_mtime
-                await self._process_file(is_initial=True)
+                await self._process_and_notify(is_initial=True, on_changed=on_changed)
 
             while self._running:
                 try:
                     await asyncio.sleep(self._poll_interval)
-
-                    if not self._file_path.exists():
-                        continue
-
-                    current_mtime = self._file_path.stat().st_mtime
-
-                    # Only process if file was modified
-                    if self._last_mtime is None or current_mtime > self._last_mtime:
-                        self._last_mtime = current_mtime
-                        await self._process_file(is_initial=False)
-
+                    if self._running:
+                        await self._poll_once(on_changed)
                 except asyncio.CancelledError:
                     break
                 except Exception as e:  # noqa: BLE001 - keep the poll loop alive on any error
                     logger.error("Processor error: %s", e)
         finally:
             self._running = False
+            self._stop_requested = False
 
     def stop(self) -> None:
-        """Stop the monitor."""
+        """Stop the monitor, including one whose ``run`` has not started yet."""
         self._running = False
+        self._stop_requested = True

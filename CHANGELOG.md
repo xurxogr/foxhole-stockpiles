@@ -21,7 +21,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The clipboard recognizes more stockpile type names.** Aircraft Depot in every
   language besides English, plus the current Chinese Storage Depot, Portuguese
   Keep and German Town Base names.
-
 - **Webhook URLs and tokens no longer reach the logs.** Each request logged its
   full URL, which for Discord is the secret itself, and an invalid configuration
   printed its token in the error. Set the `httpx` logger to `INFO` to see requests.
@@ -44,6 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`fs clip` keeps monitoring after a failed clipboard read**, as the GUI already did.
 - **Capture only targets the game window.** Another application whose title starts
   with "War", such as Warframe, is ignored.
+- **The SAV monitor no longer reports unchanged stockpiles as changed**, nor every
+  stockpile as new after failing to read the save file when it starts.
 
 ### Security
 - **Pillow updated to 13.0**, which fixes several image decoding vulnerabilities.
