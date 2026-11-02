@@ -78,7 +78,7 @@ class TestSavCommand:
 
     @patch("foxhole_stockpiles.cli.commands.sav.SaveFileProcessor")
     @patch("foxhole_stockpiles.cli.commands.sav.OutputCoordinator")
-    @patch("foxhole_stockpiles.cli.commands.sav.setup_logging")
+    @patch("foxhole_stockpiles.cli._settings.setup_logging")
     def test_once_processes_and_exits(
         self,
         mock_setup_logging: MagicMock,
@@ -108,7 +108,7 @@ class TestSavCommand:
 
     @patch("foxhole_stockpiles.cli.commands.sav.SaveFileProcessor")
     @patch("foxhole_stockpiles.cli.commands.sav.OutputCoordinator")
-    @patch("foxhole_stockpiles.cli.commands.sav.setup_logging")
+    @patch("foxhole_stockpiles.cli._settings.setup_logging")
     def test_watch_mode_runs(
         self,
         mock_setup_logging: MagicMock,
@@ -130,7 +130,7 @@ class TestSavCommand:
 
     @patch("foxhole_stockpiles.cli.commands.sav.SaveFileProcessor")
     @patch("foxhole_stockpiles.cli.commands.sav.OutputCoordinator")
-    @patch("foxhole_stockpiles.cli.commands.sav.setup_logging")
+    @patch("foxhole_stockpiles.cli._settings.setup_logging")
     def test_keyboard_interrupt_stops_processor(
         self,
         mock_setup_logging: MagicMock,
@@ -152,7 +152,7 @@ class TestSavCommand:
 
     @patch("foxhole_stockpiles.cli.commands.sav.SaveFileProcessor")
     @patch("foxhole_stockpiles.cli.commands.sav.OutputCoordinator")
-    @patch("foxhole_stockpiles.cli.commands.sav.setup_logging")
+    @patch("foxhole_stockpiles.cli._settings.setup_logging")
     def test_output_option_overrides_handlers(
         self,
         mock_setup_logging: MagicMock,
@@ -176,7 +176,7 @@ class TestSavCommand:
         mock_output_coordinator.assert_called_once()
 
     @patch(
-        "foxhole_stockpiles.cli.commands.sav.get_app_settings",
+        "foxhole_stockpiles.cli._settings.get_app_settings",
         side_effect=FileNotFoundError("missing config"),
     )
     def test_config_error_exits_two(self, mock_get_settings: MagicMock, tmp_path: Path) -> None:

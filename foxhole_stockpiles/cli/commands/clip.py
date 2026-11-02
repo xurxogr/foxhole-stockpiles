@@ -7,23 +7,23 @@ new export is emitted.
 """
 
 import asyncio
+import logging
 from pathlib import Path
 
 import typer
 
-from foxhole_stockpiles.cli._settings import get_app_settings
-from foxhole_stockpiles.core.logging import setup_logging
-from foxhole_stockpiles.core.settings.sections.output import (
-    FileHandlerSettings,
-    JsonFormatSettings,
-    OutputHandlerConfig,
-    OutputSettings,
+from foxhole_stockpiles.cli._settings import (
+    load_settings_or_exit,
+    resolve_output_settings,
+    setup_cli_logging,
 )
 from foxhole_stockpiles.services.clipboard_scan import (
     ClipboardScanService,
     build_clipboard_scan_service,
 )
 from foxhole_stockpiles.services.output_coordinator import OutputCoordinator
+
+logger = logging.getLogger(__name__)
 
 app = typer.Typer(help="Read Foxhole stockpile data from the clipboard.")
 
@@ -47,7 +47,10 @@ async def _run(service: ClipboardScanService, poll_interval: float, once: bool) 
     typer.echo("Monitoring clipboard for stockpile exports... Press Ctrl+C to stop.")
     try:
         while True:
-            await service.poll()
+            try:
+                await service.poll()
+            except Exception as e:  # noqa: BLE001 - keep monitoring after a failed read
+                logger.error("Clipboard monitor error: %s", e)
             await asyncio.sleep(poll_interval)
     except (KeyboardInterrupt, asyncio.CancelledError):
         typer.echo("\nStopping clipboard monitor...")
@@ -78,29 +81,9 @@ def clip(
         config (str | None): Path to a configuration file.
         verbose (bool): Enable debug-level logging.
     """
-    try:
-        settings = get_app_settings(config)
-    except (FileNotFoundError, ValueError) as e:
-        typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(code=2) from e
-
-    log_level = "DEBUG" if verbose else settings.logging.log_level
-    logging_settings = settings.logging.model_copy(update={"log_level": log_level})
-    setup_logging(logging_settings)
-
-    # --output overrides config handlers.
-    if output:
-        output_settings = OutputSettings(
-            handlers=[
-                OutputHandlerConfig(
-                    name="CLI Output",
-                    format=JsonFormatSettings(),
-                    handler=FileHandlerSettings(path=str(output)),
-                )
-            ]
-        )
-    else:
-        output_settings = settings.output
+    settings = load_settings_or_exit(config)
+    setup_cli_logging(settings=settings, verbose=verbose)
+    output_settings = resolve_output_settings(settings=settings, output=output)
 
     try:
         service = build_clipboard_scan_service(settings, OutputCoordinator(output_settings))

@@ -7,7 +7,7 @@ from typing import Any
 
 import typer
 
-from foxhole_stockpiles.cli._settings import get_app_settings
+from foxhole_stockpiles.cli._settings import load_settings_or_exit
 from foxhole_stockpiles.core.image_io import read_bgr
 from foxhole_stockpiles.core.logging import setup_logging
 from foxhole_stockpiles.core.settings.sections.output import (
@@ -46,24 +46,19 @@ def _create_handler_config_for_destination(
         OutputDestination.CONSOLE: "CLI Console",
     }
 
+    handler: FileHandlerSettings | ConsoleHandlerSettings | ReturnHandlerSettings
     if destination == OutputDestination.FILE:
-        return OutputHandlerConfig(
-            name=destination_names.get(destination, "CLI Output"),
-            format=JsonFormatSettings(),
-            handler=FileHandlerSettings(path=str(output_file) if output_file else "output.json"),
-        )
+        handler = FileHandlerSettings(path=str(output_file) if output_file else "output.json")
     elif destination == OutputDestination.CONSOLE:
-        return OutputHandlerConfig(
-            name=destination_names.get(destination, "CLI Output"),
-            format=JsonFormatSettings(),
-            handler=ConsoleHandlerSettings(),
-        )
+        handler = ConsoleHandlerSettings()
     else:  # RETURN is default
-        return OutputHandlerConfig(
-            name=destination_names.get(destination, "CLI Output"),
-            format=JsonFormatSettings(),
-            handler=ReturnHandlerSettings(),
-        )
+        handler = ReturnHandlerSettings()
+
+    return OutputHandlerConfig(
+        name=destination_names.get(destination, "CLI Output"),
+        format=JsonFormatSettings(),
+        handler=handler,
+    )
 
 
 async def _run(
@@ -99,11 +94,7 @@ async def _run(
     Raises:
         typer.Exit: On missing inputs or pipeline failure.
     """
-    try:
-        settings = get_app_settings(config)
-    except (FileNotFoundError, ValueError) as e:
-        typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(code=2) from e
+    settings = load_settings_or_exit(config)
 
     database_path = database if database is not None else settings.scanner.database_path
     if database_path is None:

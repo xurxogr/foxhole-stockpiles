@@ -5,14 +5,12 @@ from pathlib import Path
 
 import typer
 
-from foxhole_stockpiles.cli._settings import get_app_settings
-from foxhole_stockpiles.core.logging import setup_logging
-from foxhole_stockpiles.core.settings.sections.output import (
-    FileHandlerSettings,
-    JsonFormatSettings,
-    OutputHandlerConfig,
-    OutputSettings,
+from foxhole_stockpiles.cli._settings import (
+    load_settings_or_exit,
+    resolve_output_settings,
+    setup_cli_logging,
 )
+from foxhole_stockpiles.core.settings.sections.output import OutputSettings
 from foxhole_stockpiles.core.utils import auto_detect_savefile, find_mapdata_file
 from foxhole_stockpiles.services.output_coordinator import OutputCoordinator
 from foxhole_stockpiles.services.savefile_processor import SaveFileProcessor
@@ -125,29 +123,9 @@ def sav(
     save_file = _resolve_save_file(file, save_dir)
 
     # Setup logging and settings.
-    try:
-        settings = get_app_settings(config)
-    except (FileNotFoundError, ValueError) as e:
-        typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(code=2) from e
-
-    log_level = "DEBUG" if verbose else settings.logging.log_level
-    logging_settings = settings.logging.model_copy(update={"log_level": log_level})
-    setup_logging(logging_settings)
-
-    # --output overrides config handlers.
-    if output:
-        output_settings = OutputSettings(
-            handlers=[
-                OutputHandlerConfig(
-                    name="CLI Output",
-                    format=JsonFormatSettings(),
-                    handler=FileHandlerSettings(path=str(output)),
-                )
-            ]
-        )
-    else:
-        output_settings = settings.output
+    settings = load_settings_or_exit(config)
+    setup_cli_logging(settings=settings, verbose=verbose)
+    output_settings = resolve_output_settings(settings=settings, output=output)
 
     asyncio.run(
         _run(

@@ -41,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Monitoring no longer leaks a connection for each webhook batch.**
 - **An oversized image is reported as unreadable** instead of ending the scan with
   an error. Scans now read PNG, JPEG, BMP and WebP only.
+- **`fs clip` keeps monitoring after a failed clipboard read**, as the GUI already did.
 - **Capture only targets the game window.** Another application whose title starts
   with "War", such as Warframe, is ignored.
 
