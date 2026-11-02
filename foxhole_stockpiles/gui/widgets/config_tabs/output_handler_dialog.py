@@ -257,12 +257,12 @@ class OutputHandlerDialog(QDialog):
 
     def _on_handler_type_changed(self) -> None:
         """Handle handler type change to show/hide relevant sections."""
-        handler_type = self.handler_type_input.currentText()
-        self.file_group.setVisible(handler_type == "file")
-        self.webhook_group.setVisible(handler_type == "webhook")
-        self.sheets_group.setVisible(handler_type == "google sheets")
+        handler_type = OutputHandlerType(self.handler_type_input.currentText())
+        self.file_group.setVisible(handler_type == OutputHandlerType.FILE)
+        self.webhook_group.setVisible(handler_type == OutputHandlerType.WEBHOOK)
+        self.sheets_group.setVisible(handler_type == OutputHandlerType.SHEETS)
         # Show format selection only for file handler (webhook/return are JSON-only)
-        show_format = handler_type == "file"
+        show_format = handler_type == OutputHandlerType.FILE
         self.format_label.setVisible(show_format)
         self.format_input.setVisible(show_format)
         # Force JSON format for non-file handlers
@@ -328,22 +328,26 @@ class OutputHandlerDialog(QDialog):
         self._on_handler_type_changed()
         self._on_webhook_auth_changed()
 
-    def _require_field(self, value: str, widget: QLineEdit, message_key: str) -> bool:
-        """Warn and focus a field if it is empty.
-
-        Args:
-            value: The field's current (already-stripped) value.
-            widget: The field to focus if the value is empty.
-            message_key: Translation key for the validation error message.
+    def _required_fields(self) -> dict[OutputHandlerType, tuple[tuple[QLineEdit, str], ...]]:
+        """Return the fields each handler type requires, in validation order.
 
         Returns:
-            True if the value is non-empty, False if a warning was shown.
+            dict[OutputHandlerType, tuple[tuple[QLineEdit, str], ...]]: For each
+                handler type, its (field, missing-value message key) pairs.
         """
-        if value:
-            return True
-        QMessageBox.warning(self, t("common.validation_error"), t(message_key))
-        widget.setFocus()
-        return False
+        return {
+            OutputHandlerType.FILE: (
+                (self.file_path_input, "output_tab.handler_dialog.file_path_required"),
+            ),
+            OutputHandlerType.WEBHOOK: (
+                (self.webhook_url_input, "output_tab.handler_dialog.webhook_url_required"),
+            ),
+            OutputHandlerType.SHEETS: (
+                (self.creds_path_input, "output_tab.handler_dialog.creds_path_required"),
+                (self.spreadsheet_url_input, "output_tab.handler_dialog.spreadsheet_url_required"),
+                (self.sheet_id_input, "output_tab.handler_dialog.sheet_id_required"),
+            ),
+        }
 
     def _warn(self, message_key: str, widget: QLineEdit | None = None) -> None:
         """Show a validation warning, optionally focusing a field.
@@ -356,69 +360,47 @@ class OutputHandlerDialog(QDialog):
         if widget is not None:
             widget.setFocus()
 
+    def _sheets_values_valid(self) -> bool:
+        """Check the format of the Google Sheets values, warning on the first problem.
+
+        Returns:
+            bool: True if every value is valid, False if a warning was shown.
+        """
+        if not os.path.exists(self.creds_path_input.text()):
+            self._warn("output_tab.handler_dialog.creds_path_invalid", self.spreadsheet_url_input)
+            return False
+
+        id_match = re.search(
+            r"(?<=https://docs.google.com/spreadsheets/d/).*(?=/)",
+            self.spreadsheet_url_input.text(),
+        )
+        if id_match is None:
+            self._warn(
+                "output_tab.handler_dialog.spreadsheet_url_invalid", self.spreadsheet_url_input
+            )
+            return False
+
+        if not bool(re.search("[a-zA-Z]+[1-9][0-9]*", self.start_cell_input.text())):
+            self._warn("output_tab.handler_dialog.start_cell_invalid")
+            return False
+
+        if self.row_format_input.text().strip() == "":
+            self._warn("output_tab.handler_dialog.row_format_missing")
+            return False
+
+        return True
+
     def _validate_and_accept(self) -> None:
         """Validate input and accept dialog if valid."""
-        handler_type = self.handler_type_input.currentText()
+        handler_type = OutputHandlerType(self.handler_type_input.currentText())
 
-        if handler_type == "file":
-            if not self._require_field(
-                self.file_path_input.text().strip(),
-                self.file_path_input,
-                "output_tab.handler_dialog.file_path_required",
-            ):
+        for widget, message_key in self._required_fields().get(handler_type, ()):
+            if not widget.text().strip():
+                self._warn(message_key=message_key, widget=widget)
                 return
 
-        elif handler_type == "webhook":
-            if not self._require_field(
-                self.webhook_url_input.text().strip(),
-                self.webhook_url_input,
-                "output_tab.handler_dialog.webhook_url_required",
-            ):
-                return
-
-        elif handler_type == "google sheets":
-            if not self._require_field(
-                self.creds_path_input.text().strip(),
-                self.creds_path_input,
-                "output_tab.handler_dialog.creds_path_required",
-            ):
-                return
-            if not self._require_field(
-                self.spreadsheet_url_input.text().strip(),
-                self.spreadsheet_url_input,
-                "output_tab.handler_dialog.spreadsheet_url_required",
-            ):
-                return
-            if not self._require_field(
-                self.sheet_id_input.text().strip(),
-                self.sheet_id_input,
-                "output_tab.handler_dialog.sheet_id_required",
-            ):
-                return
-
-            if not os.path.exists(self.creds_path_input.text()):
-                self._warn(
-                    "output_tab.handler_dialog.creds_path_invalid", self.spreadsheet_url_input
-                )
-                return
-
-            id_match = re.search(
-                r"(?<=https://docs.google.com/spreadsheets/d/).*(?=/)",
-                self.spreadsheet_url_input.text(),
-            )
-            if id_match is None:
-                self._warn(
-                    "output_tab.handler_dialog.spreadsheet_url_invalid", self.spreadsheet_url_input
-                )
-                return
-
-            if not bool(re.search("[a-zA-Z]+[1-9][0-9]*", self.start_cell_input.text())):
-                self._warn("output_tab.handler_dialog.start_cell_invalid")
-                return
-
-            if self.row_format_input.text().strip() == "":
-                self._warn("output_tab.handler_dialog.row_format_missing")
-                return
+        if handler_type == OutputHandlerType.SHEETS and not self._sheets_values_valid():
+            return
 
         self.accept()
 
