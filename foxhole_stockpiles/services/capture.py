@@ -18,6 +18,7 @@ import re
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from PIL import ImageGrab
 
@@ -35,7 +36,8 @@ logger = logging.getLogger(__name__)
 #: ``sys.platform`` value of the only platform capture is shipped for.
 CAPTURE_PLATFORM = "win32"
 
-# The Foxhole game window is titled "War"; capture targets that window.
+# The Foxhole game window is titled "War"; capture targets that window. Windows are
+# searched by this prefix and then filtered by _is_game_window.
 _WINDOW_TITLE_PREFIX = "War"
 
 # Characters not allowed in the generated screenshot filenames.
@@ -100,6 +102,19 @@ def capture_supported(platform: str = sys.platform) -> bool:
     return platform == CAPTURE_PLATFORM and PYWINCTL_AVAILABLE
 
 
+def _is_game_window(window: Any) -> bool:
+    """Tell the game window apart from others whose title starts with the prefix.
+
+    Args:
+        window (Any): A pywinctl window.
+
+    Returns:
+        bool: True if the first word of the title is exactly the game's title, so
+            "Warframe" and "Wardrobe - Notepad" do not match.
+    """
+    return str(window.title).split()[:1] == [_WINDOW_TITLE_PREFIX]
+
+
 def capture_window() -> bytes:
     """Capture the active Foxhole window and return it as PNG bytes.
 
@@ -122,10 +137,11 @@ def capture_window() -> bytes:
     except Exception as exc:
         raise CaptureError(f"Could not query windows titled '{prefix}*': {exc}") from exc
 
-    if not windows:
+    matches = [window for window in windows if _is_game_window(window)]
+    if not matches:
         raise CaptureError(f"No window titled '{prefix}*' found. Is Foxhole running?")
 
-    window = windows[0]
+    window = next((w for w in matches if getattr(w, "isActive", False)), matches[0])
 
     if getattr(window, "isMinimized", False):
         raise CaptureError("The Foxhole window is minimized; restore it before capturing.")

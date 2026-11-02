@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from PIL import ImageGrab
+from PIL import Image, ImageGrab
 
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
@@ -16,7 +16,8 @@ from foxhole_stockpiles.services.capture import CaptureError, capture_window, sa
 class _FakeWindow:
     """Minimal stand-in for a pywinctl window."""
 
-    def __init__(self, *, minimized: bool = False, active: bool = True) -> None:
+    def __init__(self, *, minimized: bool = False, active: bool = True, title: str = "War") -> None:
+        self.title = title
         self.isMinimized = minimized
         self.isActive = active
 
@@ -134,3 +135,32 @@ def test_save_screenshot_without_stockpile(tmp_path: Path) -> None:
     assert path is not None
     assert path.exists()
     assert path.read_bytes() == b"PNGDATA"
+
+
+def test_capture_picks_the_active_window_among_matches(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A background window sharing the title never hides the active game window."""
+    grabbed: list[Any] = []
+    background = _FakeWindow(active=False)
+    game = _FakeWindow(active=True)
+    game.getClientFrame = lambda: (1, 2, 3, 4)  # type: ignore[method-assign]
+    _enable_capture(monkeypatch, [background, game])
+    monkeypatch.setattr(
+        capture.ImageGrab,
+        "grab",
+        lambda bbox, all_screens: grabbed.append(bbox) or Image.new("RGB", (4, 4)),
+    )
+
+    capture_window()
+
+    assert grabbed == [(1, 2, 3, 4)]
+
+
+@pytest.mark.parametrize("title", ["Warframe", "Wardrobe - Notepad", "Warhammer III"])
+def test_capture_ignores_other_titles_with_the_same_prefix(
+    monkeypatch: pytest.MonkeyPatch, title: str
+) -> None:
+    """A different application whose title merely starts with 'War' is not captured."""
+    _enable_capture(monkeypatch, [_FakeWindow(title=title)])
+
+    with pytest.raises(CaptureError, match="No window"):
+        capture_window()
