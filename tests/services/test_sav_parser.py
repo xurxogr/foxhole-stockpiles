@@ -413,23 +413,31 @@ class TestUnreadableStockpile:
         assert good.errors is None
         assert bad.errors is not None
 
-    def test_unreadable_items_keep_only_the_identity(self) -> None:
-        """Without valid items, the stockpile keeps what identifies it and the error."""
-        data = {"name": "N", "type": "Seaport", "hex": "H", "items": [{"quantity": "many"}]}
-        with patch(f"{_SAV_MODULE}.fs_sav.parse_save", return_value=[data]):
-            stockpile = parse_save("MapData.sav")[0]
+    @pytest.mark.parametrize(
+        "unreadable",
+        [
+            {"name": "Lost", "type": "Seaport", "hex": "H", "items": [{"quantity": "many"}]},
+            {"name": "Lost", "hex": 7, "items": "not-a-list"},
+        ],
+    )
+    def test_unreadable_items_leave_the_stockpile_out(
+        self, unreadable: dict[str, Any], caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Without valid items it is logged and left out, so it can't look empty downstream."""
+        with (
+            patch(f"{_SAV_MODULE}.fs_sav.parse_save", return_value=[unreadable, self._GOOD]),
+            caplog.at_level(logging.ERROR),
+        ):
+            stockpiles = parse_save("MapData.sav")
 
-        assert (stockpile.name, stockpile.type, stockpile.hex) == ("N", "Seaport", "H")
-        assert stockpile.items == []
-        assert stockpile.errors is not None
+        assert [stockpile.name for stockpile in stockpiles] == ["Good"]
+        assert "Lost" in caplog.text
+        assert "left out" in caplog.text
 
-    def test_malformed_identity_is_still_reported(self) -> None:
-        """Malformed identity fields don't stop the stockpile from being reported."""
-        data = {"name": 5, "hex": 7, "items": "not-a-list"}
-        with patch(f"{_SAV_MODULE}.fs_sav.parse_save", return_value=[data]):
-            stockpile = parse_save("MapData.sav")[0]
+    def test_parse_save_bytes_leaves_out_unreadable_items(self) -> None:
+        """Parsing from bytes leaves out a stockpile with unreadable items too."""
+        unreadable = {"name": "Lost", "type": "Seaport", "items": [{"quantity": "many"}]}
+        with patch(f"{_SAV_MODULE}.fs_sav.parse_save_bytes", return_value=[unreadable, self._GOOD]):
+            stockpiles = parse_save_bytes(b"data")
 
-        assert stockpile.name == "5"
-        assert stockpile.type == StockpileType.UNDEFINED
-        assert stockpile.hex is None
-        assert stockpile.errors is not None
+        assert [stockpile.name for stockpile in stockpiles] == ["Good"]
