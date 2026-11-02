@@ -19,6 +19,7 @@ from fs_tools.gui.windows.icon_import_window import IconImportWindow
 
 MAIN_ICONS_TOTAL = 10
 OVERLAYS_TOTAL = 4  # The crate icon plus three subtype icons
+COVERAGE_WORKER = "fs_tools.gui.utils.pak_validation_controller.PakCoverageWorker"
 
 
 def coverage(main: int = 10, overlays: int = 4, crate: bool = True) -> PakCoverage:
@@ -235,7 +236,7 @@ def test_add_mod_pak_files(qtbot: Any, configured_window: IconImportWindow, tmp_
         mock_dialog.return_value = ([test_pak1, test_pak2], "PAK Files (*.pak)")
 
         # Mock validation to prevent background thread issues
-        with patch.object(configured_window, "_trigger_validation"):
+        with patch.object(configured_window.pak_validation, "trigger_validation"):
             configured_window.add_mod_pak_files()
 
         assert configured_window.mod_pak_files == [test_pak1, test_pak2]
@@ -258,7 +259,7 @@ def test_add_mod_pak_files_no_duplicates(
     """
     test_pak = str(tmp_path / "test.pak")
 
-    with patch.object(configured_window, "_trigger_validation"):
+    with patch.object(configured_window.pak_validation, "trigger_validation"):
         # Add once
         with patch(
             "fs_tools.gui.windows.icon_import_window.QFileDialog.getOpenFileNames"
@@ -320,7 +321,7 @@ def test_remove_selected_paks(
     item0.setSelected(True)
 
     # Remove (mock validation)
-    with patch.object(configured_window, "_trigger_validation"):
+    with patch.object(configured_window.pak_validation, "trigger_validation"):
         configured_window.remove_selected_mod_paks()
 
     # Only second should remain
@@ -393,7 +394,7 @@ def test_pak_drop_event(configured_window: IconImportWindow, tmp_path: Path) -> 
     mock_event = MagicMock(spec=QDropEvent)
     mock_event.mimeData.return_value = mime_data
 
-    with patch.object(configured_window, "_trigger_validation"):
+    with patch.object(configured_window.pak_validation, "trigger_validation"):
         configured_window.pak_drop_event(mock_event)
 
     assert test_pak in configured_window.mod_pak_files
@@ -537,8 +538,8 @@ def test_start_import_passes_worker_arguments(configured_window: IconImportWindo
     """
     configured_window.mod_pak_files = ["mod1.pak", "mod2.pak"]
     configured_window.vanilla_pak_file = "vanilla.pak"
-    configured_window._validation_result = coverage(overlays=0, crate=False)
-    configured_window._vanilla_validation_result = coverage()
+    configured_window.pak_validation.validation_result = coverage(overlays=0, crate=False)
+    configured_window.pak_validation.vanilla_validation_result = coverage()
     configured_window.mod_name_input.setText("test_mod")
     configured_window.db_path_input.setText("/tmp/test.h5")
     configured_window.settings.database_builder.target_resolutions = ["1080", "1440"]
@@ -991,7 +992,7 @@ def test_select_vanilla_pak_file_selected(
     ) as mock_dialog:
         mock_dialog.return_value = (test_pak, "PAK Files (*.pak)")
 
-        with patch.object(configured_window, "_trigger_vanilla_validation"):
+        with patch.object(configured_window.pak_validation, "trigger_vanilla_validation"):
             configured_window.select_vanilla_pak()
 
         assert configured_window.vanilla_pak_file == test_pak
@@ -1107,8 +1108,8 @@ def test_trigger_validation_no_pak_files(configured_window: IconImportWindow) ->
     """
     configured_window.mod_pak_files = []
 
-    with patch.object(configured_window, "_set_pak_controls_enabled") as mock_set:
-        configured_window._trigger_validation()
+    with patch.object(configured_window.pak_validation, "_set_pak_controls_enabled") as mock_set:
+        configured_window.pak_validation.trigger_validation()
         mock_set.assert_not_called()
 
 
@@ -1129,10 +1130,10 @@ def test_trigger_validation_no_catalog(qtbot: Any, mock_unconfigured_settings: A
         window.mod_pak_files = ["test.pak"]
 
         with (
-            patch("fs_tools.gui.windows.icon_import_window.PakCoverageWorker") as mock_worker_class,
-            patch.object(window, "_set_pak_controls_enabled") as mock_set,
+            patch(COVERAGE_WORKER) as mock_worker_class,
+            patch.object(window.pak_validation, "_set_pak_controls_enabled") as mock_set,
         ):
-            window._trigger_validation()
+            window.pak_validation.trigger_validation()
             mock_set.assert_not_called()
             mock_worker_class.assert_not_called()
 
@@ -1146,12 +1147,12 @@ def test_trigger_validation_starts_worker(qtbot: Any, configured_window: IconImp
     """
     configured_window.mod_pak_files = ["test.pak"]
 
-    with patch("fs_tools.gui.windows.icon_import_window.PakCoverageWorker") as mock_worker_class:
+    with patch(COVERAGE_WORKER) as mock_worker_class:
         mock_worker = MagicMock()
         mock_worker.isRunning.return_value = False
         mock_worker_class.return_value = mock_worker
 
-        configured_window._trigger_validation()
+        configured_window.pak_validation.trigger_validation()
 
         mock_worker_class.assert_called_once_with(
             catalog_path=configured_window.settings.database_builder.catalog_file,
@@ -1159,11 +1160,13 @@ def test_trigger_validation_starts_worker(qtbot: Any, configured_window: IconImp
             parent=configured_window,
         )
         mock_worker.coverage_ready.connect.assert_called_once_with(
-            configured_window._on_validation_complete
+            configured_window.pak_validation._on_validation_complete
         )
-        mock_worker.failed.connect.assert_called_once_with(configured_window._on_validation_failed)
+        mock_worker.failed.connect.assert_called_once_with(
+            configured_window.pak_validation._on_validation_failed
+        )
         mock_worker.start.assert_called_once()
-        assert configured_window._is_validating is True
+        assert configured_window.pak_validation.is_validating is True
         assert configured_window.start_button.isEnabled() is False
 
 
@@ -1175,15 +1178,15 @@ def test_on_validation_complete_valid(configured_window: IconImportWindow) -> No
     """
     result = coverage()
     configured_window.mod_pak_files = ["test.pak"]
-    configured_window._is_validating = True
+    configured_window.pak_validation.is_validating = True
     configured_window.vanilla_group.setVisible(True)
     configured_window.vanilla_pak_file = "vanilla.pak"
     configured_window.vanilla_pak_display.setText("vanilla.pak")
 
-    configured_window._on_validation_complete(result)
+    configured_window.pak_validation._on_validation_complete(result)
 
-    assert configured_window._is_validating is False
-    assert configured_window._validation_result == result
+    assert configured_window.pak_validation.is_validating is False
+    assert configured_window.pak_validation.validation_result == result
     # Use isHidden() since window isn't shown
     assert configured_window.vanilla_group.isHidden() is True
     assert configured_window.vanilla_pak_file is None
@@ -1202,12 +1205,12 @@ def test_on_validation_complete_no_catalog_icons(configured_window: IconImportWi
         configured_window: Configured window instance
     """
     configured_window.mod_pak_files = ["test.pak"]
-    configured_window._is_validating = True
+    configured_window.pak_validation.is_validating = True
     configured_window.vanilla_group.setVisible(True)
 
-    configured_window._on_validation_complete(coverage(main=0))
+    configured_window.pak_validation._on_validation_complete(coverage(main=0))
 
-    assert configured_window._is_validating is False
+    assert configured_window.pak_validation.is_validating is False
     assert configured_window.vanilla_group.isHidden() is True
     assert configured_window.validation_status_label.text() == t(
         "database_builder.validation.no_catalog_icons"
@@ -1222,12 +1225,12 @@ def test_on_validation_complete_missing_crate(configured_window: IconImportWindo
         configured_window: Configured window instance
     """
     configured_window.mod_pak_files = ["test.pak"]
-    configured_window._is_validating = True
+    configured_window.pak_validation.is_validating = True
     configured_window.vanilla_group.setVisible(False)
 
-    configured_window._on_validation_complete(coverage(overlays=3, crate=False))
+    configured_window.pak_validation._on_validation_complete(coverage(overlays=3, crate=False))
 
-    assert configured_window._is_validating is False
+    assert configured_window.pak_validation.is_validating is False
     # Use isHidden() since window isn't shown
     assert configured_window.vanilla_group.isHidden() is False
     assert (
@@ -1247,9 +1250,9 @@ def test_on_validation_complete_missing_subicons(configured_window: IconImportWi
         configured_window: Configured window instance
     """
     configured_window.mod_pak_files = ["test.pak"]
-    configured_window._is_validating = True
+    configured_window.pak_validation.is_validating = True
 
-    configured_window._on_validation_complete(coverage(overlays=1, crate=True))
+    configured_window.pak_validation._on_validation_complete(coverage(overlays=1, crate=True))
 
     # Use isHidden() since window isn't shown
     assert configured_window.vanilla_group.isHidden() is False
@@ -1264,9 +1267,9 @@ def test_on_validation_complete_missing_both(configured_window: IconImportWindow
         configured_window: Configured window instance
     """
     configured_window.mod_pak_files = ["test.pak"]
-    configured_window._is_validating = True
+    configured_window.pak_validation.is_validating = True
 
-    configured_window._on_validation_complete(coverage(overlays=0, crate=False))
+    configured_window.pak_validation._on_validation_complete(coverage(overlays=0, crate=False))
 
     # Use isHidden() since window isn't shown
     assert configured_window.vanilla_group.isHidden() is False
@@ -1282,15 +1285,15 @@ def test_on_validation_failed(configured_window: IconImportWindow) -> None:
         configured_window (IconImportWindow): Configured window instance
     """
     configured_window.mod_pak_files = ["test.pak"]
-    configured_window._is_validating = True
-    configured_window._set_pak_controls_enabled(False)
+    configured_window.pak_validation.is_validating = True
+    configured_window.pak_validation._set_pak_controls_enabled(False)
     configured_window.vanilla_group.setVisible(True)
 
-    configured_window._on_validation_failed("unreadable PAK")
+    configured_window.pak_validation._on_validation_failed("unreadable PAK")
 
-    assert configured_window._is_validating is False
-    assert configured_window._validation_failed is True
-    assert configured_window._validation_result is None
+    assert configured_window.pak_validation.is_validating is False
+    assert configured_window.pak_validation.validation_failed is True
+    assert configured_window.pak_validation.validation_result is None
     assert configured_window.add_mod_pak_button.isEnabled() is True
     assert configured_window.vanilla_group.isHidden() is True
     assert configured_window.validation_status_label.text() == t(
@@ -1305,7 +1308,7 @@ def test_set_pak_controls_enabled_disable(configured_window: IconImportWindow) -
     Args:
         configured_window: Configured window instance
     """
-    configured_window._set_pak_controls_enabled(False)
+    configured_window.pak_validation._set_pak_controls_enabled(False)
 
     assert configured_window.add_mod_pak_button.isEnabled() is False
     assert configured_window.remove_mod_pak_button.isEnabled() is False
@@ -1320,10 +1323,10 @@ def test_set_pak_controls_enabled_enable(configured_window: IconImportWindow) ->
         configured_window: Configured window instance
     """
     # First disable
-    configured_window._set_pak_controls_enabled(False)
+    configured_window.pak_validation._set_pak_controls_enabled(False)
 
     # Then enable
-    configured_window._set_pak_controls_enabled(True)
+    configured_window.pak_validation._set_pak_controls_enabled(True)
 
     assert configured_window.add_mod_pak_button.isEnabled() is True
     assert configured_window.remove_mod_pak_button.isEnabled() is True
@@ -1339,7 +1342,7 @@ def test_validate_inputs_while_validating(configured_window: IconImportWindow) -
     """
     configured_window.mod_pak_files = ["test.pak"]
     configured_window.mod_name_input.setText("test_mod")
-    configured_window._is_validating = True
+    configured_window.pak_validation.is_validating = True
 
     is_valid, error_msg = configured_window.validate_inputs()
 
@@ -1356,7 +1359,7 @@ def test_validate_inputs_check_failed(configured_window: IconImportWindow) -> No
     configured_window.mod_pak_files = ["test.pak"]
     configured_window.mod_name_input.setText("test_mod")
     configured_window.db_path_input.setText("/tmp/test.h5")
-    configured_window._validation_failed = True
+    configured_window.pak_validation.validation_failed = True
 
     is_valid, error_msg = configured_window.validate_inputs()
 
@@ -1373,7 +1376,7 @@ def test_validate_inputs_no_catalog_icons(configured_window: IconImportWindow) -
     configured_window.mod_pak_files = ["test.pak"]
     configured_window.mod_name_input.setText("test_mod")
     configured_window.db_path_input.setText("/tmp/test.h5")
-    configured_window._validation_result = coverage(main=0)
+    configured_window.pak_validation.validation_result = coverage(main=0)
 
     is_valid, error_msg = configured_window.validate_inputs()
 
@@ -1391,7 +1394,7 @@ def test_validate_inputs_vanilla_required_but_missing(
     """
     configured_window.mod_pak_files = ["test.pak"]
     configured_window.mod_name_input.setText("test_mod")
-    configured_window._validation_result = coverage(overlays=0, crate=False)
+    configured_window.pak_validation.validation_result = coverage(overlays=0, crate=False)
     configured_window.vanilla_pak_file = None
 
     is_valid, error_msg = configured_window.validate_inputs()
@@ -1413,11 +1416,11 @@ def test_validate_inputs_vanilla_required_and_provided(
     configured_window.db_path_input.setText("/tmp/test.h5")
 
     # Mod PAK files lack the overlays
-    configured_window._validation_result = coverage(overlays=0, crate=False)
+    configured_window.pak_validation.validation_result = coverage(overlays=0, crate=False)
 
     # Vanilla PAK is provided and covers every overlay
     configured_window.vanilla_pak_file = "vanilla.pak"
-    configured_window._vanilla_validation_result = coverage()
+    configured_window.pak_validation.vanilla_validation_result = coverage()
 
     is_valid, error_msg = configured_window.validate_inputs()
 
@@ -1437,11 +1440,11 @@ def test_validate_inputs_vanilla_provided_but_invalid(
     configured_window.mod_name_input.setText("test_mod")
 
     # Mod PAK files lack the overlays
-    configured_window._validation_result = coverage(overlays=0, crate=False)
+    configured_window.pak_validation.validation_result = coverage(overlays=0, crate=False)
 
     # Vanilla PAK is provided but lacks overlays too
     configured_window.vanilla_pak_file = "wrong.pak"
-    configured_window._vanilla_validation_result = coverage(overlays=3, crate=False)
+    configured_window.pak_validation.vanilla_validation_result = coverage(overlays=3, crate=False)
 
     is_valid, error_msg = configured_window.validate_inputs()
 
@@ -1461,11 +1464,11 @@ def test_validate_inputs_vanilla_provided_not_validated(
     configured_window.mod_name_input.setText("test_mod")
 
     # Mod PAK files lack the overlays
-    configured_window._validation_result = coverage(overlays=0, crate=False)
+    configured_window.pak_validation.validation_result = coverage(overlays=0, crate=False)
 
     # Vanilla PAK is provided but not yet validated
     configured_window.vanilla_pak_file = "vanilla.pak"
-    configured_window._vanilla_validation_result = None
+    configured_window.pak_validation.vanilla_validation_result = None
 
     is_valid, error_msg = configured_window.validate_inputs()
 
@@ -1483,7 +1486,7 @@ def test_validate_inputs_while_validating_vanilla(
     """
     configured_window.mod_pak_files = ["test.pak"]
     configured_window.mod_name_input.setText("test_mod")
-    configured_window._is_validating_vanilla = True
+    configured_window.pak_validation.is_validating_vanilla = True
 
     is_valid, error_msg = configured_window.validate_inputs()
 
@@ -1500,9 +1503,9 @@ def test_trigger_vanilla_validation_no_file(configured_window: IconImportWindow)
     configured_window.vanilla_pak_file = None
 
     # Should return early without doing anything
-    configured_window._trigger_vanilla_validation()
+    configured_window.pak_validation.trigger_vanilla_validation()
 
-    assert configured_window._is_validating_vanilla is False
+    assert configured_window.pak_validation.is_validating_vanilla is False
 
 
 def test_trigger_vanilla_validation_no_catalog(configured_window: IconImportWindow) -> None:
@@ -1514,10 +1517,10 @@ def test_trigger_vanilla_validation_no_catalog(configured_window: IconImportWind
     configured_window.vanilla_pak_file = "test.pak"
     configured_window.settings.database_builder.catalog_file = None
 
-    with patch("fs_tools.gui.windows.icon_import_window.PakCoverageWorker") as mock_worker_class:
-        configured_window._trigger_vanilla_validation()
+    with patch(COVERAGE_WORKER) as mock_worker_class:
+        configured_window.pak_validation.trigger_vanilla_validation()
 
-    assert configured_window._is_validating_vanilla is False
+    assert configured_window.pak_validation.is_validating_vanilla is False
     mock_worker_class.assert_not_called()
 
 
@@ -1533,23 +1536,23 @@ def test_trigger_vanilla_validation_starts_worker(
     vanilla_pak = str(tmp_path / "vanilla.pak")
     configured_window.vanilla_pak_file = vanilla_pak
 
-    with patch("fs_tools.gui.windows.icon_import_window.PakCoverageWorker") as mock_worker_class:
+    with patch(COVERAGE_WORKER) as mock_worker_class:
         mock_worker = MagicMock()
         mock_worker_class.return_value = mock_worker
 
-        configured_window._trigger_vanilla_validation()
+        configured_window.pak_validation.trigger_vanilla_validation()
 
-        assert configured_window._is_validating_vanilla is True
+        assert configured_window.pak_validation.is_validating_vanilla is True
         mock_worker_class.assert_called_once_with(
             catalog_path=configured_window.settings.database_builder.catalog_file,
             pak_files=[vanilla_pak],
             parent=configured_window,
         )
         mock_worker.coverage_ready.connect.assert_called_once_with(
-            configured_window._on_vanilla_validation_complete
+            configured_window.pak_validation._on_vanilla_validation_complete
         )
         mock_worker.failed.connect.assert_called_once_with(
-            configured_window._on_vanilla_validation_failed
+            configured_window.pak_validation._on_vanilla_validation_failed
         )
         mock_worker.start.assert_called_once()
 
@@ -1562,11 +1565,11 @@ def test_on_vanilla_validation_complete_valid(configured_window: IconImportWindo
     """
     result = coverage()
 
-    configured_window._is_validating_vanilla = True
-    configured_window._on_vanilla_validation_complete(result)
+    configured_window.pak_validation.is_validating_vanilla = True
+    configured_window.pak_validation._on_vanilla_validation_complete(result)
 
-    assert configured_window._is_validating_vanilla is False
-    assert configured_window._vanilla_validation_result == result
+    assert configured_window.pak_validation.is_validating_vanilla is False
+    assert configured_window.pak_validation.vanilla_validation_result == result
     assert (
         t("database_builder.validation.all_assets_found")
         in configured_window.validation_status_label.text()
@@ -1585,13 +1588,13 @@ def test_on_vanilla_validation_complete_invalid(
     """
     result = coverage(overlays=0, crate=False)
 
-    configured_window._is_validating_vanilla = True
+    configured_window.pak_validation.is_validating_vanilla = True
 
     with patch("fs_tools.gui.windows.icon_import_window.QMessageBox.warning") as mock_warning:
-        configured_window._on_vanilla_validation_complete(result)
+        configured_window.pak_validation._on_vanilla_validation_complete(result)
 
-    assert configured_window._is_validating_vanilla is False
-    assert configured_window._vanilla_validation_result == result
+    assert configured_window.pak_validation.is_validating_vanilla is False
+    assert configured_window.pak_validation.vanilla_validation_result == result
     assert (
         t("database_builder.validation.invalid_vanilla")
         in configured_window.validation_status_label.text()
@@ -1609,15 +1612,15 @@ def test_on_vanilla_validation_failed(configured_window: IconImportWindow) -> No
         configured_window (IconImportWindow): Configured window instance
     """
     configured_window.mod_pak_files = ["test.pak"]
-    configured_window._validation_result = coverage(overlays=0, crate=False)
-    configured_window._is_validating_vanilla = True
-    configured_window._set_vanilla_controls_enabled(False)
+    configured_window.pak_validation.validation_result = coverage(overlays=0, crate=False)
+    configured_window.pak_validation.is_validating_vanilla = True
+    configured_window.pak_validation._set_vanilla_controls_enabled(False)
 
     with patch("fs_tools.gui.windows.icon_import_window.QMessageBox.warning") as mock_warning:
-        configured_window._on_vanilla_validation_failed("unreadable PAK")
+        configured_window.pak_validation._on_vanilla_validation_failed("unreadable PAK")
 
-    assert configured_window._is_validating_vanilla is False
-    assert configured_window._vanilla_validation_result is None
+    assert configured_window.pak_validation.is_validating_vanilla is False
+    assert configured_window.pak_validation.vanilla_validation_result is None
     assert configured_window.vanilla_browse_button.isEnabled() is True
     assert configured_window.vanilla_info.isHidden() is False
     assert configured_window.validation_status_label.text() == t(
@@ -1635,12 +1638,12 @@ def test_set_vanilla_controls_enabled(configured_window: IconImportWindow) -> No
         configured_window: Configured window instance
     """
     # Disable controls
-    configured_window._set_vanilla_controls_enabled(False)
+    configured_window.pak_validation._set_vanilla_controls_enabled(False)
     assert configured_window.vanilla_browse_button.isEnabled() is False
     assert configured_window.vanilla_clear_button.isEnabled() is False
 
     # Enable controls
-    configured_window._set_vanilla_controls_enabled(True)
+    configured_window.pak_validation._set_vanilla_controls_enabled(True)
     assert configured_window.vanilla_browse_button.isEnabled() is True
     assert configured_window.vanilla_clear_button.isEnabled() is True
 
@@ -1656,13 +1659,13 @@ def test_trigger_validation_waits_for_existing(configured_window: IconImportWind
     # Create a mock worker that appears to be running
     mock_existing_worker = MagicMock()
     mock_existing_worker.isRunning.return_value = True
-    configured_window.validation_worker = mock_existing_worker
+    configured_window.pak_validation.validation_worker = mock_existing_worker
 
-    with patch("fs_tools.gui.windows.icon_import_window.PakCoverageWorker") as mock_worker_class:
+    with patch(COVERAGE_WORKER) as mock_worker_class:
         mock_new_worker = MagicMock()
         mock_worker_class.return_value = mock_new_worker
 
-        configured_window._trigger_validation()
+        configured_window.pak_validation.trigger_validation()
 
         # Should have waited for existing worker
         mock_existing_worker.wait.assert_called_once()
@@ -1678,7 +1681,7 @@ def test_close_event_with_vanilla_validation_worker_running(
     """
     mock_worker = MagicMock()
     mock_worker.isRunning.return_value = True
-    configured_window.vanilla_validation_worker = mock_worker
+    configured_window.pak_validation.vanilla_validation_worker = mock_worker
 
     mock_event = MagicMock()
 
@@ -1767,7 +1770,7 @@ def test_pak_drag_enter_event_while_validating(configured_window: IconImportWind
     Args:
         configured_window: Configured window instance
     """
-    configured_window._is_validating = True
+    configured_window.pak_validation.is_validating = True
 
     mock_event = MagicMock(spec=QDragEnterEvent)
     configured_window.pak_drag_enter_event(mock_event)
@@ -1785,7 +1788,7 @@ def test_pak_drop_event_while_validating(
         configured_window: Configured window instance
         tmp_path: Temporary directory path
     """
-    configured_window._is_validating = True
+    configured_window.pak_validation.is_validating = True
     test_pak = str(tmp_path / "test.pak")
 
     mime_data = QMimeData()
@@ -1814,7 +1817,7 @@ def test_clear_all_paks_clears_validation_state(
     # Set up some state
     configured_window.mod_pak_files = ["test.pak"]
     configured_window.mod_pak_list_widget.addItem("test.pak")
-    configured_window._validation_result = coverage(overlays=0, crate=False)
+    configured_window.pak_validation.validation_result = coverage(overlays=0, crate=False)
     configured_window.validation_status_label.setText("Some status")
     configured_window.vanilla_group.setVisible(True)
     configured_window.vanilla_pak_file = "vanilla.pak"
@@ -1822,7 +1825,7 @@ def test_clear_all_paks_clears_validation_state(
     configured_window.clear_all_mod_paks()
 
     assert configured_window.mod_pak_files == []
-    assert configured_window._validation_result is None
+    assert configured_window.pak_validation.validation_result is None
     assert configured_window.validation_status_label.text() == ""
     # Use isHidden() since window isn't shown
     assert configured_window.vanilla_group.isHidden() is True
@@ -1840,7 +1843,7 @@ def test_close_event_with_validation_worker_running(
     """
     mock_validation_worker = MagicMock()
     mock_validation_worker.isRunning.return_value = True
-    configured_window.validation_worker = mock_validation_worker
+    configured_window.pak_validation.validation_worker = mock_validation_worker
 
     mock_event = MagicMock()
 
@@ -1856,8 +1859,8 @@ def test_update_start_button_state_validating(configured_window: IconImportWindo
     Args:
         configured_window: Configured window instance
     """
-    configured_window._is_validating = True
-    configured_window._update_start_button_state()
+    configured_window.pak_validation.is_validating = True
+    configured_window.pak_validation.update_start_button_state()
     assert configured_window.start_button.isEnabled() is False
 
 
@@ -1869,8 +1872,8 @@ def test_update_start_button_state_validating_vanilla(
     Args:
         configured_window: Configured window instance
     """
-    configured_window._is_validating_vanilla = True
-    configured_window._update_start_button_state()
+    configured_window.pak_validation.is_validating_vanilla = True
+    configured_window.pak_validation.update_start_button_state()
     assert configured_window.start_button.isEnabled() is False
 
 
@@ -1883,7 +1886,7 @@ def test_update_start_button_state_no_mod_files(
         configured_window: Configured window instance
     """
     configured_window.mod_pak_files = []
-    configured_window._update_start_button_state()
+    configured_window.pak_validation.update_start_button_state()
     assert configured_window.start_button.isEnabled() is True
 
 
@@ -1896,9 +1899,9 @@ def test_update_start_button_state_mod_validation_passed(
         configured_window: Configured window instance
     """
     configured_window.mod_pak_files = ["test.pak"]
-    configured_window._validation_result = coverage()
+    configured_window.pak_validation.validation_result = coverage()
 
-    configured_window._update_start_button_state()
+    configured_window.pak_validation.update_start_button_state()
     assert configured_window.start_button.isEnabled() is True
 
 
@@ -1911,9 +1914,9 @@ def test_update_start_button_state_no_catalog_icons(
         configured_window (IconImportWindow): Configured window instance
     """
     configured_window.mod_pak_files = ["test.pak"]
-    configured_window._validation_result = coverage(main=0)
+    configured_window.pak_validation.validation_result = coverage(main=0)
 
-    configured_window._update_start_button_state()
+    configured_window.pak_validation.update_start_button_state()
     assert configured_window.start_button.isEnabled() is False
 
 
@@ -1926,9 +1929,9 @@ def test_update_start_button_state_check_failed(
         configured_window (IconImportWindow): Configured window instance
     """
     configured_window.mod_pak_files = ["test.pak"]
-    configured_window._validation_failed = True
+    configured_window.pak_validation.validation_failed = True
 
-    configured_window._update_start_button_state()
+    configured_window.pak_validation.update_start_button_state()
     assert configured_window.start_button.isEnabled() is False
 
 
@@ -1941,10 +1944,10 @@ def test_update_start_button_state_mod_validation_failed_no_vanilla(
         configured_window: Configured window instance
     """
     configured_window.mod_pak_files = ["test.pak"]
-    configured_window._validation_result = coverage(overlays=0, crate=False)
-    configured_window._vanilla_validation_result = None
+    configured_window.pak_validation.validation_result = coverage(overlays=0, crate=False)
+    configured_window.pak_validation.vanilla_validation_result = None
 
-    configured_window._update_start_button_state()
+    configured_window.pak_validation.update_start_button_state()
     assert configured_window.start_button.isEnabled() is False
 
 
@@ -1957,10 +1960,10 @@ def test_update_start_button_state_mod_validation_failed_vanilla_valid(
         configured_window: Configured window instance
     """
     configured_window.mod_pak_files = ["test.pak"]
-    configured_window._validation_result = coverage(overlays=0, crate=False)
-    configured_window._vanilla_validation_result = coverage()
+    configured_window.pak_validation.validation_result = coverage(overlays=0, crate=False)
+    configured_window.pak_validation.vanilla_validation_result = coverage()
 
-    configured_window._update_start_button_state()
+    configured_window.pak_validation.update_start_button_state()
     assert configured_window.start_button.isEnabled() is True
 
 
@@ -1973,10 +1976,10 @@ def test_update_start_button_state_mod_validation_failed_vanilla_invalid(
         configured_window: Configured window instance
     """
     configured_window.mod_pak_files = ["test.pak"]
-    configured_window._validation_result = coverage(overlays=0, crate=False)
-    configured_window._vanilla_validation_result = coverage(overlays=1, crate=True)
+    configured_window.pak_validation.validation_result = coverage(overlays=0, crate=False)
+    configured_window.pak_validation.vanilla_validation_result = coverage(overlays=1, crate=True)
 
-    configured_window._update_start_button_state()
+    configured_window.pak_validation.update_start_button_state()
     assert configured_window.start_button.isEnabled() is False
 
 
@@ -1989,9 +1992,9 @@ def test_update_start_button_state_no_validation_result(
         configured_window: Configured window instance
     """
     configured_window.mod_pak_files = ["test.pak"]
-    configured_window._validation_result = None
+    configured_window.pak_validation.validation_result = None
 
-    configured_window._update_start_button_state()
+    configured_window.pak_validation.update_start_button_state()
     assert configured_window.start_button.isEnabled() is True
 
 
@@ -2007,11 +2010,11 @@ def test_clear_vanilla_pak_restores_warning_state(
     configured_window.mod_pak_files = ["test.pak"]
 
     # Mod PAK files lack the overlays
-    configured_window._validation_result = coverage(overlays=0, crate=False)
+    configured_window.pak_validation.validation_result = coverage(overlays=0, crate=False)
 
     # Set up valid vanilla PAK
     configured_window.vanilla_pak_file = "vanilla.pak"
-    configured_window._vanilla_validation_result = coverage()
+    configured_window.pak_validation.vanilla_validation_result = coverage()
     configured_window.vanilla_info.setVisible(False)
     configured_window.validation_status_label.setText("All required assets found")
 
@@ -2020,7 +2023,7 @@ def test_clear_vanilla_pak_restores_warning_state(
 
     # Should restore warning state
     assert configured_window.vanilla_pak_file is None
-    assert configured_window._vanilla_validation_result is None
+    assert configured_window.pak_validation.vanilla_validation_result is None
     # Use isHidden() since window isn't shown
     assert configured_window.vanilla_info.isHidden() is False
     assert (
