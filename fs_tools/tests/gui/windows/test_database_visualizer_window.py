@@ -18,6 +18,7 @@ from fs_tools.gui.windows.database_visualizer_window import DatabaseVisualizerWi
 from fs_tools.models.icon_template import IconTemplate
 
 MODULE = "fs_tools.gui.windows.database_visualizer_window"
+ACTIONS = "fs_tools.gui.utils.template_icon_actions"
 
 
 @pytest.fixture
@@ -163,10 +164,10 @@ class TestDatabaseVisualizerWindowUI:
         Args:
             visualizer_window: Window fixture.
         """
-        assert visualizer_window.current_image is not None
-        assert visualizer_window.highest_image is not None
-        assert visualizer_window.info_label_left is not None
-        assert visualizer_window.info_label_right is not None
+        assert visualizer_window.detail_panel.current_image is not None
+        assert visualizer_window.detail_panel.highest_image is not None
+        assert visualizer_window.detail_panel.info_label_left is not None
+        assert visualizer_window.detail_panel.info_label_right is not None
 
     def test_progress_bar_hidden_initially(
         self, visualizer_window: DatabaseVisualizerWindow
@@ -510,7 +511,7 @@ class TestDatabaseVisualizerWindowTemplateSelection:
         visualizer_window._on_template_selected(item)
 
         # Info labels should contain template details
-        info_text_left = visualizer_window.info_label_left.text()
+        info_text_left = visualizer_window.detail_panel.info_label_left.text()
         assert "TestItem" in info_text_left
         assert "neutral" in info_text_left
         assert "vanilla" in info_text_left
@@ -644,7 +645,7 @@ class TestDatabaseVisualizerWindowTemplateSelectionAdvanced:
         visualizer_window._on_template_selected(item)
 
         # Right info label should indicate highest resolution not found
-        info_text_right = visualizer_window.info_label_right.text()
+        info_text_right = visualizer_window.detail_panel.info_label_right.text()
         # Check for the resolution (1080px) in the not found message
         assert "1080" in info_text_right
 
@@ -660,7 +661,7 @@ class TestDatabaseVisualizerWindowImageDisplay:
         Args:
             visualizer_window: Window fixture.
         """
-        visualizer_window._display_comparison_images(None, None)
+        visualizer_window.detail_panel.display_comparison_images(None, None)
         # Should not raise
 
     def test_display_comparison_images_with_template(
@@ -677,13 +678,16 @@ class TestDatabaseVisualizerWindowImageDisplay:
         # Create a non-zero image for display
         mock_template.image = np.ones((32, 32, 3), dtype=np.uint8) * 128
 
-        visualizer_window._display_comparison_images(mock_template, None)
+        visualizer_window.detail_panel.display_comparison_images(mock_template, None)
 
         # Current image should have a pixmap
-        assert not visualizer_window.current_image.pixmap().isNull()
+        assert not visualizer_window.detail_panel.current_image.pixmap().isNull()
 
         # Highest should show not found text (check translation key)
-        assert t("database_visualizer.template_not_found") in visualizer_window.highest_image.text()
+        assert (
+            t("database_visualizer.template_not_found")
+            in visualizer_window.detail_panel.highest_image.text()
+        )
 
     def test_display_comparison_images_with_both(
         self,
@@ -710,11 +714,11 @@ class TestDatabaseVisualizerWindowImageDisplay:
             phash=0,
         )
 
-        visualizer_window._display_comparison_images(mock_template, highest_template)
+        visualizer_window.detail_panel.display_comparison_images(mock_template, highest_template)
 
         # Both images should have pixmaps
-        assert not visualizer_window.current_image.pixmap().isNull()
-        assert not visualizer_window.highest_image.pixmap().isNull()
+        assert not visualizer_window.detail_panel.current_image.pixmap().isNull()
+        assert not visualizer_window.detail_panel.highest_image.pixmap().isNull()
 
 
 class TestDatabaseVisualizerWindowReplaceIcon:
@@ -728,7 +732,7 @@ class TestDatabaseVisualizerWindowReplaceIcon:
         Args:
             visualizer_window: Window fixture.
         """
-        assert not visualizer_window.replace_button.isEnabled()
+        assert not visualizer_window.detail_panel.replace_button.isEnabled()
         assert visualizer_window.selected_template is None
 
     def test_template_selection_enables_replace_button(
@@ -751,7 +755,7 @@ class TestDatabaseVisualizerWindowReplaceIcon:
 
         visualizer_window._on_template_selected(item)
 
-        assert visualizer_window.replace_button.isEnabled()
+        assert visualizer_window.detail_panel.replace_button.isEnabled()
         assert visualizer_window.selected_template == (0, mock_template)
 
     def test_resolution_change_clears_selection(
@@ -769,7 +773,7 @@ class TestDatabaseVisualizerWindowReplaceIcon:
         """
         visualizer_window.all_databases = {SupportedResolution.R_1080: mock_database}
         visualizer_window.selected_template = (0, mock_template)
-        visualizer_window.replace_button.setEnabled(True)
+        visualizer_window.detail_panel.replace_button.setEnabled(True)
 
         visualizer_window.resolution_filter.clear()
         visualizer_window.resolution_filter.addItem("1080p", SupportedResolution.R_1080)
@@ -777,7 +781,7 @@ class TestDatabaseVisualizerWindowReplaceIcon:
         visualizer_window._on_resolution_changed()
 
         assert visualizer_window.selected_template is None
-        assert not visualizer_window.replace_button.isEnabled()
+        assert not visualizer_window.detail_panel.replace_button.isEnabled()
 
     def test_replace_icon_no_selection_returns_early(
         self, visualizer_window: DatabaseVisualizerWindow
@@ -789,8 +793,8 @@ class TestDatabaseVisualizerWindowReplaceIcon:
         """
         visualizer_window.selected_template = None
 
-        with patch("fs_tools.gui.windows.database_visualizer_window.QFileDialog") as mock_dialog:
-            visualizer_window._on_replace_icon()
+        with patch("fs_tools.gui.utils.template_icon_actions.QFileDialog") as mock_dialog:
+            visualizer_window.icon_actions.on_replace_icon()
             mock_dialog.getOpenFileName.assert_not_called()
 
     def test_replace_icon_cancelled_dialog_returns_early(
@@ -809,11 +813,11 @@ class TestDatabaseVisualizerWindowReplaceIcon:
         visualizer_window.database_path = "/path/to/db.h5"
 
         with patch(
-            f"{MODULE}.QFileDialog.getOpenFileName",
+            f"{ACTIONS}.QFileDialog.getOpenFileName",
             return_value=("", ""),
         ):
-            with patch(f"{MODULE}.replace_icon") as mock_replace:
-                visualizer_window._on_replace_icon()
+            with patch(f"{ACTIONS}.replace_icon") as mock_replace:
+                visualizer_window.icon_actions.on_replace_icon()
                 mock_replace.assert_not_called()
 
     def test_replace_icon_passes_file_path(
@@ -833,14 +837,14 @@ class TestDatabaseVisualizerWindowReplaceIcon:
 
         with (
             patch(
-                f"{MODULE}.QFileDialog.getOpenFileName",
+                f"{ACTIONS}.QFileDialog.getOpenFileName",
                 return_value=("/path/to/icon.png", "PNG Files (*.png)"),
             ),
-            patch(f"{MODULE}.replace_icon") as mock_replace,
-            patch.object(visualizer_window, "_reload_current_resolution") as mock_reload,
-            patch(f"{MODULE}.QMessageBox.information") as mock_info,
+            patch(f"{ACTIONS}.replace_icon") as mock_replace,
+            patch.object(visualizer_window, "reload_current_resolution") as mock_reload,
+            patch(f"{ACTIONS}.QMessageBox.information") as mock_info,
         ):
-            visualizer_window._on_replace_icon()
+            visualizer_window.icon_actions.on_replace_icon()
 
         mock_replace.assert_called_once_with(
             Path("/path/to/db.h5"), mock_template, Path("/path/to/icon.png")
@@ -865,15 +869,15 @@ class TestDatabaseVisualizerWindowReplaceIcon:
 
         with (
             patch(
-                f"{MODULE}.QFileDialog.getOpenFileName",
+                f"{ACTIONS}.QFileDialog.getOpenFileName",
                 return_value=("/path/to/icon.png", ""),
             ),
-            patch(f"{MODULE}.replace_icon", side_effect=RuntimeError("Replace failed")),
-            patch.object(visualizer_window, "_show_replace_error") as mock_show_error,
-            patch.object(visualizer_window, "_reload_current_resolution") as mock_reload,
-            patch(f"{MODULE}.QMessageBox.information") as mock_info,
+            patch(f"{ACTIONS}.replace_icon", side_effect=RuntimeError("Replace failed")),
+            patch.object(visualizer_window.icon_actions, "_show_replace_error") as mock_show_error,
+            patch.object(visualizer_window, "reload_current_resolution") as mock_reload,
+            patch(f"{ACTIONS}.QMessageBox.information") as mock_info,
         ):
-            visualizer_window._on_replace_icon()
+            visualizer_window.icon_actions.on_replace_icon()
 
         mock_show_error.assert_called_once_with("Replace failed")
         mock_reload.assert_not_called()
@@ -900,7 +904,7 @@ class TestDatabaseVisualizerWindowReplaceIcon:
         reloaded = [mock_crated_template]
 
         with patch(f"{MODULE}.read_resolution", return_value=reloaded) as mock_read:
-            visualizer_window._reload_current_resolution()
+            visualizer_window.reload_current_resolution()
 
         mock_read.assert_called_once_with(Path("/path/to/db.h5"), SupportedResolution.R_1080)
         assert visualizer_window.all_databases[SupportedResolution.R_1080] == reloaded
@@ -920,7 +924,7 @@ class TestDatabaseVisualizerWindowReplaceIcon:
         visualizer_window.database_path = "/path/to/db.h5"
 
         with patch(f"{MODULE}.read_resolution") as mock_read:
-            visualizer_window._reload_current_resolution()
+            visualizer_window.reload_current_resolution()
 
         mock_read.assert_not_called()
 
@@ -931,9 +935,9 @@ class TestDatabaseVisualizerWindowReplaceIcon:
             visualizer_window: Window fixture.
         """
         with patch(
-            "fs_tools.gui.windows.database_visualizer_window.QMessageBox.critical"
+            "fs_tools.gui.utils.template_icon_actions.QMessageBox.critical"
         ) as mock_critical:
-            visualizer_window._show_replace_error("Test error")
+            visualizer_window.icon_actions._show_replace_error("Test error")
 
             mock_critical.assert_called_once()
             call_args = mock_critical.call_args[0]
@@ -965,7 +969,7 @@ class TestDatabaseVisualizerWindowSaveIcon:
         Args:
             visualizer_window: Window fixture.
         """
-        assert not visualizer_window.save_button.isEnabled()
+        assert not visualizer_window.detail_panel.save_button.isEnabled()
 
     def test_save_icon_no_selection_returns_early(
         self, visualizer_window: DatabaseVisualizerWindow
@@ -978,9 +982,9 @@ class TestDatabaseVisualizerWindowSaveIcon:
         visualizer_window.selected_template = None
 
         with patch(
-            "fs_tools.gui.windows.database_visualizer_window.QFileDialog.getSaveFileName"
+            "fs_tools.gui.utils.template_icon_actions.QFileDialog.getSaveFileName"
         ) as mock_dialog:
-            visualizer_window._on_save_icon()
+            visualizer_window.icon_actions.on_save_icon()
             mock_dialog.assert_not_called()
 
     def test_save_icon_cancelled_dialog_returns_early(
@@ -997,11 +1001,11 @@ class TestDatabaseVisualizerWindowSaveIcon:
         visualizer_window.selected_template = (0, mock_template)
 
         with patch(
-            "fs_tools.gui.windows.database_visualizer_window.QFileDialog.getSaveFileName",
+            "fs_tools.gui.utils.template_icon_actions.QFileDialog.getSaveFileName",
             return_value=("", ""),
         ):
-            with patch("fs_tools.gui.windows.database_visualizer_window.write_bgr") as mock_write:
-                visualizer_window._on_save_icon()
+            with patch("fs_tools.gui.utils.template_icon_actions.write_bgr") as mock_write:
+                visualizer_window.icon_actions.on_save_icon()
                 mock_write.assert_not_called()
 
     def test_save_icon_success(self, visualizer_window: DatabaseVisualizerWindow) -> None:
@@ -1018,14 +1022,14 @@ class TestDatabaseVisualizerWindowSaveIcon:
         visualizer_window.selected_template = (0, mock_template)
 
         with patch(
-            "fs_tools.gui.windows.database_visualizer_window.QFileDialog.getSaveFileName",
+            "fs_tools.gui.utils.template_icon_actions.QFileDialog.getSaveFileName",
             return_value=("/tmp/test.png", ""),
         ) as mock_dialog:
-            with patch("fs_tools.gui.windows.database_visualizer_window.write_bgr") as mock_write:
+            with patch("fs_tools.gui.utils.template_icon_actions.write_bgr") as mock_write:
                 with patch(
-                    "fs_tools.gui.windows.database_visualizer_window.QMessageBox.information"
+                    "fs_tools.gui.utils.template_icon_actions.QMessageBox.information"
                 ) as mock_info:
-                    visualizer_window._on_save_icon()
+                    visualizer_window.icon_actions.on_save_icon()
 
                     # Verify default filename doesn't have _crated
                     call_args = mock_dialog.call_args
@@ -1048,14 +1052,12 @@ class TestDatabaseVisualizerWindowSaveIcon:
         visualizer_window.selected_template = (0, mock_template)
 
         with patch(
-            "fs_tools.gui.windows.database_visualizer_window.QFileDialog.getSaveFileName",
+            "fs_tools.gui.utils.template_icon_actions.QFileDialog.getSaveFileName",
             return_value=("/tmp/test.png", ""),
         ) as mock_dialog:
-            with patch("fs_tools.gui.windows.database_visualizer_window.write_bgr"):
-                with patch(
-                    "fs_tools.gui.windows.database_visualizer_window.QMessageBox.information"
-                ):
-                    visualizer_window._on_save_icon()
+            with patch("fs_tools.gui.utils.template_icon_actions.write_bgr"):
+                with patch("fs_tools.gui.utils.template_icon_actions.QMessageBox.information"):
+                    visualizer_window.icon_actions.on_save_icon()
 
                     # Verify default filename has _crated suffix
                     call_args = mock_dialog.call_args
@@ -1074,17 +1076,17 @@ class TestDatabaseVisualizerWindowSaveIcon:
         visualizer_window.selected_template = (0, mock_template)
 
         with patch(
-            "fs_tools.gui.windows.database_visualizer_window.QFileDialog.getSaveFileName",
+            "fs_tools.gui.utils.template_icon_actions.QFileDialog.getSaveFileName",
             return_value=("/tmp/test.png", ""),
         ):
             with patch(
-                "fs_tools.gui.windows.database_visualizer_window.write_bgr",
+                "fs_tools.gui.utils.template_icon_actions.write_bgr",
                 side_effect=Exception("Write failed"),
             ):
                 with patch(
-                    "fs_tools.gui.windows.database_visualizer_window.QMessageBox.critical"
+                    "fs_tools.gui.utils.template_icon_actions.QMessageBox.critical"
                 ) as mock_critical:
-                    visualizer_window._on_save_icon()
+                    visualizer_window.icon_actions.on_save_icon()
                     mock_critical.assert_called_once()
 
 
@@ -1099,7 +1101,7 @@ class TestDatabaseVisualizerWindowDeleteIcon:
         Args:
             visualizer_window: Window fixture.
         """
-        assert not visualizer_window.delete_button.isEnabled()
+        assert not visualizer_window.detail_panel.delete_button.isEnabled()
 
     def test_delete_icon_no_selection_returns_early(
         self, visualizer_window: DatabaseVisualizerWindow
@@ -1111,10 +1113,8 @@ class TestDatabaseVisualizerWindowDeleteIcon:
         """
         visualizer_window.selected_template = None
 
-        with patch(
-            "fs_tools.gui.windows.database_visualizer_window.QMessageBox.question"
-        ) as mock_dialog:
-            visualizer_window._on_delete_icon()
+        with patch("fs_tools.gui.utils.template_icon_actions.QMessageBox.question") as mock_dialog:
+            visualizer_window.icon_actions.on_delete_icon()
             mock_dialog.assert_not_called()
 
     def test_delete_icon_cancelled_returns_early(
@@ -1132,11 +1132,11 @@ class TestDatabaseVisualizerWindowDeleteIcon:
         visualizer_window.database_path = "/tmp/test.h5"
 
         with patch(
-            f"{MODULE}.QMessageBox.question",
+            f"{ACTIONS}.QMessageBox.question",
             return_value=QMessageBox.StandardButton.No,
         ):
-            with patch(f"{MODULE}.delete_icon") as mock_delete:
-                visualizer_window._on_delete_icon()
+            with patch(f"{ACTIONS}.delete_icon") as mock_delete:
+                visualizer_window.icon_actions.on_delete_icon()
                 mock_delete.assert_not_called()
 
     def test_delete_icon_success(
@@ -1158,14 +1158,14 @@ class TestDatabaseVisualizerWindowDeleteIcon:
 
         with (
             patch(
-                f"{MODULE}.QMessageBox.question",
+                f"{ACTIONS}.QMessageBox.question",
                 return_value=QMessageBox.StandardButton.Yes,
             ),
-            patch(f"{MODULE}.delete_icon") as mock_delete,
+            patch(f"{ACTIONS}.delete_icon") as mock_delete,
             patch(f"{MODULE}.read_resolution", return_value=[]) as mock_read,
-            patch(f"{MODULE}.QMessageBox.information") as mock_info,
+            patch(f"{ACTIONS}.QMessageBox.information") as mock_info,
         ):
-            visualizer_window._on_delete_icon()
+            visualizer_window.icon_actions.on_delete_icon()
 
         mock_delete.assert_called_once_with(Path("/tmp/test.h5"), mock_template)
         mock_info.assert_called_once()
@@ -1173,9 +1173,9 @@ class TestDatabaseVisualizerWindowDeleteIcon:
 
         # Verify selection was cleared, buttons disabled and the list reloaded
         assert visualizer_window.selected_template is None
-        assert not visualizer_window.save_button.isEnabled()
-        assert not visualizer_window.replace_button.isEnabled()
-        assert not visualizer_window.delete_button.isEnabled()
+        assert not visualizer_window.detail_panel.save_button.isEnabled()
+        assert not visualizer_window.detail_panel.replace_button.isEnabled()
+        assert not visualizer_window.detail_panel.delete_button.isEnabled()
         assert visualizer_window.all_databases[SupportedResolution.R_1080] == []
         assert visualizer_window.current_templates == []
 
@@ -1193,14 +1193,14 @@ class TestDatabaseVisualizerWindowDeleteIcon:
 
         with (
             patch(
-                f"{MODULE}.QMessageBox.question",
+                f"{ACTIONS}.QMessageBox.question",
                 return_value=QMessageBox.StandardButton.Yes,
             ),
-            patch(f"{MODULE}.delete_icon", side_effect=Exception("Delete failed")),
-            patch(f"{MODULE}.QMessageBox.critical") as mock_critical,
-            patch.object(visualizer_window, "_reload_current_resolution") as mock_reload,
+            patch(f"{ACTIONS}.delete_icon", side_effect=Exception("Delete failed")),
+            patch(f"{ACTIONS}.QMessageBox.critical") as mock_critical,
+            patch.object(visualizer_window, "reload_current_resolution") as mock_reload,
         ):
-            visualizer_window._on_delete_icon()
+            visualizer_window.icon_actions.on_delete_icon()
 
         mock_critical.assert_called_once()
         mock_reload.assert_not_called()

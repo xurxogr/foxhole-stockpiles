@@ -4,7 +4,6 @@ import logging
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -17,23 +16,21 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
-    QMessageBox,
     QProgressBar,
     QPushButton,
-    QScrollArea,
     QSplitter,
     QVBoxLayout,
     QWidget,
 )
 
-from foxhole_stockpiles.core.image_io import write_bgr
 from foxhole_stockpiles.enums.item_category import ItemCategory
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
-from fs_tools.core.template_store import delete_icon, read_resolution, replace_icon
-from fs_tools.gui.utils.bgr_pixmap import bgr_to_pixmap
+from fs_tools.core.template_store import read_resolution
 from fs_tools.gui.utils.database_loader_worker import DatabaseLoaderWorker
+from fs_tools.gui.utils.template_icon_actions import TemplateIconActions
+from fs_tools.gui.widgets.icon_detail_panel import IconDetailPanel
 from fs_tools.models.icon_template import IconTemplate
 
 logger = logging.getLogger(__name__)
@@ -58,6 +55,7 @@ class DatabaseVisualizerWindow(QDialog):
         self.all_templates: list[tuple[int, IconTemplate]] = []
         self.loader_thread: DatabaseLoaderWorker | None = None
         self.selected_template: tuple[int, IconTemplate] | None = None
+        self.icon_actions = TemplateIconActions(view=self, parent=self)
 
         self.init_ui()
 
@@ -116,16 +114,7 @@ class DatabaseVisualizerWindow(QDialog):
         self.crated_normal.setText(t("database_visualizer.crated_normal"))
         self.crated_crated.setText(t("database_visualizer.crated_crated"))
         self.clear_button.setText(t("database_visualizer.clear_filters"))
-        self.info_label_left.setText(t("database_visualizer.select_template"))
-        self.info_label_right.setText("")
-        self.save_button.setText(t("database_visualizer.save_icon"))
-        self.replace_button.setText(t("database_visualizer.replace_icon"))
-        self.delete_button.setText(t("database_visualizer.delete_icon"))
-        self.image_group.setTitle(t("database_visualizer.template_comparison"))
-        self.current_group.setTitle(t("database_visualizer.current_resolution"))
-        self.highest_group.setTitle(t("database_visualizer.highest_resolution"))
-        self.current_image.setText(t("database_visualizer.no_image_selected"))
-        self.highest_image.setText(t("database_visualizer.no_image_selected"))
+        self.detail_panel.retranslate()
 
     def _create_left_panel(self) -> QWidget:
         """Create the left panel with filters and template list.
@@ -243,97 +232,11 @@ class DatabaseVisualizerWindow(QDialog):
         database_layout.addWidget(self.browse_button)
         layout.addWidget(self.database_group)
 
-        # Template info and action buttons in horizontal layout
-        info_layout = QHBoxLayout()
-
-        # Two-column info layout
-        info_columns_layout = QHBoxLayout()
-
-        # Left column: code, faction, category, mod, crated
-        self.info_label_left = QLabel()
-        self.info_label_left.setFont(QFont("Arial", 10))
-        self.info_label_left.setWordWrap(True)
-        self.info_label_left.setStyleSheet(
-            "QLabel { background-color: palette(alternate-base); padding: 10px; "
-            "border: 1px solid palette(mid); }"
-        )
-        info_columns_layout.addWidget(self.info_label_left)
-
-        # Right column: resolution, shape, index, highest res
-        self.info_label_right = QLabel()
-        self.info_label_right.setFont(QFont("Arial", 10))
-        self.info_label_right.setWordWrap(True)
-        self.info_label_right.setStyleSheet(
-            "QLabel { background-color: palette(alternate-base); padding: 10px; "
-            "border: 1px solid palette(mid); }"
-        )
-        info_columns_layout.addWidget(self.info_label_right)
-
-        info_layout.addLayout(info_columns_layout, stretch=1)
-
-        # Action buttons layout
-        buttons_layout = QVBoxLayout()
-
-        # Save icon button
-        self.save_button = QPushButton()
-        self.save_button.setEnabled(False)
-        self.save_button.setMinimumWidth(120)
-        self.save_button.clicked.connect(self._on_save_icon)
-        buttons_layout.addWidget(self.save_button)
-
-        # Replace icon button
-        self.replace_button = QPushButton()
-        self.replace_button.setEnabled(False)
-        self.replace_button.setMinimumWidth(120)
-        self.replace_button.clicked.connect(self._on_replace_icon)
-        buttons_layout.addWidget(self.replace_button)
-
-        # Delete icon button
-        self.delete_button = QPushButton()
-        self.delete_button.setEnabled(False)
-        self.delete_button.setMinimumWidth(120)
-        self.delete_button.clicked.connect(self._on_delete_icon)
-        buttons_layout.addWidget(self.delete_button)
-
-        info_layout.addLayout(buttons_layout)
-
-        layout.addLayout(info_layout)
-
-        # Image comparison area
-        self.image_group = QGroupBox()
-        image_layout = QHBoxLayout(self.image_group)
-
-        # Current resolution image
-        self.current_group = QGroupBox()
-        current_layout = QVBoxLayout(self.current_group)
-        current_scroll = QScrollArea()
-        self.current_image = QLabel()
-        self.current_image.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.current_image.setMinimumHeight(200)
-        self.current_image.setStyleSheet(
-            "QLabel { border: 1px solid palette(mid); background-color: palette(base); }"
-        )
-        current_scroll.setWidget(self.current_image)
-        current_scroll.setWidgetResizable(True)
-        current_layout.addWidget(current_scroll)
-        image_layout.addWidget(self.current_group)
-
-        # Highest resolution image
-        self.highest_group = QGroupBox()
-        highest_layout = QVBoxLayout(self.highest_group)
-        highest_scroll = QScrollArea()
-        self.highest_image = QLabel()
-        self.highest_image.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.highest_image.setMinimumHeight(200)
-        self.highest_image.setStyleSheet(
-            "QLabel { border: 1px solid palette(mid); background-color: palette(base); }"
-        )
-        highest_scroll.setWidget(self.highest_image)
-        highest_scroll.setWidgetResizable(True)
-        highest_layout.addWidget(highest_scroll)
-        image_layout.addWidget(self.highest_group)
-
-        layout.addWidget(self.image_group)
+        self.detail_panel = IconDetailPanel()
+        self.detail_panel.save_button.clicked.connect(self.icon_actions.on_save_icon)
+        self.detail_panel.replace_button.clicked.connect(self.icon_actions.on_replace_icon)
+        self.detail_panel.delete_button.clicked.connect(self.icon_actions.on_delete_icon)
+        layout.addWidget(self.detail_panel)
 
         return panel
 
@@ -389,9 +292,7 @@ class DatabaseVisualizerWindow(QDialog):
         """Handle resolution change."""
         # Clear selected template when resolution changes
         self.selected_template = None
-        self.save_button.setEnabled(False)
-        self.replace_button.setEnabled(False)
-        self.delete_button.setEnabled(False)
+        self.detail_panel.set_actions_enabled(False)
 
         # PySide6 returns enum value as string, convert back to enum
         resolution_data = self.resolution_filter.currentData()
@@ -572,9 +473,7 @@ class DatabaseVisualizerWindow(QDialog):
 
         # Store selected template and enable action buttons
         self.selected_template = (idx, template)
-        self.save_button.setEnabled(True)
-        self.replace_button.setEnabled(True)
-        self.delete_button.setEnabled(True)
+        self.detail_panel.set_actions_enabled(True)
 
         # Find highest resolution available
         highest_resolution = max(self.all_databases.keys(), key=lambda x: int(x.value))
@@ -593,148 +492,20 @@ class DatabaseVisualizerWindow(QDialog):
                     highest_template = high_template
                     break
 
-        # Update info labels (two columns)
-        # Left column: code, faction, category, mod, crated
-        info_text_left = (
-            f"<b>{t('database_visualizer.info.code')}</b> {template.code}<br>"
-            f"<b>{t('database_visualizer.info.faction')}</b> {template.faction.value}<br>"
-            f"<b>{t('database_visualizer.info.category')}</b> {template.category.value}<br>"
-            f"<b>{t('database_visualizer.info.mod')}</b> {template.mod}<br>"
-            f"<b>{t('database_visualizer.info.crated')}</b> {template.crated}"
-        )
-        self.info_label_left.setText(info_text_left)
-
-        # Right column: resolution, shape, index, highest res
-        current_res = f"{template.resolution.value}px"
-        if highest_template:
-            highest_info = (
-                f"<b>{t('database_visualizer.info.highest_res_available')}</b> "
-                f"{highest_template.resolution.value}px ({highest_template.image.shape})"
-            )
-        else:
-            not_found_msg = t("database_visualizer.info.highest_res_not_found")
-            not_found_msg = not_found_msg.replace("{resolution}", highest_resolution.value)
-            highest_info = f"<b>{not_found_msg}</b>"
-
-        info_text_right = (
-            f"<b>{t('database_visualizer.info.current_resolution')}</b> {current_res}<br>"
-            f"<b>{t('database_visualizer.info.current_shape')}</b> {template.image.shape}<br>"
-            f"<b>{t('database_visualizer.info.database_index')}</b> {idx}<br>"
-            f"{highest_info}"
-        )
-        self.info_label_right.setText(info_text_right)
-
-        # Display comparison images
-        self._display_comparison_images(template, highest_template)
-
-    @staticmethod
-    def _scale_pixmap(pixmap: QPixmap, width: int, height: int) -> QPixmap:
-        """Scale a pixmap to the given size, keeping aspect ratio.
-
-        Args:
-            pixmap (QPixmap): The pixmap to scale.
-            width (int): Target width.
-            height (int): Target height.
-
-        Returns:
-            QPixmap: The scaled pixmap.
-        """
-        return pixmap.scaled(
-            width,
-            height,
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.FastTransformation,
+        self.detail_panel.show_template(
+            index=idx,
+            template=template,
+            highest_template=highest_template,
+            highest_resolution=highest_resolution,
         )
 
-    def _display_comparison_images(
-        self, current_template: IconTemplate | None, highest_template: IconTemplate | None
-    ) -> None:
-        """Display current and highest resolution templates at matching sizes.
+    def clear_selection(self) -> None:
+        """Forget the selected template and clear its details."""
+        self.selected_template = None
+        self.detail_panel.set_actions_enabled(False)
+        self.detail_panel.clear_details()
 
-        Args:
-            current_template (IconTemplate | None): The currently selected template.
-            highest_template (IconTemplate | None): The highest resolution template.
-        """
-        if not current_template:
-            return
-
-        current_pixmap = bgr_to_pixmap(current_template.image)
-        current_w, current_h = current_pixmap.width(), current_pixmap.height()
-
-        if highest_template:
-            highest_pixmap = bgr_to_pixmap(highest_template.image)
-
-            # Target size: highest resolution at 4x scale
-            target_width = highest_pixmap.width() * 4
-            target_height = highest_pixmap.height() * 4
-
-            # Keep aspect ratio when scaling current resolution to match target size
-            current_scale = min(target_width / current_w, target_height / current_h)
-            current_scaled = self._scale_pixmap(
-                current_pixmap, int(current_w * current_scale), int(current_h * current_scale)
-            )
-            highest_scaled = self._scale_pixmap(highest_pixmap, target_width, target_height)
-
-            self.highest_image.setPixmap(highest_scaled)
-            self.highest_image.resize(highest_scaled.size())
-            self.highest_group.setTitle(
-                t("database_visualizer.highest_resolution_found").replace(
-                    "{resolution}", highest_template.resolution.value
-                )
-            )
-        else:
-            # Fallback: use 8x for current if no highest template
-            current_scale = 8.0
-            current_scaled = self._scale_pixmap(
-                current_pixmap, int(current_w * current_scale), int(current_h * current_scale)
-            )
-
-            self.highest_image.setText(t("database_visualizer.template_not_found"))
-            self.highest_group.setTitle(t("database_visualizer.highest_resolution_not_found"))
-
-        self.current_image.setPixmap(current_scaled)
-        self.current_image.resize(current_scaled.size())
-        self.current_group.setTitle(
-            t("database_visualizer.current_resolution_scale")
-            .replace("{resolution}", current_template.resolution.value)
-            .replace("{scale}", f"{current_scale:.1f}")
-        )
-
-    def _on_replace_icon(self) -> None:
-        """Handle replace icon button click."""
-        if not self.selected_template or not self.current_resolution or not self.database_path:
-            return
-
-        _idx, template = self.selected_template
-
-        # Open file dialog to select new icon
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            t("database_visualizer.select_replacement_icon"),
-            "",
-            "PNG Files (*.png);;All Files (*)",
-        )
-
-        if not file_path:
-            return
-
-        # The icon is resized and composited like templates built from the game
-        try:
-            replace_icon(Path(self.database_path), template, Path(file_path))
-        except Exception as e:  # noqa: BLE001 - surface any replace failure to the user
-            self._show_replace_error(str(e))
-            return
-
-        self._reload_current_resolution()
-
-        # Show success message
-        QMessageBox.information(
-            self,
-            t("database_visualizer.replace_success_title"),
-            t("database_visualizer.replace_success_message").replace("{code}", template.code),
-        )
-
-    def _reload_current_resolution(self) -> None:
+    def reload_current_resolution(self) -> None:
         """Re-read the current resolution's templates after an edit and refresh the list."""
         if not self.current_resolution or not self.database_path:
             return
@@ -743,113 +514,6 @@ class DatabaseVisualizerWindow(QDialog):
         self.current_templates = templates
         self.all_templates = list(enumerate(templates))
         self._apply_filters()
-
-    def _on_save_icon(self) -> None:
-        """Handle save icon button click."""
-        if not self.selected_template:
-            return
-
-        _idx, template = self.selected_template
-
-        # Open file dialog to select save location
-        crated_suffix = "_crated" if template.crated else ""
-        default_name = f"{template.code}{crated_suffix}_{template.resolution.value}p.png"
-        file_path, _ = QFileDialog.getSaveFileName(
-            self,
-            t("database_visualizer.save_icon_dialog"),
-            default_name,
-            "PNG Files (*.png);;All Files (*)",
-        )
-
-        if not file_path:
-            return
-
-        # Save the icon image
-        try:
-            write_bgr(file_path, template.image)
-        except Exception as e:  # noqa: BLE001 - surface any save failure to the user
-            logger.exception("Failed to save icon")
-            QMessageBox.critical(
-                self,
-                t("database_visualizer.save_error_title"),
-                t("database_visualizer.save_error_message").replace("{error}", str(e)),
-            )
-            return
-
-        QMessageBox.information(
-            self,
-            t("database_visualizer.save_success_title"),
-            t("database_visualizer.save_success_message").replace("{path}", file_path),
-        )
-
-    def _on_delete_icon(self) -> None:
-        """Handle delete icon button click."""
-        if not self.selected_template or not self.current_resolution or not self.database_path:
-            return
-
-        _idx, template = self.selected_template
-
-        # Ask for confirmation
-        reply = QMessageBox.question(
-            self,
-            t("database_visualizer.delete_confirm_title"),
-            t("database_visualizer.delete_confirm_message")
-            .replace("{code}", template.code)
-            .replace("{resolution}", self.current_resolution.value),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-
-        if reply != QMessageBox.StandardButton.Yes:
-            return
-
-        # Delete the icon from the database
-        try:
-            delete_icon(Path(self.database_path), template)
-        except Exception as e:  # noqa: BLE001 - surface any delete failure to the user
-            logger.exception("Failed to delete icon")
-            QMessageBox.critical(
-                self,
-                t("database_visualizer.delete_error_title"),
-                t("database_visualizer.delete_error_message").replace("{error}", str(e)),
-            )
-            return
-
-        QMessageBox.information(
-            self,
-            t("database_visualizer.delete_success_title"),
-            t("database_visualizer.delete_success_message").replace("{code}", template.code),
-        )
-
-        # Clear selection and disable buttons
-        self.selected_template = None
-        self.save_button.setEnabled(False)
-        self.replace_button.setEnabled(False)
-        self.delete_button.setEnabled(False)
-
-        # Clear details panel
-        self.info_label_left.setText(t("database_visualizer.select_template"))
-        self.info_label_right.setText("")
-        self.current_image.clear()
-        self.current_image.setText(t("database_visualizer.no_image_selected"))
-        self.highest_image.clear()
-        self.highest_image.setText(t("database_visualizer.no_image_selected"))
-
-        # Refresh template list from the modified database
-        self._reload_current_resolution()
-
-    def _show_replace_error(self, error: str) -> None:
-        """Show error message for failed icon replacement.
-
-        Args:
-            error (str): Error message to display.
-        """
-        logger.exception("Failed to replace icon")
-        QMessageBox.critical(
-            self,
-            t("database_visualizer.replace_error_title"),
-            t("database_visualizer.replace_error_message").replace("{error}", error),
-        )
 
     def closeEvent(self, event: object) -> None:
         """Handle window close event.
