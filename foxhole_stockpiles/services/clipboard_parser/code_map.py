@@ -5,11 +5,11 @@ from __future__ import annotations
 import json
 import logging
 from collections import defaultdict
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from foxhole_stockpiles.enums.item_faction import ItemFaction
+from foxhole_stockpiles.models.catalog_code import CatalogCode
 
 logger = logging.getLogger(__name__)
 
@@ -51,14 +51,6 @@ def _normalize(text: str) -> str:
         str: Text with curly quotes/apostrophes folded to ASCII and trimmed.
     """
     return text.translate(_QUOTE_TRANSLATION).strip()
-
-
-@dataclass(frozen=True)
-class CatalogCode:
-    """A catalog item's code and faction, used for clipboard code-mapping."""
-
-    code: str
-    faction: ItemFaction
 
 
 class ClipboardCodeMap:

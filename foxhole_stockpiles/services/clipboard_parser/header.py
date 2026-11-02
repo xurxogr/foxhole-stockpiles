@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass
 from datetime import datetime
 
+from foxhole_stockpiles.models.clipboard_header import ClipboardHeader
 from foxhole_stockpiles.models.stockpile_coords import StockpileCoords
 from foxhole_stockpiles.services.clipboard_parser.type_aliases import _type_from_display
 
@@ -23,25 +23,14 @@ _HEADER_RE = re.compile(
 )
 
 
-@dataclass(frozen=True)
-class _Header:
-    """Parsed header line fields (town/city intentionally dropped)."""
-
-    hex: str
-    type: str
-    name: str
-    coords: StockpileCoords
-    timestamp: datetime | None
-
-
-def _parse_header(line: str) -> _Header | None:
+def _parse_header(line: str) -> ClipboardHeader | None:
     """Parse the header line; the gate for "is this a stockpile export".
 
     Args:
         line (str): The candidate header line.
 
     Returns:
-        _Header | None: Parsed header, or None if the line is not a header.
+        ClipboardHeader | None: Parsed header, or None if the line is not a header.
     """
     match = _HEADER_RE.match(line.strip())
     if not match:
@@ -68,7 +57,7 @@ def _parse_header(line: str) -> _Header | None:
     except ValueError:
         logger.debug("Could not parse clipboard timestamp: %r", match.group("ts"))
 
-    return _Header(
+    return ClipboardHeader(
         hex=hex_name,
         type=_type_from_display(type_display),
         name=name,

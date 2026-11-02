@@ -5,8 +5,8 @@ from __future__ import annotations
 import re
 
 from foxhole_stockpiles.enums.item_faction import ItemFaction
+from foxhole_stockpiles.models.catalog_code import CatalogCode
 from foxhole_stockpiles.services.clipboard_parser.code_map import (
-    CatalogCode,
     ClipboardCodeMap,
     _choose_code,
 )

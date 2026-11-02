@@ -7,10 +7,12 @@ from typing import Any
 
 from foxhole_stockpiles.enums.hex import Hex
 from foxhole_stockpiles.enums.item_faction import ItemFaction
+from foxhole_stockpiles.models.catalog_code import CatalogCode
+from foxhole_stockpiles.models.clipboard_header import ClipboardHeader
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
-from foxhole_stockpiles.services.clipboard_parser.code_map import CatalogCode, ClipboardCodeMap
-from foxhole_stockpiles.services.clipboard_parser.header import _Header, _parse_header
+from foxhole_stockpiles.services.clipboard_parser.code_map import ClipboardCodeMap
+from foxhole_stockpiles.services.clipboard_parser.header import _parse_header
 from foxhole_stockpiles.services.clipboard_parser.items import (
     _detect_locale,
     _infer_faction,
@@ -37,7 +39,7 @@ def parse_clipboard(text: str | None, code_map: ClipboardCodeMap) -> Stockpile |
         return None
 
     lines = text.splitlines()
-    header: _Header | None = None
+    header: ClipboardHeader | None = None
     body_start = 0
     for index, line in enumerate(lines):
         if not line.strip():

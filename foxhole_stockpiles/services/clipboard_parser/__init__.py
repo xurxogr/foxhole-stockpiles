@@ -37,8 +37,8 @@ clipboard content.
 
 from __future__ import annotations
 
+from foxhole_stockpiles.models.catalog_code import CatalogCode
 from foxhole_stockpiles.services.clipboard_parser.code_map import (
-    CatalogCode,
     ClipboardCodeMap,
     build_code_map,
     build_code_map_from_file,
