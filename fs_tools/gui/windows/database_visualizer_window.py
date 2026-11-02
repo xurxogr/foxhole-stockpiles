@@ -3,9 +3,8 @@
 import logging
 from pathlib import Path
 
-import numpy as np
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont, QImage, QPixmap
+from PySide6.QtGui import QFont, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -27,12 +26,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from foxhole_stockpiles.core.image_io import swap_rb, write_bgr
+from foxhole_stockpiles.core.image_io import write_bgr
 from foxhole_stockpiles.enums.item_category import ItemCategory
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
 from fs_tools.core.template_store import delete_icon, read_resolution, replace_icon
+from fs_tools.gui.utils.bgr_pixmap import bgr_to_pixmap
 from fs_tools.gui.utils.database_loader_worker import DatabaseLoaderWorker
 from fs_tools.models.icon_template import IconTemplate
 
@@ -628,22 +628,6 @@ class DatabaseVisualizerWindow(QDialog):
         self._display_comparison_images(template, highest_template)
 
     @staticmethod
-    def _template_to_pixmap(image: np.ndarray) -> tuple[QPixmap, int, int]:
-        """Convert a template's BGR image array into a displayable QPixmap.
-
-        Args:
-            image (np.ndarray): BGR image array from an IconTemplate.
-
-        Returns:
-            tuple[QPixmap, int, int]: The pixmap and its (width, height).
-        """
-        rgb = swap_rb(image)
-        h, w, ch = rgb.shape
-        bytes_per_line = ch * w
-        qt_image = QImage(rgb.data.tobytes(), w, h, bytes_per_line, QImage.Format.Format_RGB888)
-        return QPixmap.fromImage(qt_image), w, h
-
-    @staticmethod
     def _scale_pixmap(pixmap: QPixmap, width: int, height: int) -> QPixmap:
         """Scale a pixmap to the given size, keeping aspect ratio.
 
@@ -674,14 +658,15 @@ class DatabaseVisualizerWindow(QDialog):
         if not current_template:
             return
 
-        current_pixmap, current_w, current_h = self._template_to_pixmap(current_template.image)
+        current_pixmap = bgr_to_pixmap(current_template.image)
+        current_w, current_h = current_pixmap.width(), current_pixmap.height()
 
         if highest_template:
-            highest_pixmap, highest_w, highest_h = self._template_to_pixmap(highest_template.image)
+            highest_pixmap = bgr_to_pixmap(highest_template.image)
 
             # Target size: highest resolution at 4x scale
-            target_width = highest_w * 4
-            target_height = highest_h * 4
+            target_width = highest_pixmap.width() * 4
+            target_height = highest_pixmap.height() * 4
 
             # Keep aspect ratio when scaling current resolution to match target size
             current_scale = min(target_width / current_w, target_height / current_h)

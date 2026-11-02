@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont, QImage, QPixmap
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QDialog,
     QFileDialog,
@@ -23,9 +23,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from foxhole_stockpiles.core.image_io import resize_bgr, swap_rb
+from foxhole_stockpiles.core.image_io import resize_bgr
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
+from fs_tools.gui.utils.bgr_pixmap import bgr_to_pixmap
 from fs_tools.gui.utils.database_loader_worker import DatabaseLoaderWorker
 from fs_tools.gui.utils.image_scan_worker import ImageScanWorker
 from fs_tools.models.detected_icon_info import DetectedIconInfo
@@ -360,22 +361,8 @@ class DebugImageWindow(QDialog):
             size = highlight_icon.size
             _draw_box(display_image, x, y, size)
 
-        # Convert BGR to RGB for Qt
-        rgb_image = swap_rb(display_image)
-        h, w, ch = rgb_image.shape
-        bytes_per_line = ch * w
-
-        qt_image = QImage(
-            rgb_image.data.tobytes(),
-            w,
-            h,
-            bytes_per_line,
-            QImage.Format.Format_RGB888,
-        )
-
         # Scale to fit while maintaining aspect ratio
-        pixmap = QPixmap.fromImage(qt_image)
-        scaled_pixmap = pixmap.scaled(
+        scaled_pixmap = bgr_to_pixmap(display_image).scaled(
             self.screenshot_label.width() - 20,
             self.screenshot_label.height() - 20,
             Qt.AspectRatioMode.KeepAspectRatio,
@@ -610,23 +597,9 @@ class DebugImageWindow(QDialog):
         # Scale up for display
         display_image = resize_bgr(image, scaled_size, scaled_size, mode="nearest")
 
-        # Convert BGR to RGB for Qt
-        rgb_image = swap_rb(display_image)
-        h, w, ch = rgb_image.shape
-        bytes_per_line = ch * w
-
-        qt_image = QImage(
-            rgb_image.data.tobytes(),
-            w,
-            h,
-            bytes_per_line,
-            QImage.Format.Format_RGB888,
-        )
-        pixmap = QPixmap.fromImage(qt_image)
-
         # Icon image
         image_label = QLabel()
-        image_label.setPixmap(pixmap)
+        image_label.setPixmap(bgr_to_pixmap(display_image))
         image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         image_label.setStyleSheet("QLabel { border: 1px solid palette(mid); }")
         layout.addWidget(image_label)
