@@ -22,6 +22,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   language besides English, plus the current Chinese Storage Depot, Portuguese
   Keep and German Town Base names.
 
+- **Webhook URLs and tokens no longer reach the logs.** Each request logged its
+  full URL, which for Discord is the secret itself, and an invalid configuration
+  printed its token in the error. Set the `httpx` logger to `INFO` to see requests.
+- **Stockpile names can no longer write files outside the output folder.** A name
+  such as `..` moved the file up a level. Characters and device names Windows
+  refuses are also replaced, so `{stockpile_name}` can change for those names.
+- **Stockpiles with a dot in their name no longer overwrite each other's file.**
+  `base.v2` and `base.v3` were both saved as `base.json`.
+- **Spreadsheet output no longer lets data run as a formula.** Region and type
+  values were written to Google Sheets as they came, and a leading space could
+  hide a formula from the check in Sheets and CSV/TSV output.
+- **Google Sheets recovers from a revoked token** by asking to authorize again, and
+  stops waiting after 5 minutes if the browser window is closed. A broken
+  configuration is now reported without opening the browser.
+- **Saving the configuration can no longer corrupt it**, even if the disk fills up
+  or the app is killed halfway.
+- **Monitoring no longer leaks a connection for each webhook batch.**
+- **An oversized image is reported as unreadable** instead of ending the scan with
+  an error. Scans now read PNG, JPEG, BMP and WebP only.
+- **Capture only targets the game window.** Another application whose title starts
+  with "War", such as Warframe, is ignored.
+
+### Security
+- **Pillow updated to 13.0**, which fixes several image decoding vulnerabilities.
+- **Releases are built from locked dependencies**, and CI actions are pinned to
+  exact commits.
+- **A warning is logged when a webhook token is sent over plain HTTP** to another
+  machine.
+
 ## [1.1.0] - 2026-07-14
 
 ### Added
