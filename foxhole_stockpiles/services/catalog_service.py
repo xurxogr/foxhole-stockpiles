@@ -7,6 +7,8 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from foxhole_stockpiles.core.settings import get_settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -86,7 +88,5 @@ def get_catalog_service() -> CatalogService:
     Returns:
         CatalogService: A catalog service using the configured catalog file.
     """
-    from foxhole_stockpiles.core.settings import get_settings
-
     catalog_path = get_settings().database_builder.catalog_file
     return CatalogService(catalog_path=catalog_path)

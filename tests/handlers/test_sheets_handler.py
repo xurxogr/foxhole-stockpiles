@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from googleapiclient.errors import HttpError
 
+from foxhole_stockpiles.connectors.google_credentials import CredentialsUnavailableError
 from foxhole_stockpiles.core.settings.sections import SheetsHandlerSettings
 from foxhole_stockpiles.enums.stockpile_type import StockpileType
 from foxhole_stockpiles.handlers import sheets as sheets_mod
@@ -63,12 +64,17 @@ class TestSheetsOutputHandlerHandle:
 
     @pytest.mark.asyncio
     async def test_handle_no_creds(self, sample_stockpile: Stockpile) -> None:
-        """Test handling with no URL configured returns message."""
-        settings = SheetsHandlerSettings(spreadsheet_url=None)
+        """Missing credentials are reported as a message."""
+        settings = SheetsHandlerSettings(
+            spreadsheet_url=_VALID_URL,
+            sheet_id="Sheet1",
+            start_cell="A1",
+            row_format="item_code_name",
+        )
+        error = CredentialsUnavailableError("Credentials missing")
 
-        handler = SheetsOutputHandler(settings)
-
-        result = await handler.handle([sample_stockpile])
+        with patch.object(sheets_mod, "load_google_credentials", side_effect=error):
+            result = await SheetsOutputHandler(settings).handle([sample_stockpile])
 
         assert result == {"message": "Credentials missing"}
 
@@ -138,7 +144,10 @@ class TestSheetsOutputHandlerHandle:
             start_cell="A1",
             row_format="item_code_name,item_quantity",
         )
-        with patch.object(sheets_mod, "build", return_value=MagicMock()) as build:
+        with (
+            patch.object(sheets_mod, "load_google_credentials", return_value=MagicMock()),
+            patch.object(sheets_mod, "build", return_value=MagicMock()) as build,
+        ):
             result = await SheetsOutputHandler(settings).handle([sample_stockpile])
         build.assert_called_once()
         assert result == {"status": "ok"}
@@ -157,7 +166,10 @@ class TestSheetsOutputHandlerHandle:
         resp.status = 500
         resp.reason = "Server Error"
         error = HttpError(resp, b"{}")
-        with patch.object(sheets_mod, "build", side_effect=error):
+        with (
+            patch.object(sheets_mod, "load_google_credentials", return_value=MagicMock()),
+            patch.object(sheets_mod, "build", side_effect=error),
+        ):
             result = await SheetsOutputHandler(settings).handle([sample_stockpile])
         assert result == {"message": "Appending failed"}
 

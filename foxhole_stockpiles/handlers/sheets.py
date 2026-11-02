@@ -2,30 +2,57 @@
 
 import asyncio
 import logging
-import os
-from pathlib import Path
-from re import Match, search
-from typing import Any
+import re
+from collections.abc import Callable
+from typing import Any, Final
 
-from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+from foxhole_stockpiles.connectors.google_credentials import (
+    CredentialsUnavailableError,
+    load_google_credentials,
+)
 from foxhole_stockpiles.core.settings.sections.output.sheets_handler import SheetsHandlerSettings
 from foxhole_stockpiles.handlers.base_handler import BaseOutputDestinationHandler
+from foxhole_stockpiles.handlers.formula_guard import neutralize_formula
 from foxhole_stockpiles.models.stockpile import Stockpile
+from foxhole_stockpiles.models.stockpile_item import StockpileItem
+from foxhole_stockpiles.services.catalog_service import get_catalog_service
+
+_SCOPES: Final[list[str]] = ["https://www.googleapis.com/auth/spreadsheets"]
+_SPREADSHEET_ID: Final[re.Pattern[str]] = re.compile(
+    r"^https://docs\.google\.com/spreadsheets/d/([^/?#]+)"
+)
+
+CellValue = Callable[[Stockpile, StockpileItem], Any]
+
+# What each column name of the configured row format writes.
+_CELL_VALUES: Final[dict[str, CellValue]] = {
+    "timestamp": lambda stockpile, _item: stockpile.timestamp.timestamp(),
+    "timestamp_datetime": lambda stockpile, _item: str(stockpile.timestamp),
+    "structure_type": lambda stockpile, _item: stockpile.type,
+    "region": lambda stockpile, _item: stockpile.hex,
+    "structure_x": lambda stockpile, _item: stockpile.coords.x if stockpile.coords else 0,
+    "structure_y": lambda stockpile, _item: stockpile.coords.y if stockpile.coords else 0,
+    "stockpile_name": lambda stockpile, _item: stockpile.name if stockpile.is_reserve else "Public",
+    "item_code_name": lambda _stockpile, item: item.code,
+    "item_display_name": lambda _stockpile, item: get_catalog_service().get_display_name(item.code),
+    "item_quantity": lambda _stockpile, item: item.quantity,
+    "item_crated": lambda _stockpile, item: item.crated,
+    "NONE": lambda _stockpile, _item: None,
+}
 
 
 class SheetsOutputHandler(BaseOutputDestinationHandler):
-    """Handles sending stockpile data to webhook endpoints."""
+    """Handles appending stockpile data to a Google Sheets spreadsheet."""
 
     def __init__(self, sheets_settings: SheetsHandlerSettings) -> None:
         """Initialize sheets output handler.
 
         Args:
-            sheets_settings(SheetsHandlerSettings): Sheets configuration settings
+            sheets_settings (SheetsHandlerSettings): Sheets configuration settings
         """
         self.logger = logging.getLogger(__name__)
         self._creds_path = sheets_settings.creds_path
@@ -34,8 +61,56 @@ class SheetsOutputHandler(BaseOutputDestinationHandler):
         self._start_cell = sheets_settings.start_cell
         self._row_format = sheets_settings.row_format
 
+    def _config_problem(self) -> str | None:
+        """Find what makes the configuration unusable.
+
+        Returns:
+            str | None: A message for the user, or None if it is complete.
+        """
+        if self._spreadsheet_url is None:
+            return "Spreadsheet URL missing"
+        if _SPREADSHEET_ID.search(self._spreadsheet_url) is None:
+            return "Spreadsheet URL invalid"
+        if self._sheet_id is None or not self._sheet_id.strip():
+            return "Sheet ID missing"
+        if self._start_cell is None or not self._start_cell.strip():
+            return "Start cell missing"
+        if self._row_format is None or not self._row_format.strip():
+            return "Row format missing"
+        return None
+
+    def _append_rows(self, creds: Credentials, rows: list[Any] | None) -> None:
+        """Append rows through the Sheets API. Blocks on the network.
+
+        Args:
+            creds (Credentials): Valid Google credentials.
+            rows (list[Any] | None): The rows to append.
+        """
+        match = _SPREADSHEET_ID.search(self._spreadsheet_url or "")
+        spreadsheet_id = match.group(1) if match else ""
+        # A1 notation doubles an apostrophe inside a quoted sheet name.
+        sheet = (self._sheet_id or "").replace("'", "''")
+        self.logger.debug("Appending to spreadsheet (Sheet: %s)", self._sheet_id)
+
+        service = build("sheets", "v4", credentials=creds)
+        result = (
+            service.spreadsheets()
+            .values()
+            .append(
+                spreadsheetId=spreadsheet_id,
+                range=f"'{sheet}'!{self._start_cell}",
+                valueInputOption="USER_ENTERED",
+                body={"values": rows},
+            )
+            .execute()
+        )
+        self.logger.debug("Append result: %s", result)
+
     async def handle(self, stockpiles: list[Stockpile], **kwargs: Any) -> dict[str, Any]:
         """Append stockpile data to sheets spreadsheet in FIR format.
+
+        The configuration is checked first, so a broken one is reported without
+        opening a browser window to authorize.
 
         Args:
             stockpiles (list[Stockpile]): The stockpile data to send
@@ -45,167 +120,56 @@ class SheetsOutputHandler(BaseOutputDestinationHandler):
         Returns:
             dict[str, Any]: Append response data
         """
-        auth_scopes = ["https://www.googleapis.com/auth/spreadsheets"]  # Needed scopes to append
-
-        creds = None
-        if self._creds_path != "mock":  # crude fix for tests, needs revisiting
-            # Try to find saved token, if it doesn't exist or is invalid, prompt reauth
-            if os.path.exists(Path("~/.fs_token").expanduser()):
-                # ignoring mypy error since it's a import issue
-                creds = Credentials.from_authorized_user_file(  # type: ignore [no-untyped-call]
-                    str(Path("~/.fs_token").expanduser()), auth_scopes
-                )
-            if not creds or not creds.valid:
-                if creds and creds.expired and creds.refresh_token:
-                    await asyncio.to_thread(creds.refresh, Request())
-                else:
-                    if self._creds_path is None or not os.path.exists(self._creds_path):
-                        return {"message": "Credentials missing"}
-                    flow = InstalledAppFlow.from_client_secrets_file(self._creds_path, auth_scopes)
-                    creds = await asyncio.to_thread(flow.run_local_server, port=0)
-                # Save the credentials for the next run, restricted to the owner since
-                # this file holds a live OAuth refresh/access token.
-                token_path = Path("~/.fs_token").expanduser()
-                if creds:
-                    fd = os.open(token_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-                    with os.fdopen(fd, "w") as token:
-                        token.write(creds.to_json())
-                    token_path.chmod(0o600)
-
-        if creds is None and self._creds_path != "mock":
-            return {"message": "Credentials invalid or authorization failed"}
-
-        if self._spreadsheet_url is None:
-            return {"message": "Spreadsheet URL missing"}
-
-        spreadsheet_id_match: Match[str] | None = search(
-            pattern=r"(?<=https://docs.google.com/spreadsheets/d/).*(?=/)",
-            string=self._spreadsheet_url,
-        )  # Get spreadsheet ID from URL
-
-        if spreadsheet_id_match is None:
-            return {"message": "Spreadsheet URL invalid"}
-
-        spreadsheet_id = spreadsheet_id_match.group()
-
-        if self._sheet_id is None or self._sheet_id.strip() == "":
-            return {"message": "Sheet ID missing"}
-
-        if self._start_cell is None or self._start_cell.strip() == "":
-            return {"message": "Start cell missing"}
-
-        if self._row_format is None or self._row_format.strip() == "":
-            return {"message": "Row format missing"}
-
-        self.logger.debug(
-            "Appending to spreadsheet (Spreadsheet ID: %s, Sheet: %s)",
-            spreadsheet_id,
-            self._sheet_id,
-        )
-
-        rows = self.stockpiles_to_rows(stockpiles)
+        problem = self._config_problem()
+        if problem is not None:
+            return {"message": problem}
 
         try:
-            service = build("sheets", "v4", credentials=creds)
-
-            # Call the Sheets API
-            body = {"values": rows}
-            result = await asyncio.to_thread(
-                service.spreadsheets()
-                .values()
-                .append(
-                    spreadsheetId=spreadsheet_id,
-                    range=f"'{self._sheet_id}'!{self._start_cell}",
-                    valueInputOption="USER_ENTERED",
-                    body=body,
-                )
-                .execute
+            creds = await asyncio.to_thread(
+                load_google_credentials, creds_path=self._creds_path, scopes=_SCOPES
             )
+        except CredentialsUnavailableError as e:
+            return {"message": str(e)}
 
-            self.logger.debug("Append result: %s", result)
-            return {"status": "ok"}
+        rows = self.stockpiles_to_rows(stockpiles)
+        try:
+            await asyncio.to_thread(self._append_rows, creds=creds, rows=rows)
         except HttpError:
             return {"message": "Appending failed"}
+        return {"status": "ok"}
 
     def stockpiles_to_rows(self, stockpiles: list[Stockpile]) -> list[Any] | None:
         """Transform stockpile data into cell format, for usage in CSV and spreadsheet export.
 
+        Rows are written with USER_ENTERED, so Sheets evaluates formulas. Every text
+        cell passes through here, whatever column it belongs to.
+
         Args:
             stockpiles (list[Stockpile]): Stockpile data
-        Returns:
-            list[Any]: Stockpiles in cell format
-            None: On failure
-        """
-        from foxhole_stockpiles.services.catalog_service import get_catalog_service
 
-        if self._row_format is None or self._row_format.strip() == "":
+        Returns:
+            list[Any] | None: Stockpiles in cell format, or None without a row format.
+        """
+        if self._row_format is None or not self._row_format.strip():
             return None
 
-        row_params = self._row_format.split(",")
-
-        values = []
-
-        for stockpile in stockpiles:
-            for item in stockpile.items:
-                row: list[Any] = []
-
-                for row_param in row_params:
-                    match row_param:
-                        case "timestamp":
-                            row.append(stockpile.timestamp.timestamp())
-                        case "timestamp_datetime":
-                            row.append(str(stockpile.timestamp))
-                        case "structure_type":
-                            row.append(stockpile.type)
-                        case "region":
-                            row.append(stockpile.hex)
-                        case "structure_x":
-                            if stockpile.coords is None:
-                                row.append(0)
-                            else:
-                                row.append(stockpile.coords.x)
-                        case "structure_y":
-                            if stockpile.coords is None:
-                                row.append(0)
-                            else:
-                                row.append(stockpile.coords.y)
-                        case "stockpile_name":
-                            row.append(
-                                self._neutralize_formula(stockpile.name)
-                                if stockpile.is_reserve
-                                else "Public"
-                            )
-                        case "item_code_name":
-                            row.append(self._neutralize_formula(item.code))
-                        case "item_display_name":
-                            row.append(
-                                self._neutralize_formula(
-                                    get_catalog_service().get_display_name(item.code)
-                                )
-                            )
-                        case "item_quantity":
-                            row.append(item.quantity)
-                        case "item_crated":
-                            row.append(item.crated)
-                        case "NONE":
-                            row.append(None)
-
-                values.append(row)
-
-        return values
+        columns = [
+            _CELL_VALUES[name] for name in self._row_format.split(",") if name in _CELL_VALUES
+        ]
+        return [
+            [self._safe_cell(column(stockpile, item)) for column in columns]
+            for stockpile in stockpiles
+            for item in stockpile.items
+        ]
 
     @staticmethod
-    def _neutralize_formula(value: str | None) -> str | None:
-        """Prevent formula injection when a value is written with USER_ENTERED.
+    def _safe_cell(value: Any) -> Any:
+        """Neutralize a cell value if it is text.
 
         Args:
-            value (str | None): The value to neutralize, or None.
+            value (Any): The cell value.
 
         Returns:
-            str | None: The value prefixed with a single quote if it starts with
-                a character that Sheets would interpret as a formula, unchanged
-                otherwise.
+            Any: The value, safe to write with USER_ENTERED.
         """
-        if value is not None and value.startswith(("=", "+", "-", "@")):
-            return "'" + value
-        return value
+        return neutralize_formula(value) if isinstance(value, str) else value
