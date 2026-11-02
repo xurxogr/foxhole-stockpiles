@@ -5,6 +5,7 @@ import logging
 from asyncio import sleep
 from collections.abc import Callable
 from typing import Any, Final, TypeVar
+from urllib.parse import urlsplit
 
 import httpx
 from httpx import AsyncClient, ConnectTimeout
@@ -13,6 +14,11 @@ from foxhole_stockpiles.core.settings.sections.output import WebhookHandlerSetti
 from foxhole_stockpiles.enums.auth_type import AuthType
 
 F = TypeVar("F", bound=Callable[..., Any])
+
+# Longest part of a non-JSON answer passed on to the user interface.
+MAX_ERROR_BODY_CHARS: Final[int] = 500
+
+_LOOPBACK_HOSTS: Final[frozenset[str]] = frozenset({"localhost", "127.0.0.1", "::1"})
 
 
 def async_retry_on_connect_timeout(max_retries: int = 3, delay: int = 1) -> Callable[[F], F]:
@@ -58,7 +64,7 @@ def async_retry_on_connect_timeout(max_retries: int = 3, delay: int = 1) -> Call
                 Any: Result of the decorated function
             """
             retries = 0
-            while retries < max_retries:
+            while True:
                 try:
                     return await func(*args, **kwargs)
                 except ConnectTimeout as e:
@@ -71,7 +77,6 @@ def async_retry_on_connect_timeout(max_retries: int = 3, delay: int = 1) -> Call
                         "ConnectTimeout occurred. Retrying (%d/%d)...", retries, max_retries
                     )
                     await sleep(delay)
-            return await func(*args, **kwargs)
 
         return wrapper  # type: ignore[return-value]
 
@@ -94,6 +99,23 @@ class WebhookConnector:
         self._output_settings = output_settings
         self._logger = logging.getLogger(__name__)
         self._client = AsyncClient(timeout=30.0)
+        self._warn_if_token_unencrypted()
+
+    def _warn_if_token_unencrypted(self) -> None:
+        """Warn when the auth token would travel over plain HTTP to another machine.
+
+        This is not rejected because a webhook on a trusted local network is a valid
+        setup, and refusing it would invalidate the whole saved configuration.
+        """
+        settings = self._output_settings
+        if not settings.url or settings.auth_type is None or not settings.token:
+            return
+        parts = urlsplit(settings.url)
+        if parts.scheme.lower() == "http" and parts.hostname not in _LOOPBACK_HOSTS:
+            self._logger.warning(
+                "The webhook token for %s is sent unencrypted over HTTP; use HTTPS",
+                parts.hostname,
+            )
 
     def _build_auth_headers(self, token: str | None = None) -> dict[str, str]:
         """Build authentication headers based on configured auth method.
@@ -191,7 +213,7 @@ class WebhookConnector:
             except httpx.HTTPStatusError as e:
                 return [f"HTTP {e.response.status_code} error from server"]
             except ValueError:
-                return [f"HTTP {response.status_code}: {response.text}"]
+                return [f"HTTP {response.status_code}: {response.text[:MAX_ERROR_BODY_CHARS]}"]
         except ConnectTimeout:
             raise
         except Exception as e:  # noqa: BLE001 - report any send failure back as a response message

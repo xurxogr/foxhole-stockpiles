@@ -24,3 +24,6 @@ class BaseOutputDestinationHandler(ABC):
                 destination (a dict, a list of messages, or None).
         """
         pass
+
+    async def close(self) -> None:  # noqa: B027 - optional hook, most handlers hold nothing
+        """Release the resources of this handler. Nothing to release by default."""

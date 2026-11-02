@@ -46,3 +46,7 @@ class WebhookOutputHandler(BaseOutputDestinationHandler):
         truncated = [msg[:_MAX_LOGGED_RESPONSE_CHARS] for msg in response]
         self.logger.debug("Webhook response: %s", truncated)
         return response
+
+    async def close(self) -> None:
+        """Close the HTTP client of the connector."""
+        await self._webhook_connector.close()

@@ -123,5 +123,19 @@ class OutputCoordinator:
                     str(e),
                 )
                 # Continue processing other handlers even if one fails
+            finally:
+                await self._close_handler(handler=handler, name=handler_config.name)
 
         return result
+
+    async def _close_handler(self, handler: BaseOutputDestinationHandler, name: str) -> None:
+        """Release a handler's resources without affecting the remaining handlers.
+
+        Args:
+            handler (BaseOutputDestinationHandler): The handler to close.
+            name (str): Its configured name, for the log.
+        """
+        try:
+            await handler.close()
+        except Exception as e:  # noqa: BLE001 - a failed cleanup must not block the rest
+            self.logger.warning("Handler '%s' failed to close: %s", name, e)
