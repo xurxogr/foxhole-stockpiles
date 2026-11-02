@@ -1,107 +1,56 @@
 """Sequential dispatcher applying config migrations in order."""
 
-from typing import Any
+from collections.abc import Callable
+from typing import Any, Final
 
 from foxhole_stockpiles.core.settings.config_migrator import steps_early, steps_late
+
+# The step that upgrades a config from each version to the next one.
+_MIGRATIONS: Final[dict[int, Callable[[dict[str, Any]], dict[str, Any]]]] = {
+    1: steps_early.migrate_v1_to_v2,
+    2: steps_early.migrate_v2_to_v3,
+    3: steps_early.migrate_v3_to_v4,
+    4: steps_early.migrate_v4_to_v5,
+    5: steps_early.migrate_v5_to_v6,
+    6: steps_early.migrate_v6_to_v7,
+    7: steps_late.migrate_v7_to_v8,
+    8: steps_late.migrate_v8_to_v9,
+    9: steps_late.migrate_v9_to_v10,
+    10: steps_late.migrate_v10_to_v11,
+    11: steps_late.migrate_v11_to_v12,
+    12: steps_late.migrate_v12_to_v13,
+    13: steps_late.migrate_v13_to_v14,
+    14: steps_late.migrate_v14_to_v15,
+    15: steps_late.migrate_v15_to_v16,
+}
 
 
 class ConfigMigrator:
     """Handles migration of configuration data between versions."""
 
-    CURRENT_VERSION = 16
+    CURRENT_VERSION: Final[int] = max(_MIGRATIONS) + 1
 
     @classmethod
     def apply_migrations(cls, data: dict[str, Any]) -> dict[str, Any]:
         """Apply configuration migrations.
 
         Args:
-            data: Raw configuration data
+            data (dict[str, Any]): Raw configuration data
 
         Returns:
-            Migrated configuration data
+            dict[str, Any]: Migrated configuration data. A version with no step,
+                such as a newer one, is returned as it is.
         """
         if not isinstance(data, dict):
             return data
 
-        # Make a copy to avoid modifying the original
         data = dict(data)
 
-        # Determine config version (default to 1 for old configs without version field)
+        # Configs from before the version field are version 1.
         version = data.get("config_version", 1)
-
-        # Apply migrations sequentially
-        if version == 1:
-            data = steps_early.migrate_v1_to_v2(data)
-            data["config_version"] = 2
-            version = 2
-
-        if version == 2:
-            data = steps_early.migrate_v2_to_v3(data)
-            data["config_version"] = 3
-            version = 3
-
-        if version == 3:
-            data = steps_early.migrate_v3_to_v4(data)
-            data["config_version"] = 4
-            version = 4
-
-        if version == 4:
-            data = steps_early.migrate_v4_to_v5(data)
-            data["config_version"] = 5
-            version = 5
-
-        if version == 5:
-            data = steps_early.migrate_v5_to_v6(data)
-            data["config_version"] = 6
-            version = 6
-
-        if version == 6:
-            data = steps_early.migrate_v6_to_v7(data)
-            data["config_version"] = 7
-            version = 7
-
-        if version == 7:
-            data = steps_late.migrate_v7_to_v8(data)
-            data["config_version"] = 8
-            version = 8
-
-        if version == 8:
-            data = steps_late.migrate_v8_to_v9(data)
-            data["config_version"] = 9
-            version = 9
-
-        if version == 9:
-            data = steps_late.migrate_v9_to_v10(data)
-            data["config_version"] = 10
-            version = 10
-
-        if version == 10:
-            data = steps_late.migrate_v10_to_v11(data)
-            data["config_version"] = 11
-            version = 11
-
-        if version == 11:
-            data = steps_late.migrate_v11_to_v12(data)
-            data["config_version"] = 12
-            version = 12
-
-        if version == 12:
-            data = steps_late.migrate_v12_to_v13(data)
-            data["config_version"] = 13
-            version = 13
-
-        if version == 13:
-            data = steps_late.migrate_v13_to_v14(data)
-            data["config_version"] = 14
-            version = 14
-
-        if version == 14:
-            data = steps_late.migrate_v14_to_v15(data)
-            data["config_version"] = 15
-            version = 15
-
-        if version == 15:
-            data = steps_late.migrate_v15_to_v16(data)
-            data["config_version"] = 16
+        while isinstance(version, int) and version in _MIGRATIONS:
+            data = _MIGRATIONS[version](data)
+            version += 1
+            data["config_version"] = version
 
         return data
