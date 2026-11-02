@@ -66,6 +66,14 @@ class TestStockpileTypeHasTech:
         """Bases with a tech tree are recognized."""
         assert StockpileType.has_tech(value)
 
+    @pytest.mark.parametrize(
+        "value", ["GarrisonStation2", "TownCLargeGarrisonGS1", "RelicBase2", "RelicBase3"]
+    )
+    def test_variant_code_names(self, value: str) -> None:
+        """Other CodeNames of the same bases, which save files also report, have tech."""
+        assert StockpileType.has_tech(value)
+        assert Stockpile(type=value, tech=StockpileTech(small_garrison=100)).tech is not None
+
     @pytest.mark.parametrize("value", [StockpileType.SEAPORT, StockpileType.REFINERY, "NewBase"])
     def test_non_bases(self, value: str) -> None:
         """Structures without a tech tree and unknown types are not."""

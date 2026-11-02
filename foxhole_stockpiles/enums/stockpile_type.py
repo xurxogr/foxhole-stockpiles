@@ -89,6 +89,11 @@ _TECH_TYPES: frozenset[str] = frozenset(
         StockpileType.BUNKER_BASE_1,
         StockpileType.BUNKER_BASE_2,
         StockpileType.BUNKER_BASE_3,
+        # Other CodeNames of the same bases, as reported by save files.
+        "GarrisonStation2",
+        "TownCLargeGarrisonGS1",
+        "RelicBase2",
+        "RelicBase3",
     }
 )
 
