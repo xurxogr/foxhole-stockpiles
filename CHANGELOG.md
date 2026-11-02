@@ -15,8 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **More bases accept their tech tree from save files.** `GarrisonStation2`,
   `TownCLargeGarrisonGS1`, `RelicBase2` and `RelicBase3` were rejected.
 - **One unreadable stockpile no longer loses the whole save file.** The error is
-  logged and added to that stockpile's `errors`, keeping the data that is valid,
-  and every other stockpile is processed as usual.
+  logged and every other stockpile is processed as usual. If only its tech,
+  refinery or factory orders are invalid, the stockpile is kept without them and
+  with the error in its `errors`; if its other data is invalid, it is left out.
+- **The clipboard recognizes more stockpile type names.** Aircraft Depot in every
+  language besides English, plus the current Chinese Storage Depot, Portuguese
+  Keep and German Town Base names.
 
 ## [1.1.0] - 2026-07-14
 
