@@ -105,8 +105,9 @@ class PakValidationController(QObject):
             )
             view.vanilla_group.setVisible(True)
             view.vanilla_info.setText(
-                t("database_builder.vanilla_warning_missing").replace(
-                    "{missing}", " and ".join(missing_overlays(result))
+                t(
+                    "database_builder.vanilla_warning_missing",
+                    missing=" and ".join(missing_overlays(result)),
                 )
             )
 
@@ -124,7 +125,7 @@ class PakValidationController(QObject):
         self.validation_failed = True
         self._set_pak_controls_enabled(True)
         view.set_validation_status(
-            text=t("database_builder.validation.check_failed").replace("{error}", error_msg),
+            text=t("database_builder.validation.check_failed", error=error_msg),
             color=STATUS_COLOR_ERROR,
         )
         view.vanilla_group.setVisible(False)
@@ -213,7 +214,7 @@ class PakValidationController(QObject):
         QMessageBox.warning(
             self._parent_widget,
             t("database_builder.invalid_vanilla_title"),
-            t("database_builder.invalid_vanilla_message").replace("{missing}", reason),
+            t("database_builder.invalid_vanilla_message", missing=reason),
         )
 
     def _set_vanilla_controls_enabled(self, enabled: bool) -> None:

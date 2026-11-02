@@ -56,7 +56,7 @@ class TemplateIconActions:
         QMessageBox.information(
             self._parent,
             t("database_visualizer.replace_success_title"),
-            t("database_visualizer.replace_success_message").replace("{code}", template.code),
+            t("database_visualizer.replace_success_message", code=template.code),
         )
 
     def on_save_icon(self) -> None:
@@ -85,14 +85,14 @@ class TemplateIconActions:
             QMessageBox.critical(
                 self._parent,
                 t("database_visualizer.save_error_title"),
-                t("database_visualizer.save_error_message").replace("{error}", str(e)),
+                t("database_visualizer.save_error_message", error=str(e)),
             )
             return
 
         QMessageBox.information(
             self._parent,
             t("database_visualizer.save_success_title"),
-            t("database_visualizer.save_success_message").replace("{path}", file_path),
+            t("database_visualizer.save_success_message", path=file_path),
         )
 
     def on_delete_icon(self) -> None:
@@ -106,9 +106,11 @@ class TemplateIconActions:
         reply = QMessageBox.question(
             self._parent,
             t("database_visualizer.delete_confirm_title"),
-            t("database_visualizer.delete_confirm_message")
-            .replace("{code}", template.code)
-            .replace("{resolution}", view.current_resolution.value),
+            t(
+                "database_visualizer.delete_confirm_message",
+                code=template.code,
+                resolution=view.current_resolution.value,
+            ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -123,14 +125,14 @@ class TemplateIconActions:
             QMessageBox.critical(
                 self._parent,
                 t("database_visualizer.delete_error_title"),
-                t("database_visualizer.delete_error_message").replace("{error}", str(e)),
+                t("database_visualizer.delete_error_message", error=str(e)),
             )
             return
 
         QMessageBox.information(
             self._parent,
             t("database_visualizer.delete_success_title"),
-            t("database_visualizer.delete_success_message").replace("{code}", template.code),
+            t("database_visualizer.delete_success_message", code=template.code),
         )
 
         view.clear_selection()
@@ -146,5 +148,5 @@ class TemplateIconActions:
         QMessageBox.critical(
             self._parent,
             t("database_visualizer.replace_error_title"),
-            t("database_visualizer.replace_error_message").replace("{error}", error),
+            t("database_visualizer.replace_error_message", error=error),
         )

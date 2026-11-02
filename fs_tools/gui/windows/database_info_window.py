@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
+from foxhole_stockpiles.i18n import on_language_changed, t
 from fs_tools.core.template_store import read_statistics
 
 logger = logging.getLogger(__name__)
@@ -96,9 +96,7 @@ class DatabaseInfoWindow(QDialog):
         )
 
         # Connect to language change signal with cleanup
-        self._language_callback = self._on_language_changed
-        on_language_changed(self._language_callback)
-        self.destroyed.connect(lambda cb=self._language_callback: off_language_changed(cb))
+        on_language_changed(self._on_language_changed)
 
     def _on_language_changed(self, _language: str) -> None:
         """Handle language change event."""
@@ -139,7 +137,7 @@ class DatabaseInfoWindow(QDialog):
         if not db_path_obj.exists():
             self._show_message(
                 t("database_info_window.file_not_found"),
-                t("database_info_window.file_not_exist").replace("{path}", db_path),
+                t("database_info_window.file_not_exist", path=db_path),
             )
             return
 

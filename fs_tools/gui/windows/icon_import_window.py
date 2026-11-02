@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 from foxhole_stockpiles.core.settings import get_settings
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.gui.utils.qt_log_handler import QtLogHandler
-from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
+from foxhole_stockpiles.i18n import on_language_changed, t
 from fs_tools.core.pak_directory import default_pak_directory
 from fs_tools.gui.utils.icon_import_worker import IconImportWorker
 from fs_tools.gui.utils.pak_coverage_status import has_catalog_icons
@@ -89,9 +89,7 @@ class IconImportWindow(QMainWindow):
         self.retranslate()
 
         # Connect to language change signal with cleanup
-        self._language_callback = self._on_language_changed
-        on_language_changed(self._language_callback)
-        self.destroyed.connect(lambda cb=self._language_callback: off_language_changed(cb))
+        on_language_changed(self._on_language_changed)
 
     def _build_vanilla_section(self, layout: QVBoxLayout) -> None:
         """Build the vanilla PAK section (hidden until validation requires it).
@@ -486,7 +484,7 @@ class IconImportWindow(QMainWindow):
             return False, t("database_builder.validation.wait_vanilla_validation")
 
         if self.pak_validation.validation_failed:
-            return False, t("database_builder.validation.check_failed").replace("{error}", "")
+            return False, t("database_builder.validation.check_failed", error="")
 
         if self.pak_validation.validation_result and not has_catalog_icons(
             self.pak_validation.validation_result
@@ -629,7 +627,7 @@ class IconImportWindow(QMainWindow):
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "level": "ERROR",
             "module": "icon_import",
-            "message": t("database_builder.import_error").replace("{error}", error_msg),
+            "message": t("database_builder.import_error", error=error_msg),
             "color": "#FF0000",  # Red
         }
         self.log_display.append_log(error_log)

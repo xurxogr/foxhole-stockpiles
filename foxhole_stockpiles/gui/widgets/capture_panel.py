@@ -34,7 +34,7 @@ from foxhole_stockpiles.gui.utils.capture_availability import (
     sav_file_available,
 )
 from foxhole_stockpiles.gui.utils.hotkey_listener import HotkeyListener, global_hotkeys_supported
-from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
+from foxhole_stockpiles.i18n import on_language_changed, t
 
 logger = logging.getLogger(__name__)
 
@@ -84,17 +84,10 @@ class CapturePanel(QWidget):
         self.clip_capture_triggered.connect(self.clip_pipeline.on_capture_triggered)
 
         # Connect to language changes with cleanup on destruction
-        self._language_callback = self._on_language_changed
-        on_language_changed(self._language_callback)
-        self.destroyed.connect(self._cleanup)
+        on_language_changed(self._on_language_changed)
 
         # On first run nothing is configured yet; point the user at Settings.
         self._maybe_prompt_setup()
-
-    def _cleanup(self) -> None:
-        """Clean up resources when widget is destroyed."""
-        off_language_changed(self._language_callback)
-        self._stop_all_workers()
 
     def _stop_all_workers(self) -> None:
         """Stop the hotkey listener and all SAV/clipboard workers; wait for them."""

@@ -18,7 +18,7 @@ from foxhole_stockpiles.enums.sav_mode import SavMode
 from foxhole_stockpiles.gui.utils.qt_log_handler import QtLogHandler
 from foxhole_stockpiles.gui.widgets.capture_panel import CapturePanel
 from foxhole_stockpiles.gui.windows.config_window import ConfigWindow
-from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
+from foxhole_stockpiles.i18n import on_language_changed, t
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +34,7 @@ class MainWindow(QMainWindow):
         self.init_ui()
         self.create_tray_icon()
         # Connect to language changes with cleanup on destruction
-        self._language_callback = self._on_language_changed
-        on_language_changed(self._language_callback)
-        self.destroyed.connect(lambda cb=self._language_callback: off_language_changed(cb))
+        on_language_changed(self._on_language_changed)
 
     def _on_language_changed(self, _language: str) -> None:
         """Handle language change event.

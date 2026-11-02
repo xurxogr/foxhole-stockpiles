@@ -13,7 +13,6 @@ from PySide6.QtWidgets import (
 from foxhole_stockpiles.core.settings.sections.gui import GUISettings
 from foxhole_stockpiles.i18n import (
     get_available_languages,
-    off_language_changed,
     on_language_changed,
     t,
 )
@@ -70,11 +69,7 @@ class GUITab(QWidget):
         layout.addStretch()
 
         # Connect to language change events for retranslation
-        self._language_callback = self._on_language_changed
-        on_language_changed(self._language_callback)
-
-        # Disconnect callback when widget is destroyed
-        self.destroyed.connect(self._cleanup)
+        on_language_changed(self._on_language_changed)
 
     def _on_language_changed(self, _language: str) -> None:
         """Handle language change event.
@@ -83,10 +78,6 @@ class GUITab(QWidget):
             _language: The new language code (unused).
         """
         self.retranslate()
-
-    def _cleanup(self) -> None:
-        """Clean up signal connections when widget is destroyed."""
-        off_language_changed(self._language_callback)
 
     def retranslate(self) -> None:
         """Update all translatable strings."""

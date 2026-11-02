@@ -169,8 +169,10 @@ class IconDetailPanel(QWidget):
                 f"{highest_template.resolution.value}px ({highest_template.image.shape})"
             )
         else:
-            not_found_msg = t("database_visualizer.info.highest_res_not_found")
-            not_found_msg = not_found_msg.replace("{resolution}", highest_resolution.value)
+            not_found_msg = t(
+                "database_visualizer.info.highest_res_not_found",
+                resolution=highest_resolution.value,
+            )
             highest_info = f"<b>{not_found_msg}</b>"
 
         self.info_label_right.setText(
@@ -233,8 +235,9 @@ class IconDetailPanel(QWidget):
             self.highest_image.setPixmap(highest_scaled)
             self.highest_image.resize(highest_scaled.size())
             self.highest_group.setTitle(
-                t("database_visualizer.highest_resolution_found").replace(
-                    "{resolution}", highest_template.resolution.value
+                t(
+                    "database_visualizer.highest_resolution_found",
+                    resolution=highest_template.resolution.value,
                 )
             )
         else:
@@ -250,7 +253,9 @@ class IconDetailPanel(QWidget):
         self.current_image.setPixmap(current_scaled)
         self.current_image.resize(current_scaled.size())
         self.current_group.setTitle(
-            t("database_visualizer.current_resolution_scale")
-            .replace("{resolution}", current_template.resolution.value)
-            .replace("{scale}", f"{current_scale:.1f}")
+            t(
+                "database_visualizer.current_resolution_scale",
+                resolution=current_template.resolution.value,
+                scale=f"{current_scale:.1f}",
+            )
         )

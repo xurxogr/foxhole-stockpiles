@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
-from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
+from foxhole_stockpiles.i18n import on_language_changed, t
 from fs_tools.gui.utils.bgr_pixmap import bgr_to_pixmap
 from fs_tools.gui.utils.database_loader_worker import DatabaseLoaderWorker
 from fs_tools.gui.utils.image_scan_worker import ImageScanWorker
@@ -101,9 +101,7 @@ class DebugImageWindow(QDialog):
             self.load_databases()
 
         # Connect to language change signal with cleanup
-        self._language_callback = self._on_language_changed
-        on_language_changed(self._language_callback)
-        self.destroyed.connect(lambda cb=self._language_callback: off_language_changed(cb))
+        on_language_changed(self._on_language_changed)
 
     def _on_language_changed(self, _language: str) -> None:
         """Handle language change event."""

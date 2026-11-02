@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 from foxhole_stockpiles import __version__
 from foxhole_stockpiles.core.settings import reload_settings
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
-from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
+from foxhole_stockpiles.i18n import on_language_changed, t
 from fs_tools.gui.widgets.tool_launcher_row import ToolLauncherRow
 from fs_tools.gui.windows.catalog_builder_window import CatalogBuilderWindow
 from fs_tools.gui.windows.database_info_window import DatabaseInfoWindow
@@ -101,9 +101,7 @@ class ToolsMainWindow(QMainWindow):
         self._refresh_tool_availability()
 
         # Connect to language change signal with cleanup.
-        self._language_callback = self._on_language_changed
-        on_language_changed(self._language_callback)
-        self.destroyed.connect(lambda cb=self._language_callback: off_language_changed(cb))
+        on_language_changed(self._on_language_changed)
 
     def _on_language_changed(self, _language: str) -> None:
         """Handle a language change event.

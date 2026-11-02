@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QGroupBox, QVBoxLayout, QWidget
 
 from foxhole_stockpiles.gui.widgets.config_tabs.gui_tab import GUITab
 from foxhole_stockpiles.gui.widgets.config_tabs.logging_tab import LoggingTab
-from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
+from foxhole_stockpiles.i18n import on_language_changed, t
 
 
 class GeneralTab(QWidget):
@@ -55,9 +55,7 @@ class GeneralTab(QWidget):
 
         self.retranslate()
 
-        self._language_callback = self._on_language_changed
-        on_language_changed(self._language_callback)
-        self.destroyed.connect(lambda cb=self._language_callback: off_language_changed(cb))
+        on_language_changed(self._on_language_changed)
 
     def _on_language_changed(self, _language: str) -> None:
         """Handle language change event."""

@@ -27,7 +27,6 @@ from foxhole_stockpiles.core.settings import get_settings
 from foxhole_stockpiles.gui.utils.config_manager import ConfigManager
 from foxhole_stockpiles.i18n import (
     get_available_languages,
-    off_language_changed,
     on_language_changed,
     set_language,
     t,
@@ -159,9 +158,7 @@ class SettingsDialog(QDialog):
         self._update_db_download_visibility()
 
         # Connect to language change signal with cleanup
-        self._language_callback = self._on_language_changed
-        on_language_changed(self._language_callback)
-        self.destroyed.connect(lambda cb=self._language_callback: off_language_changed(cb))
+        on_language_changed(self._on_language_changed)
 
     def showEvent(self, event: QShowEvent) -> None:
         """Fit the dialog height to its content the first time it is shown.

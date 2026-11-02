@@ -21,7 +21,7 @@ from foxhole_stockpiles.core.settings.sections.output import (
 )
 from foxhole_stockpiles.enums.output_format import OutputFormat
 from foxhole_stockpiles.gui.widgets.config_tabs.output_handler_dialog import OutputHandlerDialog
-from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
+from foxhole_stockpiles.i18n import on_language_changed, t
 
 
 class OutputTab(QWidget):
@@ -112,9 +112,7 @@ class OutputTab(QWidget):
         self._update_buttons_state()
 
         # Connect to language change signal with cleanup
-        self._language_callback = self._on_language_changed
-        on_language_changed(self._language_callback)
-        self.destroyed.connect(lambda cb=self._language_callback: off_language_changed(cb))
+        on_language_changed(self._on_language_changed)
 
     def _on_language_changed(self, _language: str) -> None:
         """Handle language change event."""
@@ -202,7 +200,7 @@ class OutputTab(QWidget):
             return
 
         handler_config = self._handlers[row]
-        message = t("output_tab.remove_handler_message").replace("{name}", handler_config.name)
+        message = t("output_tab.remove_handler_message", name=handler_config.name)
         reply = QMessageBox.question(
             self,
             t("output_tab.remove_handler_title"),

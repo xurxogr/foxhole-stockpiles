@@ -600,11 +600,6 @@ class TestEdgeCases:
 class TestRemainingBranches:
     """Cover the remaining guard arrows, cached getters, and callbacks."""
 
-    def test_cleanup(self, panel: cp.CapturePanel) -> None:
-        """_cleanup unregisters the language callback and stops workers."""
-        panel._cleanup()
-        assert panel._hotkey_listener is None
-
     def test_stop_all_workers_not_running(self, panel: cp.CapturePanel) -> None:
         """A scan worker that is not running is not waited on."""
         worker = MagicMock()

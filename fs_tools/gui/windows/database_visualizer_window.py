@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
 from foxhole_stockpiles.enums.item_category import ItemCategory
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
-from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
+from foxhole_stockpiles.i18n import on_language_changed, t
 from fs_tools.core.template_store import read_resolution
 from fs_tools.gui.utils.database_loader_worker import DatabaseLoaderWorker
 from fs_tools.gui.utils.template_icon_actions import TemplateIconActions
@@ -89,9 +89,7 @@ class DatabaseVisualizerWindow(QDialog):
         self.retranslate()
 
         # Connect to language change signal with cleanup
-        self._language_callback = self._on_language_changed
-        on_language_changed(self._language_callback)
-        self.destroyed.connect(lambda cb=self._language_callback: off_language_changed(cb))
+        on_language_changed(self._on_language_changed)
 
     def _on_language_changed(self, _language: str) -> None:
         """Handle language change event."""
@@ -310,9 +308,7 @@ class DatabaseVisualizerWindow(QDialog):
 
             # Update window title
             self.setWindowTitle(
-                t("database_visualizer.title_with_resolution").replace(
-                    "{resolution}", resolution.value
-                )
+                t("database_visualizer.title_with_resolution", resolution=resolution.value)
             )
 
             # Populate mod filter with available mods for this resolution
@@ -380,9 +376,7 @@ class DatabaseVisualizerWindow(QDialog):
             error_msg (str): Error message.
         """
         self.progress_bar.setVisible(False)
-        self.results_label.setText(
-            t("database_visualizer.error_loading").replace("{error}", error_msg)
-        )
+        self.results_label.setText(t("database_visualizer.error_loading", error=error_msg))
         logger.error("Failed to load database: %s", error_msg)
 
     def _apply_filters(self) -> None:
@@ -458,9 +452,7 @@ class DatabaseVisualizerWindow(QDialog):
         total = len(self.all_templates)
         filtered = len(self.filtered_templates)
         self.results_label.setText(
-            t("database_visualizer.showing_results")
-            .replace("{filtered}", str(filtered))
-            .replace("{total}", str(total))
+            t("database_visualizer.showing_results", filtered=str(filtered), total=str(total))
         )
 
     def _on_template_selected(self, item: QListWidgetItem) -> None:

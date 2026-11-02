@@ -31,7 +31,6 @@ from foxhole_stockpiles.gui.widgets.config_tabs.sav_processing_tab import SavPro
 from foxhole_stockpiles.gui.widgets.config_tabs.scanner_tab import ScannerTab
 from foxhole_stockpiles.i18n import (
     get_translator,
-    off_language_changed,
     on_language_changed,
     set_language,
     t,
@@ -120,7 +119,6 @@ class ConfigWindow(QMainWindow):
 
         # Connect to language change signal and clean up on destruction
         on_language_changed(self.retranslate)
-        self.destroyed.connect(lambda cb=self.retranslate: off_language_changed(cb))
 
         # Add status bar
         self.status_bar = QStatusBar()

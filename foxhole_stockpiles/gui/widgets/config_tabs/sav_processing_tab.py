@@ -20,7 +20,7 @@ from foxhole_stockpiles.core.settings.sections.sav_processing import SavProcessi
 from foxhole_stockpiles.core.utils import auto_detect_savefile
 from foxhole_stockpiles.enums.sav_mode import SavMode
 from foxhole_stockpiles.gui.widgets.hotkey_field import HotkeyField
-from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
+from foxhole_stockpiles.i18n import on_language_changed, t
 
 
 class SavProcessingTab(QWidget):
@@ -86,9 +86,7 @@ class SavProcessingTab(QWidget):
         self.retranslate()
 
         # Connect to language change signal with cleanup
-        self._language_callback = self._on_language_changed
-        on_language_changed(self._language_callback)
-        self.destroyed.connect(lambda cb=self._language_callback: off_language_changed(cb))
+        on_language_changed(self._on_language_changed)
 
     def _on_language_changed(self, _language: str) -> None:
         """Handle language change event."""

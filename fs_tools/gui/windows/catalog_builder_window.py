@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
 from foxhole_stockpiles.core.settings import get_settings
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.gui.utils.qt_log_handler import QtLogHandler
-from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
+from foxhole_stockpiles.i18n import on_language_changed, t
 from fs_tools.core.pak_directory import default_pak_directory
 from fs_tools.gui.utils.catalog_builder_worker import CatalogBuilderWorker
 from fs_tools.gui.widgets.log_table_widget import LogTableWidget
@@ -150,9 +150,7 @@ class CatalogBuilderWindow(QMainWindow):
         self.retranslate()
 
         # Connect to language change signal with cleanup
-        self._language_callback = self._on_language_changed
-        on_language_changed(self._language_callback)
-        self.destroyed.connect(lambda cb=self._language_callback: off_language_changed(cb))
+        on_language_changed(self._on_language_changed)
 
     def _on_language_changed(self, _language: str) -> None:
         """Handle language change event."""
@@ -327,7 +325,7 @@ class CatalogBuilderWindow(QMainWindow):
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "level": "ERROR",
             "module": "catalog_builder",
-            "message": t("catalog_builder.build_error").replace("{error}", error_msg),
+            "message": t("catalog_builder.build_error", error=error_msg),
             "color": "#FF0000",
         }
         self.log_display.append_log(error_log)
