@@ -16,14 +16,35 @@ _TYPE_ALIASES: list[tuple[StockpileType, tuple[str, ...]]] = [
     (StockpileType.SEAPORT, ("Seaport", "Seehafen", "Port", "Porto", "Морской порт", "海港")),
     (
         StockpileType.STORAGE_DEPOT,
-        ("Storage Depot", "Lagerdepot", "Dépôt", "Depósito", "Складское помещение", "仓库"),
+        (
+            "Storage Depot",
+            "Lagerdepot",
+            "Dépôt",
+            "Depósito",
+            "Складское помещение",
+            "仓库",
+            "储备站",
+        ),
     ),
-    (StockpileType.AIRCRAFT_DEPOT, ("Aircraft Depot",)),
+    (
+        StockpileType.AIRCRAFT_DEPOT,
+        (
+            "Aircraft Depot",
+            "Flugzeugdepot",
+            "Entrepôt à Avions",
+            "Depósito de Aeronaves",
+            "Авиационный склад",
+            "飞行器储备站",
+        ),
+    ),
     (
         StockpileType.ENCAMPMENT,
         ("Encampment", "Feldlager", "Campement", "Acampamento", "Лагерь", "营地"),
     ),
-    (StockpileType.KEEP, ("Keep", "Wehrturm", "Place Forte", "Torreão", "Крепость", "要塞")),
+    (
+        StockpileType.KEEP,
+        ("Keep", "Wehrturm", "Place Forte", "Torreão", "Крепость", "要塞", "Torre"),
+    ),
     (
         StockpileType.SAFE_HOUSE,
         ("Safe House", "Unterschlupf", "Planque", "Casa Fortificada", "Убежище", "安全屋"),
@@ -71,6 +92,7 @@ _TYPE_ALIASES: list[tuple[StockpileType, tuple[str, ...]]] = [
             "Base da Cidade",
             "Ратуша",
             "城镇基地",
+            "Stadthalle",
         ),
     ),
     (
