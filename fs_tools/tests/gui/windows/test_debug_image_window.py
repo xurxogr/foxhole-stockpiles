@@ -15,6 +15,7 @@ from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.i18n import t
 from foxhole_stockpiles.models.stockpile import Stockpile
 from fs_tools.gui.utils.database_loader_worker import DatabaseLoaderWorker
+from fs_tools.gui.widgets.icon_comparison_card import IconComparisonCard
 from fs_tools.gui.windows.debug_image_window import DebugImageWindow
 from fs_tools.models.debug_candidate import DebugCandidate
 from fs_tools.models.detected_icon_info import DetectedIconInfo
@@ -1348,7 +1349,7 @@ class TestDebugImageWindowCreateIconDisplay:
         """
         image = np.zeros((32, 32, 3), dtype=np.uint8)
 
-        widget = debug_window._create_icon_display(
+        widget = IconComparisonCard(
             image=image,
             label="Detected",
             sublabel="(scaled)",
@@ -1366,7 +1367,7 @@ class TestDebugImageWindowCreateIconDisplay:
         """
         image = np.zeros((32, 32, 3), dtype=np.uint8)
 
-        widget = debug_window._create_icon_display(
+        widget = IconComparisonCard(
             image=image,
             label="vanilla",
             sublabel="(1080p)",
@@ -1384,7 +1385,7 @@ class TestDebugImageWindowCreateIconDisplay:
         """
         image = np.zeros((32, 32, 3), dtype=np.uint8)
 
-        widget = debug_window._create_icon_display(
+        widget = IconComparisonCard(
             image=image,
             label="vanilla",
             sublabel="(1080p)",
@@ -1402,7 +1403,7 @@ class TestDebugImageWindowCreateIconDisplay:
         """
         image = np.zeros((32, 32, 3), dtype=np.uint8)
 
-        widget = debug_window._create_icon_display(
+        widget = IconComparisonCard(
             image=image,
             label="vanilla",
             sublabel="(1080p)",
@@ -1421,7 +1422,7 @@ class TestDebugImageWindowCreateIconDisplay:
         # Image with different size than target
         image = np.zeros((64, 64, 3), dtype=np.uint8)
 
-        widget = debug_window._create_icon_display(
+        widget = IconComparisonCard(
             image=image,
             label="vanilla",
             sublabel="(1080p)",
@@ -1439,7 +1440,7 @@ class TestDebugImageWindowCreateIconDisplay:
         """
         image = np.zeros((32, 32, 3), dtype=np.uint8)
 
-        widget = debug_window._create_icon_display(
+        widget = IconComparisonCard(
             image=image,
             label="vanilla",
             sublabel=None,

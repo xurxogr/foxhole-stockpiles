@@ -5,7 +5,6 @@ from pathlib import Path
 
 import numpy as np
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QDialog,
     QFileDialog,
@@ -23,12 +22,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from foxhole_stockpiles.core.image_io import resize_bgr
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
 from fs_tools.gui.utils.bgr_pixmap import bgr_to_pixmap
 from fs_tools.gui.utils.database_loader_worker import DatabaseLoaderWorker
 from fs_tools.gui.utils.image_scan_worker import ImageScanWorker
+from fs_tools.gui.widgets.icon_comparison_card import IconComparisonCard
 from fs_tools.models.detected_icon_info import DetectedIconInfo
 from fs_tools.models.icon_template import IconTemplate
 from fs_tools.models.scan_result import ScanResult
@@ -440,7 +439,7 @@ class DebugImageWindow(QDialog):
         matched_code = candidates[0].code if candidates else icon_info.code
 
         # Display detected icon with the engine's matched code
-        detected_widget = self._create_icon_display(
+        detected_widget = IconComparisonCard(
             image=icon_info.icon_image,
             label=t("debug_viewer.detected"),
             sublabel=matched_code,
@@ -464,7 +463,7 @@ class DebugImageWindow(QDialog):
             if template is None:
                 logger.debug("No template image for candidate %s/%s", candidate.mod, candidate.code)
                 continue
-            template_widget = self._create_icon_display(
+            template_widget = IconComparisonCard(
                 image=template.image,
                 label=candidate.mod,
                 sublabel=candidate.code,
@@ -560,81 +559,6 @@ class DebugImageWindow(QDialog):
         separator.setFixedWidth(2)
         separator.setStyleSheet("background-color: palette(mid);")
         self.comparison_layout.addWidget(separator)
-
-    def _create_icon_display(
-        self,
-        image: np.ndarray,
-        label: str,
-        sublabel: str | None,
-        ncc_score: float | None,
-        target_size: int,
-    ) -> QWidget:
-        """Create a widget displaying an icon with label and optional NCC score.
-
-        Args:
-            image (np.ndarray): Image to display (BGR format).
-            label (str): Label text (e.g., mod name or "Detected").
-            sublabel (str | None): Second line label text (e.g., code name or pHash dist).
-            ncc_score (float | None): NCC score to display, or None for detected icon.
-            target_size (int): Target size for scaling.
-
-        Returns:
-            QWidget: Widget containing the icon display.
-        """
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-        layout.setContentsMargins(5, 5, 5, 5)
-        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        # Scale image to 4x for visibility
-        scale = 4
-        scaled_size = target_size * scale
-
-        # Resize image if needed to match target size first
-        if image.shape[0] != target_size or image.shape[1] != target_size:
-            image = resize_bgr(image, target_size, target_size, mode="area")
-
-        # Scale up for display
-        display_image = resize_bgr(image, scaled_size, scaled_size, mode="nearest")
-
-        # Icon image
-        image_label = QLabel()
-        image_label.setPixmap(bgr_to_pixmap(display_image))
-        image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        image_label.setStyleSheet("QLabel { border: 1px solid palette(mid); }")
-        layout.addWidget(image_label)
-
-        # Label text (line 1)
-        text_label = QLabel(label)
-        text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        text_label.setFont(QFont("Arial", 10, QFont.Weight.Bold))
-        layout.addWidget(text_label)
-
-        # Sublabel (line 2)
-        if sublabel:
-            sublabel_widget = QLabel(sublabel)
-            sublabel_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            sublabel_widget.setStyleSheet("QLabel { color: palette(mid); }")
-            layout.addWidget(sublabel_widget)
-
-        # NCC score (line 3) - add spacer if None to keep alignment
-        score_label = QLabel()
-        score_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        if ncc_score is not None:
-            score_label.setText(f"NCC: {ncc_score:.3f}")
-            # Color based on score
-            if ncc_score >= 0.95:
-                color = "#4caf50"  # Green
-            elif ncc_score >= 0.90:
-                color = "#ff9800"  # Orange
-            else:
-                color = "#f44336"  # Red
-            score_label.setStyleSheet(f"QLabel {{ color: {color}; }}")
-        else:
-            score_label.setText(" ")  # Spacer for alignment
-        layout.addWidget(score_label)
-
-        return widget
 
     def _clear_comparison(self) -> None:
         """Clear the comparison panel."""
