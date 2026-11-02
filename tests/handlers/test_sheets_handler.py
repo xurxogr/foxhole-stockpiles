@@ -6,7 +6,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from googleapiclient.errors import HttpError
 
-from foxhole_stockpiles.connectors.google_credentials import CredentialsUnavailableError
+from foxhole_stockpiles.connectors.credentials_unavailable_error import (
+    CredentialsUnavailableError,
+)
 from foxhole_stockpiles.core.settings.sections import SheetsHandlerSettings
 from foxhole_stockpiles.enums.stockpile_type import StockpileType
 from foxhole_stockpiles.handlers import sheets as sheets_mod
@@ -51,7 +53,6 @@ class TestSheetsOutputHandlerInit:
     def test_init_with_settings(self, sheets_settings: SheetsHandlerSettings) -> None:
         """Test initialization with settings."""
         handler = SheetsOutputHandler(sheets_settings)
-        assert handler._creds_path == "mock"
         assert (
             handler._spreadsheet_url
             == "https://docs.google.com/spreadsheets/d/12345/edit?gid=0#gid=0"
@@ -73,7 +74,7 @@ class TestSheetsOutputHandlerHandle:
         )
         error = CredentialsUnavailableError("Credentials missing")
 
-        with patch.object(sheets_mod, "load_google_credentials", side_effect=error):
+        with patch.object(sheets_mod.GoogleCredentialsProvider, "load", side_effect=error):
             result = await SheetsOutputHandler(settings).handle([sample_stockpile])
 
         assert result == {"message": "Credentials missing"}
@@ -145,7 +146,7 @@ class TestSheetsOutputHandlerHandle:
             row_format="item_code_name,item_quantity",
         )
         with (
-            patch.object(sheets_mod, "load_google_credentials", return_value=MagicMock()),
+            patch.object(sheets_mod.GoogleCredentialsProvider, "load", return_value=MagicMock()),
             patch.object(sheets_mod, "build", return_value=MagicMock()) as build,
         ):
             result = await SheetsOutputHandler(settings).handle([sample_stockpile])
@@ -167,7 +168,7 @@ class TestSheetsOutputHandlerHandle:
         resp.reason = "Server Error"
         error = HttpError(resp, b"{}")
         with (
-            patch.object(sheets_mod, "load_google_credentials", return_value=MagicMock()),
+            patch.object(sheets_mod.GoogleCredentialsProvider, "load", return_value=MagicMock()),
             patch.object(sheets_mod, "build", side_effect=error),
         ):
             result = await SheetsOutputHandler(settings).handle([sample_stockpile])

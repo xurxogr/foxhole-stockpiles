@@ -4,7 +4,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from foxhole_stockpiles.connectors.google_credentials import CredentialsUnavailableError
+from foxhole_stockpiles.connectors.credentials_unavailable_error import (
+    CredentialsUnavailableError,
+)
 from foxhole_stockpiles.core.settings.sections import SheetsHandlerSettings
 from foxhole_stockpiles.handlers import sheets as sheets_mod
 from foxhole_stockpiles.handlers.sheets import SheetsOutputHandler
@@ -67,8 +69,8 @@ async def test_mock_is_not_a_way_around_authentication() -> None:
     handler = SheetsOutputHandler(_settings(creds_path="mock"))
     with (
         patch.object(
-            sheets_mod,
-            "load_google_credentials",
+            sheets_mod.GoogleCredentialsProvider,
+            "load",
             side_effect=CredentialsUnavailableError("Credentials missing"),
         ) as load,
         patch.object(sheets_mod, "build") as build,
@@ -84,7 +86,7 @@ async def test_mock_is_not_a_way_around_authentication() -> None:
 async def test_invalid_configuration_does_not_ask_for_authorization() -> None:
     """A broken configuration is reported before any browser window opens."""
     handler = SheetsOutputHandler(_settings(sheet_id=""))
-    with patch.object(sheets_mod, "load_google_credentials") as load:
+    with patch.object(sheets_mod.GoogleCredentialsProvider, "load") as load:
         result = await handler.handle([Stockpile(items=[_ITEM])])
 
     load.assert_not_called()
@@ -105,7 +107,7 @@ async def test_spreadsheet_id_is_only_the_id_segment(url: str) -> None:
     service = MagicMock()
     handler = SheetsOutputHandler(_settings(spreadsheet_url=url))
     with (
-        patch.object(sheets_mod, "load_google_credentials", return_value=MagicMock()),
+        patch.object(sheets_mod.GoogleCredentialsProvider, "load", return_value=MagicMock()),
         patch.object(sheets_mod, "build", return_value=service),
     ):
         result = await handler.handle([Stockpile(items=[_ITEM])])
@@ -121,7 +123,7 @@ async def test_apostrophe_in_sheet_name_is_escaped() -> None:
     service = MagicMock()
     handler = SheetsOutputHandler(_settings(sheet_id="Bob's"))
     with (
-        patch.object(sheets_mod, "load_google_credentials", return_value=MagicMock()),
+        patch.object(sheets_mod.GoogleCredentialsProvider, "load", return_value=MagicMock()),
         patch.object(sheets_mod, "build", return_value=service),
     ):
         await handler.handle([Stockpile(items=[_ITEM])])

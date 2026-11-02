@@ -9,10 +9,12 @@ from google.auth.exceptions import RefreshError
 from google_auth_oauthlib.flow import WSGITimeoutError
 
 from foxhole_stockpiles.connectors import google_credentials as module
+from foxhole_stockpiles.connectors.credentials_unavailable_error import (
+    CredentialsUnavailableError,
+)
 from foxhole_stockpiles.connectors.google_credentials import (
     OAUTH_TIMEOUT_SECONDS,
-    CredentialsUnavailableError,
-    load_google_credentials,
+    GoogleCredentialsProvider,
 )
 
 _SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -46,7 +48,10 @@ def test_valid_saved_token_is_used_as_is(token_path: Path) -> None:
     """Credentials that are still valid need neither a refresh nor a browser."""
     creds = _saved(valid=True)
     with patch.object(module.Credentials, "from_authorized_user_file", return_value=creds):
-        assert load_google_credentials(None, _SCOPES, token_path) is creds
+        assert (
+            GoogleCredentialsProvider(creds_path=None, scopes=_SCOPES, token_path=token_path).load()
+            is creds
+        )
     creds.refresh.assert_not_called()
 
 
@@ -54,7 +59,10 @@ def test_expired_token_is_refreshed_and_saved(token_path: Path) -> None:
     """An expired token with a refresh token is renewed and written back."""
     creds = _saved(valid=False, expired=True, refresh_token="r")
     with patch.object(module.Credentials, "from_authorized_user_file", return_value=creds):
-        assert load_google_credentials(None, _SCOPES, token_path) is creds
+        assert (
+            GoogleCredentialsProvider(creds_path=None, scopes=_SCOPES, token_path=token_path).load()
+            is creds
+        )
     creds.refresh.assert_called_once()
     assert json.loads(token_path.read_text(encoding="utf-8")) == {"token": "t"}
 
@@ -73,7 +81,9 @@ def test_revoked_token_falls_back_to_authorizing_again(token_path: Path, tmp_pat
         patch.object(module.Credentials, "from_authorized_user_file", return_value=creds),
         patch.object(module.InstalledAppFlow, "from_client_secrets_file", return_value=flow),
     ):
-        result = load_google_credentials(str(client_secrets), _SCOPES, token_path)
+        result = GoogleCredentialsProvider(
+            creds_path=str(client_secrets), scopes=_SCOPES, token_path=token_path
+        ).load()
 
     assert result is fresh
     flow.run_local_server.assert_called_once_with(port=0, timeout_seconds=OAUTH_TIMEOUT_SECONDS)
@@ -87,13 +97,15 @@ def test_corrupt_token_file_is_ignored(token_path: Path) -> None:
         ),
         pytest.raises(CredentialsUnavailableError, match="Credentials missing"),
     ):
-        load_google_credentials(None, _SCOPES, token_path)
+        GoogleCredentialsProvider(creds_path=None, scopes=_SCOPES, token_path=token_path).load()
 
 
 def test_missing_client_secrets_is_reported(tmp_path: Path) -> None:
     """Without a saved token or a client secrets file nothing can authorize."""
     with pytest.raises(CredentialsUnavailableError, match="Credentials missing"):
-        load_google_credentials(str(tmp_path / "nope.json"), _SCOPES, tmp_path / "token")
+        GoogleCredentialsProvider(
+            creds_path=str(tmp_path / "nope.json"), scopes=_SCOPES, token_path=tmp_path / "token"
+        ).load()
 
 
 def test_abandoned_authorization_times_out(tmp_path: Path) -> None:
@@ -107,4 +119,6 @@ def test_abandoned_authorization_times_out(tmp_path: Path) -> None:
         patch.object(module.InstalledAppFlow, "from_client_secrets_file", return_value=flow),
         pytest.raises(CredentialsUnavailableError, match="authorization failed"),
     ):
-        load_google_credentials(str(client_secrets), _SCOPES, tmp_path / "token")
+        GoogleCredentialsProvider(
+            creds_path=str(client_secrets), scopes=_SCOPES, token_path=tmp_path / "token"
+        ).load()

@@ -10,10 +10,10 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from foxhole_stockpiles.connectors.google_credentials import (
+from foxhole_stockpiles.connectors.credentials_unavailable_error import (
     CredentialsUnavailableError,
-    load_google_credentials,
 )
+from foxhole_stockpiles.connectors.google_credentials import GoogleCredentialsProvider
 from foxhole_stockpiles.core.settings.sections.output.sheets_handler import SheetsHandlerSettings
 from foxhole_stockpiles.handlers.base_handler import BaseOutputDestinationHandler
 from foxhole_stockpiles.handlers.formula_guard import neutralize_formula
@@ -55,7 +55,9 @@ class SheetsOutputHandler(BaseOutputDestinationHandler):
             sheets_settings (SheetsHandlerSettings): Sheets configuration settings
         """
         self.logger = logging.getLogger(__name__)
-        self._creds_path = sheets_settings.creds_path
+        self._credentials = GoogleCredentialsProvider(
+            creds_path=sheets_settings.creds_path, scopes=_SCOPES
+        )
         self._spreadsheet_url = sheets_settings.spreadsheet_url
         self._sheet_id = sheets_settings.sheet_id
         self._start_cell = sheets_settings.start_cell
@@ -125,9 +127,7 @@ class SheetsOutputHandler(BaseOutputDestinationHandler):
             return {"message": problem}
 
         try:
-            creds = await asyncio.to_thread(
-                load_google_credentials, creds_path=self._creds_path, scopes=_SCOPES
-            )
+            creds = await asyncio.to_thread(self._credentials.load)
         except CredentialsUnavailableError as e:
             return {"message": str(e)}
 
