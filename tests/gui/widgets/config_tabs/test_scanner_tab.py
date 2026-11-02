@@ -32,7 +32,7 @@ def test_scanner_tab_initialization(scanner_tab: ScannerTab) -> None:
         scanner_tab: ScannerTab instance
     """
     assert scanner_tab.database_path_input is not None
-    assert scanner_tab.capture_key_display is not None
+    assert scanner_tab.capture_key_field.display is not None
     assert scanner_tab.confidence_gap_input is not None
     assert scanner_tab.screenshots_folder_input is not None
 
@@ -163,7 +163,7 @@ def test_scanner_tab_set_values(scanner_tab: ScannerTab) -> None:
     scanner_tab.set_values(settings)
 
     assert scanner_tab.database_path_input.text() == "/test/db.h5"
-    assert scanner_tab.capture_key_display.text() == "F9"
+    assert scanner_tab.capture_key_field.display.text() == "F9"
     assert scanner_tab.confidence_gap_input.value() == 0.1
     assert scanner_tab.screenshots_folder_input.text() == "/test/screenshots"
 
@@ -231,7 +231,7 @@ def test_scanner_tab_capture_key_roundtrip(scanner_tab: ScannerTab) -> None:
         scanner_tab: ScannerTab instance
     """
     scanner_tab.set_values(ScannerSettings(capture_key="F9"))
-    assert scanner_tab.capture_key_display.text() == "F9"
+    assert scanner_tab.capture_key_field.display.text() == "F9"
     assert scanner_tab.get_values().capture_key == "F9"
 
 
@@ -242,5 +242,5 @@ def test_scanner_tab_clear_capture_key(scanner_tab: ScannerTab) -> None:
         scanner_tab: ScannerTab instance
     """
     scanner_tab.set_values(ScannerSettings(capture_key="F9"))
-    scanner_tab.clear_capture_key()
+    scanner_tab.capture_key_field.clear()
     assert scanner_tab.get_values().capture_key is None

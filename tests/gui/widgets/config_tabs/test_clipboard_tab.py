@@ -32,7 +32,7 @@ def test_initialization(clipboard_tab: ClipboardTab) -> None:
         clipboard_tab: ClipboardTab instance.
     """
     assert clipboard_tab.mode_combo is not None
-    assert clipboard_tab.clip_key_display is not None
+    assert clipboard_tab.clip_key_field.display is not None
     assert clipboard_tab.poll_interval_input is not None
 
 
@@ -47,7 +47,7 @@ def test_set_values(clipboard_tab: ClipboardTab) -> None:
     )
 
     assert clipboard_tab.mode_combo.currentData() == ClipMode.MONITOR
-    assert clipboard_tab.clip_key_display.text() == "F11"
+    assert clipboard_tab.clip_key_field.display.text() == "F11"
     assert clipboard_tab.poll_interval_input.value() == 2.5
 
 
@@ -75,7 +75,7 @@ def test_clear_hotkey_yields_none(clipboard_tab: ClipboardTab) -> None:
         clipboard_tab: ClipboardTab instance.
     """
     clipboard_tab.set_values(ClipboardSettings(clip_capture_key="F11"))
-    clipboard_tab._clear_clip_key()
+    clipboard_tab.clip_key_field.clear()
 
     assert clipboard_tab.get_values().clip_capture_key is None
 

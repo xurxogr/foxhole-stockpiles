@@ -6,7 +6,6 @@ from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QComboBox,
-    QDialog,
     QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
@@ -21,7 +20,7 @@ from PySide6.QtWidgets import (
 from foxhole_stockpiles.core.constants import DATA_DOWNLOAD_URL
 from foxhole_stockpiles.core.settings.sections.clipboard import ClipboardSettings
 from foxhole_stockpiles.enums.clip_mode import ClipMode
-from foxhole_stockpiles.gui.widgets.capture_key_dialog import CaptureKeyDialog
+from foxhole_stockpiles.gui.widgets.hotkey_field import HotkeyField
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
 
 
@@ -35,7 +34,6 @@ class ClipboardTab(QWidget):
             parent (QWidget | None): Parent widget. Defaults to None.
         """
         super().__init__(parent)
-        self._clip_capture_key_value: str | None = None
         self.init_ui()
 
     def init_ui(self) -> None:
@@ -73,19 +71,8 @@ class ClipboardTab(QWidget):
 
         # Clipboard hotkey (used in manual mode)
         self.clip_key_label = QLabel()
-        clip_key_layout_widget = QWidget()
-        clip_key_layout = QHBoxLayout(clip_key_layout_widget)
-        clip_key_layout.setContentsMargins(0, 0, 0, 0)
-        self.clip_key_display = QLineEdit()
-        self.clip_key_display.setReadOnly(True)
-        self.clip_key_change = QPushButton()
-        self.clip_key_change.clicked.connect(self._change_clip_key)
-        self.clip_key_clear = QPushButton()
-        self.clip_key_clear.clicked.connect(self._clear_clip_key)
-        clip_key_layout.addWidget(self.clip_key_display)
-        clip_key_layout.addWidget(self.clip_key_change)
-        clip_key_layout.addWidget(self.clip_key_clear)
-        form_layout.addRow(self.clip_key_label, clip_key_layout_widget)
+        self.clip_key_field = HotkeyField()
+        form_layout.addRow(self.clip_key_label, self.clip_key_field)
 
         # Poll interval
         self.poll_interval_label = QLabel()
@@ -126,9 +113,10 @@ class ClipboardTab(QWidget):
 
         self.clip_key_label.setText(t("clipboard_tab.clip_hotkey"))
         self.clip_key_label.setToolTip(t("clipboard_tab.clip_hotkey_tooltip"))
-        self.clip_key_display.setPlaceholderText(t("clipboard_tab.clip_hotkey_placeholder"))
-        self.clip_key_change.setText(t("clipboard_tab.clip_hotkey_change"))
-        self.clip_key_clear.setText(t("common.clear"))
+        self.clip_key_field.retranslate(
+            placeholder=t("clipboard_tab.clip_hotkey_placeholder"),
+            change_text=t("clipboard_tab.clip_hotkey_change"),
+        )
 
         self.poll_interval_label.setText(t("clipboard_tab.poll_interval_label"))
         self.poll_interval_label.setToolTip(t("clipboard_tab.poll_interval_tooltip"))
@@ -152,18 +140,6 @@ class ClipboardTab(QWidget):
         if filepath:
             self.catalog_path_input.setText(filepath)
 
-    def _change_clip_key(self) -> None:
-        """Open the key-capture dialog and store the chosen clipboard hotkey."""
-        dialog = CaptureKeyDialog(self)
-        if dialog.exec() == QDialog.DialogCode.Accepted and dialog.key_text:
-            self._clip_capture_key_value = dialog.key_text
-            self.clip_key_display.setText(dialog.key_text)
-
-    def _clear_clip_key(self) -> None:
-        """Clear the configured clipboard hotkey."""
-        self._clip_capture_key_value = None
-        self.clip_key_display.clear()
-
     def set_values(self, settings: ClipboardSettings) -> None:
         """Set widget values from settings.
 
@@ -174,8 +150,7 @@ class ClipboardTab(QWidget):
         mode_index = self.mode_combo.findData(settings.mode)
         if mode_index >= 0:
             self.mode_combo.setCurrentIndex(mode_index)
-        self._clip_capture_key_value = settings.clip_capture_key
-        self.clip_key_display.setText(settings.clip_capture_key or "")
+        self.clip_key_field.set_key(settings.clip_capture_key)
         self.poll_interval_input.setValue(settings.poll_interval)
 
     def get_values(self) -> ClipboardSettings:
@@ -186,7 +161,7 @@ class ClipboardTab(QWidget):
         """
         return ClipboardSettings(
             mode=self.mode_combo.currentData(),
-            clip_capture_key=self._clip_capture_key_value or None,
+            clip_capture_key=self.clip_key_field.key(),
             poll_interval=self.poll_interval_input.value(),
         )
 

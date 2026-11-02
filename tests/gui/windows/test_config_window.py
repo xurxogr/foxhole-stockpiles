@@ -288,7 +288,7 @@ def test_config_window_populate_tabs(config_window: ConfigWindow) -> None:
     config_window.populate_tabs()
 
     # Verify scanner_tab was populated with the capture key
-    assert config_window.scanner_tab.capture_key_display.text() == "F9"
+    assert config_window.scanner_tab.capture_key_field.display.text() == "F9"
 
 
 def test_config_window_populate_tabs_none_settings(config_window: ConfigWindow) -> None:

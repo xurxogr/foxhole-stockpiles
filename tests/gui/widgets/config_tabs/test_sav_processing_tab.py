@@ -4,10 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
-from PySide6.QtWidgets import QDialog
 
 from foxhole_stockpiles.gui.widgets.config_tabs import sav_processing_tab as mod
 from foxhole_stockpiles.gui.widgets.config_tabs.sav_processing_tab import SavProcessingTab
@@ -61,33 +60,12 @@ def test_clear_file(tab: SavProcessingTab) -> None:
     assert tab.sav_file_input.text() == ""
 
 
-def test_change_key_accepted(tab: SavProcessingTab) -> None:
-    """Accepting the key dialog stores and displays the hotkey."""
-    dialog = MagicMock()
-    dialog.exec.return_value = QDialog.DialogCode.Accepted
-    dialog.key_text = "<ctrl>+s"
-    with patch.object(mod, "CaptureKeyDialog", return_value=dialog):
-        tab._change_sav_key()
-    assert tab.sav_key_display.text() == "<ctrl>+s"
-    assert tab._sav_capture_key_value == "<ctrl>+s"
-
-
-def test_change_key_cancelled(tab: SavProcessingTab) -> None:
-    """Rejecting the key dialog keeps the existing hotkey."""
-    tab._sav_capture_key_value = "F1"
-    dialog = MagicMock()
-    dialog.exec.return_value = QDialog.DialogCode.Rejected
-    with patch.object(mod, "CaptureKeyDialog", return_value=dialog):
-        tab._change_sav_key()
-    assert tab._sav_capture_key_value == "F1"
-
-
 def test_clear_key(tab: SavProcessingTab) -> None:
-    """Clearing removes the configured hotkey."""
-    tab._sav_capture_key_value = "F9"
-    tab._clear_sav_key()
-    assert tab._sav_capture_key_value is None
-    assert tab.sav_key_display.text() == ""
+    """Clearing the field removes the hotkey from the values."""
+    tab.sav_key_field.set_key("F9")
+    tab.sav_key_field.clear()
+    assert tab.get_values().sav_capture_key is None
+    assert tab.sav_key_field.display.text() == ""
 
 
 def test_language_change_retranslates(tab: SavProcessingTab) -> None:
