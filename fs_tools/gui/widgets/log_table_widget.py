@@ -78,7 +78,7 @@ class LogTableWidget(QTableWidget):
 
         message_item = QTableWidgetItem(log_data["message"])
         message_item.setForeground(brush)
-        message_item.setTextAlignment(int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop))
+        message_item.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
 
         self.setItem(row_position, 0, time_item)
         self.setItem(row_position, 1, level_item)
