@@ -42,7 +42,6 @@ class SettingsDialog(QDialog):
 
     This dialog configures everything fs-tools relies on:
     - Template database path (scanner.database_path)
-    - External tools: repak, umodel and uassetgui
     - Database builder settings: catalog file and resolutions
 
     All values are persisted to the shared config file (see

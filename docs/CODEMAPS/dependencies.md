@@ -98,7 +98,7 @@ Packaging: `tool.setuptools.packages.find` includes `foxhole_stockpiles*` +
 - `sincroniza.sh` — rsync the source (minus the multi-GB `data/` PAKs) to a
   Windows path for building the exe there.
 - `build_database.sh` — extract PAKs + build the template DB via `fs-tools`.
-- `tools/` — `crate_overlay_calibrator.py`, `sync_stockpile_translations.py`, `update_dependencies.py`.
+- `tools/` — `sync_stockpile_translations.py`, `update_dependencies.py`.
 
 ## Config examples
 
