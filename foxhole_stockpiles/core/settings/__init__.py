@@ -3,6 +3,7 @@
 import logging
 from functools import lru_cache
 
+from foxhole_stockpiles.core.logging import setup_logging
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.core.settings.json_settings_source import Utf8JsonConfigSettingsSource
 
@@ -32,10 +33,6 @@ def reload_settings() -> AppSettings:
     new_settings = get_settings()
 
     # Always reconfigure logging to ensure any changes take effect
-    # Import here to avoid circular import: settings/__init__ -> core.logging ->
-    # settings.sections.logging -> settings/__init__ (partially initialized)
-    from foxhole_stockpiles.core.logging import setup_logging
-
     setup_logging(new_settings.logging)
 
     return new_settings

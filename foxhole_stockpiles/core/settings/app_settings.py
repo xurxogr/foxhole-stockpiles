@@ -57,6 +57,7 @@ class AppSettings(BaseSettings):
         env_nested_delimiter="__",
         env_prefix="FS_",
         json_file=str(_config_path),
+        hide_input_in_errors=True,  # the config holds webhook URLs and tokens
     )
 
     @model_validator(mode="before")

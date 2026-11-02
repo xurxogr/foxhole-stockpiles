@@ -4,13 +4,27 @@ import logging
 import sys
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
-
-from foxhole_stockpiles.core.settings.sections.logging import LoggingSettings
+from typing import Final, Protocol
 
 # Handler names used to identify handlers and avoid duplicates
 QT_GUI_HANDLER_NAME = "foxhole_qt_gui_handler"
 APP_STREAM_HANDLER_NAME = "foxhole_app_stream_handler"
 APP_FILE_HANDLER_NAME = "foxhole_app_file_handler"
+
+# httpx logs every request URL at INFO, and a webhook URL can be a credential
+# (Discord's holds its token), so it only logs problems unless configured otherwise.
+_QUIET_LOGGERS: Final[dict[str, int]] = {"httpx": logging.WARNING}
+
+
+class LoggingConfig(Protocol):
+    """The logging options ``setup_logging`` reads."""
+
+    loggers: dict[str, str]
+    log_level: str
+    log_format: str
+    date_format: str
+    rotate_logs: bool
+    log_file: str | None
 
 
 def _get_handler_by_name(logger: logging.Logger, name: str) -> logging.Handler | None:
@@ -58,11 +72,11 @@ def _get_min_level(root_level: str, loggers: dict[str, str]) -> int:
     return min(levels)
 
 
-def setup_logging(settings: LoggingSettings) -> None:
+def setup_logging(settings: LoggingConfig) -> None:
     """Setup logging configuration for the application.
 
     Args:
-        settings (LoggingSettings): Logging settings to configure logging.
+        settings (LoggingConfig): Logging settings to configure logging.
 
     Note:
         This function manages handlers by name to avoid duplicates and preserve
@@ -100,7 +114,7 @@ def setup_logging(settings: LoggingSettings) -> None:
                 encoding="utf-8",
             )
         else:
-            handler = logging.FileHandler(log_path)
+            handler = logging.FileHandler(log_path, encoding="utf-8")
 
         handler.set_name(APP_FILE_HANDLER_NAME)
     else:
@@ -116,10 +130,8 @@ def setup_logging(settings: LoggingSettings) -> None:
     if qt_handler:
         qt_handler.setLevel(min_level)
 
-    # Reset common loggers to NOTSET so they inherit from root
-    # This ensures log level changes take effect for all loggers
-    for logger_name in ["uvicorn", "uvicorn.error", "uvicorn.access", "fastapi"]:
-        logging.getLogger(logger_name).setLevel(logging.NOTSET)
+    for logger_name, quiet_level in _QUIET_LOGGERS.items():
+        logging.getLogger(logger_name).setLevel(quiet_level)
 
     # Configure individual logger levels from settings
     for logger_name, level in settings.loggers.items():

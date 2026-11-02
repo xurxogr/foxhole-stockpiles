@@ -13,7 +13,7 @@ class WebhookHandlerSettings(BaseModel):
     """Settings for webhook output handler."""
 
     type: OutputHandlerType = Field(default=OutputHandlerType.WEBHOOK, description="Handler type")
-    url: str | None = Field(description="Webhook URL for sending output", default=None)
+    url: str | None = Field(description="Webhook URL for sending output", default=None, repr=False)
     auth_type: AuthType | None = Field(
         description=(
             "Authentication type to use when sending to webhook. "
@@ -28,6 +28,7 @@ class WebhookHandlerSettings(BaseModel):
             "Required when auth_type is 'basic', 'bearer', or 'header'."
         ),
         default=None,
+        repr=False,
     )
     auth_header: str | None = Field(
         description=(
@@ -36,7 +37,7 @@ class WebhookHandlerSettings(BaseModel):
         default=None,
     )
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", hide_input_in_errors=True)
 
     ALLOWED_URL_SCHEMES: ClassVar[frozenset[str]] = frozenset({"http", "https"})
 
