@@ -6,7 +6,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtWidgets import QApplication, QMessageBox, QTableWidget
 
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.i18n import t
@@ -266,7 +266,7 @@ def test_append_log(configured_window: CatalogBuilderWindow) -> None:
         "color": "#FFFFFF",
     }
     initial_rows = configured_window.log_display.rowCount()
-    configured_window.append_log(log_data)
+    configured_window.log_display.append_log(log_data)
     assert configured_window.log_display.rowCount() == initial_rows + 1
 
 
@@ -274,27 +274,25 @@ def test_append_log(configured_window: CatalogBuilderWindow) -> None:
 
 
 def test_log_key_press_event_none(configured_window: CatalogBuilderWindow) -> None:
-    """Test _log_key_press_event handles None event."""
-    configured_window._log_key_press_event(None)  # Should not raise
+    """Test keyPressEvent handles None event."""
+    configured_window.log_display.keyPressEvent(None)  # Should not raise
 
 
 def test_log_key_press_event_copy(configured_window: CatalogBuilderWindow) -> None:
-    """Test _log_key_press_event handles copy key."""
-    with patch.object(configured_window, "_copy_selected_logs") as mock_copy:
+    """Test keyPressEvent handles copy key."""
+    with patch.object(configured_window.log_display, "_copy_selected_logs") as mock_copy:
         event = MagicMock()
         event.matches = MagicMock(return_value=True)
-        configured_window._log_key_press_event(event)
+        configured_window.log_display.keyPressEvent(event)
         mock_copy.assert_called_once()
 
 
 def test_log_key_press_event_other(configured_window: CatalogBuilderWindow) -> None:
-    """Test _log_key_press_event handles other keys."""
-    with patch(
-        "fs_tools.gui.windows.catalog_builder_window.QTableWidget.keyPressEvent"
-    ) as mock_key_press:
+    """Test keyPressEvent handles other keys."""
+    with patch.object(QTableWidget, "keyPressEvent") as mock_key_press:
         event = MagicMock()
         event.matches = MagicMock(return_value=False)
-        configured_window._log_key_press_event(event)
+        configured_window.log_display.keyPressEvent(event)
         mock_key_press.assert_called_once()
 
 
@@ -303,7 +301,7 @@ def test_log_key_press_event_other(configured_window: CatalogBuilderWindow) -> N
 
 def test_copy_selected_logs_no_selection(configured_window: CatalogBuilderWindow) -> None:
     """Test _copy_selected_logs handles no selection."""
-    configured_window._copy_selected_logs()  # Should not raise
+    configured_window.log_display._copy_selected_logs()  # Should not raise
 
 
 def test_copy_selected_logs_with_selection(configured_window: CatalogBuilderWindow) -> None:
@@ -315,13 +313,13 @@ def test_copy_selected_logs_with_selection(configured_window: CatalogBuilderWind
         "message": "Test message",
         "color": "#FFFFFF",
     }
-    configured_window.append_log(log_data)
+    configured_window.log_display.append_log(log_data)
     configured_window.log_display.selectRow(0)
 
     with patch.object(QApplication, "clipboard") as mock_clipboard:
         mock_cb = MagicMock()
         mock_clipboard.return_value = mock_cb
-        configured_window._copy_selected_logs()
+        configured_window.log_display._copy_selected_logs()
         mock_cb.setText.assert_called_once()
 
 

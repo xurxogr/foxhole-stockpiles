@@ -4,23 +4,16 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QBrush, QColor, QKeyEvent, QKeySequence
 from PySide6.QtWidgets import (
-    QAbstractItemView,
-    QApplication,
     QCheckBox,
     QFileDialog,
     QGroupBox,
     QHBoxLayout,
-    QHeaderView,
     QLabel,
     QLineEdit,
     QMainWindow,
     QMessageBox,
     QPushButton,
-    QTableWidget,
-    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -31,6 +24,7 @@ from foxhole_stockpiles.gui.utils.qt_log_handler import QtLogHandler
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
 from fs_tools.core.pak_directory import default_pak_directory
 from fs_tools.gui.utils.catalog_builder_worker import CatalogBuilderWorker
+from fs_tools.gui.widgets.log_table_widget import LogTableWidget
 
 logger = logging.getLogger(__name__)
 
@@ -54,11 +48,11 @@ class CatalogBuilderWindow(QMainWindow):
 
         # Setup log handler
         self.log_handler = QtLogHandler()
-        self.log_handler.log_message.connect(self.append_log)
         log_level = getattr(logging, self.settings.logging.log_level.upper(), logging.INFO)
         self.log_handler.setLevel(log_level)
 
         self.init_ui()
+        self.log_handler.log_message.connect(self.log_display.append_log)
 
     def init_ui(self) -> None:
         """Initialize the user interface."""
@@ -123,33 +117,7 @@ class CatalogBuilderWindow(QMainWindow):
         logs_layout = QVBoxLayout()
         self.logs_group.setLayout(logs_layout)
 
-        self.log_display = QTableWidget()
-        self.log_display.setColumnCount(4)
-        self.log_display.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.log_display.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.log_display.setWordWrap(True)
-        vertical_header = self.log_display.verticalHeader()
-        if vertical_header:
-            vertical_header.setVisible(False)
-            vertical_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        self.log_display.setStyleSheet(
-            "QTableWidget { background-color: #1E1E1E; gridline-color: #3E3E3E; }"
-        )
-
-        # Set column widths
-        header = self.log_display.horizontalHeader()
-        if header:
-            header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-            header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-            header.setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)
-            header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
-
-        self.log_display.setColumnWidth(0, 150)
-        self.log_display.setColumnWidth(1, 80)
-        self.log_display.setColumnWidth(2, 250)
-
-        # Enable copy on CTRL-C
-        self.log_display.keyPressEvent = self._log_key_press_event  # type: ignore[method-assign]
+        self.log_display = LogTableWidget()
 
         logs_layout.addWidget(self.log_display)
         layout.addWidget(self.logs_group, stretch=1)
@@ -204,14 +172,7 @@ class CatalogBuilderWindow(QMainWindow):
         self.full_checkbox.setText(t("catalog_builder.full_catalog"))
         self.full_checkbox.setToolTip(t("catalog_builder.full_catalog_tooltip"))
         self.logs_group.setTitle(t("catalog_builder.process_logs"))
-        self.log_display.setHorizontalHeaderLabels(
-            [
-                t("common.log_columns.time"),
-                t("common.log_columns.level"),
-                t("common.log_columns.module"),
-                t("common.log_columns.message"),
-            ]
-        )
+        self.log_display.retranslate()
         self.start_button.setText(t("catalog_builder.build_catalog"))
         self.cancel_button.setText(t("common.cancel"))
         self.clear_logs_button.setText(t("common.clear_logs"))
@@ -347,7 +308,7 @@ class CatalogBuilderWindow(QMainWindow):
                 "message": t("catalog_builder.build_cancelled"),
                 "color": "#FFA500",
             }
-        self.append_log(status_log)
+        self.log_display.append_log(status_log)
 
         # Re-enable inputs
         self.start_button.setEnabled(True)
@@ -369,7 +330,7 @@ class CatalogBuilderWindow(QMainWindow):
             "message": t("catalog_builder.build_error").replace("{error}", error_msg),
             "color": "#FF0000",
         }
-        self.append_log(error_log)
+        self.log_display.append_log(error_log)
 
     def on_build_progress(self, message: str) -> None:
         """Handle build progress update.
@@ -384,88 +345,11 @@ class CatalogBuilderWindow(QMainWindow):
             "message": message,
             "color": "#2196F3",
         }
-        self.append_log(progress_log)
-
-    def append_log(self, log_data: dict[str, str]) -> None:
-        """Append a log entry to the log display.
-
-        Args:
-            log_data (dict[str, str]): Dictionary containing log data
-        """
-        row_position = self.log_display.rowCount()
-        self.log_display.insertRow(row_position)
-
-        color = QColor(log_data["color"])
-        brush = QBrush(color)
-
-        time_item = QTableWidgetItem(log_data["timestamp"])
-        time_item.setForeground(brush)
-
-        level_item = QTableWidgetItem(log_data["level"])
-        level_item.setForeground(brush)
-
-        module_item = QTableWidgetItem(log_data["module"])
-        module_item.setForeground(brush)
-
-        message_item = QTableWidgetItem(log_data["message"])
-        message_item.setForeground(brush)
-        message_item.setTextAlignment(int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop))
-
-        self.log_display.setItem(row_position, 0, time_item)
-        self.log_display.setItem(row_position, 1, level_item)
-        self.log_display.setItem(row_position, 2, module_item)
-        self.log_display.setItem(row_position, 3, message_item)
-
-        self.log_display.resizeRowToContents(row_position)
-        self.log_display.scrollToBottom()
+        self.log_display.append_log(progress_log)
 
     def clear_logs(self) -> None:
         """Clear the log display."""
         self.log_display.setRowCount(0)
-
-    def _log_key_press_event(self, event: QKeyEvent | None) -> None:
-        """Handle key press events in log display.
-
-        Args:
-            event (QKeyEvent | None): Key event
-        """
-        if not event:
-            return
-
-        if event.matches(QKeySequence.StandardKey.Copy):
-            self._copy_selected_logs()
-        else:
-            QTableWidget.keyPressEvent(self.log_display, event)
-
-    def _copy_selected_logs(self) -> None:
-        """Copy selected log rows to clipboard."""
-        selected_rows = self.log_display.selectionModel()
-        if not selected_rows:
-            return
-
-        selected_indexes = selected_rows.selectedRows()
-        if not selected_indexes:
-            return
-
-        lines = []
-        for index in sorted(selected_indexes, key=lambda x: x.row()):
-            row = index.row()
-            time_item = self.log_display.item(row, 0)
-            level_item = self.log_display.item(row, 1)
-            module_item = self.log_display.item(row, 2)
-            message_item = self.log_display.item(row, 3)
-
-            if time_item and level_item and module_item and message_item:
-                line = (
-                    f"[{time_item.text()}] {level_item.text()} "
-                    f"{module_item.text()}: {message_item.text()}"
-                )
-                lines.append(line)
-
-        if lines:
-            clipboard = QApplication.clipboard()
-            if clipboard:
-                clipboard.setText("\n".join(lines))
 
     def closeEvent(self, event: object) -> None:
         """Handle window close event.

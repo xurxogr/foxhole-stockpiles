@@ -5,23 +5,19 @@ from datetime import datetime
 from pathlib import Path
 
 from fs_assets.types import PakCoverage
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QDragEnterEvent, QDropEvent, QKeyEvent, QKeySequence
+from PySide6.QtCore import Signal
+from PySide6.QtGui import QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
     QAbstractItemView,
-    QApplication,
     QFileDialog,
     QGroupBox,
     QHBoxLayout,
-    QHeaderView,
     QLabel,
     QLineEdit,
     QListWidget,
     QMainWindow,
     QMessageBox,
     QPushButton,
-    QTableWidget,
-    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -38,6 +34,7 @@ from fs_tools.gui.utils.pak_coverage_status import (
     missing_overlays,
 )
 from fs_tools.gui.utils.pak_coverage_worker import PakCoverageWorker
+from fs_tools.gui.widgets.log_table_widget import LogTableWidget
 
 logger = logging.getLogger(__name__)
 
@@ -77,11 +74,11 @@ class IconImportWindow(QMainWindow):
         # Setup log handler (shared across all imports)
         # Use log level from settings
         self.log_handler = QtLogHandler()
-        self.log_handler.log_message.connect(self.append_log)
         log_level = getattr(logging, self.settings.logging.log_level.upper(), logging.INFO)
         self.log_handler.setLevel(log_level)
 
         self.init_ui()
+        self.log_handler.log_message.connect(self.log_display.append_log)
 
     def init_ui(self) -> None:
         """Initialize the user interface."""
@@ -252,35 +249,7 @@ class IconImportWindow(QMainWindow):
         logs_layout = QVBoxLayout()
         self.logs_group.setLayout(logs_layout)
 
-        self.log_display = QTableWidget()
-        self.log_display.setColumnCount(4)
-        self.log_display.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.log_display.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.log_display.setWordWrap(True)  # Enable word wrap for multi-line content
-        vertical_header = self.log_display.verticalHeader()
-        if vertical_header:
-            vertical_header.setVisible(False)
-            # Auto-resize rows to fit content
-            vertical_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        self.log_display.setStyleSheet(
-            "QTableWidget { background-color: #1E1E1E; gridline-color: #3E3E3E; }"
-        )
-
-        # Set column widths
-        header = self.log_display.horizontalHeader()
-        if header:
-            header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-            header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-            header.setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)
-            header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
-
-        # Set minimum column widths
-        self.log_display.setColumnWidth(0, 150)  # Time
-        self.log_display.setColumnWidth(1, 80)  # Level
-        self.log_display.setColumnWidth(2, 250)  # Module
-
-        # Enable copy on CTRL-C
-        self.log_display.keyPressEvent = self._log_key_press_event  # type: ignore[method-assign]
+        self.log_display = LogTableWidget()
 
         logs_layout.addWidget(self.log_display)
 
@@ -340,14 +309,7 @@ class IconImportWindow(QMainWindow):
         self.db_path_input.setToolTip(t("database_builder.destination_tooltip"))
         self.db_browse_button.setText(t("common.browse"))
         self.logs_group.setTitle(t("database_builder.process_logs"))
-        self.log_display.setHorizontalHeaderLabels(
-            [
-                t("common.log_columns.time"),
-                t("common.log_columns.level"),
-                t("common.log_columns.module"),
-                t("common.log_columns.message"),
-            ]
-        )
+        self.log_display.retranslate()
         self.start_button.setText(t("database_builder.start_import"))
         self.clear_logs_button.setText(t("common.clear_logs"))
         self.close_button.setText(t("common.close"))
@@ -867,7 +829,7 @@ class IconImportWindow(QMainWindow):
                 "message": t("database_builder.import_cancelled"),
                 "color": "#FFA500",  # Orange
             }
-        self.append_log(status_log)
+        self.log_display.append_log(status_log)
 
         # Re-enable inputs
         self._re_enable_inputs()
@@ -891,7 +853,7 @@ class IconImportWindow(QMainWindow):
             "message": t("database_builder.import_error").replace("{error}", error_msg),
             "color": "#FF0000",  # Red
         }
-        self.append_log(error_log)
+        self.log_display.append_log(error_log)
 
     def on_import_progress(self, message: str) -> None:
         """Handle import progress update.
@@ -899,7 +861,7 @@ class IconImportWindow(QMainWindow):
         Args:
             message (str): Progress message
         """
-        self.append_log(
+        self.log_display.append_log(
             {
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "level": "INFO",
@@ -909,97 +871,9 @@ class IconImportWindow(QMainWindow):
             }
         )
 
-    def append_log(self, log_data: dict[str, str]) -> None:
-        """Append a log entry to the log display.
-
-        Args:
-            log_data (dict[str, str]): Dictionary containing timestamp, level, module, message,
-                and color
-        """
-        row_position = self.log_display.rowCount()
-        self.log_display.insertRow(row_position)
-
-        color = QColor(log_data["color"])
-        brush = QBrush(color)
-
-        # Create table items
-        time_item = QTableWidgetItem(log_data["timestamp"])
-        time_item.setForeground(brush)
-
-        level_item = QTableWidgetItem(log_data["level"])
-        level_item.setForeground(brush)
-
-        module_item = QTableWidgetItem(log_data["module"])
-        module_item.setForeground(brush)
-
-        message_item = QTableWidgetItem(log_data["message"])
-        message_item.setForeground(brush)
-        # Enable text wrapping for message item and align to top
-        message_item.setTextAlignment(int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop))
-
-        # Add items to table
-        self.log_display.setItem(row_position, 0, time_item)
-        self.log_display.setItem(row_position, 1, level_item)
-        self.log_display.setItem(row_position, 2, module_item)
-        self.log_display.setItem(row_position, 3, message_item)
-
-        # Resize row to fit content
-        self.log_display.resizeRowToContents(row_position)
-
-        # Auto-scroll to bottom
-        self.log_display.scrollToBottom()
-
     def clear_logs(self) -> None:
         """Clear the log display."""
         self.log_display.setRowCount(0)
-
-    def _log_key_press_event(self, event: QKeyEvent | None) -> None:
-        """Handle key press events in log display.
-
-        Args:
-            event (QKeyEvent | None): Key event
-        """
-        if not event:
-            return
-
-        # Handle CTRL-C for copying selected rows
-        if event.matches(QKeySequence.StandardKey.Copy):
-            self._copy_selected_logs()
-        else:
-            # Call the default implementation for other keys
-            QTableWidget.keyPressEvent(self.log_display, event)
-
-    def _copy_selected_logs(self) -> None:
-        """Copy selected log rows to clipboard."""
-        selected_rows = self.log_display.selectionModel()
-        if not selected_rows:
-            return
-
-        selected_indexes = selected_rows.selectedRows()
-        if not selected_indexes:
-            return
-
-        # Build text from selected rows
-        lines = []
-        for index in sorted(selected_indexes, key=lambda x: x.row()):
-            row = index.row()
-            time_item = self.log_display.item(row, 0)
-            level_item = self.log_display.item(row, 1)
-            module_item = self.log_display.item(row, 2)
-            message_item = self.log_display.item(row, 3)
-
-            if time_item and level_item and module_item and message_item:
-                # Format: [Time] LEVEL Module: Message
-                line = (
-                    f"[{time_item.text()}] {level_item.text()} "
-                    f"{module_item.text()}: {message_item.text()}"
-                )
-                lines.append(line)
-
-        if lines:
-            clipboard = QApplication.clipboard()
-            if clipboard:
-                clipboard.setText("\n".join(lines))
 
     def closeEvent(self, event: object) -> None:
         """Handle window close event.

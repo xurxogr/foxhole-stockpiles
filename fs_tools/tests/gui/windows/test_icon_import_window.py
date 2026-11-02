@@ -9,7 +9,7 @@ import pytest
 from fs_assets.types import PakCoverage
 from PySide6.QtCore import QMimeData, Qt, QUrl
 from PySide6.QtGui import QDragEnterEvent, QDropEvent, QKeyEvent
-from PySide6.QtWidgets import QMessageBox, QTableWidget
+from PySide6.QtWidgets import QApplication, QMessageBox, QTableWidget
 
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.core.settings.sections.database_builder import DatabaseBuilderSettings
@@ -728,7 +728,7 @@ def test_append_log(qtbot: Any, configured_window: IconImportWindow) -> None:
         "color": "#FFFFFF",
     }
 
-    configured_window.append_log(log_data)
+    configured_window.log_display.append_log(log_data)
 
     assert configured_window.log_display.rowCount() == 1
     item_0_0 = configured_window.log_display.item(0, 0)
@@ -763,8 +763,8 @@ def test_append_multiple_logs(qtbot: Any, configured_window: IconImportWindow) -
         "color": "#FF0000",
     }
 
-    configured_window.append_log(log1)
-    configured_window.append_log(log2)
+    configured_window.log_display.append_log(log1)
+    configured_window.log_display.append_log(log2)
 
     assert configured_window.log_display.rowCount() == 2
 
@@ -784,8 +784,8 @@ def test_clear_logs(qtbot: Any, configured_window: IconImportWindow) -> None:
         "message": "Test message",
         "color": "#FFFFFF",
     }
-    configured_window.append_log(log_data)
-    configured_window.append_log(log_data)
+    configured_window.log_display.append_log(log_data)
+    configured_window.log_display.append_log(log_data)
 
     assert configured_window.log_display.rowCount() == 2
 
@@ -936,7 +936,7 @@ def test_copy_selected_logs(qtbot: Any, configured_window: IconImportWindow) -> 
         configured_window: Configured window instance
     """
     # Add some log entries
-    configured_window.append_log(
+    configured_window.log_display.append_log(
         {
             "timestamp": "2024-01-01 12:00:00",
             "level": "INFO",
@@ -945,7 +945,7 @@ def test_copy_selected_logs(qtbot: Any, configured_window: IconImportWindow) -> 
             "color": "#FFFFFF",
         }
     )
-    configured_window.append_log(
+    configured_window.log_display.append_log(
         {
             "timestamp": "2024-01-01 12:00:01",
             "level": "ERROR",
@@ -958,11 +958,11 @@ def test_copy_selected_logs(qtbot: Any, configured_window: IconImportWindow) -> 
     # Select all rows
     configured_window.log_display.selectAll()
 
-    with patch("fs_tools.gui.windows.icon_import_window.QApplication.clipboard") as mock_clipboard:
+    with patch.object(QApplication, "clipboard") as mock_clipboard:
         mock_clipboard_instance = MagicMock()
         mock_clipboard.return_value = mock_clipboard_instance
 
-        configured_window._copy_selected_logs()
+        configured_window.log_display._copy_selected_logs()
 
         # Check clipboard was called with formatted text
         mock_clipboard_instance.setText.assert_called_once()
@@ -1695,7 +1695,7 @@ def test_log_key_press_event_none(configured_window: IconImportWindow) -> None:
         configured_window: Configured window instance
     """
     # Should not raise
-    configured_window._log_key_press_event(None)
+    configured_window.log_display.keyPressEvent(None)
 
 
 def test_log_key_press_event_other_key(configured_window: IconImportWindow) -> None:
@@ -1713,7 +1713,7 @@ def test_log_key_press_event_other_key(configured_window: IconImportWindow) -> N
 
     # Should not raise and should call default handler
     with patch.object(QTableWidget, "keyPressEvent") as mock_default:
-        configured_window._log_key_press_event(event)
+        configured_window.log_display.keyPressEvent(event)
         mock_default.assert_called_once()
 
 
@@ -1731,8 +1731,8 @@ def test_log_key_press_event_copy_key(configured_window: IconImportWindow) -> No
     )
 
     # Should call _copy_selected_logs
-    with patch.object(configured_window, "_copy_selected_logs") as mock_copy:
-        configured_window._log_key_press_event(event)
+    with patch.object(configured_window.log_display, "_copy_selected_logs") as mock_copy:
+        configured_window.log_display.keyPressEvent(event)
         mock_copy.assert_called_once()
 
 
@@ -1744,7 +1744,7 @@ def test_copy_selected_logs_no_selection_model(configured_window: IconImportWind
     """
     with patch.object(configured_window.log_display, "selectionModel", return_value=None):
         # Should not raise
-        configured_window._copy_selected_logs()
+        configured_window.log_display._copy_selected_logs()
 
 
 def test_copy_selected_logs_no_selected_rows(configured_window: IconImportWindow) -> None:
@@ -1758,7 +1758,7 @@ def test_copy_selected_logs_no_selected_rows(configured_window: IconImportWindow
 
     with patch.object(configured_window.log_display, "selectionModel", return_value=mock_selection):
         # Should not raise
-        configured_window._copy_selected_logs()
+        configured_window.log_display._copy_selected_logs()
 
 
 def test_pak_drag_enter_event_while_validating(configured_window: IconImportWindow) -> None:
