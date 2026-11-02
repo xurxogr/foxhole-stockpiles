@@ -26,16 +26,13 @@ dependencies = [
     # Core image processing libraries
     "httpx>=0.28.1",
     "numpy>=2.5.0",
-    "pillow>=12.2.0",
+    "pillow>=13.0.0",
     "pydantic>=2.13.4",
     "pydantic_settings>=2.14.2",
     # Platform-appropriate config directory resolution
     "platformdirs>=4.10.0",
     # Clipboard access (shared by GUI and CLI clipboard scanning)
     "pyperclip>=1.8",
-    # Memory profiling
-    "psutil>=7.2.2",
-    "memory-profiler>=0.61.0",
     # Google API
     "google-api-python-client>=2.197.0",
     "google-auth-httplib2>=0.4.0",
@@ -65,9 +62,11 @@ dev = [
     "mypy>=2.1.0",
     "ruff>=0.15.19",
     "pre-commit>=4.6.0",
-    "types-requests",
-    "types-psutil",
 
+]
+# Packaging the standalone executables.
+build = [
+    "pyinstaller>=6.0",
 ]
 # Screenshot capture and global hotkeys (Windows only): game window lookup and
 # the hotkey listener. Without them both features are disabled.

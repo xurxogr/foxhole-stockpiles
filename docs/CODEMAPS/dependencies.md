@@ -23,8 +23,6 @@ Source of truth: `pyproject.toml`. Python **3.12+**.
 | google-auth-oauthlib | 1.4.0 | Google OAuth installed-app flow |
 | PySide6 | 6.6 | desktop GUI (LGPL) |
 | httpx | 0.28.1 | async HTTP (webhooks) |
-| psutil | 7.2.2 | process/memory utils |
-| memory-profiler | 0.61.0 | memory profiling |
 
 **Removed in the server-removal refactor:** `fastapi`, `uvicorn[standard]`,
 `python-multipart`, `jinja2`, `slowapi`.
@@ -72,7 +70,7 @@ OAuth installed-app flow; token cached at `~/.fs_token`. Config in
 ## Dev dependencies (`[project.optional-dependencies] dev`)
 
 pytest 9.0.3 (+ asyncio 1.2, cov 7.1, xdist 3.8, qt 4.5), mypy 2.1 (strict),
-ruff 0.15.13, pre-commit 4.6, type stubs (types-requests, types-psutil).
+ruff 0.15.13, pre-commit 4.6.
 
 **Quality gates:** `ruff check` / `ruff format`; `mypy foxhole_stockpiles fs_tools`
 (strict, pydantic plugin); `pytest` (≥80% coverage, `--cov=foxhole_stockpiles --cov=fs_tools`).
