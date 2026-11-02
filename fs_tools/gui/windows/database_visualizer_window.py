@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 
 import numpy as np
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QImage, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -32,45 +32,11 @@ from foxhole_stockpiles.enums.item_category import ItemCategory
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
-from fs_tools.core.template_store import (
-    delete_icon,
-    read_all_resolutions,
-    read_resolution,
-    replace_icon,
-)
+from fs_tools.core.template_store import delete_icon, read_resolution, replace_icon
+from fs_tools.gui.utils.database_loader_worker import DatabaseLoaderWorker
 from fs_tools.models.icon_template import IconTemplate
 
 logger = logging.getLogger(__name__)
-
-
-class DatabaseLoader(QThread):
-    """Thread for loading all databases in background."""
-
-    finished = Signal(object)  # all_databases_dict
-    error = Signal(str)
-
-    def __init__(self, database_path: str) -> None:
-        """Initialize the database loader.
-
-        Args:
-            database_path (str): Path to the database file to load.
-        """
-        super().__init__()
-        self.database_path = database_path
-
-    def run(self) -> None:
-        """Load all databases in background thread.
-
-        Emits:
-            finished: Signal with loaded databases on success.
-            error: Signal with error message on failure.
-        """
-        try:
-            self.finished.emit(read_all_resolutions(Path(self.database_path)))
-
-        except Exception as e:  # noqa: BLE001 - report any failure via the error signal
-            logger.exception("Failed to load databases")
-            self.error.emit(str(e))
 
 
 class DatabaseVisualizerWindow(QDialog):
@@ -90,7 +56,7 @@ class DatabaseVisualizerWindow(QDialog):
         self.current_templates: list[IconTemplate] | None = None
         self.filtered_templates: list[tuple[int, IconTemplate]] = []
         self.all_templates: list[tuple[int, IconTemplate]] = []
-        self.loader_thread: DatabaseLoader | None = None
+        self.loader_thread: DatabaseLoaderWorker | None = None
         self.selected_template: tuple[int, IconTemplate] | None = None
 
         self.init_ui()
@@ -476,8 +442,8 @@ class DatabaseVisualizerWindow(QDialog):
         self.progress_bar.setRange(0, 0)  # Indeterminate progress
 
         # Create and start loader thread
-        self.loader_thread = DatabaseLoader(self.database_path)
-        self.loader_thread.finished.connect(self._on_databases_loaded)
+        self.loader_thread = DatabaseLoaderWorker(self.database_path)
+        self.loader_thread.databases_loaded.connect(self._on_databases_loaded)
         self.loader_thread.error.connect(self._on_database_error)
         self.loader_thread.start()
 

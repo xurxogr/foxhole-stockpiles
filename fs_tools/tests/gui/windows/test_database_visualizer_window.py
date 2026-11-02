@@ -13,10 +13,8 @@ from foxhole_stockpiles.enums.item_category import ItemCategory
 from foxhole_stockpiles.enums.item_faction import ItemFaction
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.i18n import t
-from fs_tools.gui.windows.database_visualizer_window import (
-    DatabaseLoader,
-    DatabaseVisualizerWindow,
-)
+from fs_tools.gui.utils.database_loader_worker import DatabaseLoaderWorker
+from fs_tools.gui.windows.database_visualizer_window import DatabaseVisualizerWindow
 from fs_tools.models.icon_template import IconTemplate
 
 MODULE = "fs_tools.gui.windows.database_visualizer_window"
@@ -89,59 +87,6 @@ def visualizer_window(qtbot: Any) -> DatabaseVisualizerWindow:
     window = DatabaseVisualizerWindow(parent=None, database_path=None)
     qtbot.addWidget(window)
     return window
-
-
-class TestDatabaseLoader:
-    """Tests for DatabaseLoader thread."""
-
-    def test_initialization(self) -> None:
-        """Test DatabaseLoader initialization."""
-        loader = DatabaseLoader("/path/to/db.h5")
-        assert loader.database_path == "/path/to/db.h5"
-
-    def test_run_success(self, qtbot: Any) -> None:
-        """Test successful database loading.
-
-        Args:
-            qtbot: PyQt test fixture.
-        """
-        loader = DatabaseLoader("/path/to/db.h5")
-
-        mock_databases: dict[SupportedResolution, list[IconTemplate]] = {
-            SupportedResolution.R_1080: []
-        }
-
-        with patch(f"{MODULE}.read_all_resolutions", return_value=mock_databases) as mock_read:
-            # Connect signal to capture result
-            result = []
-            loader.finished.connect(lambda x: result.append(x))
-
-            loader.run()
-
-            mock_read.assert_called_once_with(Path("/path/to/db.h5"))
-            assert len(result) == 1
-            assert result[0] == mock_databases
-
-    def test_run_error(self, qtbot: Any) -> None:
-        """Test database loading error handling.
-
-        Args:
-            qtbot: PyQt test fixture.
-        """
-        loader = DatabaseLoader("/path/to/db.h5")
-
-        with patch(
-            f"{MODULE}.read_all_resolutions",
-            side_effect=FileNotFoundError("Database not found"),
-        ):
-            # Connect signal to capture error
-            errors = []
-            loader.error.connect(lambda x: errors.append(x))
-
-            loader.run()
-
-            assert len(errors) == 1
-            assert "Database not found" in errors[0]
 
 
 class TestDatabaseVisualizerWindowInitialization:
@@ -433,7 +378,7 @@ class TestDatabaseVisualizerWindowDatabaseLoading:
         """
         visualizer_window.database_path = "/path/to/db.h5"
 
-        with patch.object(DatabaseLoader, "start") as mock_start:
+        with patch.object(DatabaseLoaderWorker, "start") as mock_start:
             visualizer_window.load_databases()
 
             assert visualizer_window.loader_thread is not None

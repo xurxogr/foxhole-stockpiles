@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 
 import numpy as np
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QImage, QPixmap
 from PySide6.QtWidgets import (
     QDialog,
@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
 from foxhole_stockpiles.core.image_io import resize_bgr, swap_rb
 from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
-from fs_tools.core.template_store import read_all_resolutions
+from fs_tools.gui.utils.database_loader_worker import DatabaseLoaderWorker
 from fs_tools.gui.utils.image_scan_worker import ImageScanWorker
 from fs_tools.models.detected_icon_info import DetectedIconInfo
 from fs_tools.models.icon_template import IconTemplate
@@ -69,35 +69,6 @@ DEFAULT_PHASH_THRESHOLD = 15
 DEFAULT_MAX_NCC_CANDIDATES = 50
 
 
-class DatabaseLoader(QThread):
-    """Thread for loading all databases in background."""
-
-    finished = Signal(object)  # all_databases_dict
-    error = Signal(str)
-
-    def __init__(self, database_path: str) -> None:
-        """Initialize the database loader.
-
-        Args:
-            database_path (str): Path to the database file to load.
-        """
-        super().__init__()
-        self.database_path = database_path
-
-    def run(self) -> None:
-        """Load all databases in background thread.
-
-        Emits:
-            finished: Signal with loaded databases on success.
-            error: Signal with error message on failure.
-        """
-        try:
-            self.finished.emit(read_all_resolutions(Path(self.database_path)))
-        except Exception as e:  # noqa: BLE001 - report any failure via the error signal
-            logger.exception("Failed to load databases")
-            self.error.emit(str(e))
-
-
 class DebugImageWindow(QDialog):
     """Debug window for analyzing screenshot scanning results.
 
@@ -121,7 +92,7 @@ class DebugImageWindow(QDialog):
         self.scan_result: ScanResult | None = None
         self.selected_icon: DetectedIconInfo | None = None
 
-        self.loader_thread: DatabaseLoader | None = None
+        self.loader_thread: DatabaseLoaderWorker | None = None
         self.scan_worker: ImageScanWorker | None = None
 
         self.init_ui()
@@ -710,8 +681,8 @@ class DebugImageWindow(QDialog):
         if not self.database_path:
             return
 
-        self.loader_thread = DatabaseLoader(self.database_path)
-        self.loader_thread.finished.connect(self._on_databases_loaded)
+        self.loader_thread = DatabaseLoaderWorker(self.database_path)
+        self.loader_thread.databases_loaded.connect(self._on_databases_loaded)
         self.loader_thread.error.connect(self._on_database_error)
         self.loader_thread.start()
 
