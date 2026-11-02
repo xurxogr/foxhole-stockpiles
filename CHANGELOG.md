@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and clipboard data reported Encampment as `GarrisonStation` and Safe House as
   `ForwardBase1`. They now use the same codes as the game and save files, so the
   `type` and the stockpile key of these two structures change in the output.
+- **More bases accept their tech tree from save files.** `GarrisonStation2`,
+  `TownCLargeGarrisonGS1`, `RelicBase2` and `RelicBase3` were rejected.
+- **One unreadable stockpile no longer loses the whole save file.** The error is
+  logged and added to that stockpile's `errors`, keeping the data that is valid,
+  and every other stockpile is processed as usual.
 
 ## [1.1.0] - 2026-07-14
 
