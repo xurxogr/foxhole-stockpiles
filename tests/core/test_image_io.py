@@ -6,10 +6,12 @@ alpha channel of 4-channel template icons (a regression that silently corrupted
 generated template databases).
 """
 
+import io
 from pathlib import Path
 
 import numpy as np
 import pytest
+from PIL import Image
 
 from foxhole_stockpiles.core.image_io import (
     decode_bgr,
@@ -154,3 +156,32 @@ class TestResizeAndSwap:
             bgr_image (np.ndarray): Source BGR image.
         """
         assert np.array_equal(swap_rb(swap_rb(bgr_image)), bgr_image)
+
+
+class TestUntrustedImages:
+    """Tests for images the loaders must refuse without raising."""
+
+    def _png(self) -> bytes:
+        buffer = io.BytesIO()
+        Image.new("RGB", (64, 64)).save(buffer, format="PNG")
+        return buffer.getvalue()
+
+    def test_decompression_bomb_returns_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """An image far above the pixel limit is rejected like any unreadable one."""
+        monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 10)
+        assert decode_bgr(self._png()) is None
+
+    def test_decompression_bomb_file_returns_none(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The file loader rejects it the same way."""
+        path = tmp_path / "bomb.png"
+        path.write_bytes(self._png())
+        monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 10)
+        assert read_bgr(path) is None
+
+    def test_formats_outside_the_screenshot_list_are_refused(self) -> None:
+        """Rare decoders are not reachable from a file the user opens or receives."""
+        buffer = io.BytesIO()
+        Image.new("RGB", (8, 8)).save(buffer, format="TIFF")
+        assert decode_bgr(buffer.getvalue()) is None

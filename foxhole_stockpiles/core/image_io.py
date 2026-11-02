@@ -11,6 +11,7 @@ Arrays are BGR ``uint8`` (the order ``fs-ocr`` expects and the format the old
 
 import io
 from pathlib import Path
+from typing import Final
 
 import numpy as np
 from numpy.typing import NDArray
@@ -23,6 +24,18 @@ _RESAMPLE = {
     "nearest": Image.Resampling.NEAREST,  # cv2.INTER_NEAREST
     "linear": Image.Resampling.BILINEAR,  # cv2.INTER_LINEAR (default)
 }
+
+
+# Screenshots only. Limiting the decoders keeps the rarely used ones out of reach of
+# a file the user opens or receives.
+_READABLE_FORMATS: Final[tuple[str, ...]] = ("PNG", "JPEG", "BMP", "WEBP")
+
+# What Pillow raises for a file that cannot be read, is corrupt or is oversized.
+_DECODE_ERRORS: Final[tuple[type[Exception], ...]] = (
+    OSError,
+    ValueError,
+    Image.DecompressionBombError,
+)
 
 
 def _to_bgr(img: Image.Image) -> NDArray[np.uint8]:
@@ -49,9 +62,9 @@ def read_bgr(path: str | Path) -> NDArray[np.uint8] | None:
             (mirrors ``cv2.imread`` returning None on failure).
     """
     try:
-        with Image.open(path) as img:
+        with Image.open(path, formats=_READABLE_FORMATS) as img:
             return _to_bgr(img)
-    except (OSError, ValueError):
+    except _DECODE_ERRORS:
         return None
 
 
@@ -65,9 +78,9 @@ def decode_bgr(data: bytes) -> NDArray[np.uint8] | None:
         NDArray[np.uint8] | None: BGR image, or None if it cannot be decoded.
     """
     try:
-        with Image.open(io.BytesIO(data)) as img:
+        with Image.open(io.BytesIO(data), formats=_READABLE_FORMATS) as img:
             return _to_bgr(img)
-    except (OSError, ValueError):
+    except _DECODE_ERRORS:
         return None
 
 
