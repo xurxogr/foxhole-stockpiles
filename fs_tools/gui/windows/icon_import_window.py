@@ -1,7 +1,6 @@
 """Icon import window for importing new icons to the database."""
 
 import logging
-import platform
 from datetime import datetime
 from pathlib import Path
 
@@ -31,6 +30,7 @@ from foxhole_stockpiles.core.settings import get_settings
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.gui.utils.qt_log_handler import QtLogHandler
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
+from fs_tools.core.pak_directory import default_pak_directory
 from fs_tools.gui.utils.icon_import_worker import IconImportWorker
 from fs_tools.gui.utils.pak_coverage_status import (
     covers_all_overlays,
@@ -367,47 +367,12 @@ class IconImportWindow(QMainWindow):
         catalog_file = settings.database_builder.catalog_file
         return bool(catalog_file and catalog_file.exists())
 
-    def _get_default_pak_directory(self) -> str:
-        """Get default directory for PAK files based on platform.
-
-        Returns:
-            str: Default directory path for PAK files
-        """
-        # Default to current working directory
-        default_path = Path.cwd()
-        system = platform.system()
-
-        if system == "Windows":
-            # Windows: C:\Program Files (x86)\Steam\steamapps\common\Foxhole\War\Content\Paks
-            steam_path = Path(
-                "C:/Program Files (x86)/Steam/steamapps/common/Foxhole/War/Content/Paks"
-            )
-            if steam_path.exists():
-                default_path = steam_path
-        elif system == "Linux":
-            # Check if running under WSL
-            try:
-                with open("/proc/version") as f:
-                    version_info = f.read().lower()
-                    if "microsoft" in version_info or "wsl" in version_info:
-                        # WSL: /mnt/c/Program Files (x86)/Steam/...
-                        wsl_path = Path(
-                            "/mnt/c/Program Files (x86)/Steam/steamapps/common/"
-                            "Foxhole/War/Content/Paks"
-                        )
-                        if wsl_path.exists():
-                            default_path = wsl_path
-            except OSError:
-                pass  # Keep default_path as cwd
-
-        return str(default_path)
-
     def select_vanilla_pak(self) -> None:
         """Open file dialog to select vanilla PAK file."""
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             t("database_builder.select_vanilla_pak"),
-            self._get_default_pak_directory(),
+            default_pak_directory(),
             t("database_builder.pak_filter"),
         )
         if file_path:
@@ -452,7 +417,7 @@ class IconImportWindow(QMainWindow):
         files, _ = QFileDialog.getOpenFileNames(
             self,
             t("database_builder.select_mod_pak"),
-            self._get_default_pak_directory(),
+            default_pak_directory(),
             t("database_builder.pak_filter"),
         )
         if files:

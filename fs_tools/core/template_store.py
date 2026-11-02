@@ -54,7 +54,7 @@ def read_resolution(database_path: Path, resolution: SupportedResolution) -> lis
     Returns:
         list[IconTemplate]: The templates, in storage order.
     """
-    records = fs_assets.read_templates(str(database_path), int(resolution.value))
+    records = fs_assets.read_templates(database_path, int(resolution.value))
     return [_to_icon_template(record, resolution) for record in records]
 
 
@@ -68,7 +68,7 @@ def read_statistics(database_path: Path) -> DatabaseStatistics:
         DatabaseStatistics: The resolutions holding templates (ascending) and the
             template count per mod and resolution.
     """
-    stats = fs_assets.database_statistics(str(database_path))
+    stats = fs_assets.database_statistics(database_path)
     mod_stats = {
         mod: {str(resolution): count for resolution, count in counts.items()}
         for mod, counts in stats["mods"].items()
@@ -107,14 +107,14 @@ def replace_icon(database_path: Path, template: IconTemplate, icon_path: Path) -
         icon_path (Path): The new icon image.
     """
     fs_assets.modify_icon(
-        str(database_path),
+        database_path,
         code=template.code,
         faction=_FACTION_NAMES[template.faction],
         category=template.category.value,
         crated=template.crated,
         mod_name=template.mod,
         resolution=[int(template.resolution.value)],
-        icon=str(icon_path),
+        icon=icon_path,
         replace=True,
     )
 
@@ -127,7 +127,7 @@ def delete_icon(database_path: Path, template: IconTemplate) -> None:
         template (IconTemplate): The template to delete.
     """
     fs_assets.modify_icon(
-        str(database_path),
+        database_path,
         code=template.code,
         faction=_FACTION_NAMES[template.faction],
         category=template.category.value,

@@ -71,14 +71,13 @@ def test_run_adds_the_mod_with_fs_assets(tmp_path: Path) -> None:
         worker.run()
 
     kwargs = add_mod.call_args.kwargs
-    assert kwargs["catalog"] == str(tmp_path / "catalog.json")
+    assert kwargs["catalog"] == tmp_path / "catalog.json"
     assert kwargs["pak"] == ["Mod_1.pak", "Mod_2.pak"]
-    assert kwargs["db"] == str(tmp_path / "db" / "templates.h5")
+    assert kwargs["db"] == tmp_path / "db" / "templates.h5"
     assert kwargs["mod_name"] == "clean icons"
     assert kwargs["vanilla_pak"] == "War.pak"
     assert kwargs["resolution"] == [1080, 1440]
     assert callable(kwargs["progress"])
-    assert (tmp_path / "db").is_dir()
     finished.assert_called_once_with(True)
     error.assert_not_called()
     assert "120" in progress.call_args.args[0]

@@ -361,23 +361,3 @@ def test_close_event_worker_running_cancel(configured_window: CatalogBuilderWind
         mock_question.return_value = QMessageBox.StandardButton.No
         configured_window.closeEvent(mock_event)
         mock_event.ignore.assert_called_once()
-
-
-# ===== Default PAK Directory Tests =====
-
-
-def test_get_default_pak_directory(configured_window: CatalogBuilderWindow) -> None:
-    """Test _get_default_pak_directory returns a path."""
-    with patch("platform.system", return_value="Unknown"):
-        result = configured_window._get_default_pak_directory()
-        assert result is not None
-
-
-def test_get_default_pak_directory_linux_not_wsl(
-    configured_window: CatalogBuilderWindow,
-) -> None:
-    """Test _get_default_pak_directory on Linux (not WSL)."""
-    with patch("platform.system", return_value="Linux"):
-        with patch("builtins.open", side_effect=OSError):
-            result = configured_window._get_default_pak_directory()
-            assert result is not None

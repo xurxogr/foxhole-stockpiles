@@ -73,11 +73,10 @@ class IconImportWorker(QThread):
     def run(self) -> None:
         """Import the mod and report the outcome through the signals."""
         try:
-            self.database_path.parent.mkdir(parents=True, exist_ok=True)
             stats = fs_assets.add_mod(
-                catalog=str(self.catalog_path),
+                catalog=self.catalog_path,
                 pak=self.mod_pak_files,
-                db=str(self.database_path),
+                db=self.database_path,
                 mod_name=self.mod_name,
                 vanilla_pak=self.vanilla_pak_file,
                 resolution=self.resolutions,

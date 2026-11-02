@@ -1,7 +1,6 @@
 """Catalog builder window for building item catalog from PAK files."""
 
 import logging
-import platform
 from datetime import datetime
 from pathlib import Path
 
@@ -30,6 +29,7 @@ from foxhole_stockpiles.core.settings import get_settings
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
 from foxhole_stockpiles.gui.utils.qt_log_handler import QtLogHandler
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
+from fs_tools.core.pak_directory import default_pak_directory
 from fs_tools.gui.utils.catalog_builder_worker import CatalogBuilderWorker
 
 logger = logging.getLogger(__name__)
@@ -232,43 +232,12 @@ class CatalogBuilderWindow(QMainWindow):
         """
         return True
 
-    def _get_default_pak_directory(self) -> str:
-        """Get default directory for PAK files based on platform.
-
-        Returns:
-            str: Default directory path for PAK files
-        """
-        default_path = Path.cwd()
-        system = platform.system()
-
-        if system == "Windows":
-            steam_path = Path(
-                "C:/Program Files (x86)/Steam/steamapps/common/Foxhole/War/Content/Paks"
-            )
-            if steam_path.exists():
-                default_path = steam_path
-        elif system == "Linux":
-            try:
-                with open("/proc/version") as f:
-                    version_info = f.read().lower()
-                    if "microsoft" in version_info or "wsl" in version_info:
-                        wsl_path = Path(
-                            "/mnt/c/Program Files (x86)/Steam/steamapps/common/"
-                            "Foxhole/War/Content/Paks"
-                        )
-                        if wsl_path.exists():
-                            default_path = wsl_path
-            except OSError:
-                pass
-
-        return str(default_path)
-
     def select_pak_file(self) -> None:
         """Open file dialog to select PAK file."""
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             t("catalog_builder.select_pak"),
-            self._get_default_pak_directory(),
+            default_pak_directory(),
             t("catalog_builder.pak_filter"),
         )
         if file_path:

@@ -53,8 +53,8 @@ def test_run_builds_the_catalog_from_the_pak(worker: CatalogBuilderWorker, tmp_p
         worker.run()
 
     kwargs = build.call_args.kwargs
-    assert kwargs["pak"] == str(tmp_path / "War.pak")
-    assert kwargs["output"] == str(tmp_path / "out" / "catalog.json")
+    assert kwargs["pak"] == tmp_path / "War.pak"
+    assert kwargs["output"] == tmp_path / "out" / "catalog.json"
     assert kwargs["full"] is True
     assert callable(kwargs["progress"])
     assert (tmp_path / "out").is_dir()

@@ -39,7 +39,7 @@ class PakCoverageWorker(QThread):
     def run(self) -> None:
         """Check the PAK files and report the coverage or the failure."""
         try:
-            coverage = fs_assets.pak_coverage(catalog=str(self.catalog_path), pak=self.pak_files)
+            coverage = fs_assets.pak_coverage(catalog=self.catalog_path, pak=self.pak_files)
         except Exception as e:  # noqa: BLE001 - report any failure via the failed signal
             logger.error("PAK coverage check failed: %s", e)
             self.failed.emit(str(e))

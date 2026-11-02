@@ -50,9 +50,7 @@ def test_run_reports_the_coverage_of_every_pak(tmp_path: Path) -> None:
     with patch(_PAK_COVERAGE, return_value=coverage()) as pak_coverage:
         worker.run()
 
-    pak_coverage.assert_called_once_with(
-        catalog=str(tmp_path / "catalog.json"), pak=["a.pak", "b.pak"]
-    )
+    pak_coverage.assert_called_once_with(catalog=tmp_path / "catalog.json", pak=["a.pak", "b.pak"])
     ready.assert_called_once_with(coverage())
     failed.assert_not_called()
 

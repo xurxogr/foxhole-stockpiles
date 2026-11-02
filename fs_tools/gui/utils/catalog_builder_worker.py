@@ -58,8 +58,8 @@ class CatalogBuilderWorker(QThread):
         try:
             self.output_path.parent.mkdir(parents=True, exist_ok=True)
             stats = fs_assets.build_catalog(
-                pak=str(self.pak_file),
-                output=str(self.output_path),
+                pak=self.pak_file,
+                output=self.output_path,
                 full=self.full,
                 progress=self._on_progress,
             )
