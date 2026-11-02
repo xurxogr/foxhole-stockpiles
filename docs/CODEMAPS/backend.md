@@ -98,7 +98,7 @@ the configured `token` is sent as the value of that header.
 into section builders + pure helpers extracted):
 - **Unified Capture button** — toggles hotkey listener; single click starts/stops.
 - **Scan a file** (menu) — local scan of a chosen image.
-- **SAV** column — one-shot scan + monitor (`gui/utils/sav_workers.py`).
+- **SAV** column — one-shot scan + monitor (`gui/utils/sav_scan_worker.py`, `gui/utils/sav_monitor_worker.py`).
 - **Activity feed** — user-friendly log via `QPlainTextEdit` (replaced old table);
   timestamps + messages via `gui/utils/capture_feed_formatting.py` helper.
 

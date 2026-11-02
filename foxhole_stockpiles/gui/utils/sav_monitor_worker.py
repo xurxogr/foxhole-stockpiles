@@ -1,4 +1,4 @@
-"""Worker threads for SAV file processing."""
+"""Worker thread for continuous SAV file monitoring."""
 
 import asyncio
 import logging
@@ -13,62 +13,14 @@ from foxhole_stockpiles.services.savefile_processor import SaveFileProcessor
 logger = logging.getLogger(__name__)
 
 
-class SavScanWorker(QThread):
-    """Worker thread for one-time SAV file scanning."""
-
-    finished = Signal(bool)  # True = success, False = failure
-    error = Signal(str)  # Error message
-    progress = Signal(str)  # Progress message
-    stockpiles_found = Signal(list)  # List of Stockpile objects
-    output_response = Signal(object)  # OutputResponse (dict | list[str] | None)
-
-    def __init__(
-        self,
-        sav_path: Path,
-        output_coordinator: OutputCoordinator,
-    ) -> None:
-        """Initialize the SAV scan worker.
-
-        Args:
-            sav_path (Path): Path to the .sav file to scan.
-            output_coordinator (OutputCoordinator): Output coordinator for handlers.
-        """
-        super().__init__()
-        self._sav_path = sav_path
-        self._output_coordinator = output_coordinator
-
-    def run(self) -> None:
-        """Run the scan in background thread."""
-        try:
-            logger.info("Processing file: %s", self._sav_path)
-            self.progress.emit(f"Processing: {self._sav_path.name}")
-
-            # Create processor and run once
-            processor = SaveFileProcessor(
-                file_path=self._sav_path,
-                output_coordinator=self._output_coordinator,
-                emit_all_on_start=True,
-            )
-
-            # Run the async method in an event loop
-            stockpiles = asyncio.run(processor.run_once())
-
-            self.stockpiles_found.emit(stockpiles)
-            self.output_response.emit(processor.last_output)
-            self.finished.emit(True)
-
-        except RuntimeError as e:
-            self.error.emit(str(e))
-            self.finished.emit(False)
-        except Exception as e:  # noqa: BLE001 - report any failure via the error signal
-            self.error.emit(f"Error processing SAV file: {e}")
-            self.finished.emit(False)
-
-
 class SavMonitorWorker(QThread):
-    """Worker thread for continuous SAV file monitoring."""
+    """Worker thread for continuous SAV file monitoring.
 
-    finished = Signal(bool)  # True = stopped normally, False = error
+    The completion signal is named ``monitor_finished`` (not ``finished``) to
+    avoid shadowing ``QThread``'s built-in ``finished`` signal.
+    """
+
+    monitor_finished = Signal(bool)  # True = stopped normally, False = error
     error = Signal(str)  # Error message
     progress = Signal(str)  # Progress/status message
     stockpiles_changed = Signal(list)  # List of changed Stockpile objects
@@ -118,14 +70,14 @@ class SavMonitorWorker(QThread):
             asyncio.run(self._run_monitor())
 
             logger.info("Monitor stopped")
-            self.finished.emit(True)
+            self.monitor_finished.emit(True)
 
         except RuntimeError as e:
             self.error.emit(str(e))
-            self.finished.emit(False)
+            self.monitor_finished.emit(False)
         except Exception as e:  # noqa: BLE001 - report any failure via the error signal
             self.error.emit(f"Error monitoring SAV file: {e}")
-            self.finished.emit(False)
+            self.monitor_finished.emit(False)
 
     async def _run_monitor(self) -> None:
         """Run the monitoring loop with change detection callback."""

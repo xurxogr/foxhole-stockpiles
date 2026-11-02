@@ -36,12 +36,11 @@ from foxhole_stockpiles.gui.utils.capture_availability import (
 )
 from foxhole_stockpiles.gui.utils.capture_feed_formatting import ocr_summary, stockpile_summary
 from foxhole_stockpiles.gui.utils.capture_scan_worker import LocalScanWorker
-from foxhole_stockpiles.gui.utils.clipboard_workers import (
-    ClipboardMonitorWorker,
-    ClipboardScanWorker,
-)
+from foxhole_stockpiles.gui.utils.clipboard_monitor_worker import ClipboardMonitorWorker
+from foxhole_stockpiles.gui.utils.clipboard_scan_worker import ClipboardScanWorker
 from foxhole_stockpiles.gui.utils.hotkey_listener import HotkeyListener, global_hotkeys_supported
-from foxhole_stockpiles.gui.utils.sav_workers import SavMonitorWorker, SavScanWorker
+from foxhole_stockpiles.gui.utils.sav_monitor_worker import SavMonitorWorker
+from foxhole_stockpiles.gui.utils.sav_scan_worker import SavScanWorker
 from foxhole_stockpiles.i18n import off_language_changed, on_language_changed, t
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.services.clipboard_scan import (
@@ -804,7 +803,7 @@ class CapturePanel(QWidget):
         self._sav_scan_worker.error.connect(self._on_sav_error)
         self._sav_scan_worker.stockpiles_found.connect(self._on_sav_stockpiles)
         self._sav_scan_worker.output_response.connect(self._on_output_response)
-        self._sav_scan_worker.finished.connect(self._on_sav_scan_finished)
+        self._sav_scan_worker.scan_finished.connect(self._on_sav_scan_finished)
         self._sav_scan_worker.start()
 
     def _apply_sav_mode(self) -> None:
@@ -868,7 +867,7 @@ class CapturePanel(QWidget):
         self._sav_monitor_worker.error.connect(self._on_sav_error)
         self._sav_monitor_worker.stockpiles_changed.connect(self._on_sav_stockpiles)
         self._sav_monitor_worker.output_response.connect(self._on_output_response)
-        self._sav_monitor_worker.finished.connect(self._on_sav_monitor_finished)
+        self._sav_monitor_worker.monitor_finished.connect(self._on_sav_monitor_finished)
         self._sav_monitor_worker.start()
 
     def stop_sav_monitor(self) -> None:
@@ -974,7 +973,7 @@ class CapturePanel(QWidget):
         worker.stockpile_found.connect(self._on_clip_stockpile_found)
         worker.output_response.connect(self._on_output_response)
         worker.error.connect(self._on_clip_error)
-        worker.finished.connect(lambda _success: self._on_clip_scan_finished())
+        worker.scan_finished.connect(lambda _success: self._on_clip_scan_finished())
         self._clip_scan_worker = worker
         worker.start()
 
@@ -1019,7 +1018,7 @@ class CapturePanel(QWidget):
         self._clip_monitor_worker.error.connect(self._on_clip_error)
         self._clip_monitor_worker.stockpile_found.connect(self._on_clip_stockpile_found)
         self._clip_monitor_worker.output_response.connect(self._on_output_response)
-        self._clip_monitor_worker.finished.connect(self._on_clip_monitor_finished)
+        self._clip_monitor_worker.monitor_finished.connect(self._on_clip_monitor_finished)
         self._clip_monitor_worker.start()
 
     def stop_clip_monitor(self) -> None:
