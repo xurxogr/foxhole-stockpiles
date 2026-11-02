@@ -5,10 +5,15 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, patch
 
+import pytest
+import shiboken6
+from PySide6.QtCore import QObject
+
 from foxhole_stockpiles.i18n.translator import (
     Translator,
     _deep_merge,
     _get_exe_dir,
+    _get_signals,
     _load_json_file,
     get_available_languages,
     get_translator,
@@ -516,3 +521,77 @@ class TestTranslatorEnglishNotFound:
                 ):
                     translator = Translator("en")
                     assert translator.translations == {}
+
+
+class TestBrokenTranslationStrings:
+    """A translation file with bad placeholders must not break the caller."""
+
+    @pytest.mark.parametrize(
+        "text",
+        ["unbalanced { brace", "positional {} field", "index {0} field", "attr {error.nope}"],
+    )
+    def test_returns_the_unformatted_text(self, text: str) -> None:
+        """A string that cannot be formatted is returned as written.
+
+        Args:
+            text (str): The broken translation.
+        """
+        translator = Translator("en")
+        translator.translations = {"broken": text}
+
+        assert translator.get("broken", error="boom") == text
+
+    def test_braces_in_a_value_are_not_expanded(self) -> None:
+        """A value containing braces is inserted literally."""
+        translator = Translator("en")
+        translator.translations = {"message": "Failed: {error}"}
+
+        assert translator.get("message", error="bad {path}") == "Failed: bad {path}"
+
+
+class TestLanguageCallbackLifetime:
+    """Subscriptions end with the QObject that owns the callback."""
+
+    @pytest.mark.parametrize("dropped_by", ["delete", "parent"])
+    def test_destroyed_owner_is_no_longer_called(self, dropped_by: str) -> None:
+        """A bound method of a destroyed QObject stops receiving language changes.
+
+        Args:
+            dropped_by (str): How the owner is destroyed.
+        """
+        calls: list[str] = []
+
+        class Owner(QObject):
+            """Records the language changes it receives."""
+
+            def on_change(self, language: str) -> None:
+                """Record a language change.
+
+                Args:
+                    language (str): The new language.
+                """
+                calls.append(language)
+
+        parent = QObject()
+        owner = Owner(parent)
+        on_language_changed(owner.on_change)
+        _get_signals().language_changed.emit("first")
+
+        shiboken6.delete(owner if dropped_by == "delete" else parent)
+        _get_signals().language_changed.emit("second")
+
+        assert calls == ["first"]
+
+    def test_plain_function_stays_until_disconnected(self) -> None:
+        """A callable without a QObject owner needs an explicit disconnect."""
+        calls: list[str] = []
+
+        def on_change(language: str) -> None:
+            calls.append(language)
+
+        on_language_changed(on_change)
+        _get_signals().language_changed.emit("first")
+        off_language_changed(on_change)
+        _get_signals().language_changed.emit("second")
+
+        assert calls == ["first"]

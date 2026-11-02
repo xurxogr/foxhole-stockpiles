@@ -190,8 +190,8 @@ class Translator:
         if isinstance(value, str) and kwargs:
             try:
                 return value.format(**kwargs)
-            except KeyError as e:
-                logger.warning("Missing format parameter %s for key: %s", e, key)
+            except (KeyError, IndexError, ValueError, AttributeError) as e:
+                logger.warning("Cannot format translation %s: %r", key, e)
                 return value
 
         return str(value) if value is not None else key
@@ -259,6 +259,9 @@ def set_language(language: str) -> None:
 
 def on_language_changed(callback: Callable[[str], None]) -> None:
     """Connect a callback to language change events.
+
+    A bound method of a QObject is disconnected by Qt when that object is destroyed;
+    any other callable stays connected until passed to ``off_language_changed``.
 
     Args:
         callback (Callable[[str], None]): Function to call when language changes.

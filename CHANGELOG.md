@@ -48,6 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The Google Sheets dialog accepts a link without a trailing slash**, saves it
   without surrounding spaces, and focuses the credentials field when that path is
   invalid.
+- **A translation with malformed placeholders no longer raises an error**; it is
+  shown as written and logged.
 
 ### Security
 - **Pillow updated to 13.0**, which fixes several image decoding vulnerabilities.
