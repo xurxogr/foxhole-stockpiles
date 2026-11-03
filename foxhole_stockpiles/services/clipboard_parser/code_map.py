@@ -35,11 +35,6 @@ _QUOTE_TRANSLATION = str.maketrans(
     }
 )
 
-# The catalog has exactly one duplicate display name ("Rare Materials" maps to
-# both ``RareMaterials`` and ``FacilityMaterials12``, both faction-neutral).
-# Prefer the base-resource code so all sources agree on a single mapping.
-_PREFERRED_CODES: frozenset[str] = frozenset({"RareMaterials"})
-
 
 def _normalize(text: str) -> str:
     """Normalize typographic quotes and surrounding whitespace.
@@ -131,12 +126,9 @@ def _choose_code(matches: list[CatalogCode]) -> CatalogCode:
         matches (list[CatalogCode]): Non-empty candidate codes for a name.
 
     Returns:
-        CatalogCode: The preferred code, else the lowest code name (stable).
+        CatalogCode: The candidate with the lowest code name (stable).
     """
-    if len(matches) == 1:
-        return matches[0]
-    preferred = [m for m in matches if m.code in _PREFERRED_CODES]
-    return (preferred or sorted(matches, key=lambda m: m.code))[0]
+    return min(matches, key=lambda match: match.code)
 
 
 def build_code_map(catalog: list[dict[str, Any]]) -> ClipboardCodeMap:
@@ -173,9 +165,8 @@ def build_code_map(catalog: list[dict[str, Any]]) -> ClipboardCodeMap:
 def _log_collisions(by_locale: dict[str, dict[str, list[CatalogCode]]]) -> None:
     """Log, once, any display name that maps to more than one catalog code.
 
-    Collisions are a property of the catalog (e.g. "Rare Materials"), so they
-    are reported a single time when the map is built rather than on every
-    lookup.
+    Collisions are a property of the catalog, so they are reported a single time
+    when the map is built rather than on every lookup.
 
     Args:
         by_locale (dict[str, dict[str, list[CatalogCode]]]): The locale->name->

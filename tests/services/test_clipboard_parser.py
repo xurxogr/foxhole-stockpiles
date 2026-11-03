@@ -18,8 +18,8 @@ from foxhole_stockpiles.services.clipboard_parser import (
 CATALOG_PATH = Path(__file__).resolve().parents[2] / "data" / "catalog.json"
 
 # A representative export: header, a crated small-items group, a blank-line
-# group boundary, an assembled-vehicles group, then a crated group containing
-# the one ambiguous name ("Rare Materials"). Uses the in-game curly glyphs.
+# group boundary, an assembled-vehicles group, then another crated group.
+# Uses the in-game curly glyphs.
 SAMPLE = (
     "Terminus - Rising Loom - Seaport - Public - X: 0.4577449 Y: 0.6644695,2026.06.23-16.30.38\n"
     "Argenti r.II Rifle (Crate),32\n"
@@ -110,13 +110,29 @@ def test_quote_normalization_matches_curly_names(code_map: ClipboardCodeMap) -> 
     assert by_code["ArmoredCar2LargeW"].quantity == 2
 
 
-def test_ambiguous_rare_materials_prefers_base_code(code_map: ClipboardCodeMap) -> None:
-    """The one duplicate display name resolves to the base-resource code."""
+def test_rare_materials_resolves_to_its_catalog_code(code_map: ClipboardCodeMap) -> None:
+    """Rare Materials is a single catalog entry, reported under its facility code."""
     stockpile = parse_clipboard(SAMPLE, code_map)
     assert stockpile is not None
     codes = {item.code for item in stockpile.items}
-    assert "RareMaterials" in codes
-    assert "FacilityMaterials12" not in codes
+    assert "FacilityMaterials12" in codes
+    assert "RareMaterials" not in codes
+
+
+def test_same_name_codes_resolve_to_the_lowest_code() -> None:
+    """A display name shared by several codes always picks the same one."""
+    catalog: list[dict[str, Any]] = [
+        {"CodeName": "ItemB", "DisplayName": "Shared"},
+        {"CodeName": "ItemA", "DisplayName": "Shared"},
+    ]
+
+    stockpile = parse_clipboard(
+        "Terminus - Rising Loom - Seaport - Public - X: 0.1 Y: 0.2,2026.06.23-16.30.38\nShared,1\n",
+        build_code_map(catalog),
+    )
+
+    assert stockpile is not None
+    assert [item.code for item in stockpile.items] == ["ItemA"]
 
 
 def test_build_code_map_records_faction() -> None:

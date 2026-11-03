@@ -143,8 +143,8 @@ database.h5
 
 Built from the game PAK by `fs-assets build-catalog`.
 Item metadata: `code`, `name`, `category`, `faction`, `cratable`, icon ref.
-`cratable` ← `ItemProfileData.bIsCratable` (items) or presence of
-`MassProductionFactory` in `ProductionCategories` (vehicles). Read via
+`cratable` ← the entry's `bIsCratable`, set by `fs-assets`: `ItemProfileData.bIsCratable`
+(items), `VehicleBuildType` (vehicles) or `BuildLocationType` (structures). Read via
 `services/catalog_service.py` (cached `get_catalog_service()`, `get_display_name`).
 
 ## SAV data
