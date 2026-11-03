@@ -5,7 +5,9 @@ converting its output to internal Stockpile models.
 """
 
 import logging
+import threading
 import warnings
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -31,6 +33,8 @@ _TYPE_SPECIFIC_FIELDS = frozenset({"tech", "refinery", "factory_orders"})
 
 # What converting unexpected fs-sav data can raise (ValidationError is a ValueError).
 _CONVERSION_ERRORS = (ValueError, TypeError, AttributeError)
+
+_WARNINGS_LOCK = threading.Lock()
 
 
 class SaveFileBusyError(RuntimeError):
@@ -66,10 +70,9 @@ def parse_save(
         SaveFileBusyError: If the game kept writing the file while it was read.
         RuntimeError: If parsing fails.
     """
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        try:
-            raw_stockpiles = fs_sav.parse_save(
+    try:
+        raw_stockpiles = _call_capturing_warnings(
+            lambda: fs_sav.parse_save(
                 str(path),
                 public=public,
                 reserves=reserves,
@@ -77,17 +80,13 @@ def parse_save(
                 stockpile_type=stockpile_type,
                 with_items=with_items,
             )
-        except RuntimeError as e:
-            if _FILE_BUSY_MARKER in str(e):
-                raise SaveFileBusyError(str(e)) from e
-            raise
-        finally:
-            _log_warnings(caught)
+        )
+    except RuntimeError as e:
+        if _FILE_BUSY_MARKER in str(e):
+            raise SaveFileBusyError(str(e)) from e
+        raise
 
-    if not isinstance(raw_stockpiles, list):
-        raise RuntimeError(f"fs_sav.parse_save returned unexpected type: {type(raw_stockpiles)}")
-
-    return _convert_all(raw_stockpiles)
+    return _convert_all(_checked_list(raw_stockpiles, function_name="parse_save"))
 
 
 def parse_save_bytes(
@@ -115,9 +114,8 @@ def parse_save_bytes(
     Raises:
         RuntimeError: If parsing fails.
     """
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        raw_stockpiles = fs_sav.parse_save_bytes(
+    raw_stockpiles = _call_capturing_warnings(
+        lambda: fs_sav.parse_save_bytes(
             data,
             public=public,
             reserves=reserves,
@@ -125,14 +123,9 @@ def parse_save_bytes(
             stockpile_type=stockpile_type,
             with_items=with_items,
         )
-    _log_warnings(caught)
+    )
 
-    if not isinstance(raw_stockpiles, list):
-        raise RuntimeError(
-            f"fs_sav.parse_save_bytes returned unexpected type: {type(raw_stockpiles)}"
-        )
-
-    return _convert_all(raw_stockpiles)
+    return _convert_all(_checked_list(raw_stockpiles, function_name="parse_save_bytes"))
 
 
 def info() -> dict[str, str]:
@@ -143,6 +136,46 @@ def info() -> dict[str, str]:
     """
     result: dict[str, str] = fs_sav.info()
     return result
+
+
+def _call_capturing_warnings(parse: Callable[[], Any]) -> Any:
+    """Run a fs-sav parse, logging its warnings even if it fails.
+
+    Parsing runs on worker threads, and ``catch_warnings`` changes the global warnings
+    state: two captures at once could leave the state of the other one behind.
+
+    Args:
+        parse (Callable[[], Any]): The fs-sav call.
+
+    Returns:
+        Any: What the call returned.
+    """
+    with _WARNINGS_LOCK, warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        try:
+            return parse()
+        finally:
+            _log_warnings(caught)
+
+
+def _checked_list(raw_stockpiles: Any, function_name: str) -> list[dict[str, Any]]:
+    """Check that fs-sav returned the list it promises.
+
+    Args:
+        raw_stockpiles (Any): What fs-sav returned.
+        function_name (str): The fs-sav function, for the error.
+
+    Returns:
+        list[dict[str, Any]]: The same list.
+
+    Raises:
+        RuntimeError: If it is not a list.
+    """
+    if not isinstance(raw_stockpiles, list):
+        raise RuntimeError(
+            f"fs_sav.{function_name} returned unexpected type: {type(raw_stockpiles)}"
+        )
+    return raw_stockpiles
 
 
 def _log_warnings(caught: list[warnings.WarningMessage]) -> None:
