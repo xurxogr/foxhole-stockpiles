@@ -164,10 +164,7 @@ class Scanner:
         Returns:
             Stockpile: The detected stockpile with items and metadata.
         """
-        img = _coerce_image(image)
-        ext_faction = _FACTION_TO_EXTERNAL.get(faction) if faction else None
-        result = await asyncio.to_thread(self._scanner.scan, img, ext_faction)
-        return to_runtime_stockpile(result)
+        return await asyncio.to_thread(self.scan_sync, image, faction)
 
     def scan_sync(
         self,
