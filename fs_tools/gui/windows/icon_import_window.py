@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 
 from foxhole_stockpiles.core.settings import get_settings
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
+from foxhole_stockpiles.enums.supported_resolution import SupportedResolution
 from foxhole_stockpiles.i18n import on_language_changed, t
 from fs_tools.core.pak_directory import default_pak_directory
 from fs_tools.gui.utils.icon_import_worker import IconImportWorker
@@ -488,6 +489,16 @@ class IconImportWindow(ProcessLogWindow):
         db_path = self.db_path_input.text().strip()
         if not db_path:
             return False, t("database_builder.validation.select_database")
+
+        # The configuration tab only offers supported ones; a hand-edited file may not.
+        supported = {resolution.value for resolution in SupportedResolution}
+        configured = self.settings.database_builder.target_resolutions or []
+        unsupported = [resolution for resolution in configured if resolution not in supported]
+        if unsupported:
+            return False, t(
+                "database_builder.validation.unsupported_resolutions",
+                resolutions=", ".join(unsupported),
+            )
 
         return True, ""
 

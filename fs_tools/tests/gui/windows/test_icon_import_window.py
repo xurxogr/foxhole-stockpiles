@@ -2032,3 +2032,51 @@ def test_clear_vanilla_pak_restores_warning_state(
     )
     # Start button should be disabled since mod validation failed and no vanilla
     assert configured_window.start_button.isEnabled() is False
+
+
+@pytest.mark.parametrize("configured", [["abc"], ["999"], ["1080", "abc"]])
+def test_start_import_refuses_unusable_resolutions(
+    configured_window: IconImportWindow, configured: list[str]
+) -> None:
+    """A hand-edited setting is reported as what it is, before anything starts.
+
+    Args:
+        configured_window (IconImportWindow): Configured window instance.
+        configured (list[str]): Resolutions set in the settings.
+    """
+    configured_window.mod_pak_files = ["test.pak"]
+    configured_window.mod_name_input.setText("test_mod")
+    configured_window.db_path_input.setText("/tmp/test.h5")
+    configured_window.settings.database_builder.target_resolutions = configured
+
+    with (
+        patch("fs_tools.gui.windows.icon_import_window.QMessageBox.warning") as warning,
+        patch("fs_tools.gui.windows.icon_import_window.QMessageBox.critical") as critical,
+        patch("fs_tools.gui.windows.icon_import_window.IconImportWorker") as worker,
+    ):
+        configured_window.start_import()
+
+    critical.assert_not_called()
+    worker.assert_not_called()
+    warning.assert_called_once()
+    assert warning.call_args.args[1] == t("common.validation_error")
+    assert configured[-1] in warning.call_args.args[2]
+    assert configured_window.start_button.isEnabled()
+
+
+@pytest.mark.parametrize("configured", [None, [], ["1080", "1440"]])
+def test_usable_resolutions_pass_validation(
+    configured_window: IconImportWindow, configured: list[str] | None
+) -> None:
+    """All, none selected and supported ones are accepted.
+
+    Args:
+        configured_window (IconImportWindow): Configured window instance.
+        configured (list[str] | None): Resolutions set in the settings.
+    """
+    configured_window.mod_pak_files = ["test.pak"]
+    configured_window.mod_name_input.setText("test_mod")
+    configured_window.db_path_input.setText("/tmp/test.h5")
+    configured_window.settings.database_builder.target_resolutions = configured
+
+    assert configured_window.validate_inputs() == (True, "")

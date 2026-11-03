@@ -128,7 +128,8 @@
       "mod_missing_assets": "Les fichiers PAK du mod manquent des ressources requises. Veuillez sélectionner le fichier PAK du jeu vanilla.",
       "vanilla_invalid": "Le fichier PAK vanilla sélectionné ne contient pas les ressources requises. Veuillez sélectionner le fichier PAK vanilla correct (War-WindowsNoEditor.pak).",
       "no_catalog_icons": "Aucun des fichiers PAK ne contient d'icônes du catalogue",
-      "check_failed": "Impossible de vérifier les fichiers PAK : {error}"
+      "check_failed": "Impossible de vérifier les fichiers PAK : {error}",
+      "unsupported_resolutions": "La configuration contient des résolutions non prises en charge : {resolutions}"
     },
     "invalid_vanilla_title": "PAK vanilla invalide",
     "invalid_vanilla_message": "Le fichier PAK sélectionné ne contient pas les ressources requises ({missing}).\n\nVeuillez sélectionner le fichier PAK vanilla correct du jeu :\nWar-WindowsNoEditor.pak\n\nCe fichier se trouve généralement dans :\nSteam/steamapps/common/Foxhole/War/Content/Paks/",

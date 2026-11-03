@@ -128,7 +128,8 @@
       "mod_missing_assets": "模组 PAK 文件缺少必需资源。请选择原版游戏 PAK 文件。",
       "vanilla_invalid": "选定的原版 PAK 文件不包含必需资源。请选择正确的原版游戏 PAK 文件 (War-WindowsNoEditor.pak)。",
       "no_catalog_icons": "所有 PAK 文件都不包含目录中的图标",
-      "check_failed": "无法检查 PAK 文件：{error}"
+      "check_failed": "无法检查 PAK 文件：{error}",
+      "unsupported_resolutions": "配置中包含不支持的分辨率：{resolutions}"
     },
     "invalid_vanilla_title": "无效的原版 PAK",
     "invalid_vanilla_message": "选定的 PAK 文件不包含必需资源 ({missing})。\n\n请选择正确的原版游戏 PAK 文件：\nWar-WindowsNoEditor.pak\n\n此文件通常位于：\nSteam/steamapps/common/Foxhole/War/Content/Paks/",
