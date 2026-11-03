@@ -25,6 +25,7 @@ from foxhole_stockpiles.gui.controllers import (
 )
 from foxhole_stockpiles.gui.utils import capture_availability
 from foxhole_stockpiles.gui.widgets import capture_panel as cp
+from foxhole_stockpiles.i18n import t
 from foxhole_stockpiles.models.stockpile import Stockpile
 
 _MODULES = (cp, monitor_pipeline, ocr_pipeline, sav_pipeline, clip_pipeline)
@@ -842,3 +843,37 @@ class TestRemainingBranches:
         panel.clip_pipeline._monitor_worker = MagicMock()
         panel.clip_pipeline._on_monitor_finished(True)
         assert panel.clip_pipeline._monitor_worker is not None
+
+
+class TestHotkeysUnavailableHint:
+    """The first hint says why configured keys can't be used on this machine."""
+
+    def test_configured_keys_are_not_reported_as_missing(
+        self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A key in the settings is not "nothing set up" when only the platform lacks them."""
+        settings = AppSettings()
+        settings.sav_processing.sav_capture_key = "Ctrl+F3"
+        _use_settings(monkeypatch, settings)
+        panel._hotkeys_available = False
+        panel._get_started_shown = False
+        panel.clear_logs()
+
+        panel._maybe_prompt_setup()
+
+        text = panel.activity_feed.toPlainText()
+        assert t("activity.hotkeys_unavailable") in text
+        assert t("activity.get_started") not in text
+
+    def test_without_any_key_the_hint_stays_the_same(
+        self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """With nothing configured, setting something up is still the right advice."""
+        _use_settings(monkeypatch, AppSettings())
+        panel._hotkeys_available = False
+        panel._get_started_shown = False
+        panel.clear_logs()
+
+        panel._maybe_prompt_setup()
+
+        assert t("activity.get_started") in panel.activity_feed.toPlainText()

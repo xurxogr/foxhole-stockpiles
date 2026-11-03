@@ -21,6 +21,7 @@
     "sav_error": "⚠ SAV-Fehler: {error}",
     "clip_error": "⚠ Zwischenablage-Fehler: {error}",
     "get_started": "Noch keine Methode eingerichtet — öffne Einstellungen → Eingabe, um Screenshot, Zwischenablage oder SAV einzurichten.",
+    "hotkeys_unavailable": "Globale Tastenkürzel funktionieren nur in der Windows-Version, daher können die Tasten aus den Einstellungen hier nicht verwendet werden. Verwenden Sie stattdessen das Menü Datei oder den Überwachungsmodus.",
     "feed_placeholder": "Aktivität erscheint hier…",
     "output_response": "Ausgabe: {text}"
   },

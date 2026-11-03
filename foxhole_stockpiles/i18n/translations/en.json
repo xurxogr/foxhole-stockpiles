@@ -21,6 +21,7 @@
     "sav_error": "⚠ SAV error: {error}",
     "clip_error": "⚠ Clipboard error: {error}",
     "get_started": "No method set up yet — open Settings → Input to set up Screenshot, Clipboard, or SAV.",
+    "hotkeys_unavailable": "Hotkeys only work in the Windows build, so the keys in Settings can't be used here. Use the File menu or monitor mode instead.",
     "feed_placeholder": "Activity will appear here…",
     "output_response": "Output: {text}"
   },

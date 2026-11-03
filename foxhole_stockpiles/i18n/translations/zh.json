@@ -21,6 +21,7 @@
     "sav_error": "⚠ SAV 错误：{error}",
     "clip_error": "⚠ 剪贴板错误：{error}",
     "get_started": "尚未设置任何方法 — 打开 设置 → 输入 来设置 截图、剪贴板 或 SAV。",
+    "hotkeys_unavailable": "全局热键仅在 Windows 版本中可用，因此无法在此使用设置中的按键。请改用“文件”菜单或监控模式。",
     "feed_placeholder": "活动将显示在此处…",
     "output_response": "输出：{text}"
   },

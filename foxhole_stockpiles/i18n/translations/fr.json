@@ -21,6 +21,7 @@
     "sav_error": "⚠ Erreur SAV : {error}",
     "clip_error": "⚠ Erreur du presse-papiers : {error}",
     "get_started": "Aucune méthode configurée — ouvrez Paramètres → Entrée pour configurer Capture, Presse-papiers ou SAV.",
+    "hotkeys_unavailable": "Les raccourcis globaux ne fonctionnent que dans la version Windows : ceux des paramètres ne sont donc pas utilisables ici. Utilisez plutôt le menu Fichier ou le mode surveillance.",
     "feed_placeholder": "L'activité apparaîtra ici…",
     "output_response": "Sortie : {text}"
   },

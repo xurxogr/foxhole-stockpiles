@@ -496,7 +496,15 @@ class CapturePanel(QWidget):
             return
 
         if not self._get_started_shown:
-            self.feed(t("activity.get_started"))
+            has_key = (
+                settings.scanner.capture_key
+                or settings.sav_processing.sav_capture_key
+                or settings.clipboard.clip_capture_key
+            )
+            hotkeys_missing = has_key and not self._hotkeys_available
+            self.feed(
+                t("activity.hotkeys_unavailable" if hotkeys_missing else "activity.get_started")
+            )
             self._get_started_shown = True
 
     def clear_logs(self) -> None:

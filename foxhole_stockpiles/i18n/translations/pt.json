@@ -21,6 +21,7 @@
     "sav_error": "⚠ Erro de SAV: {error}",
     "clip_error": "⚠ Erro da área de transferência: {error}",
     "get_started": "Ainda não há nenhum método configurado — abre Definições → Entrada para configurar Captura, Área de transferência ou SAV.",
+    "hotkeys_unavailable": "As teclas globais só funcionam na versão Windows, por isso as das definições não podem ser usadas aqui. Use o menu Ficheiro ou o modo de monitorização.",
     "feed_placeholder": "A atividade aparecerá aqui…",
     "output_response": "Saída: {text}"
   },

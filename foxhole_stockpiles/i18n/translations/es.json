@@ -21,6 +21,7 @@
     "sav_error": "⚠ Error de SAV: {error}",
     "clip_error": "⚠ Error del portapapeles: {error}",
     "get_started": "Aún no hay ningún método configurado — abre Ajustes → Entrada para configurar Captura, Portapapeles o SAV.",
+    "hotkeys_unavailable": "Las teclas globales solo funcionan en la versión de Windows, así que aquí no se pueden usar las de Ajustes. Usa el menú Archivo o el modo de monitorización.",
     "feed_placeholder": "La actividad aparecerá aquí…",
     "output_response": "Salida: {text}"
   },
