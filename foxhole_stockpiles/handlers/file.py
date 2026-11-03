@@ -1,14 +1,12 @@
 """File output handler - writes data to filesystem."""
 
 import asyncio
-import datetime
 import json
 import logging
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from foxhole_stockpiles.core.safe_path_segment import safe_path_segment
 from foxhole_stockpiles.core.settings.sections.output.csv_format import (
     CSV_FIELDS,
     CSV_HEADERS,
@@ -18,6 +16,11 @@ from foxhole_stockpiles.core.settings.sections.output.json_format import JsonFor
 from foxhole_stockpiles.enums.output_format import OutputFormat
 from foxhole_stockpiles.handlers.base_handler import BaseOutputDestinationHandler
 from foxhole_stockpiles.handlers.formula_guard import neutralize_formula
+from foxhole_stockpiles.handlers.path_template import (
+    fill_path_template,
+    stockpile_type_label,
+    with_extension,
+)
 from foxhole_stockpiles.handlers.stockpile_json import stockpiles_to_json_payload
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
@@ -67,10 +70,7 @@ class FileOutputHandler(BaseOutputDestinationHandler):
 
         # Fix the extension first: a dot in a substituted value is not an extension.
         file = self._fix_extension(file)
-        for placeholder, value in self._build_placeholders(stockpiles).items():
-            file = file.replace(placeholder, safe_path_segment(value))
-
-        output_path = Path(file)
+        output_path = Path(fill_path_template(template=file, stockpiles=stockpiles))
         content = self._format_output(stockpiles)
 
         def write_file() -> None:
@@ -82,51 +82,6 @@ class FileOutputHandler(BaseOutputDestinationHandler):
         await asyncio.to_thread(write_file)
 
         self.logger.debug("Output saved to: %s", output_path)
-
-    def _build_placeholders(self, stockpiles: list[Stockpile]) -> dict[str, str]:
-        """Build the values a path template can use.
-
-        What depends on a stockpile is taken from the first one.
-
-        Args:
-            stockpiles (list[Stockpile]): The stockpiles being written, at least one.
-
-        Returns:
-            dict[str, str]: The value of each placeholder, not yet safe for a path.
-        """
-        first = stockpiles[0]
-        now = datetime.datetime.now()
-        return {
-            "{timestamp}": now.strftime("%Y-%m-%d_%H-%M-%S"),
-            "{year}": now.strftime("%Y"),
-            "{month}": now.strftime("%m"),
-            "{day}": now.strftime("%d"),
-            "{hour}": now.strftime("%H"),
-            "{minute}": now.strftime("%M"),
-            "{second}": now.strftime("%S"),
-            "{stockpile_type}": self._get_stockpile_type_str(first),
-            "{stockpile_name}": (first.name or "Unknown")
-            if len(stockpiles) == 1
-            else "multiple_stockpiles",
-            "{resolution}": first.resolution or "Unknown",
-            "{hex}": first.hex or "Unknown",
-            "{coords}": first.coords.to_key().replace("_", "-") if first.coords else "0-0",
-        }
-
-    def _get_stockpile_type_str(self, stockpile: Stockpile | None) -> str:
-        """Get stockpile type as string for placeholders.
-
-        Args:
-            stockpile (Stockpile | None): The stockpile to get type from
-
-        Returns:
-            str: Stockpile type string or "Unknown"
-        """
-        if not stockpile or not stockpile.type:
-            return "Unknown"
-        if isinstance(stockpile.type, str):
-            return stockpile.type.title()
-        return stockpile.type.value.title()
 
     def _format_output(self, stockpiles: list[Stockpile]) -> str:
         """Format stockpile data based on format settings.
@@ -193,7 +148,7 @@ class FileOutputHandler(BaseOutputDestinationHandler):
         """
         # Get stockpile-level values
         stockpile_name = stockpile.name or ""
-        stockpile_type = self._get_stockpile_type_str(stockpile) if stockpile.type else ""
+        stockpile_type = stockpile_type_label(stockpile) if stockpile.type else ""
         shard = stockpile.shard or ""
         ingame_timestamp = stockpile.ingame_timestamp or ""
 
@@ -255,9 +210,4 @@ class FileOutputHandler(BaseOutputDestinationHandler):
         else:
             correct_ext = ".json"
 
-        path = Path(file_path)
-        if path.suffix:
-            # Replace the existing extension, whatever it is
-            return str(path.with_suffix(correct_ext))
-        # No extension, add the correct one
-        return file_path + correct_ext
+        return with_extension(path=file_path, extension=correct_ext)

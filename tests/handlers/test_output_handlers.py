@@ -243,7 +243,7 @@ class TestFileOutputHandler:
         with (
             patch("pathlib.Path.open") as mock_open,
             patch("pathlib.Path.mkdir"),
-            patch("foxhole_stockpiles.handlers.file.datetime") as mock_datetime_module,
+            patch("foxhole_stockpiles.handlers.path_template.datetime") as mock_datetime_module,
         ):
             mock_now = Mock()
             mock_now.strftime.side_effect = lambda fmt: {
@@ -277,7 +277,7 @@ class TestFileOutputHandler:
         with (
             patch("pathlib.Path.open") as mock_open,
             patch("pathlib.Path.mkdir") as mock_mkdir,
-            patch("foxhole_stockpiles.handlers.file.datetime") as mock_datetime_module,
+            patch("foxhole_stockpiles.handlers.path_template.datetime") as mock_datetime_module,
         ):
             # Create a mock datetime object
             mock_now = Mock()
@@ -317,7 +317,7 @@ class TestFileOutputHandler:
         with (
             patch("pathlib.Path.open") as mock_open,
             patch("pathlib.Path.mkdir"),
-            patch("foxhole_stockpiles.handlers.file.datetime") as mock_datetime_module,
+            patch("foxhole_stockpiles.handlers.path_template.datetime") as mock_datetime_module,
         ):
             mock_now = Mock()
             mock_now.strftime.side_effect = lambda fmt: {
