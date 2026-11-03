@@ -8,6 +8,9 @@ from foxhole_stockpiles.core.settings.sections.output.csv_format import (
     CSV_HEADERS,
     CsvFormatSettings,
 )
+from foxhole_stockpiles.core.settings.sections.output.discord_handler import (
+    DiscordHandlerSettings,
+)
 from foxhole_stockpiles.core.settings.sections.output.file_handler import FileHandlerSettings
 from foxhole_stockpiles.core.settings.sections.output.handler_config import (
     FormatSettings,
@@ -27,6 +30,7 @@ __all__ = [
     "CSV_FIELDS",
     "CSV_HEADERS",
     "ConsoleHandlerSettings",
+    "DiscordHandlerSettings",
     "CsvFormatSettings",
     "FileHandlerSettings",
     "FormatSettings",

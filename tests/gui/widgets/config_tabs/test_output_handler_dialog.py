@@ -7,6 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from foxhole_stockpiles.core.settings.sections import (
+    DiscordHandlerSettings,
     FileHandlerSettings,
     ImageHandlerSettings,
     OutputHandlerConfig,
@@ -273,3 +274,82 @@ def test_image_handler_can_merge_stockpiles(qtbot: Any) -> None:
     handler = widget.get_handler_config().handler
     assert isinstance(handler, ImageHandlerSettings)
     assert handler.aggregate is False
+
+
+class TestDiscordHandler:
+    """The fields of the handler that posts stockpiles to Discord."""
+
+    URL = "https://discord.com/api/webhooks/123/abc"
+
+    @pytest.fixture
+    def discord_dialog(self, qtbot: Any) -> OutputHandlerDialog:
+        """Build a dialog set to the Discord handler.
+
+        Args:
+            qtbot (Any): PyQt test fixture.
+
+        Returns:
+            OutputHandlerDialog: The dialog.
+        """
+        widget = OutputHandlerDialog()
+        qtbot.addWidget(widget)
+        widget.handler_type_input.setCurrentText(OutputHandlerType.DISCORD.value)
+        return widget
+
+    def test_only_its_fields_are_shown(self, discord_dialog: OutputHandlerDialog) -> None:
+        """The output format does not apply to images either."""
+        assert not discord_dialog.discord_group.isHidden()
+        assert discord_dialog.image_group.isHidden()
+        assert discord_dialog.format_input.isHidden()
+
+    def test_values_become_its_settings(self, discord_dialog: OutputHandlerDialog) -> None:
+        """What is typed ends up in the configuration."""
+        group = discord_dialog.discord_group
+        group.url_input.setText(f" {self.URL} ")
+        group.username_input.setText("Logi")
+        group.message_input.setText("Report of {name}")
+        group.appearance.icon_mod_input.setCurrentText("mymod")
+
+        handler = discord_dialog.get_handler_config().handler
+
+        assert isinstance(handler, DiscordHandlerSettings)
+        assert handler.url == self.URL
+        assert handler.username == "Logi"
+        assert handler.avatar_url is None
+        assert handler.message == "Report of {name}"
+        assert handler.icon_mod == "mymod"
+
+    def test_settings_are_shown_when_editing(self, qtbot: Any) -> None:
+        """An existing handler can be changed."""
+        config = OutputHandlerConfig(
+            name="discord",
+            handler=DiscordHandlerSettings(url=self.URL, avatar_url="https://a/b.png"),
+        )
+        widget = OutputHandlerDialog(handler_config=config)
+        qtbot.addWidget(widget)
+
+        assert widget.discord_group.url_input.text() == self.URL
+        assert widget.discord_group.avatar_url_input.text() == "https://a/b.png"
+
+    @pytest.mark.parametrize("url", ["", "https://evil.example/api/webhooks/1/a"])
+    def test_only_a_discord_webhook_is_accepted(
+        self, discord_dialog: OutputHandlerDialog, url: str
+    ) -> None:
+        """Without one the dialog stays open and says why."""
+        discord_dialog.discord_group.url_input.setText(url)
+        with (
+            patch.object(dialog_mod.QMessageBox, "warning") as warning,
+            patch.object(discord_dialog, "accept") as accept,
+        ):
+            discord_dialog._validate_and_accept()
+
+        warning.assert_called_once()
+        accept.assert_not_called()
+
+    def test_a_discord_webhook_is_accepted(self, discord_dialog: OutputHandlerDialog) -> None:
+        """Pasted with spaces around it as well."""
+        discord_dialog.discord_group.url_input.setText(f" {self.URL} ")
+        with patch.object(discord_dialog, "accept") as accept:
+            discord_dialog._validate_and_accept()
+
+        accept.assert_called_once()

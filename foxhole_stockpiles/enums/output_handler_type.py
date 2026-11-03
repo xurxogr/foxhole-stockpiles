@@ -12,3 +12,4 @@ class OutputHandlerType(StrEnum):
     CONSOLE = "console"
     SHEETS = "google sheets"
     IMAGE = "image"
+    DISCORD = "discord"

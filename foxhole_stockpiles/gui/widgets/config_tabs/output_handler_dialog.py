@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
 from foxhole_stockpiles.core.settings.sections.output import (
     ConsoleHandlerSettings,
     CsvFormatSettings,
+    DiscordHandlerSettings,
     FileHandlerSettings,
     ImageHandlerSettings,
     JsonFormatSettings,
@@ -30,10 +31,14 @@ from foxhole_stockpiles.core.settings.sections.output import (
     SheetsHandlerSettings,
     WebhookHandlerSettings,
 )
+from foxhole_stockpiles.core.settings.sections.output.discord_handler import (
+    is_discord_webhook_url,
+)
 from foxhole_stockpiles.core.settings.sections.output.sheets_handler import SPREADSHEET_URL_PATTERN
 from foxhole_stockpiles.enums.auth_type import AuthType
 from foxhole_stockpiles.enums.output_format import OutputFormat
 from foxhole_stockpiles.enums.output_handler_type import OutputHandlerType
+from foxhole_stockpiles.gui.widgets.config_tabs.discord_output_group import DiscordOutputGroup
 from foxhole_stockpiles.gui.widgets.config_tabs.image_output_group import ImageOutputGroup
 from foxhole_stockpiles.i18n import on_language_changed, t
 
@@ -44,6 +49,7 @@ _DEFAULT_NAMES = {
     OutputHandlerType.SHEETS: "Append rows (Google Sheets)",
     OutputHandlerType.RETURN: "API Response",
     OutputHandlerType.IMAGE: "Image",
+    OutputHandlerType.DISCORD: "Discord",
 }
 
 
@@ -79,6 +85,8 @@ class OutputHandlerDialog(QDialog):
         layout.addWidget(self._build_sheets_group())
         self.image_group = ImageOutputGroup()
         layout.addWidget(self.image_group)
+        self.discord_group = DiscordOutputGroup()
+        layout.addWidget(self.discord_group)
 
         # Button box
         button_box = QDialogButtonBox(
@@ -293,6 +301,7 @@ class OutputHandlerDialog(QDialog):
         self.row_format_input.setToolTip(t("output_tab.handler_dialog.row_format_tooltip"))
 
         self.image_group.retranslate()
+        self.discord_group.retranslate()
 
     def _on_handler_type_changed(self) -> None:
         """Handle handler type change to show/hide relevant sections."""
@@ -301,6 +310,7 @@ class OutputHandlerDialog(QDialog):
         self.webhook_group.setVisible(handler_type == OutputHandlerType.WEBHOOK)
         self.sheets_group.setVisible(handler_type == OutputHandlerType.SHEETS)
         self.image_group.setVisible(handler_type == OutputHandlerType.IMAGE)
+        self.discord_group.setVisible(handler_type == OutputHandlerType.DISCORD)
         # Show format selection only for file handler (webhook/return are JSON-only)
         show_format = handler_type == OutputHandlerType.FILE
         self.format_label.setVisible(show_format)
@@ -362,6 +372,8 @@ class OutputHandlerDialog(QDialog):
             self.row_format_input.setText(handler.row_format or "")
         elif isinstance(handler, ImageHandlerSettings):
             self.image_group.load(handler)
+        elif isinstance(handler, DiscordHandlerSettings):
+            self.discord_group.load(handler)
 
         self._on_handler_type_changed()
         self._on_webhook_auth_changed()
@@ -387,6 +399,9 @@ class OutputHandlerDialog(QDialog):
             ),
             OutputHandlerType.IMAGE: (
                 (self.image_group.path_input, "output_tab.handler_dialog.image_path_required"),
+            ),
+            OutputHandlerType.DISCORD: (
+                (self.discord_group.url_input, "output_tab.handler_dialog.discord_url_invalid"),
             ),
         }
 
@@ -442,6 +457,15 @@ class OutputHandlerDialog(QDialog):
         if handler_type == OutputHandlerType.SHEETS and not self._sheets_values_valid():
             return
 
+        if handler_type == OutputHandlerType.DISCORD and not is_discord_webhook_url(
+            self.discord_group.url_input.text().strip()
+        ):
+            self._warn(
+                message_key="output_tab.handler_dialog.discord_url_invalid",
+                widget=self.discord_group.url_input,
+            )
+            return
+
         self.accept()
 
     def get_handler_config(self) -> OutputHandlerConfig:
@@ -480,6 +504,7 @@ class OutputHandlerDialog(QDialog):
         | ConsoleHandlerSettings
         | SheetsHandlerSettings
         | ImageHandlerSettings
+        | DiscordHandlerSettings
     ):
         """Read the fields of a handler type.
 
@@ -488,8 +513,8 @@ class OutputHandlerDialog(QDialog):
 
         Returns:
             ReturnHandlerSettings | FileHandlerSettings | WebhookHandlerSettings
-                | ConsoleHandlerSettings | SheetsHandlerSettings | ImageHandlerSettings:
-                Its settings.
+                | ConsoleHandlerSettings | SheetsHandlerSettings | ImageHandlerSettings
+                | DiscordHandlerSettings: Its settings.
         """
         match handler_type:
             case OutputHandlerType.FILE:
@@ -514,6 +539,8 @@ class OutputHandlerDialog(QDialog):
                 )
             case OutputHandlerType.IMAGE:
                 return self.image_group.read()
+            case OutputHandlerType.DISCORD:
+                return self.discord_group.read()
             case _:  # RETURN
                 return ReturnHandlerSettings()
 

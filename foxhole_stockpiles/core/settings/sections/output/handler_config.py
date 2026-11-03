@@ -8,6 +8,9 @@ from foxhole_stockpiles.core.settings.sections.output.console_handler import (
     ConsoleHandlerSettings,
 )
 from foxhole_stockpiles.core.settings.sections.output.csv_format import CsvFormatSettings
+from foxhole_stockpiles.core.settings.sections.output.discord_handler import (
+    DiscordHandlerSettings,
+)
 from foxhole_stockpiles.core.settings.sections.output.file_handler import FileHandlerSettings
 from foxhole_stockpiles.core.settings.sections.output.image_handler import ImageHandlerSettings
 from foxhole_stockpiles.core.settings.sections.output.json_format import JsonFormatSettings
@@ -47,7 +50,8 @@ HandlerSettings = Annotated[
     | Annotated[WebhookHandlerSettings, Tag(OutputHandlerType.WEBHOOK)]
     | Annotated[ConsoleHandlerSettings, Tag(OutputHandlerType.CONSOLE)]
     | Annotated[SheetsHandlerSettings, Tag(OutputHandlerType.SHEETS)]
-    | Annotated[ImageHandlerSettings, Tag(OutputHandlerType.IMAGE)],
+    | Annotated[ImageHandlerSettings, Tag(OutputHandlerType.IMAGE)]
+    | Annotated[DiscordHandlerSettings, Tag(OutputHandlerType.DISCORD)],
     Discriminator(_get_handler_discriminator),
 ]
 

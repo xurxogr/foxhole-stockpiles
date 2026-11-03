@@ -7,6 +7,7 @@ from foxhole_stockpiles.core.settings.sections.logging import LoggingSettings
 from foxhole_stockpiles.core.settings.sections.output import (
     ConsoleHandlerSettings,
     CsvFormatSettings,
+    DiscordHandlerSettings,
     FileHandlerSettings,
     ImageHandlerSettings,
     JsonFormatSettings,
@@ -22,6 +23,7 @@ from foxhole_stockpiles.core.settings.sections.scanner import ScannerSettings
 __all__ = [
     "ClipboardSettings",
     "ConsoleHandlerSettings",
+    "DiscordHandlerSettings",
     "CsvFormatSettings",
     "DatabaseBuilderSettings",
     "FileHandlerSettings",
