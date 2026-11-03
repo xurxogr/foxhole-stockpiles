@@ -18,9 +18,15 @@ _TIMESTAMP_FORMAT = "%Y.%m.%d-%H.%M.%S"
 # Header line: "<hex> - <town> - <type> - <name> - X: <x> Y: <y>,<timestamp>".
 # The coords/timestamp tail is unambiguous (and not localized), so anchor on it
 # and treat the rest as the " - "-joined prefix.
+# The number has one way to match each text: this runs on whatever the clipboard
+# holds, and backtracking over a long run of digits would stall the whole process.
+_NUMBER = r"[-+]?(?:\d+(?:\.\d+)?|\.\d+)"
 _HEADER_RE = re.compile(
-    r"^(?P<prefix>.+) - X:\s*(?P<x>[-+]?\d*\.?\d+)\s+Y:\s*(?P<y>[-+]?\d*\.?\d+),(?P<ts>.+)$"
+    rf"^(?P<prefix>.+) - X:\s*(?P<x>{_NUMBER})\s+Y:\s*(?P<y>{_NUMBER}),(?P<ts>.+)$"
 )
+
+# Far above any real export header, whose free text is one short stockpile name.
+_MAX_HEADER_CHARS = 1024
 
 
 def _parse_header(line: str) -> ClipboardHeader | None:
@@ -32,6 +38,9 @@ def _parse_header(line: str) -> ClipboardHeader | None:
     Returns:
         ClipboardHeader | None: Parsed header, or None if the line is not a header.
     """
+    if len(line) > _MAX_HEADER_CHARS:
+        return None
+
     match = _HEADER_RE.match(line.strip())
     if not match:
         return None
