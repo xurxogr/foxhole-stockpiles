@@ -15,20 +15,22 @@ from foxhole_stockpiles.core.settings.sections.output import WebhookHandlerSetti
 
 _TOKEN = "SUPERSECRET-TOKEN"
 _SECRET_PATH = "SECRET-PATH"
+_OAUTH_LOGGERS = ("requests_oauthlib", "oauthlib")
 
 
 @pytest.fixture
 def restore_logging() -> Iterator[None]:
-    """Put the root handlers and the httpx level back after a test changes them."""
+    """Put the root handlers and the quietened levels back after a test changes them."""
     root = logging.getLogger()
-    httpx_logger = logging.getLogger("httpx")
+    quiet_loggers = [logging.getLogger(name) for name in ("httpx", *_OAUTH_LOGGERS)]
     handlers = list(root.handlers)
     root_level = root.level
-    httpx_level = httpx_logger.level
+    quiet_levels = [logger.level for logger in quiet_loggers]
     yield
     root.handlers[:] = handlers
     root.setLevel(root_level)
-    httpx_logger.setLevel(httpx_level)
+    for logger, level in zip(quiet_loggers, quiet_levels, strict=True):
+        logger.setLevel(level)
 
 
 def _invalid_webhook() -> dict[str, str]:
@@ -108,3 +110,16 @@ def test_configured_httpx_level_wins() -> None:
     setup_logging(LoggingSettings(loggers={"httpx": "INFO"}))
 
     assert logging.getLogger("httpx").level == logging.INFO
+
+
+@pytest.mark.parametrize("logger_name", [f"{name}.child" for name in _OAUTH_LOGGERS])
+@pytest.mark.usefixtures("restore_logging")
+def test_debug_logging_does_not_print_oauth_tokens(logger_name: str) -> None:
+    """The OAuth libraries log whole token responses at DEBUG, refresh token included."""
+    setup_logging(LoggingSettings(log_level="DEBUG"))
+    stream = io.StringIO()
+    logging.getLogger().addHandler(logging.StreamHandler(stream))
+
+    logging.getLogger(logger_name).debug("Obtained token %s", _TOKEN)
+
+    assert _TOKEN not in stream.getvalue()

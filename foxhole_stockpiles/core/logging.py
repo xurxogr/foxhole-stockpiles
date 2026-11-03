@@ -13,7 +13,12 @@ APP_FILE_HANDLER_NAME = "foxhole_app_file_handler"
 
 # httpx logs every request URL at INFO, and a webhook URL can be a credential
 # (Discord's holds its token), so it only logs problems unless configured otherwise.
-_QUIET_LOGGERS: Final[dict[str, int]] = {"httpx": logging.WARNING}
+# The OAuth libraries log whole token responses at DEBUG, refresh token included.
+_QUIET_LOGGERS: Final[dict[str, int]] = {
+    "httpx": logging.WARNING,
+    "oauthlib": logging.WARNING,
+    "requests_oauthlib": logging.WARNING,
+}
 
 
 class LoggingConfig(Protocol):
