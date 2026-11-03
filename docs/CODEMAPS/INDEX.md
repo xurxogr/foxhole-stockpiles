@@ -3,7 +3,7 @@
 # Foxhole Stockpiles — Codemap Index
 
 **Last Updated:** 2026-11-03
-**Version:** 1.1.0 | **Config schema:** v16 | **Python:** 3.12+
+**Version:** 1.2.0 | **Config schema:** v16 | **Python:** 3.12+
 
 ## What it is
 

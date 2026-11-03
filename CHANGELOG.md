@@ -7,7 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-03
+
+### Added
+- **Save files now keep more stockpile data:** base tech, factory orders, and
+  refinery orders and storages are included in the output.
+- **Busy save files are retried.** A save the game is still writing no longer fails
+  the read straight away.
+
 ### Changed
+- **Catalog and database tooling now runs on `fs-assets`.** `fs-tools` no longer needs
+  repak, umodel or UAssetGUI, the `external_tools` setting is gone (config schema v16,
+  migrated automatically), and the `fs-tools` `extract-assets`, `generate-templates`,
+  `build-db` and `add-mod` commands are replaced by the `fs-assets` CLI.
+- **Screen capture and global hotkeys ship only on Windows**, through the `capture`
+  extra when installing from source. `fs.exe` includes them.
 - **Catalog and icon database updated for Foxhole Update 67.** Some item codes in the
   output change: Rare Materials is now `FacilityMaterials12` (was `RareMaterials`),
   and the Zeal and Bolas emplacements are now `EmplacedAAC` and `EmplacedAAW` (were
@@ -333,7 +347,10 @@ Initial beta release.
 - Test coverage >80%
 - CI/CD with GitHub Actions
 
-[Unreleased]: https://github.com/xurxogr/foxhole-stockpiles/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/xurxogr/foxhole-stockpiles/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/xurxogr/foxhole-stockpiles/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/xurxogr/foxhole-stockpiles/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/xurxogr/foxhole-stockpiles/compare/v0.4.0...v1.0.0
 [0.4.0]: https://github.com/xurxogr/foxhole-stockpiles/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/xurxogr/foxhole-stockpiles/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/xurxogr/foxhole-stockpiles/compare/v0.2.0...v0.3.0
