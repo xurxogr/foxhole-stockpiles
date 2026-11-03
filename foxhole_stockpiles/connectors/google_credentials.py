@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 from typing import Final
 
-from google.auth.exceptions import RefreshError
+from google.auth.exceptions import RefreshError, TransportError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow, WSGITimeoutError
@@ -92,6 +92,10 @@ class GoogleCredentialsProvider:
         Returns:
             Credentials | None: The renewed credentials, or None if they cannot be
                 renewed or Google rejected them.
+
+        Raises:
+            CredentialsUnavailableError: If Google could not be reached. The saved
+                token may be fine, so this does not ask the user to authorize again.
         """
         if creds is None or not creds.expired or not creds.refresh_token:
             return None
@@ -100,6 +104,9 @@ class GoogleCredentialsProvider:
         except RefreshError as e:
             logger.warning("Google rejected the saved token, authorizing again: %s", e)
             return None
+        except TransportError as e:
+            logger.warning("Could not reach Google to renew the saved token: %s", e)
+            raise CredentialsUnavailableError("Could not reach Google") from e
         return creds
 
     def _authorize(self) -> Credentials:

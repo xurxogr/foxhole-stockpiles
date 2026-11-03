@@ -1,8 +1,11 @@
 """Tests for the untrusted-data handling of handlers.sheets."""
 
+import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
+from googleapiclient.errors import HttpError
+from httplib2 import ServerNotFoundError
 
 from foxhole_stockpiles.connectors.credentials_unavailable_error import (
     CredentialsUnavailableError,
@@ -172,3 +175,33 @@ def test_other_links_are_not_spreadsheets(url: str) -> None:
         url (str): The link.
     """
     assert SPREADSHEET_URL_PATTERN.search(url) is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("error", "logged"),
+    [
+        (HttpError(MagicMock(status=403, reason="Forbidden"), b"{}", uri=_URL), "403"),
+        (ServerNotFoundError("no such host"), "ServerNotFoundError"),
+        (TimeoutError("timed out"), "TimeoutError"),
+    ],
+    ids=["api-error", "dns-failure", "timeout"],
+)
+async def test_failed_append_explains_itself_in_the_log(
+    error: Exception, logged: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The user sees a short message, and the log says why without the spreadsheet link."""
+    handler = SheetsOutputHandler(_settings())
+    stockpile = Stockpile(items=[_ITEM])
+
+    with (
+        patch.object(sheets_mod.GoogleCredentialsProvider, "load", return_value=MagicMock()),
+        patch.object(sheets_mod, "build", side_effect=error),
+        caplog.at_level(logging.ERROR),
+    ):
+        result = await handler.handle([stockpile])
+
+    assert result == {"message": "Appending failed"}
+    assert handler.delivered is False
+    assert logged in caplog.text
+    assert "ABC-123" not in caplog.text

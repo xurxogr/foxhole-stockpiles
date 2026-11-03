@@ -8,6 +8,7 @@ from typing import Any, Final
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from httplib2 import HttpLib2Error
 
 from foxhole_stockpiles.connectors.credentials_unavailable_error import (
     CredentialsUnavailableError,
@@ -134,7 +135,13 @@ class SheetsOutputHandler(BaseOutputDestinationHandler):
         rows = self.stockpiles_to_rows(stockpiles)
         try:
             await asyncio.to_thread(self._append_rows, creds=creds, rows=rows)
-        except HttpError:
+        except HttpError as e:
+            # Its text would add the request URL, which holds the spreadsheet ID.
+            self.logger.error("Appending to the sheet failed: HTTP %s %s", e.status_code, e.reason)
+            self.delivered = False
+            return {"message": "Appending failed"}
+        except (HttpLib2Error, OSError) as e:
+            self.logger.error("Appending to the sheet failed: %s: %s", type(e).__name__, e)
             self.delivered = False
             return {"message": "Appending failed"}
         return {"status": "ok"}

@@ -36,6 +36,7 @@ dependencies = [
     # Google API
     "google-api-python-client>=2.197.0",
     "google-auth-httplib2>=0.4.0",
+    "httplib2>=0.32.0",
     "google-auth-oauthlib>=1.4.0",
     # PySide6 for GUI (LGPL, official Qt project)
     "PySide6>=6.6",
@@ -100,6 +101,7 @@ plugins = ["pydantic.mypy"]
 module = [
     "google_auth_oauthlib.*",
     "googleapiclient.*",
+    "httplib2.*",
     "pynput.*",
     "pywinctl.*",
     "pyperclip.*",

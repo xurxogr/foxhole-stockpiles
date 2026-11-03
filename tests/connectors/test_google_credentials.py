@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from google.auth.exceptions import RefreshError
+from google.auth.exceptions import RefreshError, TransportError
 from google_auth_oauthlib.flow import WSGITimeoutError
 
 from foxhole_stockpiles.connectors import google_credentials as module
@@ -122,3 +122,19 @@ def test_abandoned_authorization_times_out(tmp_path: Path) -> None:
         GoogleCredentialsProvider(
             creds_path=str(client_secrets), scopes=_SCOPES, token_path=tmp_path / "token"
         ).load()
+
+
+def test_network_failure_while_refreshing_does_not_ask_to_authorize(token_path: Path) -> None:
+    """A network outage says nothing about the token, so no browser window opens for it."""
+    creds = _saved(valid=False, expired=True, refresh_token="r")
+    creds.refresh.side_effect = TransportError("no route to host")
+    provider = GoogleCredentialsProvider(creds_path=None, scopes=_SCOPES, token_path=token_path)
+
+    with (
+        patch.object(module.Credentials, "from_authorized_user_file", return_value=creds),
+        patch.object(provider, "_authorize") as authorize,
+        pytest.raises(CredentialsUnavailableError, match="reach Google"),
+    ):
+        provider.load()
+
+    authorize.assert_not_called()
