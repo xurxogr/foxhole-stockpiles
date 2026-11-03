@@ -1,6 +1,7 @@
 """Database visualizer window for browsing template database."""
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
 
 from PySide6.QtCore import Qt
@@ -384,57 +385,47 @@ class DatabaseVisualizerWindow(QDialog):
         if self.current_templates is None:
             return
 
-        # Get filter values (PySide6 returns enum values as strings, convert back)
+        matches = self._build_template_filter()
+        self.filtered_templates = [
+            (idx, template) for idx, template in self.all_templates if matches(template)
+        ]
+        self._update_template_list()
+
+    def _build_template_filter(self) -> Callable[[IconTemplate], bool]:
+        """Read the filter widgets into one check of a template.
+
+        Returns:
+            Callable[[IconTemplate], bool]: Whether a template passes every filter.
+        """
+        # PySide6 returns enum values as strings, convert back
         code_text = self.code_filter.text().lower()
         faction_data = self.faction_filter.currentData()
-        faction = (
-            ItemFaction(faction_data)
-            if faction_data and not isinstance(faction_data, ItemFaction)
-            else faction_data
-        )
+        faction = ItemFaction(faction_data) if faction_data else None
         category_data = self.category_filter.currentData()
-        category = (
-            ItemCategory(category_data)
-            if category_data and not isinstance(category_data, ItemCategory)
-            else category_data
-        )
+        category = ItemCategory(category_data) if category_data else None
         mod = self.mod_filter.currentData()
-
-        # Crated filter logic
         show_all_crated = self.crated_all.isChecked()
         show_normal = self.crated_normal.isChecked()
         show_crated = self.crated_crated.isChecked()
 
-        # Filter templates
-        filtered: list[tuple[int, IconTemplate]] = []
-        for idx, template in self.all_templates:
-            # Code filter
-            if code_text and code_text not in template.code.lower():
-                continue
+        def matches(template: IconTemplate) -> bool:
+            """Check a template against the filters read.
 
-            # Faction filter
-            if faction and template.faction != faction:
-                continue
+            Args:
+                template (IconTemplate): The template.
 
-            # Category filter
-            if category and template.category != category:
-                continue
+            Returns:
+                bool: Whether it passes every filter.
+            """
+            return (
+                code_text in template.code.lower()
+                and (not faction or template.faction == faction)
+                and (not category or template.category == category)
+                and (not mod or template.mod == mod)
+                and (show_all_crated or (show_crated if template.crated else show_normal))
+            )
 
-            # Mod filter
-            if mod and template.mod != mod:
-                continue
-
-            # Crated filter
-            if not show_all_crated:
-                if template.crated and not show_crated:
-                    continue
-                if not template.crated and not show_normal:
-                    continue
-
-            filtered.append((idx, template))
-
-        self.filtered_templates = filtered
-        self._update_template_list()
+        return matches
 
     def _update_template_list(self) -> None:
         """Update the template list widget."""

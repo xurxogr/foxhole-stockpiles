@@ -1318,3 +1318,100 @@ class TestDatabaseVisualizerWindowBrowseDatabase:
             visualizer_window: Window fixture.
         """
         assert visualizer_window.database_path_edit.isReadOnly()
+
+
+def _template(
+    code: str,
+    faction: ItemFaction = ItemFaction.NEUTRAL,
+    category: ItemCategory = ItemCategory.Item,
+    mod: str = "vanilla",
+    crated: bool = False,
+) -> IconTemplate:
+    """Build a template to filter.
+
+    Args:
+        code (str): Its code, which tells it apart from the others.
+        faction (ItemFaction): Its faction.
+        category (ItemCategory): Its category.
+        mod (str): Its mod.
+        crated (bool): Whether it is crated.
+
+    Returns:
+        IconTemplate: The template.
+    """
+    return IconTemplate(
+        code=code,
+        faction=faction,
+        category=category,
+        mod=mod,
+        crated=crated,
+        resolution=SupportedResolution.R_1080,
+        image=np.zeros((32, 32, 3), dtype=np.uint8),
+    )
+
+
+def _filtered_codes(window: DatabaseVisualizerWindow) -> list[str]:
+    """Apply the filters to a fixed set of templates.
+
+    Args:
+        window (DatabaseVisualizerWindow): The window, with its filters set.
+
+    Returns:
+        list[str]: The codes of the templates that pass.
+    """
+    window.current_templates = MagicMock()
+    window.all_templates = list(
+        enumerate(
+            [
+                _template("Rifle"),
+                _template("RifleCrate", crated=True),
+                _template("Warden", faction=ItemFaction.WARDENS),
+                _template("Truck", category=ItemCategory.Vehicle),
+                _template("Modded", mod="other"),
+            ]
+        )
+    )
+    window._apply_filters()
+    return [template.code for _, template in window.filtered_templates]
+
+
+def test_no_filter_keeps_every_template(visualizer_window: DatabaseVisualizerWindow) -> None:
+    """With the filters at their defaults nothing is hidden."""
+    assert _filtered_codes(visualizer_window) == [
+        "Rifle",
+        "RifleCrate",
+        "Warden",
+        "Truck",
+        "Modded",
+    ]
+
+
+def test_code_filter_ignores_case(visualizer_window: DatabaseVisualizerWindow) -> None:
+    """Part of the code is enough, in any case."""
+    visualizer_window.code_filter.setText("rIfLe")
+
+    assert _filtered_codes(visualizer_window) == ["Rifle", "RifleCrate"]
+
+
+def test_combo_filters_keep_what_matches(visualizer_window: DatabaseVisualizerWindow) -> None:
+    """Each combo keeps only its value."""
+    visualizer_window.faction_filter.setCurrentText(ItemFaction.WARDENS.value)
+    assert _filtered_codes(visualizer_window) == ["Warden"]
+
+    visualizer_window.faction_filter.setCurrentIndex(0)
+    visualizer_window.category_filter.setCurrentText(ItemCategory.Vehicle.value)
+    assert _filtered_codes(visualizer_window) == ["Truck"]
+
+
+def test_crated_filter_separates_crated_from_normal(
+    visualizer_window: DatabaseVisualizerWindow,
+) -> None:
+    """Without "all", choosing crated or normal hides the other kind."""
+    visualizer_window.crated_all.setChecked(False)
+    visualizer_window.crated_crated.setChecked(True)
+    assert _filtered_codes(visualizer_window) == ["RifleCrate"]
+
+    visualizer_window.crated_crated.setChecked(False)
+    visualizer_window.crated_normal.setChecked(True)
+    assert "RifleCrate" not in _filtered_codes(visualizer_window)
+    assert "Rifle" in _filtered_codes(visualizer_window)
