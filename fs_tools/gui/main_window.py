@@ -224,33 +224,28 @@ class ToolsMainWindow(QMainWindow):
         self._visualizer_row.set_available(has_database)
         self._debug_viewer_row.set_available(has_database)
 
-    def _track(self, window: QWidget) -> None:
-        """Keep a reference to a launched window.
+    def _open(self, window: QWidget) -> None:
+        """Show a tool window, keeping a reference to it until it is destroyed.
 
         Args:
-            window (QWidget): The window to retain.
+            window (QWidget): The window to show.
         """
         self._open_windows.append(window)
         window.destroyed.connect(lambda: self._open_windows.remove(window))
+        window.setWindowModality(Qt.WindowModality.NonModal)
+        window.show()
 
     def show_icon_import(self) -> None:
         """Open the icon import / database builder window."""
-        window = IconImportWindow(self)
-        self._track(window)
-        window.show()
+        self._open(IconImportWindow(self))
 
     def show_catalog_builder(self) -> None:
         """Open the catalog builder window."""
-        window = CatalogBuilderWindow(self)
-        self._track(window)
-        window.show()
+        self._open(CatalogBuilderWindow(self))
 
     def show_database_info(self) -> None:
         """Open the database information dialog."""
-        window = DatabaseInfoWindow(self, initial_db_path=self._configured_database_path())
-        window.setWindowModality(Qt.WindowModality.NonModal)
-        self._track(window)
-        window.show()
+        self._open(DatabaseInfoWindow(self, initial_db_path=self._configured_database_path()))
 
     def show_settings(self) -> None:
         """Open the fs-tools configuration dialog."""
@@ -268,17 +263,11 @@ class ToolsMainWindow(QMainWindow):
         database_path = self._require_database_path()
         if database_path is None:
             return
-        window = DatabaseVisualizerWindow(self, database_path=database_path)
-        window.setWindowModality(Qt.WindowModality.NonModal)
-        self._track(window)
-        window.show()
+        self._open(DatabaseVisualizerWindow(self, database_path=database_path))
 
     def show_debug_viewer(self) -> None:
         """Open the debug image viewer dialog."""
         database_path = self._require_database_path()
         if database_path is None:
             return
-        window = DebugImageWindow(self, database_path=database_path)
-        window.setWindowModality(Qt.WindowModality.NonModal)
-        self._track(window)
-        window.show()
+        self._open(DebugImageWindow(self, database_path=database_path))
