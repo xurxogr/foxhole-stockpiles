@@ -3,8 +3,6 @@
 from pathlib import Path
 
 from PySide6.QtWidgets import (
-    QComboBox,
-    QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
     QHBoxLayout,
@@ -18,7 +16,10 @@ from PySide6.QtWidgets import (
 
 from foxhole_stockpiles.core.settings.sections.sav_processing import SavProcessingSettings
 from foxhole_stockpiles.core.utils import auto_detect_savefile
-from foxhole_stockpiles.enums.capture_mode import CaptureMode
+from foxhole_stockpiles.gui.widgets.config_tabs.capture_mode_fields import (
+    build_mode_combo,
+    build_poll_interval_input,
+)
 from foxhole_stockpiles.gui.widgets.hotkey_field import HotkeyField
 from foxhole_stockpiles.i18n import on_language_changed, t
 
@@ -44,9 +45,7 @@ class SavProcessingTab(QWidget):
 
         # SAV mode (manual hotkey scan vs. auto-monitor)
         self.mode_label = QLabel()
-        self.mode_combo = QComboBox()
-        self.mode_combo.addItem("", CaptureMode.MANUAL)
-        self.mode_combo.addItem("", CaptureMode.MONITOR)
+        self.mode_combo = build_mode_combo()
         form_layout.addRow(self.mode_label, self.mode_combo)
 
         # SAV hotkey (used in manual mode)
@@ -72,11 +71,7 @@ class SavProcessingTab(QWidget):
 
         # Poll interval
         self.poll_interval_label = QLabel()
-        self.poll_interval_input = QDoubleSpinBox()
-        self.poll_interval_input.setRange(0.1, 60.0)
-        self.poll_interval_input.setSingleStep(0.5)
-        self.poll_interval_input.setDecimals(1)
-        self.poll_interval_input.setSuffix(" s")
+        self.poll_interval_input = build_poll_interval_input()
         form_layout.addRow(self.poll_interval_label, self.poll_interval_input)
 
         layout.addLayout(form_layout)

@@ -4,6 +4,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from foxhole_stockpiles.core.constants import MAX_POLL_INTERVAL, MIN_POLL_INTERVAL
 from foxhole_stockpiles.enums.capture_mode import CaptureMode
 
 
@@ -35,8 +36,8 @@ class SavProcessingSettings(BaseModel):
     poll_interval: float = Field(
         description="Polling interval in seconds for monitoring mode",
         default=1.0,
-        ge=0.1,
-        le=60.0,
+        ge=MIN_POLL_INTERVAL,
+        le=MAX_POLL_INTERVAL,
     )
     model_config = ConfigDict(
         extra="forbid",
