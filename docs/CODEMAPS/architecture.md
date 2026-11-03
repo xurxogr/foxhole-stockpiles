@@ -1,4 +1,4 @@
-<!-- Generated: 2026-07-03 | Branch: main | Token estimate: ~1000 -->
+<!-- Generated: 2026-11-03 | Branch: main | Token estimate: ~1000 -->
 
 # Architecture & Design Patterns
 
@@ -15,7 +15,7 @@ foxhole_stockpiles ──depends──> fs-ocr (external Rust PyPI pkg)
 ```
 
 - **foxhole_stockpiles** — desktop runtime: CLI, PySide6 GUI, screenshot
-  capture, local scan, SAV processing, output routing. Talks to the OCR engine
+  capture, local scan, SAV and clipboard processing, output routing. Talks to the OCR engine
   only through `services/scanner.py`.
 - **fs_tools** — build-time tooling (`visualize`, `debug`, catalog/icon-import GUI).
   Self-contained: own `core/settings`, `models`, `gui`, `i18n`. The catalog and
@@ -71,11 +71,24 @@ SAV-sourced `Stockpile`s carry map metadata (`hex`, `coords`, `is_reserve`) and 
 `raw_timestamp` (excluded from serialization) used for change-tracking via
 `Stockpile.to_key()`. OCR-sourced items carry `x`/`y` pixel coords instead.
 
+## Clipboard pipeline (stockpile export → stockpile data)
+
+```
+clipboard text (manual hotkey or monitor polling)
+  ▼ services/clipboard_scan.py (ClipboardScanService; GUI workers + `fs clip`)
+  ▼ services/clipboard_source.py → services/clipboard_parser/parse_clipboard()
+       header gate; display name → code via code_map.py + data/catalog.json
+  ▼ services/output_coordinator.py → handlers/*
+```
+
+Global hotkeys work only on Windows with the `capture` extra
+(`global_hotkeys_supported()`); elsewhere use the File menu or monitor mode.
+
 ## Entry surfaces
 
 | Surface | Module | Notes |
 |---|---|---|
-| CLI `fs` | `cli/app.py` (Typer) | `scan` `gui` `sav`; no subcommand → GUI |
+| CLI `fs` | `cli/app.py` (Typer) | `scan` `gui` `sav` `clip`; no subcommand → GUI |
 | Desktop GUI | `gui/app.py` → `gui/windows/main_window.py` | capture panel + SAV tools |
 | Tooling | `fs_tools/cli.py`, `fs_tools/gui` | `visualize` `debug`; no subcommand → GUI; GUI wraps `fs-assets` |
 
@@ -99,9 +112,9 @@ v13→v14 reworks webhook `forward` auth into `header`, v14→v15 drops
 
 `gui/windows/main_window.py` hosts `widgets/capture_panel.py` (central widget):
 Start/Stop capture toggle (binds the hotkey listener), "scan a file" action, SAV
-scan/monitor tools, and a live log table. Config dialog
-(`windows/config_window.py`) has five always-visible tabs: Scanner (incl.
-capture hotkey), Output, SAV Processing, Logging, GUI.
+and clipboard tools, and an activity feed; `gui/controllers/` holds the pipelines.
+Config dialog (`windows/config_window.py`) has three tabs: Input (screenshot,
+clipboard, SAV), Output, General.
 
 ## Error handling & security
 
@@ -109,9 +122,9 @@ capture hotkey), Output, SAV Processing, Logging, GUI.
 - `Scanner.__init__` raises `ValueError` (no `database_path`) / `FileNotFoundError`.
 - `services/capture.py` raises `CaptureError` (no window / minimized / inactive /
   unavailable platform); the GUI surfaces it in the activity feed + a message box.
-- **Security**: icon path sanitization before PAK extraction; config/token file
-  permissions restricted to owner-only; path-template placeholder sanitization in
-  file output handler (strip `/` and `\\` from user-controlled values).
+- **Security**: config, token and log files restricted to owner-only;
+  path segments sanitized (`core/safe_path_segment.py`); spreadsheet formulas
+  neutralized on output (`handlers/formula_guard.py`).
 
 ## Design decisions (rationale)
 

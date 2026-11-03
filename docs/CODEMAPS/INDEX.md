@@ -1,14 +1,14 @@
-<!-- Generated: 2026-07-03 | Branch: main | Source files: ~235 (.py) | Token estimate: ~950 -->
+<!-- Generated: 2026-11-03 | Branch: main | Source files: ~185 (.py, without tests) | Token estimate: ~950 -->
 
 # Foxhole Stockpiles — Codemap Index
 
-**Last Updated:** 2026-07-03
-**Version:** 0.4.0 | **Config schema:** v16 | **Python:** 3.12+
+**Last Updated:** 2026-11-03
+**Version:** 1.1.0 | **Config schema:** v16 | **Python:** 3.12+
 
 ## What it is
 
 Desktop app that extracts structured item data from Foxhole stockpile
-screenshots, and parses Foxhole `.sav` world files. It is **capture-first**: a
+screenshots, and parses Foxhole `.sav` world files and clipboard stockpile exports. It is **capture-first**: a
 global hotkey grabs the live Foxhole window, the OCR runs **in-process**, and the
 result is routed to configured outputs (JSON/CSV/TSV/Sheets/webhook/console).
 The OCR engine itself is an **external Rust package** (`fs-ocr` on PyPI); this
@@ -25,7 +25,7 @@ repo is the desktop runtime + tooling around it. There is no REST server.
 │ SAV), screenshot capture, local  │ DB visualizer/debug viewer,  │
 │ scan, output routing, OCR seam   │ fs-assets wrapper, template  │
 │ (services/scanner.py)            │ store (core/template_store)  │
-│ ~120 .py                         │ ~100 .py                     │
+│ ~140 .py                         │ ~40 .py                      │
 └──────────────────────────────────┴──────────────────────────────┘
 ```
 
@@ -49,13 +49,13 @@ capture-and-scan. The HDF5 template DB is built and edited by the external
 
 ## foxhole_stockpiles modules
 
-- **cli/** — Typer app (`app.py`); commands `scan`, `gui`, `sav`; `_settings.py` loads `AppSettings`, `_console.py` Rich output.
-- **services/** — `scanner.py` (**OCR seam → external `fs_ocr`**), `capture.py` (grab the Foxhole window), `local_scan.py` (`LocalScanService`: scan → outputs), `output_coordinator.py` (sink routing), `catalog_service.py`, `clipboard_parser/` package (clipboard scan parsing), `sav_parser.py`, `savefile_processor.py`.
-- **core/** — `settings/` (Pydantic `AppSettings` v16 + `config_migrator/` package + nested `sections/`), `logging.py`, `utils.py`, `version.py`.
+- **cli/** — Typer app (`app.py`); commands `scan`, `gui`, `sav`, `clip`; `_settings.py` loads `AppSettings`, `_console.py` Rich output.
+- **services/** — `scanner.py` (**OCR seam → external `fs_ocr`**), `capture.py` (grab the Foxhole window), `clipboard_scan.py` + `clipboard_parser/` (clipboard exports), `local_scan.py` (`LocalScanService`: scan → outputs), `output_coordinator.py` (sink routing), `catalog_service.py`, `clipboard_parser/` package (clipboard scan parsing), `sav_parser.py`, `savefile_processor.py`.
+- **core/** — `settings/` (Pydantic `AppSettings` v16 + `config_migrator/` package + nested `sections/`), `logging.py`, `utils.py`, `safe_path_segment.py`, owner-only log files (`private_*`).
 - **models/** — Pydantic v2: `stockpile.py` (`hex`/`coords`/`is_reserve`/`to_key()`), `stockpile_item.py` (`x`/`y`/`candidates`), `item_candidate.py`, `stockpile_coords.py`, memory-stat models.
-- **handlers/** — output sinks taking `list[Stockpile]`: `console.py`, `file.py`, `webhook.py`, `response.py` (return), **`sheets.py`** (Google Sheets), `stockpile_json.py` (shared JSON payload builder); interface in `base_handler.py`.
-- **enums/** — StrEnums: stockpile_type (~28), item_faction, item_category, supported_language, supported_resolution, output_format/destination/handler_type, auth_type, capture_mode.
-- **gui/** — PySide6 desktop app: `windows/` (main, config), `widgets/capture_panel.py` (refactored init_ui + pure helpers) + `config_tabs/`, `utils/` (hotkey listener, capture+scan worker, SAV workers, activity feed formatter).
+- **handlers/** — output sinks taking `list[Stockpile]`: `console.py`, `file.py`, `webhook.py`, `response.py` (return), **`sheets.py`** (Google Sheets), `formula_guard.py` (spreadsheet formula neutralizing), `stockpile_json.py` (shared JSON payload builder); interface in `base_handler.py`.
+- **enums/** — StrEnums: stockpile_type (~28), item_faction, item_category, supported_resolution, output_format/destination/handler_type, auth_type, capture_mode.
+- **gui/** — PySide6 desktop app: `windows/` (main, config), `controllers/` (OCR, SAV, clipboard pipelines), `widgets/capture_panel.py` (refactored init_ui + pure helpers) + `config_tabs/`, `utils/` (hotkey listener, capture+scan worker, SAV workers, activity feed formatter).
 - **connectors/**, **i18n/** — webhook connector, translations.
 
 ## See also

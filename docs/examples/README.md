@@ -1,12 +1,12 @@
 # Configuration Examples
 
-Example `~/.fs_config` files for common setups.
+Example configuration files for common setups.
 
 ## Quick Start
 
-1. **Copy an example** to `~/.fs_config`:
+1. **Copy an example** to your [config file](../configuration.md#2-configuration-file) (Linux path shown):
    ```bash
-   cp docs/examples/fs_config.minimal ~/.fs_config
+   cp docs/examples/fs_config.minimal ~/.config/foxhole-stockpiles/config.json
    ```
 
 2. **Edit it** for your setup:
@@ -25,7 +25,7 @@ Example `~/.fs_config` files for common setups.
 
 ```json
 {
-  "config_version": 15,
+  "config_version": 16,
   "scanner": {
     "database_path": "/app/data/foxhole_templates.h5"
   }
@@ -57,7 +57,7 @@ secrets (see below).
 Settings resolve highest → lowest:
 
 1. **Environment variables** (`FS_*`)
-2. **Configuration file** (`~/.fs_config`)
+2. **Configuration file** (`config.json`)
 3. **Defaults**
 
 ## Using Environment Variables

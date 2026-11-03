@@ -198,8 +198,7 @@ python build_fs.py
 ```
 
 This produces `fs.exe` and `fs-tools.exe` in `dist/` (~50–80 MB each), bundling
-all Python dependencies. External tools (`repak.exe`, `umodel.exe`) are still
-provided separately. The CI/release workflow runs this automatically on
+all Python dependencies. The CI/release workflow runs this automatically on
 `vX.Y.Z` tags and publishes the executables as GitHub Release assets.
 
 ## Translations

@@ -34,7 +34,7 @@ What actually happened.
 
 **Dependency Versions (if relevant):**
 ```bash
-pip list | grep -E "(fs-ocr|fs-sav|pydantic|PySide6|pillow|numpy)"
+pip list | grep -E "(fs-ocr|fs-sav|fs-assets|pydantic|PySide6|pillow|numpy)"
 ```
 
 ## Error Output

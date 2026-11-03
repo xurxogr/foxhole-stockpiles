@@ -8,11 +8,11 @@ a `.sav` file is processed), the result is POSTed to your URL.
 ## Configuration
 
 Webhook output is configured as a handler in the `output.handlers` list of your
-`~/.fs_config`. Add a handler with `"type": "webhook"`:
+[config file](configuration.md#2-configuration-file). Add a handler with `"type": "webhook"`:
 
 ```json
 {
-  "config_version": 10,
+  "config_version": 16,
   "scanner": { "database_path": "/path/to/templates.h5", "capture_key": "F9" },
   "output": {
     "handlers": [

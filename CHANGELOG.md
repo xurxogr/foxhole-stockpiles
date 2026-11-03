@@ -7,7 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Catalog and icon database updated for Foxhole Update 67.** Some item codes in the
+  output change: Rare Materials is now `FacilityMaterials12` (was `RareMaterials`),
+  and the Zeal and Bolas emplacements are now `EmplacedAAC` and `EmplacedAAW` (were
+  `EmplacedAircraftC` and `EmplacedAircraftW`). Anything reading those codes must
+  be updated.
+- **`fs-assets` 0.3.2 is now the minimum version.**
+
 ### Fixed
+- **Configured hotkeys are no longer reported as missing.** Where global hotkeys are
+  unavailable, the app now says so instead of asking you to set up a method.
 - **Encampment and Safe House no longer have each other's type code.** Screenshots
   and clipboard data reported Encampment as `GarrisonStation` and Safe House as
   `ForwardBase1`. They now use the same codes as the game and save files, so the

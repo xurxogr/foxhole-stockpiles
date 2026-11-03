@@ -1,4 +1,4 @@
-<!-- Generated: 2026-07-03 | Branch: main | Token estimate: ~850 -->
+<!-- Generated: 2026-11-03 | Branch: main | Token estimate: ~850 -->
 
 # Dependencies & External Tools
 
@@ -8,19 +8,22 @@ Source of truth: `pyproject.toml`. Python **3.12+**.
 
 | Package | Min | Role |
 |---|---|---|
-| numpy | 2.4.5 | arrays / image buffers |
-| pillow | 12.2.0 | image I/O + **screen grab** (`ImageGrab`) |
+| numpy | 2.5.0 | arrays / image buffers |
+| pillow | 13.0.0 | image I/O + **screen grab** (`ImageGrab`) |
 | pydantic | 2.13.4 | models / validation |
-| pydantic-settings | 2.14.1 | env + file config |
-| typer | 0.12.0 | CLI framework (`fs`, `fs-tools`) |
+| pydantic-settings | 2.14.2 | env + file config |
+| platformdirs | 4.10.0 | platform config dir |
+| pyperclip | 1.8 | clipboard reads |
+| typer | 0.26.7 | CLI framework (`fs`, `fs-tools`) |
 | **pywinctl** | **0.4** | **window detection (find the Foxhole window); Windows-only `capture` extra** |
 | **pynput** | **1.7.7** | **global capture hotkey; Windows-only `capture` extra** |
 | **fs-ocr** | 1.1.0 | external Rust OCR engine (replaces in-repo `fs_ocr`) |
-| **fs-sav** | 0.3.0 | Rust `.sav` parser |
+| **fs-sav** | 0.4.0 | Rust `.sav` parser |
 | **fs-assets** | 0.3.2 | Rust game-asset tools: catalog + icon-template DB (CLI `fs-assets`; backs the `fs_tools` GUI) |
-| google-api-python-client | 2.196.0 | Google Sheets output handler |
+| google-api-python-client | 2.197.0 | Google Sheets output handler |
 | google-auth-httplib2 | 0.4.0 | Google auth transport |
 | google-auth-oauthlib | 1.4.0 | Google OAuth installed-app flow |
+| httplib2 | 0.32.0 | Google API transport |
 | PySide6 | 6.6 | desktop GUI (LGPL) |
 | httpx | 0.28.1 | async HTTP (webhooks) |
 
@@ -33,7 +36,7 @@ into the `fs-ocr` Rust engine), `discord-webhook` (notifications stack dropped).
 
 - **fs-ocr** (PyPI `fs-ocr>=1.1.0`) — the OCR engine. `StockpileScanner`,
   `ScanConfig`, `Stockpile`, `StockpileItem`. Backs `services/scanner.py`.
-- **fs-sav** (PyPI) — backs `services/sav_parser.py`.
+- **fs-sav** (PyPI `fs-sav>=0.4.0`) — backs `services/sav_parser.py`.
 - **fs-assets** (PyPI `fs-assets>=0.3.2`) — reads the game `.pak` directly to
   build the catalog (`build_catalog`) and the icon-template DB (`add_mod`,
   `modify_icon`, `read_templates`, `database_statistics`, `pak_coverage`).
@@ -56,8 +59,8 @@ No PAK/asset tools are needed: repak, umodel and UAssetGUI are no longer used
 Screenshot capture (`services/capture.py`) needs `pywinctl` + Pillow's
 `ImageGrab` and an active, non-minimized Foxhole window (title `War*`). The libs
 are imported lazily and raise `CaptureError` where unavailable (e.g. headless
-Linux) — capture is effectively a Windows/desktop feature, while SAV processing
-and CLI scan work everywhere.
+Linux) — capture is effectively a Windows/desktop feature, and global hotkeys need
+Windows plus the `capture` extra, while SAV, clipboard and CLI scan work everywhere.
 
 ## Google Sheets integration
 
@@ -69,8 +72,8 @@ OAuth installed-app flow; token cached at `~/.fs_token`. Config in
 
 ## Dev dependencies (`[project.optional-dependencies] dev`)
 
-pytest 9.0.3 (+ asyncio 1.2, cov 7.1, xdist 3.8, qt 4.5), mypy 2.1 (strict),
-ruff 0.15.13, pre-commit 4.6.
+pytest 9.1.1 (+ asyncio 1.4, cov 7.1, xdist 3.8, qt 4.5), mypy 2.1 (strict),
+ruff 0.15.19, pre-commit 4.6. Extras: `build` (pyinstaller 6.0), `capture` (Windows).
 
 **Quality gates:** `ruff check` / `ruff format`; `mypy foxhole_stockpiles fs_tools`
 (strict, pydantic plugin); `pytest` (≥80% coverage, `--cov=foxhole_stockpiles --cov=fs_tools`).
@@ -79,7 +82,7 @@ ruff 0.15.13, pre-commit 4.6.
 
 ```
 [project.scripts]
-fs        = foxhole_stockpiles.cli.app:main      # scan/gui/sav
+fs        = foxhole_stockpiles.cli.app:main      # scan/gui/sav/clip
 fs-tools  = fs_tools.cli:main
 [project.gui-scripts]
 fs-gui       = foxhole_stockpiles.gui.app:launch_gui
@@ -93,16 +96,13 @@ Packaging: `tool.setuptools.packages.find` includes `foxhole_stockpiles*` +
 
 - `build_fs.py` — PyInstaller build of `fs.exe` (`--onefile --windowed`,
   `--collect-submodules foxhole_stockpiles`; bundles i18n translations).
-- `sincroniza.sh` — rsync the source (minus the multi-GB `data/` PAKs) to a
-  Windows path for building the exe there.
-- `build_database.sh` — extract PAKs + build the template DB via `fs-tools`.
 - `tools/` — `sync_stockpile_translations.py`, `update_dependencies.py`.
 
 ## Config examples
 
 ```jsonc
-// platform config dir (~/.fs_config)
-{ "config_version": 15,
+// <platform config dir>/foxhole-stockpiles/ (legacy ~/.fs_config is moved there)
+{ "config_version": 16,
   "scanner": { "database_path": "...templates.h5", "capture_key": "F9", "confidence_gap": 0.0 },
   "output": { "handlers": [ /* console/file/webhook/return/sheets */ ] },
   "sav_processing": { /* save dir / map data resolution */ } }

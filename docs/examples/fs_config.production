@@ -1,5 +1,5 @@
 {
-  "config_version": 15,
+  "config_version": 16,
   "scanner": {
     "database_path": "/path/to/foxhole_templates.h5",
     "capture_key": "F9",

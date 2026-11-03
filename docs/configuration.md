@@ -24,13 +24,13 @@ export FS_LOGGING__LOG_FILE=/var/log/foxhole-scanner.log
 
 ### 2. Configuration File
 
-Create a file at `~/.fs_config` with JSON configuration:
+Create a JSON file at `<platform config dir>/foxhole-stockpiles/config.json` (on Linux, `~/.config/foxhole-stockpiles/config.json`; on Windows, under `%LOCALAPPDATA%`). A legacy `~/.fs_config` file is moved there automatically:
 
 **Note on Config Versioning:** The configuration includes a `config_version` field (current: **16**). Old configs are automatically migrated when loaded via `ConfigMigrator` - no manual action required. V5 introduced the `output.handlers` array structure (multiple output destinations); later versions added the `sav_processing` section for Foxhole save-file processing; V10 removed the obsolete `api_server` and `api_auth` sections (the FastAPI server was removed in favor of local screenshot capture); V11 removed the `stockpile_types` section (type detection now happens inside the external `fs-ocr` engine, so the aliases had no effect); V12 removed the `notifications` section (the notifier stack was never wired into the scan flow); V13 removed `gui.config_level` (the basic/advanced/developer setting no longer gated anything after OCR/template settings moved to `fs-ocr`/`fs-tools`); V14 reworked the webhook `forward` auth type into `header` (`client_auth_header` → `auth_header`); V15 dropped two dead fields, `scanner.early_exit_threshold` and `sav_processing.emit_all_on_start`; V16 removed the `external_tools` section (`repak`/`umodel`/`uassetgui`) and `database_builder.workers` (the catalog and template database are now built by the external `fs-assets` package, which reads the PAK directly).
 
 ```json
 {
-  "config_version": 11,
+  "config_version": 16,
   "scanner": {
     "database_path": "/path/to/database.h5",
     "capture_key": "F9"
@@ -65,11 +65,10 @@ Settings for the stockpile scanner.
 |---------|------|---------|-------------|
 | `database_path` | string | `null` | Path to the template database file |
 | `capture_key` | string\|null | `null` | Global hotkey that captures the Foxhole window and scans it (e.g. `"F9"`). The captured window title is hardcoded to `"War"`. Set to `null` (or leave unset) to disable capture |
-| `early_exit_threshold` | float | `0.0` | Early exit threshold for icon matching (0.0-1.0), used by the `fs-tools` candidate inspector. Set to 0.0 to disable early exit |
 | `confidence_gap` | float | `0.0` | Confidence gap for returning alternative candidates (0.0-1.0). Returns candidates within `(best_confidence - confidence_gap)` range that have the same category, crated status, and mod. Set to 0.0 to disable |
 | `screenshots_folder` | string | `""` | Folder to save captured screenshots. When set, each screenshot taken via the capture hotkey is saved here in a per-day subfolder (`YYYY-MM-DD/HHMMSS_<type>_<name>_<resolution>.png`). Empty string disables saving |
 
-> **Removed in config v8:** `custom_model`, `tessdata_path`, `max_ncc_candidates`, `phash_threshold`, and `ncc_tiebreaker_threshold`. **Removed in config v11:** `template_cache_size`, `debug_mode`, and `extract_icons` — these old in-repo-engine knobs have no remaining consumer. Stored values are dropped automatically on migration.
+> **Removed in config v8:** `custom_model`, `tessdata_path`, `max_ncc_candidates`, `phash_threshold`, and `ncc_tiebreaker_threshold`. **Removed in config v11:** `template_cache_size`, `debug_mode`, and `extract_icons`. **Removed in config v15:** `early_exit_threshold` and `sav_processing.emit_all_on_start`. These no longer have any consumer. Stored values are dropped automatically on migration.
 
 ### Output (`output`)
 
@@ -231,15 +230,31 @@ Settings for processing Foxhole save files (`.sav`) via the `fs sav` command (ba
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
+| `mode` | string | `"manual"` | `"manual"`: a hotkey scans the file once per press. `"monitor"`: the file is polled for changes |
+| `sav_capture_key` | string\|null | `null` | Global hotkey for manual mode (e.g. `"F10"`). Windows only |
 | `sav_file_path` | string\|null | `null` | Path to the Foxhole save file (`.sav`) to process |
 | `poll_interval` | float | `1.0` | Polling interval in seconds for monitoring mode (0.1–60.0) |
-| `emit_all_on_start` | boolean | `true` | Emit all stockpiles on first read (single-scan mode) |
 
 **Example:**
 ```bash
 export FS_SAV_PROCESSING__SAV_FILE_PATH="/path/to/User_MapData.sav"
 export FS_SAV_PROCESSING__POLL_INTERVAL=2.0
-export FS_SAV_PROCESSING__EMIT_ALL_ON_START=true
+```
+
+### Clipboard (`clipboard`)
+
+Settings for reading stockpiles copied with the in-game **Copy to Clipboard** button.
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `mode` | string | `"manual"` | `"manual"`: a hotkey reads the clipboard once per press. `"monitor"`: the clipboard is polled and each new export is emitted |
+| `clip_capture_key` | string\|null | `null` | Global hotkey for manual mode (e.g. `"F11"`). Windows only |
+| `poll_interval` | float | `1.0` | Polling interval in seconds for monitor mode (0.1–60.0) |
+
+**Example:**
+```bash
+export FS_CLIPBOARD__MODE=monitor
+export FS_CLIPBOARD__POLL_INTERVAL=2.0
 ```
 
 ## Common Configurations
@@ -250,7 +265,7 @@ export FS_SAV_PROCESSING__EMIT_ALL_ON_START=true
 export FS_OUTPUT__HANDLERS='[{"name":"Webhook","format":{"type":"json"},"handler":{"type":"webhook","url":"https://api.example.com/stockpiles","auth_type":"bearer","token":"webhook-token-456"}}]'
 ```
 
-Or in your `.fs_config`:
+Or in your config file:
 ```json
 {
   "output": {
@@ -299,20 +314,20 @@ export FS_SCANNER__CAPTURE_KEY=F9
 Settings are resolved in this order (highest to lowest priority):
 
 1. Environment variables (`FS_*`)
-2. Configuration file (`~/.fs_config`)
+2. Configuration file (`config.json`, see above)
 3. Default values
 
 Environment variables always override configuration file settings.
 
 ## Complete Configuration Reference
 
-### Full `.fs_config` Example
+### Full Configuration File Example
 
 This example shows all available settings with their default values:
 
 ```json
 {
-  "config_version": 11,
+  "config_version": 16,
   "logging": {
     "loggers": {},
     "log_level": "INFO",
@@ -333,8 +348,8 @@ This example shows all available settings with their default values:
   "scanner": {
     "database_path": null,
     "capture_key": null,
-    "early_exit_threshold": 0.0,
-    "confidence_gap": 0.0
+    "confidence_gap": 0.0,
+    "screenshots_folder": ""
   },
   "database_builder": {
     "catalog_file": null,
@@ -345,9 +360,15 @@ This example shows all available settings with their default values:
     "language": "en"
   },
   "sav_processing": {
+    "mode": "manual",
+    "sav_capture_key": null,
     "sav_file_path": null,
-    "poll_interval": 1.0,
-    "emit_all_on_start": true
+    "poll_interval": 1.0
+  },
+  "clipboard": {
+    "mode": "manual",
+    "clip_capture_key": null,
+    "poll_interval": 1.0
   }
 }
 ```
@@ -371,7 +392,6 @@ This table lists all available environment variables with their default values:
 | **Scanner** | | | |
 | `FS_SCANNER__DATABASE_PATH` | string | `null` | Template database path |
 | `FS_SCANNER__CAPTURE_KEY` | string\|null | `null` | Hotkey to capture the Foxhole "War" window and scan it (e.g. `F9`); `null` disables capture |
-| `FS_SCANNER__EARLY_EXIT_THRESHOLD` | float | `0.0` | Early exit threshold (used by `fs-tools`) |
 | `FS_SCANNER__CONFIDENCE_GAP` | float | `0.0` | Confidence gap for alternative candidates |
 | `FS_SCANNER__SCREENSHOTS_FOLDER` | string | `""` | Folder to save screenshots (empty to disable) |
 | **Database Builder** | | | |
@@ -381,9 +401,14 @@ This table lists all available environment variables with their default values:
 | `FS_GUI__MINIMIZE_TO_TRAY` | boolean | `false` | Minimize to tray on close |
 | `FS_GUI__LANGUAGE` | string | `"en"` | GUI language code |
 | **SAV Processing** | | | |
+| `FS_SAV_PROCESSING__MODE` | string | `"manual"` | `manual` or `monitor` |
+| `FS_SAV_PROCESSING__SAV_CAPTURE_KEY` | string\|null | `null` | Hotkey for manual mode (Windows only) |
 | `FS_SAV_PROCESSING__SAV_FILE_PATH` | string\|null | `null` | Path to the Foxhole `.sav` file to process |
 | `FS_SAV_PROCESSING__POLL_INTERVAL` | float | `1.0` | Polling interval in seconds for monitoring mode (0.1–60.0) |
-| `FS_SAV_PROCESSING__EMIT_ALL_ON_START` | boolean | `true` | Emit all stockpiles on first read |
+| **Clipboard** | | | |
+| `FS_CLIPBOARD__MODE` | string | `"manual"` | `manual` or `monitor` |
+| `FS_CLIPBOARD__CLIP_CAPTURE_KEY` | string\|null | `null` | Hotkey for manual mode (Windows only) |
+| `FS_CLIPBOARD__POLL_INTERVAL` | float | `1.0` | Polling interval in seconds for monitor mode (0.1–60.0) |
 
 **Note:** For JSON values (arrays/objects), use proper JSON syntax in the environment variable:
 ```bash

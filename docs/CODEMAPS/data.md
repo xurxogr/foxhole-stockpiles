@@ -1,4 +1,4 @@
-<!-- Generated: 2026-07-03 | Branch: main | Token estimate: ~1000 -->
+<!-- Generated: 2026-11-03 | Branch: main | Token estimate: ~1000 -->
 
 # Data Models, Config & Database
 
@@ -11,7 +11,8 @@ JSON-serializable. Enums are `StrEnum`.
 ```python
 class Stockpile(BaseModel):
     name: str = ""
-    type: StockpileType = UNDEFINED
+    type: str = StockpileType.UNDEFINED   # in-game CodeNames pass through verbatim
+    faction: ItemFaction | None
     hex: str | None = None            # map region name (SAV)
     coords: StockpileCoords | None    # map coordinates (SAV)
     is_reserve: bool = False
@@ -20,6 +21,9 @@ class Stockpile(BaseModel):
     shard: str | None = None
     ingame_timestamp: str | None = None
     resolution: str | None = None
+    tech: StockpileTech | None
+    refinery: Refinery | None
+    factory_orders: list[FactoryOrder] | None
     errors: list[str] | None = None
     raw_timestamp: int | None = None  # ticks, excluded from serialization
     def to_key(self) -> str           # type:hex:coords:name — SAV change-tracking
@@ -41,7 +45,8 @@ Custom `model_serializer` emits `candidates` only when non-empty.
 ### Other runtime models (`models/`)
 - `item_candidate.py` `ItemCandidate` — alternative match (code, confidence)
 - `stockpile_coords.py` `StockpileCoords` — `{x, y}` normalized map coords (`to_key()`)
-- `memory_snapshot.py`, `request_memory_stats.py` — memory monitoring
+- `stockpile_tech.py`, `refinery*.py`, `factory_order*.py` — structure-specific SAV data
+- `catalog_code.py` `CatalogCode` — code + faction; `clipboard_header.py` — parsed export header
 
 (Matching/template models — `IconTemplate`, `DatabaseStatistics`, etc. — live in
 `fs_tools/models/`, not the runtime. Catalog entries are produced by `fs-assets`;
@@ -60,7 +65,6 @@ The external `fs-ocr` exposes `StockpileScanner`, `ScanConfig`,
 | `StockpileType` | ~28 in-game structures (Encampment, Keep, Safe House, Relic Base, Bunker T1/T2/T3, Border/Town T1/T2/T3, Underground Fortress, BMS Longhook/Bluefin, Storage Depot, Seaport, Aircraft Depot, Hospital, Refinery, Maintenance Tunnel, facility/factory types) + Undefined. Values are UE asset names |
 | `ItemFaction` | Colonials, Wardens, Neutral |
 | `ItemCategory` | 20+ (Ammo, AT Ammo, Weapons, … Vehicles) |
-| `SupportedLanguage` | en, pt, fr, de, ru, zh, … |
 | `SupportedResolution` | 16 (664px … 2880px) |
 | `OutputFormat` | JSON, CSV, TSV |
 | `OutputDestination` | return, file, webhook, console, **sheets** |
@@ -142,10 +146,12 @@ database.h5
 ## Catalog JSON (`data/catalog.json`)
 
 Built from the game PAK by `fs-assets build-catalog`.
-Item metadata: `code`, `name`, `category`, `faction`, `cratable`, icon ref.
+Entries: `CodeName`, `DisplayName`, `DisplayNameLocales`, `FactionVariant`, `ItemCategory`,
+`Icon`, `StockpileCategory`, `bIsStockpilable`, `bIsCratable`.
 `cratable` ← the entry's `bIsCratable`, set by `fs-assets`: `ItemProfileData.bIsCratable`
 (items), `VehicleBuildType` (vehicles) or `BuildLocationType` (structures). Read via
-`services/catalog_service.py` (cached `get_catalog_service()`, `get_display_name`).
+`services/catalog_service.py` (cached `get_catalog_service()`, `get_display_name`) and
+`services/clipboard_parser/code_map.py` (display name → code).
 
 ## SAV data
 

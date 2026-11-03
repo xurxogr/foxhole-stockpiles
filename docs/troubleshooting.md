@@ -222,8 +222,8 @@ If you're using a mod (e.g., clean-icons) and items show as Unknown:
 # Verify mod templates exist (filter by mod in the visualizer)
 fs-tools visualize --database templates.h5
 
-# If templates exist but don't match, rebuild with current mod files
-./build_database.sh
+# If templates exist but don't match, rebuild them with current mod files
+# (see "Building a custom OCR database" in docs/advanced.md)
 ```
 
 ### Low Confidence Scores
@@ -281,7 +281,7 @@ Pressing the hotkey has no effect, or no hotkey seems to be registered.
 
 **Solution:**
 The capture hotkey is not set. Configure `scanner.capture_key`:
-- In the GUI: **Settings → Scanner** tab, set the capture key.
+- In the GUI: **Settings → Input**, set the capture key.
 - Or via environment variable:
   ```bash
   export FS_SCANNER__CAPTURE_KEY=F9
@@ -337,8 +337,18 @@ includes them; from source, install the `capture` extra on Windows
 other platforms use file-based scanning or SAV processing instead:
 ```bash
 fs scan --image screenshot.png
-fs sav world.sav
+fs sav --file MapData.sav --once
 ```
+
+### Hotkeys Only Work in the Windows Build
+
+**Problem:**
+The activity feed says that hotkeys only work in the Windows build, even though
+keys are set in Settings.
+
+**Solution:**
+Your keys are saved correctly, but this platform can't register global hotkeys.
+Use the Windows build, or use the File menu or monitor mode here.
 
 ### Capture Won't Start (No Database)
 
@@ -401,17 +411,17 @@ Settings don't change when setting environment variables.
 ### Config File Ignored
 
 **Problem:**
-Settings in `~/.fs_config` are not being used.
+Settings in your config file are not being used.
 
 **Solution:**
 1. Verify file location:
    ```bash
-   ls -la ~/.fs_config
+   ls -la ~/.config/foxhole-stockpiles/config.json  # Linux path
    ```
 
 2. Check JSON syntax is valid (the config file is schema v16):
    ```bash
-   python -m json.tool ~/.fs_config
+   python -m json.tool ~/.config/foxhole-stockpiles/config.json
    ```
 
 3. Remember: Environment variables override the config file

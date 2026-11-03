@@ -1,4 +1,4 @@
-<!-- Generated: 2026-07-03 | Branch: main | Token estimate: ~950 -->
+<!-- Generated: 2026-11-03 | Branch: main | Token estimate: ~950 -->
 
 # CLI, GUI Capture & Local Pipeline
 
@@ -15,10 +15,13 @@ the GUI capture flow, the OCR seam, and output routing.
 | `fs scan` | `cli/commands/scan.py` | `ScannerSettings` → `services.scanner` (external `fs_ocr`) → `OutputCoordinator` → handler dict / printed JSON |
 | `fs gui` | `cli/commands/gui.py` | launches PySide6 desktop app |
 | `fs sav` | `cli/commands/sav.py` | `SaveFileProcessor` (resolves `.sav` + map data) → `OutputCoordinator` |
+| `fs clip` | `cli/commands/clip.py` | `ClipboardScanService` (one read or monitor) → `OutputCoordinator` |
 
 Asset/DB tooling lives in the separate `fs-tools` CLI.
 
 ## Screenshot capture (GUI)
+
+Global hotkeys need Windows and the `capture` extra (`global_hotkeys_supported()`).
 
 ```
 scanner.capture_key (e.g. "F9")
@@ -82,11 +85,15 @@ async def handle_output(stockpiles: list[Stockpile], **kwargs) -> dict | None:
     # all handlers run even if one raises (errors logged, not propagated)
 ```
 
+A handler is created and closed per send. What a handler failed to deliver stays
+pending in memory for that handler only and is retried on the next send, so a retry
+cannot duplicate rows in the outputs that already got it.
+
 Handlers (`handlers/`), all `handle(stockpiles: list[Stockpile])`:
 `console.py`, `file.py` (JSON/CSV/TSV w/ table-driven field dispatch),
 `webhook.py` (HTTP POST, supports basic/bearer/**header** auth), `response.py`
 (`ReturnOutputHandler` → returns the dict), **`sheets.py`** (Google Sheets append),
-`stockpile_json.py` (shared JSON payload builder). Interface: `base_handler.py`.
+`stockpile_json.py` (shared JSON payload builder), `formula_guard.py`. Interface: `base_handler.py`.
 
 Webhook **auth types** (removed obsolete `forward`): `auth_type` ∈ {basic, bearer, header}.
 **header auth**: `WebhookHandlerSettings.auth_type="header"` + `auth_header` —
@@ -113,8 +120,7 @@ The payload models are `Stockpile` / `StockpileItem` — see data.md.
 ## Scanner config (`core/settings/sections/scanner.py`)
 
 `ScannerSettings`: `database_path`, **`capture_key`** (global hotkey),
-`early_exit_threshold` (used by `fs-tools`), `confidence_gap`,
-`screenshots_folder` (capture saving).
+`confidence_gap`, `screenshots_folder` (capture saving).
 
 ```bash
 fs scan --image shot.png --config my.json
