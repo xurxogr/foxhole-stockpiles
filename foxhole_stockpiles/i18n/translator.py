@@ -102,11 +102,28 @@ def _load_json_file(path: Path) -> dict[str, Any] | None:
         return None
     try:
         with open(path, encoding="utf-8") as f:
-            data: dict[str, Any] = json.load(f)
-            return data
-    except (json.JSONDecodeError, OSError) as e:
+            data = json.load(f)
+    except (ValueError, OSError) as e:  # ValueError: invalid JSON or not UTF-8
         logger.warning("Failed to read translation file %s: %s", path, e)
         return None
+    if not isinstance(data, dict):
+        logger.warning("Ignoring translation file %s: it is not a JSON object", path)
+        return None
+    return data
+
+
+def _language_name(path: Path) -> str | None:
+    """Read the display name a translation file gives its language.
+
+    Args:
+        path (Path): Path to the translation file.
+
+    Returns:
+        str | None: The name, or None if the file is unusable or does not give one.
+    """
+    data = _load_json_file(path)
+    name = data.get("language_name") if data else None
+    return name if isinstance(name, str) else None
 
 
 class TranslatorSignals(QObject):
@@ -310,35 +327,13 @@ def get_available_languages() -> list[tuple[str, str]]:
     """
     languages_dict: dict[str, str] = {}
 
-    # First, load bundled translations
-    bundled_dir = _get_bundled_translations_dir()
-    if bundled_dir.exists():
-        for translation_file in bundled_dir.glob("*.json"):
-            language_code = translation_file.stem
-            try:
-                with open(translation_file, encoding="utf-8") as f:
-                    data = json.load(f)
-                    language_name = data.get("language_name", language_code)
-                    languages_dict[language_code] = language_name
-            except (json.JSONDecodeError, OSError) as e:
-                logger.warning("Failed to read language file %s: %s", translation_file, e)
-                languages_dict[language_code] = language_code
-
-    # Then, load user translations (override bundled ones with same code)
-    user_dir = _get_user_translations_dir()
-    if user_dir.exists():
-        for translation_file in user_dir.glob("*.json"):
-            language_code = translation_file.stem
-            try:
-                with open(translation_file, encoding="utf-8") as f:
-                    data = json.load(f)
-                    language_name = data.get("language_name", language_code)
-                    languages_dict[language_code] = language_name
-                    logger.debug("Found user translation: %s (%s)", language_name, language_code)
-            except (json.JSONDecodeError, OSError) as e:
-                logger.warning("Failed to read user language file %s: %s", translation_file, e)
-                if language_code not in languages_dict:
-                    languages_dict[language_code] = language_code
+    # User translations come last so that their names override the bundled ones.
+    for directory in (_get_bundled_translations_dir(), _get_user_translations_dir()):
+        for translation_file in directory.glob("*.json"):
+            code = translation_file.stem
+            languages_dict[code] = _language_name(translation_file) or languages_dict.get(
+                code, code
+            )
 
     if not languages_dict:
         return [("en", "English")]
