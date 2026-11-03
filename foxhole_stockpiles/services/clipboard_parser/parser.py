@@ -29,7 +29,7 @@ def parse_clipboard(text: str | None, code_map: ClipboardCodeMap) -> Stockpile |
 
     Args:
         text (str | None): Raw clipboard text.
-        code_map (ClipboardCodeMap): Per-locale display-name -> code lookup.
+        code_map (ClipboardCodeMap): Per-locale display-name -> code mapping.
 
     Returns:
         Stockpile | None: The parsed stockpile, or None if the text is not a
@@ -39,55 +39,18 @@ def parse_clipboard(text: str | None, code_map: ClipboardCodeMap) -> Stockpile |
         return None
 
     lines = text.splitlines()
-    header: ClipboardHeader | None = None
-    body_start = 0
-    for index, line in enumerate(lines):
-        if not line.strip():
-            continue
-        header = _parse_header(line)
-        body_start = index + 1
-        break
-
+    header, body_start = _find_header(lines)
     if header is None:
         return None
 
-    # Collect every item line first (blank lines are group separators), then
-    # detect the export language from the names so the whole file reads in it.
-    raw_items: list[tuple[str, int]] = []
-    for line in lines[body_start:]:
-        stripped = line.strip()
-        if not stripped:
-            continue
-        parsed = _parse_item_line(stripped)
-        if parsed is not None:
-            raw_items.append(parsed)
-
+    # Collect every item line first so the export language can be detected from the
+    # names, and the whole file resolved in that language.
+    raw_items = _parse_item_lines(lines[body_start:])
     locale = _detect_locale(code_map, [display for display, _ in raw_items])
 
-    # Pass 1: resolve each kept item to its candidate code(s).
-    resolved: list[tuple[list[CatalogCode], bool, int]] = []
-    for display, quantity in raw_items:
-        if quantity < 1:
-            continue
-        candidates, crated = _resolve_item_candidates(code_map, display, locale)
-        if not candidates:
-            logger.warning("Unknown item in clipboard export: %r", display)
-            continue
-        resolved.append((candidates, crated, quantity))
-
-    # Infer the stockpile faction from the unambiguous items only (an ambiguous
-    # item can't vote for the faction that disambiguates it).
-    faction_votes: dict[ItemFaction, int] = {
-        ItemFaction.WARDENS: 0,
-        ItemFaction.COLONIALS: 0,
-    }
-    for candidates, _crated, _qty in resolved:
-        if len(candidates) == 1 and candidates[0].faction in faction_votes:
-            faction_votes[candidates[0].faction] += 1
-    faction = _infer_faction(faction_votes)
-
-    # Pass 2: pick a final code per item, using the faction to break collisions.
-    items: list[StockpileItem] = [
+    resolved = _resolve_items(code_map=code_map, raw_items=raw_items, locale=locale)
+    faction = _vote_faction(resolved)
+    items = [
         StockpileItem(code=_select_code(candidates, faction).code, quantity=qty, crated=crated)
         for candidates, crated, qty in resolved
     ]
@@ -99,15 +62,103 @@ def parse_clipboard(text: str | None, code_map: ClipboardCodeMap) -> Stockpile |
         faction,
     )
 
+    return _build_stockpile(header=header, items=items, faction=faction)
+
+
+def _find_header(lines: list[str]) -> tuple[ClipboardHeader | None, int]:
+    """Parse the first line that is not blank as the header of the export.
+
+    Args:
+        lines (list[str]): The lines of the text.
+
+    Returns:
+        tuple[ClipboardHeader | None, int]: The header, if that line is one, and the
+            position of the line after it.
+    """
+    for index, line in enumerate(lines):
+        if line.strip():
+            return _parse_header(line), index + 1
+    return None, 0
+
+
+def _parse_item_lines(lines: list[str]) -> list[tuple[str, int]]:
+    """Parse the item lines of the export; blank lines only separate groups.
+
+    Args:
+        lines (list[str]): The lines after the header.
+
+    Returns:
+        list[tuple[str, int]]: The display name and quantity of each item line.
+    """
+    parsed = (_parse_item_line(line.strip()) for line in lines if line.strip())
+    return [item for item in parsed if item is not None]
+
+
+def _resolve_items(
+    code_map: ClipboardCodeMap, raw_items: list[tuple[str, int]], locale: str | None
+) -> list[tuple[list[CatalogCode], bool, int]]:
+    """Resolve each item to its candidate codes, leaving out the unusable ones.
+
+    Args:
+        code_map (ClipboardCodeMap): Per-locale display-name -> code mapping.
+        raw_items (list[tuple[str, int]]): The display name and quantity of each item.
+        locale (str | None): The detected language of the export.
+
+    Returns:
+        list[tuple[list[CatalogCode], bool, int]]: The candidates, whether it is
+            crated, and the quantity of each known item with a positive quantity.
+    """
+    resolved: list[tuple[list[CatalogCode], bool, int]] = []
+    for display, quantity in raw_items:
+        if quantity < 1:
+            continue
+        candidates, crated = _resolve_item_candidates(code_map, display, locale)
+        if not candidates:
+            logger.warning("Unknown item in clipboard export: %r", display)
+            continue
+        resolved.append((candidates, crated, quantity))
+    return resolved
+
+
+def _vote_faction(resolved: list[tuple[list[CatalogCode], bool, int]]) -> ItemFaction:
+    """Infer the stockpile faction from the unambiguous items.
+
+    An ambiguous item can't vote for the faction that disambiguates it.
+
+    Args:
+        resolved (list[tuple[list[CatalogCode], bool, int]]): The resolved items.
+
+    Returns:
+        ItemFaction: The inferred faction.
+    """
+    votes: dict[ItemFaction, int] = {ItemFaction.WARDENS: 0, ItemFaction.COLONIALS: 0}
+    for candidates, _crated, _qty in resolved:
+        if len(candidates) == 1 and candidates[0].faction in votes:
+            votes[candidates[0].faction] += 1
+    return _infer_faction(votes)
+
+
+def _build_stockpile(
+    header: ClipboardHeader, items: list[StockpileItem], faction: ItemFaction
+) -> Stockpile:
+    """Build the stockpile from the parts of the export.
+
+    Args:
+        header (ClipboardHeader): The header of the export.
+        items (list[StockpileItem]): The final items.
+        faction (ItemFaction): The inferred faction.
+
+    Returns:
+        Stockpile: The stockpile.
+    """
     # Convert the localized region name from the export to its stable hex code;
     # an unrecognized region (e.g. one added before the enum is updated) keeps
     # its display name rather than collapsing to "Undefined".
     resolved_hex = Hex.from_display(header.hex)
     hex_name = header.hex if resolved_hex is Hex.UNDEFINED else resolved_hex.value
 
-    # The faction is inferred by majority vote of the items; only a definite
-    # side is reported. A NEUTRAL inference means we could not determine it, so
-    # the faction is left unset rather than reported as neutral.
+    # A NEUTRAL inference means it could not be determined, so the faction is left
+    # unset rather than reported as neutral.
     inferred_faction = faction if faction in (ItemFaction.WARDENS, ItemFaction.COLONIALS) else None
 
     fields: dict[str, Any] = {
