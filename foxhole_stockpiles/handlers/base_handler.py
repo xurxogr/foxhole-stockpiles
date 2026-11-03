@@ -33,5 +33,19 @@ class BaseOutputDestinationHandler(ABC):
         """
         pass
 
+    def undelivered(self, batch: list[Stockpile]) -> list[Stockpile]:
+        """Tell which stockpiles of a batch did not reach the destination.
+
+        A handler that sends them one by one overrides this, so a retry does not
+        repeat the ones that did arrive.
+
+        Args:
+            batch (list[Stockpile]): What ``handle`` received.
+
+        Returns:
+            list[Stockpile]: The ones to send again with the next batch.
+        """
+        return [] if self.delivered else batch
+
     async def close(self) -> None:  # noqa: B027 - optional hook, most handlers hold nothing
         """Release the resources of this handler. Nothing to release by default."""

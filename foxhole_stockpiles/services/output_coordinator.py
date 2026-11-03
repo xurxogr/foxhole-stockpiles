@@ -106,7 +106,7 @@ class OutputCoordinator:
 
         for position, handler_config in enumerate(handlers):
             batch = self._batch_for(position=position, stockpiles=stockpiles)
-            handler_result, delivered = await self._run_handler(
+            handler_result, undelivered = await self._run_handler(
                 handler_config=handler_config, batch=batch, **kwargs
             )
             # First handler that returns data becomes the result of the send
@@ -117,14 +117,14 @@ class OutputCoordinator:
                     handler_config.name,
                 )
             self._track_delivery(
-                position=position, name=handler_config.name, batch=batch, delivered=delivered
+                position=position, name=handler_config.name, undelivered=undelivered
             )
 
         return result
 
     async def _run_handler(
         self, handler_config: OutputHandlerConfig, batch: list[Stockpile], **kwargs: Any
-    ) -> tuple[OutputResponse, bool]:
+    ) -> tuple[OutputResponse, list[Stockpile]]:
         """Give a batch to one handler; its failure must not block the rest.
 
         Args:
@@ -133,8 +133,8 @@ class OutputCoordinator:
             **kwargs: Additional handler-specific parameters.
 
         Returns:
-            tuple[OutputResponse, bool]: What the handler returned, and whether the
-                stockpiles reached the destination.
+            tuple[OutputResponse, list[Stockpile]]: What the handler returned, and the
+                stockpiles that did not reach the destination.
         """
         self.logger.debug(
             "Processing handler '%s' (type: %s)",
@@ -142,21 +142,21 @@ class OutputCoordinator:
             handler_config.handler.type,
         )
         result: OutputResponse = None
-        delivered = False
+        undelivered = batch
         try:
             handler = self._create_handler(handler_config)
         except Exception as e:  # noqa: BLE001 - one handler's failure must not block the rest
             self.logger.error("Handler '%s' could not be created: %s", handler_config.name, e)
-            return result, delivered
+            return result, undelivered
 
         try:
             result = await handler.handle(stockpiles=batch, **kwargs)
-            delivered = handler.delivered
+            undelivered = handler.undelivered(batch)
         except Exception as e:  # noqa: BLE001 - one handler's failure must not block the rest
             self.logger.error("Handler '%s' failed: %s", handler_config.name, e)
         finally:
             await self._close_handler(handler=handler, name=handler_config.name)
-        return result, delivered
+        return result, undelivered
 
     def _batch_for(self, position: int, stockpiles: list[Stockpile]) -> list[Stockpile]:
         """Add what a handler still has to receive to a new batch.
@@ -175,25 +175,22 @@ class OutputCoordinator:
         merged = {**undelivered, **{stockpile.to_key(): stockpile for stockpile in stockpiles}}
         return list(merged.values())
 
-    def _track_delivery(
-        self, position: int, name: str, batch: list[Stockpile], delivered: bool
-    ) -> None:
-        """Remember a batch its handler failed to deliver, or forget a delivered one.
+    def _track_delivery(self, position: int, name: str, undelivered: list[Stockpile]) -> None:
+        """Remember what a handler failed to deliver, or forget it once it has all arrived.
 
         Args:
             position (int): The position of the handler in the configuration.
             name (str): Its configured name, for the log.
-            batch (list[Stockpile]): The stockpiles it was given.
-            delivered (bool): Whether they reached the destination.
+            undelivered (list[Stockpile]): The stockpiles that did not reach the destination.
         """
-        if delivered:
+        if not undelivered:
             self._undelivered.pop(position, None)
             return
-        self._undelivered[position] = {stockpile.to_key(): stockpile for stockpile in batch}
+        self._undelivered[position] = {stockpile.to_key(): stockpile for stockpile in undelivered}
         self.logger.warning(
             "Handler '%s' did not deliver %d stockpile(s); they go again with the next batch",
             name,
-            len(batch),
+            len(undelivered),
         )
 
     async def _close_handler(self, handler: BaseOutputDestinationHandler, name: str) -> None:

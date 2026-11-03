@@ -4,6 +4,7 @@ This module contains comprehensive tests for the OutputCoordinator which orchest
 output handling by delegating to configured handlers.
 """
 
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -19,6 +20,7 @@ from foxhole_stockpiles.core.settings.sections.output import (
 )
 from foxhole_stockpiles.enums.auth_type import AuthType
 from foxhole_stockpiles.enums.stockpile_type import StockpileType
+from foxhole_stockpiles.handlers.base_handler import BaseOutputDestinationHandler
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
 from foxhole_stockpiles.services.output_coordinator import OutputCoordinator
@@ -389,3 +391,32 @@ class TestOutputCoordinator:
         assert len(result["stockpiles"]) == 2
         assert result["stockpiles"][0]["name"] == "Test Stockpile"
         assert result["stockpiles"][1]["name"] == "Second Stockpile"
+
+
+class _SendsOnlyTheFirst(BaseOutputDestinationHandler):
+    """Delivers the first stockpile of each batch and fails on the rest."""
+
+    def __init__(self) -> None:
+        self.received: list[list[str]] = []
+        self._rest: list[Stockpile] = []
+
+    async def handle(self, stockpiles: list[Stockpile], **kwargs: Any) -> None:
+        self.received.append([stockpile.name for stockpile in stockpiles])
+        self._rest = stockpiles[1:]
+
+    def undelivered(self, batch: list[Stockpile]) -> list[Stockpile]:
+        return self._rest
+
+
+@pytest.mark.asyncio
+async def test_only_what_did_not_arrive_is_sent_again() -> None:
+    """A retry does not repeat the stockpiles a handler did deliver."""
+    handler = _SendsOnlyTheFirst()
+    coordinator = OutputCoordinator(OutputSettings(handlers=[OutputHandlerConfig(name="partial")]))
+    first, second, third = (Stockpile(name=name) for name in "ABC")
+
+    with patch.object(coordinator, "_create_handler", return_value=handler):
+        await coordinator.handle_output(stockpiles=[first, second])
+        await coordinator.handle_output(stockpiles=[third])
+
+    assert handler.received == [["A", "B"], ["B", "C"]]
