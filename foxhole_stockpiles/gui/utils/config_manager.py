@@ -19,18 +19,17 @@ class ConfigManager:
         self.config_path = default_config_path()
 
     def load_config(self) -> AppSettings:
-        """Load configuration from file or create default.
+        """Load the configuration file.
+
+        A broken file is left to the caller to report. Showing defaults instead would
+        let a later save replace it, losing the tokens and URLs it holds.
 
         Returns:
-            AppSettings: Loaded configuration or default if loading fails.
+            AppSettings: The loaded configuration.
         """
-        try:
-            settings = get_settings()
-            logger.info("Configuration loaded successfully from %s", self.config_path)
-            return settings
-        except Exception as e:  # noqa: BLE001 - fall back to defaults if config fails to load
-            logger.warning("Failed to load config, using defaults: %s", e)
-            return AppSettings()
+        settings = get_settings()
+        logger.info("Configuration loaded successfully from %s", self.config_path)
+        return settings
 
     def save_config(self, settings: AppSettings) -> tuple[bool, str]:
         """Save configuration to file.

@@ -41,16 +41,15 @@ def test_config_manager_load_config() -> None:
         mock_get_settings.assert_called_once()
 
 
-def test_config_manager_load_config_fallback_on_error() -> None:
-    """Test loading config falls back to defaults on error."""
+def test_config_manager_load_config_reports_a_broken_file() -> None:
+    """A broken config is reported: defaults saved over it would lose its tokens."""
     with patch("foxhole_stockpiles.gui.utils.config_manager.get_settings") as mock_get_settings:
-        mock_get_settings.side_effect = Exception("Config error")
+        mock_get_settings.side_effect = ValueError("Config error")
 
         manager = ConfigManager()
-        settings = manager.load_config()
 
-        # Should return default AppSettings
-        assert isinstance(settings, AppSettings)
+        with pytest.raises(ValueError, match="Config error"):
+            manager.load_config()
 
 
 def test_config_manager_save_config(tmp_path: Path, mock_settings: MagicMock) -> None:
