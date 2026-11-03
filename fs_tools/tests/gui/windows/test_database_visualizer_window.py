@@ -1415,3 +1415,24 @@ def test_crated_filter_separates_crated_from_normal(
     visualizer_window.crated_normal.setChecked(True)
     assert "RifleCrate" not in _filtered_codes(visualizer_window)
     assert "Rifle" in _filtered_codes(visualizer_window)
+
+
+@pytest.mark.parametrize("error_type", [RuntimeError, ValueError, FileNotFoundError])
+def test_a_failed_reload_is_shown_and_keeps_the_list(
+    visualizer_window: DatabaseVisualizerWindow,
+    mock_template: IconTemplate,
+    error_type: type[Exception],
+) -> None:
+    """The edit already succeeded, so a failed re-read must not end the action midway."""
+    visualizer_window.current_resolution = SupportedResolution.R_1080
+    visualizer_window.database_path = "/path/to/db.h5"
+    visualizer_window.all_templates = [(0, mock_template)]
+
+    with patch(
+        "fs_tools.gui.windows.database_visualizer_window.read_resolution",
+        side_effect=error_type("cannot read"),
+    ):
+        visualizer_window.reload_current_resolution()
+
+    assert visualizer_window.all_templates == [(0, mock_template)]
+    assert "cannot read" in visualizer_window.results_label.text()

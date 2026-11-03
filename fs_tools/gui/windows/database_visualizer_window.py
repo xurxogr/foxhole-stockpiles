@@ -492,7 +492,11 @@ class DatabaseVisualizerWindow(QDialog):
         """Re-read the current resolution's templates after an edit and refresh the list."""
         if not self.current_resolution or not self.database_path:
             return
-        templates = read_resolution(Path(self.database_path), self.current_resolution)
+        try:
+            templates = read_resolution(Path(self.database_path), self.current_resolution)
+        except Exception as e:  # noqa: BLE001 - surface any read failure, keeping the list
+            self._on_database_error(str(e))
+            return
         self.all_databases[self.current_resolution] = templates
         self.current_templates = templates
         self.all_templates = list(enumerate(templates))
