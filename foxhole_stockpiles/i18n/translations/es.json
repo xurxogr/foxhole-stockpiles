@@ -228,6 +228,8 @@
       "image_icon_mod_tooltip": "Mod de la base de datos de plantillas cuyos iconos sustituyen a los del juego base. Sin base de datos, la imagen solo lleva texto.",
       "image_font": "Fuente:",
       "image_font_tooltip": "Archivo de fuente opcional, que se prueba antes que las fuentes del sistema.",
+      "image_aggregate": "Unir todos los stockpiles en una imagen",
+      "image_aggregate_tooltip": "Dibuja los stockpiles de cada envío como uno solo, sumando sus objetos. Los objetos en cajas y sueltos se mantienen separados.",
       "webhook_url_required": "La URL del webhook es requerida."
     },
     "remove_handler_title": "Eliminar manejador",

@@ -26,5 +26,9 @@ class StockpileImageSettings(BaseModel):
         description="Font tried before the ones of the system",
         default=None,
     )
+    aggregate: bool = Field(
+        description="Draw all the stockpiles of a batch as one, adding up their items",
+        default=False,
+    )
 
     model_config = ConfigDict(extra="forbid")

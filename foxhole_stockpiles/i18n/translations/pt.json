@@ -228,6 +228,8 @@
       "image_icon_mod_tooltip": "Mod da base de dados de modelos cujos ícones substituem os do jogo base. Sem base de dados, a imagem só tem texto.",
       "image_font": "Tipo de letra:",
       "image_font_tooltip": "Ficheiro de tipo de letra opcional, tentado antes dos do sistema.",
+      "image_aggregate": "Juntar todos os stockpiles numa imagem",
+      "image_aggregate_tooltip": "Desenha os stockpiles de cada envio como um só, somando os seus itens. Os itens em caixas e soltos ficam separados.",
       "webhook_url_required": "O URL do webhook é obrigatório."
     },
     "remove_handler_title": "Remover handler",

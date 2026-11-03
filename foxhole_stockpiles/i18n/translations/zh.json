@@ -228,6 +228,8 @@
       "image_icon_mod_tooltip": "模板数据库中的模组，其图标会替换基础游戏的图标。没有数据库时，图片只包含文字。",
       "image_font": "字体：",
       "image_font_tooltip": "可选的字体文件，优先于系统字体尝试。",
+      "image_aggregate": "将所有库存合并为一张图片",
+      "image_aggregate_tooltip": "将每次发送的库存绘制为一个，并累加其物品。装箱物品与散装物品分开统计。",
       "webhook_url_required": "Webhook URL 是必需的。"
     },
     "remove_handler_title": "移除处理器",

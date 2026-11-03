@@ -1,6 +1,7 @@
 """The fields of how a stockpile is drawn, shared by the handlers that draw images."""
 
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QFileDialog,
     QFormLayout,
@@ -52,6 +53,9 @@ class ImageAppearanceFields:
         font_layout.addWidget(self.font_browse_btn)
         form.addRow(self.font_path_label, font_row)
 
+        self.aggregate_input = QCheckBox()
+        form.addRow(self.aggregate_input)
+
     def retranslate(self) -> None:
         """Update all translatable strings."""
         self.headline_label.setText(t("output_tab.handler_dialog.image_headline"))
@@ -64,6 +68,8 @@ class ImageAppearanceFields:
         self.font_path_label.setText(t("output_tab.handler_dialog.image_font"))
         self.font_path_label.setToolTip(t("output_tab.handler_dialog.image_font_tooltip"))
         self.font_browse_btn.setText(t("common.browse"))
+        self.aggregate_input.setText(t("output_tab.handler_dialog.image_aggregate"))
+        self.aggregate_input.setToolTip(t("output_tab.handler_dialog.image_aggregate_tooltip"))
 
     def load(self, settings: StockpileImageSettings) -> None:
         """Show some settings in the fields.
@@ -74,17 +80,19 @@ class ImageAppearanceFields:
         self.headline_input.setText(settings.headline or "")
         self.icon_mod_input.setCurrentText(settings.icon_mod)
         self.font_path_input.setText(settings.font_path or "")
+        self.aggregate_input.setChecked(settings.aggregate)
 
-    def values(self) -> dict[str, str | None]:
+    def values(self) -> dict[str, str | bool | None]:
         """Read the fields.
 
         Returns:
-            dict[str, str | None]: The values of the settings they edit.
+            dict[str, str | bool | None]: The values of the settings they edit.
         """
         return {
             "headline": self.headline_input.text().strip() or None,
             "icon_mod": self.icon_mod_input.currentText().strip() or BASE_GAME_MOD,
             "font_path": self.font_path_input.text().strip() or None,
+            "aggregate": self.aggregate_input.isChecked(),
         }
 
     def _browse_font(self) -> None:

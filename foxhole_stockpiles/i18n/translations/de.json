@@ -228,6 +228,8 @@
       "image_icon_mod_tooltip": "Mod der Vorlagendatenbank, dessen Symbole die des Basisspiels ersetzen. Ohne Datenbank enthält das Bild nur Text.",
       "image_font": "Schriftart:",
       "image_font_tooltip": "Optionale Schriftdatei, die vor den Schriftarten des Systems versucht wird.",
+      "image_aggregate": "Alle Lager in einem Bild zusammenfassen",
+      "image_aggregate_tooltip": "Zeichnet die Lager jedes Versands als ein einziges und addiert ihre Gegenstände. Gegenstände in Kisten und lose Gegenstände bleiben getrennt.",
       "webhook_url_required": "Webhook-URL ist erforderlich."
     },
     "remove_handler_title": "Handler entfernen",

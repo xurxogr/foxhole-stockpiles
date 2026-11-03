@@ -228,6 +228,8 @@
       "image_icon_mod_tooltip": "Mod of the template database whose icons replace those of the base game. Without a database, the image has text only.",
       "image_font": "Font:",
       "image_font_tooltip": "Optional font file, tried before the fonts of the system.",
+      "image_aggregate": "Merge all stockpiles into one image",
+      "image_aggregate_tooltip": "Draw the stockpiles of each send as a single one, adding up their items. Crated and loose items stay apart.",
       "webhook_url_required": "Webhook URL is required.",
       "creds_path": "OAuth Credentials Path:",
       "creds_path_placeholder": ".../creds.json",

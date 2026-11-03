@@ -228,6 +228,8 @@
       "image_icon_mod_tooltip": "Mod de la base de modèles dont les icônes remplacent celles du jeu de base. Sans base de données, l'image ne contient que du texte.",
       "image_font": "Police :",
       "image_font_tooltip": "Fichier de police facultatif, essayé avant les polices du système.",
+      "image_aggregate": "Fusionner tous les stocks en une seule image",
+      "image_aggregate_tooltip": "Dessine les stocks de chaque envoi comme un seul, en additionnant leurs objets. Les objets en caisse et à l'unité restent séparés.",
       "webhook_url_required": "L'URL webhook est requise."
     },
     "remove_handler_title": "Supprimer le gestionnaire",

@@ -257,3 +257,19 @@ class TestImageHandler:
 
         assert [combo.itemText(index) for index in range(combo.count())] == ["mymod", "vanilla"]
         assert combo.currentText() == "vanilla"
+
+
+def test_image_handler_can_merge_stockpiles(qtbot: Any) -> None:
+    """The setting is shown when editing and read back."""
+    config = OutputHandlerConfig(
+        name="image", handler=ImageHandlerSettings(path="a.png", aggregate=True)
+    )
+    widget = OutputHandlerDialog(handler_config=config)
+    qtbot.addWidget(widget)
+    aggregate_input = widget.image_group.appearance.aggregate_input
+
+    assert aggregate_input.isChecked()
+    aggregate_input.setChecked(False)
+    handler = widget.get_handler_config().handler
+    assert isinstance(handler, ImageHandlerSettings)
+    assert handler.aggregate is False
