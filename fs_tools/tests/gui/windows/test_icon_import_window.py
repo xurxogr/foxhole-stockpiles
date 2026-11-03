@@ -1,5 +1,6 @@
 """Tests for IconImportWindow."""
 
+import logging
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any
@@ -600,11 +601,22 @@ def test_target_resolutions(
     assert configured_window._target_resolutions() == expected
 
 
-def test_start_import_no_catalog(qtbot: Any, configured_window: IconImportWindow) -> None:
-    """Test start import when catalog file is not configured.
+def _assert_nothing_started(window: IconImportWindow) -> None:
+    """Check that a refused import left the window ready to try again.
 
     Args:
-        qtbot: PyQt test fixture
+        window (IconImportWindow): The window.
+    """
+    assert window.start_button.isEnabled()
+    assert window.mod_name_input.isEnabled()
+    assert window.db_path_input.isEnabled()
+    assert window.log_handler not in logging.getLogger().handlers
+
+
+def test_start_import_no_catalog(configured_window: IconImportWindow) -> None:
+    """Without a catalog the import is refused, in the language of the user.
+
+    Args:
         configured_window: Configured window instance
     """
     configured_window.mod_pak_files = ["test.pak"]
@@ -612,16 +624,35 @@ def test_start_import_no_catalog(qtbot: Any, configured_window: IconImportWindow
     configured_window.db_path_input.setText("/tmp/test.h5")
     configured_window.settings.database_builder.catalog_file = None
 
-    with patch(
-        "fs_tools.gui.windows.icon_import_window.QMessageBox.question",
-        return_value=QMessageBox.StandardButton.Yes,
-    ):
-        with patch("fs_tools.gui.windows.icon_import_window.QMessageBox.critical") as mock_critical:
-            configured_window.start_import()
+    with patch("fs_tools.gui.windows.icon_import_window.QMessageBox.warning") as warning:
+        configured_window.start_import()
 
-            mock_critical.assert_called_once()
-            args = mock_critical.call_args[0]
-            assert "Catalog file not configured" in args[2]
+    warning.assert_called_once()
+    assert warning.call_args.args[1:] == (
+        t("common.validation_error"),
+        t("database_builder.validation.catalog_not_configured"),
+    )
+    _assert_nothing_started(configured_window)
+
+
+def test_start_import_invalid_mod_name_leaves_nothing_started(
+    configured_window: IconImportWindow,
+) -> None:
+    """A mod name the worker refuses does not leave the logs being captured.
+
+    Args:
+        configured_window: Configured window instance
+    """
+    configured_window.mod_pak_files = ["test.pak"]
+    configured_window.mod_name_input.setText("bad/name")
+    configured_window.db_path_input.setText("/tmp/test.h5")
+
+    with patch("fs_tools.gui.windows.icon_import_window.QMessageBox.critical") as critical:
+        configured_window.start_import()
+
+    critical.assert_called_once()
+    assert critical.call_args.args[1] == t("database_builder.invalid_mod_name_title")
+    _assert_nothing_started(configured_window)
 
 
 def test_on_import_finished_success(qtbot: Any, configured_window: IconImportWindow) -> None:

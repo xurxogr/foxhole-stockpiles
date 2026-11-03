@@ -510,27 +510,19 @@ class IconImportWindow(ProcessLogWindow):
             QMessageBox.warning(self, t("common.validation_error"), error_msg)
             return
 
-        mod_name = self.mod_name_input.text().strip()
-        db_path = Path(self.db_path_input.text().strip())
-        self._current_import_db_path = db_path  # Store for signal emission
-
-        # Disable inputs and start button
-        self.start_button.setEnabled(False)
-        self.mod_name_input.setEnabled(False)
-        self.db_path_input.setEnabled(False)
-
-        # Clear logs
-        self.clear_logs()
-
-        self.start_log_capture()
-
-        # Get catalog from settings
         catalog_path = self.settings.database_builder.catalog_file
         if not catalog_path:
-            QMessageBox.critical(self, "Error", "Catalog file not configured in settings")
+            QMessageBox.warning(
+                self,
+                t("common.validation_error"),
+                t("database_builder.validation.catalog_not_configured"),
+            )
             return
 
-        # Create and start worker
+        mod_name = self.mod_name_input.text().strip()
+        db_path = Path(self.db_path_input.text().strip())
+
+        # Create the worker before changing anything, so a refusal has nothing to undo.
         try:
             self.import_worker = IconImportWorker(
                 mod_pak_files=self.mod_pak_files,
@@ -543,9 +535,17 @@ class IconImportWindow(ProcessLogWindow):
         except ValueError as e:
             QMessageBox.critical(self, t("database_builder.invalid_mod_name_title"), str(e))
             logger.error("Invalid mod name: %s", e)
-            # Re-enable inputs so user can fix the error
-            self._re_enable_inputs()
             return
+
+        self._current_import_db_path = db_path  # Store for signal emission
+
+        # Disable inputs and start button
+        self.start_button.setEnabled(False)
+        self.mod_name_input.setEnabled(False)
+        self.db_path_input.setEnabled(False)
+
+        self.clear_logs()
+        self.start_log_capture()
 
         self.import_worker.finished.connect(self.on_import_finished)
         self.import_worker.error.connect(self.on_import_error)
