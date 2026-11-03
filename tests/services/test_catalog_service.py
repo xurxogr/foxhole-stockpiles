@@ -3,6 +3,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from foxhole_stockpiles.services.catalog_service import CatalogEntry, CatalogService
 
 
@@ -122,3 +124,51 @@ class TestCatalogService:
         assert service.get_display_name("Item1") == "First Item"
         assert service.get_display_name("Item2") == "Second Item"
         assert service.get_display_name("") == ""
+
+
+class TestCategory:
+    """The category an item is grouped under when it is displayed."""
+
+    @pytest.fixture
+    def service(self, tmp_path: Path) -> CatalogService:
+        """Build a service over a catalog with each kind of entry.
+
+        Args:
+            tmp_path (Path): Directory for the catalog.
+
+        Returns:
+            CatalogService: The service.
+        """
+        catalog = [
+            {
+                "CodeName": "RifleC",
+                "DisplayName": "Rifle",
+                "ItemCategory": "EItemCategory::SmallArms",
+                "StockpileCategory": "Items",
+            },
+            {"CodeName": "TruckW", "DisplayName": "Truck", "StockpileCategory": "Vehicles"},
+            {"CodeName": "Crane", "DisplayName": "Crane", "StockpileCategory": "Structures"},
+            {"CodeName": "OldEntry", "DisplayName": "Old"},
+        ]
+        path = tmp_path / "catalog.json"
+        path.write_text(json.dumps(catalog), encoding="utf-8")
+        return CatalogService(catalog_path=path)
+
+    def test_item_uses_its_item_category_with_readable_words(self, service: CatalogService) -> None:
+        """An Unreal enum value becomes a label."""
+        assert service.get_category("RifleC") == "Small Arms"
+
+    def test_vehicle_and_structure_use_their_stockpile_category(
+        self, service: CatalogService
+    ) -> None:
+        """Vehicles and structures have no item category."""
+        assert service.get_category("TruckW") == "Vehicles"
+        assert service.get_category("Crane") == "Structures"
+
+    def test_entry_without_any_category_has_none(self, service: CatalogService) -> None:
+        """A catalog from an older build has no stockpile category."""
+        assert service.get_category("OldEntry") is None
+
+    def test_unknown_code_has_none(self, service: CatalogService) -> None:
+        """A code missing from the catalog has no category."""
+        assert service.get_category("Nope") is None

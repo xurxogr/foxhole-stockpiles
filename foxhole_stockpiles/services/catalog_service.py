@@ -2,8 +2,10 @@
 
 import json
 import logging
+import re
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -11,18 +13,40 @@ from foxhole_stockpiles.core.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
+# Unreal writes enum values as "EItemCategory::SmallArms".
+_ENUM_SEPARATOR = "::"
+_WORD_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
+
+
+def _read_category(item: dict[str, Any]) -> str | None:
+    """Read the label an item is grouped under.
+
+    Args:
+        item (dict[str, Any]): One catalog entry.
+
+    Returns:
+        str | None: The item category in readable words, the stockpile category of
+            what has none (vehicles and structures), or None in an older catalog.
+    """
+    item_category = item.get("ItemCategory")
+    if isinstance(item_category, str) and item_category:
+        return _WORD_BOUNDARY.sub(" ", item_category.rsplit(_ENUM_SEPARATOR, maxsplit=1)[-1])
+    stockpile_category = item.get("StockpileCategory")
+    return stockpile_category if isinstance(stockpile_category, str) else None
+
 
 class CatalogEntry(BaseModel):
-    """Catalog entry with item code and display name."""
+    """Catalog entry with item code, display name and category."""
 
     code: str
     display_name: str
+    category: str | None = None
 
 
 class CatalogService:
     """Service for loading and querying item catalog data.
 
-    Provides code-to-display-name lookups.
+    Provides lookups from a code to its display name and category.
     """
 
     def __init__(self, catalog_path: Path | None = None) -> None:
@@ -58,7 +82,9 @@ class CatalogService:
                 code = item.get("CodeName")
                 display_name = item.get("DisplayName", code)
                 if code:
-                    self._catalog[code] = CatalogEntry(code=code, display_name=display_name)
+                    self._catalog[code] = CatalogEntry(
+                        code=code, display_name=display_name, category=_read_category(item)
+                    )
 
             logger.info("Loaded %d items from catalog", len(self._catalog))
 
@@ -79,6 +105,19 @@ class CatalogService:
         self._load()
         entry = self._catalog.get(code)
         return entry.display_name if entry else code
+
+    def get_category(self, code: str) -> str | None:
+        """Get the category an item is grouped under.
+
+        Args:
+            code (str): The item code to look up.
+
+        Returns:
+            str | None: The category, or None if the catalog has none for that code.
+        """
+        self._load()
+        entry = self._catalog.get(code)
+        return entry.category if entry else None
 
 
 @lru_cache
