@@ -140,80 +140,89 @@ class SaveFileProcessor:
 
         return updated, new, removed_keys
 
-    async def _process_file(
-        self, is_initial: bool = False, suppress_errors: bool = True
-    ) -> list[Stockpile]:
+    async def _process_file(self, is_initial: bool = False) -> list[Stockpile]:
         """Process the save file and output changed stockpiles.
 
         Args:
             is_initial (bool): Whether this is the initial load.
-            suppress_errors (bool): If True, log and swallow processing errors
-                (watch mode keeps running). If False, re-raise so the caller can
-                surface the failure. Defaults to True.
 
         Returns:
             list[Stockpile]: List of changed stockpiles that were output.
-
-        Raises:
-            Exception: If processing fails and suppress_errors is False. A busy
-                save file (SaveFileBusyError) is otherwise retried on the next poll.
         """
         logger.info("Processing file...")
+        stockpiles = await asyncio.to_thread(parse_save, self._file_path)
 
+        if not stockpiles:
+            logger.info("No stockpiles found in save file.")
+            return []
+
+        if is_initial and self._emit_all_on_start:
+            return await self._output_initial_load(stockpiles)
+
+        return await self._output_changes(stockpiles)
+
+    async def _process_file_keep_watching(self, is_initial: bool = False) -> list[Stockpile]:
+        """Process the save file, logging a failure so that watching goes on.
+
+        Args:
+            is_initial (bool): Whether this is the initial load.
+
+        Returns:
+            list[Stockpile]: List of changed stockpiles that were output, empty on failure.
+        """
         try:
-            stockpiles = await asyncio.to_thread(parse_save, self._file_path)
-
-            if not stockpiles:
-                logger.info("No stockpiles found in save file.")
-                return []
-
-            # On initial load with emit_all_on_start, output everything
-            if is_initial and self._emit_all_on_start:
-                # Initialize cache
-                for stockpile in stockpiles:
-                    self._stockpile_cache[stockpile.to_key()] = self._timestamp_key(
-                        stockpile.timestamp
-                    )
-
-                logger.info("Initial load: %d stockpile(s)", len(stockpiles))
-                await self._output_results(stockpiles)
-                return stockpiles
-
-            # Detect changes
-            updated, new, removed = self._detect_changes(stockpiles)
-
-            total_changes = len(updated) + len(new) + len(removed)
-            if total_changes == 0:
-                logger.debug("No changes detected.")
-                return []
-
-            # Log changes
-            if new:
-                logger.info("New: %d stockpile(s)", len(new))
-            if updated:
-                logger.info("Updated: %d stockpile(s)", len(updated))
-            if removed:
-                logger.info("Removed: %d stockpile(s)", len(removed))
-
-            # Output changed stockpiles (new + updated)
-            changed_stockpiles = new + updated
-            if changed_stockpiles:
-                await self._output_results(changed_stockpiles)
-
-            return changed_stockpiles
-
+            return await self._process_file(is_initial=is_initial)
         except SaveFileBusyError as e:
-            if not suppress_errors:
-                raise
             # The game was writing the file: forget its mtime so the next poll retries.
             logger.warning("Save file busy, retrying on the next poll: %s", e)
             self._last_mtime = None
-            return []
-        except Exception as e:  # noqa: BLE001 - re-raised unless suppress_errors is set
-            if not suppress_errors:
-                raise
+        except Exception as e:  # noqa: BLE001 - a failed read must not stop the watcher
             logger.error("Error processing file: %s", e)
+        return []
+
+    async def _output_initial_load(self, stockpiles: list[Stockpile]) -> list[Stockpile]:
+        """Remember every stockpile and output them all.
+
+        Args:
+            stockpiles (list[Stockpile]): The stockpiles in the file.
+
+        Returns:
+            list[Stockpile]: The same stockpiles.
+        """
+        for stockpile in stockpiles:
+            self._stockpile_cache[stockpile.to_key()] = self._timestamp_key(stockpile.timestamp)
+
+        logger.info("Initial load: %d stockpile(s)", len(stockpiles))
+        await self._output_results(stockpiles)
+        return stockpiles
+
+    async def _output_changes(self, stockpiles: list[Stockpile]) -> list[Stockpile]:
+        """Output what changed since the last read.
+
+        Args:
+            stockpiles (list[Stockpile]): The stockpiles in the file.
+
+        Returns:
+            list[Stockpile]: The new and updated stockpiles.
+        """
+        updated, new, removed = self._detect_changes(stockpiles)
+
+        if not (updated or new or removed):
+            logger.debug("No changes detected.")
             return []
+
+        if new:
+            logger.info("New: %d stockpile(s)", len(new))
+        if updated:
+            logger.info("Updated: %d stockpile(s)", len(updated))
+        if removed:
+            logger.info("Removed: %d stockpile(s)", len(removed))
+
+        changed_stockpiles = new + updated
+        if changed_stockpiles:
+            await self._output_results(changed_stockpiles)
+
+        return changed_stockpiles
 
     async def run_once(self) -> list[Stockpile]:
         """Process the file once without monitoring.
@@ -224,7 +233,7 @@ class SaveFileProcessor:
         Raises:
             Exception: If processing the save file fails.
         """
-        return await self._process_file(is_initial=True, suppress_errors=False)
+        return await self._process_file(is_initial=True)
 
     async def prime(self) -> int | None:
         """Fill the change-detection cache from the file without emitting anything.
@@ -287,7 +296,7 @@ class SaveFileProcessor:
             is_initial (bool): Whether this is the initial load.
             on_changed (OnChanged | None): Called with the changed stockpiles.
         """
-        changed = await self._process_file(is_initial=is_initial)
+        changed = await self._process_file_keep_watching(is_initial=is_initial)
         if changed and on_changed is not None:
             on_changed(changed)
 

@@ -192,7 +192,7 @@ class TestRunOnce:
         assert len(coord.calls) == 1
 
     async def test_propagates_errors(self, tmp_path: Path) -> None:
-        """run_once re-raises parse failures (suppress_errors=False)."""
+        """run_once re-raises parse failures."""
         proc, _ = make_processor(tmp_path)
         with (
             patch(_PARSE, side_effect=RuntimeError("boom")),
@@ -203,22 +203,22 @@ class TestRunOnce:
 
 
 class TestProcessFile:
-    """Direct _process_file behaviors."""
+    """What processing the file does while watching it."""
 
     async def test_no_changes_returns_empty(self, tmp_path: Path) -> None:
         """A second identical process detects no changes."""
         proc, _ = make_processor(tmp_path, emit_all_on_start=False)
         sp = make_stockpile()
         with patch(_PARSE, return_value=[sp]):
-            await proc._process_file(is_initial=False)
-            second = await proc._process_file(is_initial=False)
+            await proc._process_file_keep_watching(is_initial=False)
+            second = await proc._process_file_keep_watching(is_initial=False)
         assert second == []
 
     async def test_suppresses_errors(self, tmp_path: Path) -> None:
-        """With suppress_errors, a parse failure returns [] instead of raising."""
+        """While watching, a parse failure returns [] instead of raising."""
         proc, _ = make_processor(tmp_path)
         with patch(_PARSE, side_effect=RuntimeError("boom")):
-            result = await proc._process_file(is_initial=False, suppress_errors=True)
+            result = await proc._process_file_keep_watching(is_initial=False)
         assert result == []
 
     async def test_busy_file_retried_next_poll(self, tmp_path: Path) -> None:
@@ -226,7 +226,7 @@ class TestProcessFile:
         proc, _ = make_processor(tmp_path)
         proc._last_mtime = 123.0
         with patch(_PARSE, side_effect=SaveFileBusyError("kept changing while being read")):
-            result = await proc._process_file(is_initial=False)
+            result = await proc._process_file_keep_watching(is_initial=False)
         assert result == []
         assert proc._last_mtime is None
 
@@ -259,7 +259,7 @@ class TestPrime:
         stockpile = make_stockpile(ts=datetime(2026, 1, 1, 14, 0, 0, tzinfo=offset))
         with patch(_PARSE, return_value=[stockpile]):
             await proc.prime()
-            changed = await proc._process_file(is_initial=False)
+            changed = await proc._process_file_keep_watching(is_initial=False)
         assert changed == []
         assert coord.calls == []
 

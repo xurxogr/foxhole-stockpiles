@@ -234,12 +234,12 @@ async def test_sav_monitor_sends_a_failed_change_with_the_next_change() -> None:
     processor = SaveFileProcessor(Path("x.sav"), output_coordinator=_coordinator(handler))
 
     with patch.object(savefile_processor, "parse_save", return_value=[_stockpile("a")]):
-        await processor._process_file()
+        await processor._process_file_keep_watching()
 
     handler.fails_with = None
     saved = [_stockpile("a"), _stockpile("b")]
     with patch.object(savefile_processor, "parse_save", return_value=saved):
-        await processor._process_file()
+        await processor._process_file_keep_watching()
 
     assert handler.batch_names() == [["a"], ["a", "b"]]
 
