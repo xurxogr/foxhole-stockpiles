@@ -35,6 +35,14 @@ from foxhole_stockpiles.enums.output_format import OutputFormat
 from foxhole_stockpiles.enums.output_handler_type import OutputHandlerType
 from foxhole_stockpiles.i18n import on_language_changed, t
 
+_DEFAULT_NAMES = {
+    OutputHandlerType.FILE: "File Output",
+    OutputHandlerType.WEBHOOK: "Webhook",
+    OutputHandlerType.CONSOLE: "Console",
+    OutputHandlerType.SHEETS: "Append rows (Google Sheets)",
+    OutputHandlerType.RETURN: "API Response",
+}
+
 
 class OutputHandlerDialog(QDialog):
     """Dialog for adding or editing an output handler."""
@@ -62,7 +70,35 @@ class OutputHandlerDialog(QDialog):
 
         layout = QVBoxLayout(self)
 
-        # Basic settings
+        layout.addWidget(self._build_basic_group())
+        layout.addWidget(self._build_file_group())
+        layout.addWidget(self._build_webhook_group())
+        layout.addWidget(self._build_sheets_group())
+
+        # Button box
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        button_box.accepted.connect(self._validate_and_accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+
+        # Apply translations
+        self.retranslate()
+
+        # Initially show/hide based on handler type and auth type
+        self._on_handler_type_changed()
+        self._on_webhook_auth_changed()
+
+        # Connect to language change signal with cleanup
+        on_language_changed(self._on_language_changed)
+
+    def _build_basic_group(self) -> QGroupBox:
+        """Build the name, handler type and format fields.
+
+        Returns:
+            QGroupBox: The group.
+        """
         self.basic_group = QGroupBox()
         basic_layout = QFormLayout()
         self.basic_group.setLayout(basic_layout)
@@ -82,9 +118,14 @@ class OutputHandlerDialog(QDialog):
         self.format_input.addItems(["json", "csv", "tsv"])
         basic_layout.addRow(self.format_label, self.format_input)
 
-        layout.addWidget(self.basic_group)
+        return self.basic_group
 
-        # File Settings Group
+    def _build_file_group(self) -> QGroupBox:
+        """Build the fields of the file handler.
+
+        Returns:
+            QGroupBox: The group.
+        """
         self.file_group = QGroupBox()
         file_layout = QFormLayout()
         self.file_group.setLayout(file_layout)
@@ -98,9 +139,14 @@ class OutputHandlerDialog(QDialog):
         file_path_layout.addWidget(self.file_browse_btn)
         file_layout.addRow(self.file_path_label, file_path_layout)
 
-        layout.addWidget(self.file_group)
+        return self.file_group
 
-        # Webhook Settings Group
+    def _build_webhook_group(self) -> QGroupBox:
+        """Build the fields of the webhook handler.
+
+        Returns:
+            QGroupBox: The group.
+        """
         self.webhook_group = QGroupBox()
         webhook_layout = QFormLayout()
         self.webhook_group.setLayout(webhook_layout)
@@ -124,9 +170,14 @@ class OutputHandlerDialog(QDialog):
         self.webhook_token_input.setEchoMode(QLineEdit.EchoMode.Password)
         webhook_layout.addRow(self.auth_token_label, self.webhook_token_input)
 
-        layout.addWidget(self.webhook_group)
+        return self.webhook_group
 
-        # Spreadsheet Settings Group
+    def _build_sheets_group(self) -> QGroupBox:
+        """Build the fields of the Google Sheets handler.
+
+        Returns:
+            QGroupBox: The group.
+        """
         self.sheets_group = QGroupBox()
         sheets_layout = QFormLayout()
         self.sheets_group.setLayout(sheets_layout)
@@ -159,25 +210,7 @@ class OutputHandlerDialog(QDialog):
         self.row_format_input = QLineEdit()
         sheets_layout.addRow(self.row_format_label, self.row_format_input)
 
-        layout.addWidget(self.sheets_group)
-
-        # Button box
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        button_box.accepted.connect(self._validate_and_accept)
-        button_box.rejected.connect(self.reject)
-        layout.addWidget(button_box)
-
-        # Apply translations
-        self.retranslate()
-
-        # Initially show/hide based on handler type and auth type
-        self._on_handler_type_changed()
-        self._on_webhook_auth_changed()
-
-        # Connect to language change signal with cleanup
-        on_language_changed(self._on_language_changed)
+        return self.sheets_group
 
     def _on_language_changed(self, _language: str) -> None:
         """Handle language change event."""
@@ -304,11 +337,7 @@ class OutputHandlerDialog(QDialog):
         self.handler_type_input.setCurrentText(handler.type)
 
         # Load format setting
-        format_type = handler_config.format.type
-        if isinstance(format_type, OutputFormat):
-            self.format_input.setCurrentText(format_type.value)
-        else:
-            self.format_input.setCurrentText(str(format_type))
+        self.format_input.setCurrentText(str(handler_config.format.type))
 
         if isinstance(handler, FileHandlerSettings):
             self.file_path_input.setText(handler.path)
@@ -409,68 +438,67 @@ class OutputHandlerDialog(QDialog):
             OutputHandlerConfig with current values.
         """
         handler_type = OutputHandlerType(self.handler_type_input.currentText())
-        name = self.name_input.text().strip()
-
-        # Create format settings based on selection
-        format_type_str = self.format_input.currentText()
-        format_settings: JsonFormatSettings | CsvFormatSettings
-        if format_type_str == "csv":
-            format_settings = CsvFormatSettings(type=OutputFormat.CSV)
-        elif format_type_str == "tsv":
-            format_settings = CsvFormatSettings(type=OutputFormat.TSV)
-        else:
-            format_settings = JsonFormatSettings()
-
-        # Create appropriate handler settings based on type
-        handler_settings: (
-            ReturnHandlerSettings
-            | FileHandlerSettings
-            | WebhookHandlerSettings
-            | ConsoleHandlerSettings
-            | SheetsHandlerSettings
+        return OutputHandlerConfig(
+            name=self.name_input.text().strip() or _DEFAULT_NAMES[handler_type],
+            format=self._read_format(),
+            handler=self._read_handler_settings(handler_type),
         )
+
+    def _read_format(self) -> JsonFormatSettings | CsvFormatSettings:
+        """Read the selected output format.
+
+        Returns:
+            JsonFormatSettings | CsvFormatSettings: The settings of that format.
+        """
+        match self.format_input.currentText():
+            case "csv":
+                return CsvFormatSettings(type=OutputFormat.CSV)
+            case "tsv":
+                return CsvFormatSettings(type=OutputFormat.TSV)
+            case _:
+                return JsonFormatSettings()
+
+    def _read_handler_settings(
+        self, handler_type: OutputHandlerType
+    ) -> (
+        ReturnHandlerSettings
+        | FileHandlerSettings
+        | WebhookHandlerSettings
+        | ConsoleHandlerSettings
+        | SheetsHandlerSettings
+    ):
+        """Read the fields of a handler type.
+
+        Args:
+            handler_type (OutputHandlerType): The selected type.
+
+        Returns:
+            ReturnHandlerSettings | FileHandlerSettings | WebhookHandlerSettings
+                | ConsoleHandlerSettings | SheetsHandlerSettings: Its settings.
+        """
         match handler_type:
             case OutputHandlerType.FILE:
-                handler_settings = FileHandlerSettings(path=self.file_path_input.text() or "output")
-                if not name:
-                    name = "File Output"
+                return FileHandlerSettings(path=self.file_path_input.text() or "output")
             case OutputHandlerType.WEBHOOK:
-                webhook_auth_type_str = self.webhook_auth_type_input.currentText()
-                webhook_auth_type: AuthType | None = (
-                    None if webhook_auth_type_str == "null" else AuthType(webhook_auth_type_str)
-                )
-                handler_settings = WebhookHandlerSettings(
+                auth_type = self.webhook_auth_type_input.currentText()
+                return WebhookHandlerSettings(
                     url=self.webhook_url_input.text() or "https://example.com/webhook",
-                    auth_type=webhook_auth_type,
+                    auth_type=None if auth_type == "null" else AuthType(auth_type),
                     token=self.webhook_token_input.text() or None,
                     auth_header=self.webhook_auth_header_input.text() or None,
                 )
-                if not name:
-                    name = "Webhook"
             case OutputHandlerType.CONSOLE:
-                handler_settings = ConsoleHandlerSettings()
-                if not name:
-                    name = "Console"
+                return ConsoleHandlerSettings()
             case OutputHandlerType.SHEETS:
-                handler_settings = SheetsHandlerSettings(
+                return SheetsHandlerSettings(
                     creds_path=self.creds_path_input.text(),
                     spreadsheet_url=self.spreadsheet_url_input.text().strip(),
                     sheet_id=self.sheet_id_input.text(),
                     start_cell=self.start_cell_input.text(),
                     row_format=self.row_format_input.text(),
                 )
-                if not name:
-                    name = "Append rows (Google Sheets)"
             case _:  # RETURN
-                handler_settings = ReturnHandlerSettings()
-                if not name:
-                    name = "API Response"
-
-        return OutputHandlerConfig(
-            name=name,
-            format=format_settings,
-            handler=handler_settings,
-        )
+                return ReturnHandlerSettings()
 
     def browse_credentials(self) -> None:
         """Open file dialog for credentials path."""

@@ -6,7 +6,8 @@ from unittest.mock import patch
 
 import pytest
 
-from foxhole_stockpiles.core.settings.sections import SheetsHandlerSettings
+from foxhole_stockpiles.core.settings.sections import FileHandlerSettings, SheetsHandlerSettings
+from foxhole_stockpiles.enums.output_format import OutputFormat
 from foxhole_stockpiles.enums.output_handler_type import OutputHandlerType
 from foxhole_stockpiles.gui.widgets.config_tabs import output_handler_dialog as dialog_mod
 from foxhole_stockpiles.gui.widgets.config_tabs.output_handler_dialog import OutputHandlerDialog
@@ -126,3 +127,55 @@ def test_pasted_whitespace_is_not_saved(dialog: OutputHandlerDialog) -> None:
     handler = dialog.get_handler_config().handler
     assert isinstance(handler, SheetsHandlerSettings)
     assert handler.spreadsheet_url == f"{_URL}/"
+
+
+@pytest.mark.parametrize(
+    ("handler_type", "name"),
+    [
+        (OutputHandlerType.FILE, "File Output"),
+        (OutputHandlerType.WEBHOOK, "Webhook"),
+        (OutputHandlerType.CONSOLE, "Console"),
+        (OutputHandlerType.SHEETS, "Append rows (Google Sheets)"),
+        (OutputHandlerType.RETURN, "API Response"),
+    ],
+)
+def test_a_handler_left_unnamed_gets_the_name_of_its_type(
+    dialog: OutputHandlerDialog, handler_type: OutputHandlerType, name: str
+) -> None:
+    """Leaving the name empty is allowed."""
+    dialog.name_input.clear()
+    dialog.handler_type_input.setCurrentText(handler_type.value)
+
+    assert dialog.get_handler_config().name == name
+
+
+def test_a_file_handler_left_without_path_writes_to_the_default_one(
+    dialog: OutputHandlerDialog,
+) -> None:
+    """The extension of the default path comes from the format."""
+    dialog.file_path_input.clear()
+    dialog.handler_type_input.setCurrentText(OutputHandlerType.FILE.value)
+
+    handler = dialog.get_handler_config().handler
+
+    assert isinstance(handler, FileHandlerSettings)
+    assert handler.path == "output"
+
+
+@pytest.mark.parametrize(
+    ("selected", "output_format"),
+    [("json", OutputFormat.JSON), ("csv", OutputFormat.CSV), ("tsv", OutputFormat.TSV)],
+)
+def test_the_selected_format_survives_saving_and_loading(
+    dialog: OutputHandlerDialog, selected: str, output_format: OutputFormat
+) -> None:
+    """What the dialog saves, it shows again; only a file handler has formats to choose."""
+    dialog.handler_type_input.setCurrentText(OutputHandlerType.FILE.value)
+    dialog.format_input.setCurrentText(selected)
+    config = dialog.get_handler_config()
+    assert config.format.type == output_format
+
+    dialog.format_input.setCurrentText("json")
+    dialog.load_handler(config)
+
+    assert dialog.format_input.currentText() == selected
