@@ -15,7 +15,6 @@ MAX_PAGE_COLUMNS: Final[int] = 4
 UNKNOWN_QUANTITY: Final[str] = "?"
 
 _OTHER_CATEGORY: Final[str] = "Other"
-_CRATES_SUFFIX: Final[str] = " (crates)"
 # In supply order, so related goods read together. Anything else goes after these.
 _CATEGORY_ORDER: Final[tuple[str, ...]] = (
     "Small Arms",
@@ -53,6 +52,18 @@ class ItemNames(Protocol):
 
         Returns:
             str | None: Its category, if it has one.
+        """
+        ...
+
+    def category_heading(self, category: str, crated: bool) -> str:
+        """Get the heading of a group of items.
+
+        Args:
+            category (str): The category.
+            crated (bool): Whether the group holds crates.
+
+        Returns:
+            str: The heading.
         """
         ...
 
@@ -106,7 +117,7 @@ def _build_groups(stockpile: Stockpile, catalog: ItemNames) -> list[tuple[str, l
     ordered = sorted(groups, key=lambda key: (_category_rank(key[0]), key[1]))
     return [
         (
-            f"{category}{_CRATES_SUFFIX}" if crated else category,
+            catalog.category_heading(category=category, crated=crated),
             sorted(groups[(category, crated)], key=lambda line: line.text.casefold()),
         )
         for category, crated in ordered

@@ -34,6 +34,18 @@ class _Catalog:
         category, slash, _ = code.partition("/")
         return category if slash else None
 
+    def category_heading(self, category: str, crated: bool) -> str:
+        """Get the heading of a group.
+
+        Args:
+            category (str): The category.
+            crated (bool): Whether the group holds crates.
+
+        Returns:
+            str: The category, marked when it holds crates.
+        """
+        return f"{category} (crates)" if crated else category
+
 
 def _pages(*items: StockpileItem) -> list[Any]:
     return build_pages(stockpile=Stockpile(items=list(items)), catalog=_Catalog())

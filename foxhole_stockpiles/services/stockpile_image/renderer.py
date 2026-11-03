@@ -11,7 +11,8 @@ from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.services.stockpile_image.font_selector import FontSelector
 from foxhole_stockpiles.services.stockpile_image.fonts import Font
 from foxhole_stockpiles.services.stockpile_image.icons import ICON_SIZE, IconKey
-from foxhole_stockpiles.services.stockpile_image.layout import ItemNames, build_pages
+from foxhole_stockpiles.services.stockpile_image.image_text import ImageText
+from foxhole_stockpiles.services.stockpile_image.layout import build_pages
 from foxhole_stockpiles.services.stockpile_image.placeholders import total_quantity
 
 ROW_HEIGHT: Final[int] = 40
@@ -65,18 +66,18 @@ class StockpileImageRenderer:
 
     def __init__(
         self,
-        catalog: ItemNames,
+        text: ImageText,
         font_selector: FontSelector,
         icons: dict[IconKey, Image.Image],
     ) -> None:
         """Initialize the renderer.
 
         Args:
-            catalog (ItemNames): Where the names and categories come from.
+            text (ImageText): The texts, in the language of the image.
             font_selector (FontSelector): What chooses the font of each text.
             icons (dict[IconKey, Image.Image]): The icon of each (code, crated).
         """
-        self._catalog = catalog
+        self._labels = text
         self._fonts = font_selector
         self._icons = icons
 
@@ -90,8 +91,8 @@ class StockpileImageRenderer:
         Returns:
             list[bytes]: The PNG of each page.
         """
-        pages = build_pages(stockpile=stockpile, catalog=self._catalog)
-        title = headline or stockpile.name or str(stockpile.type)
+        pages = build_pages(stockpile=stockpile, catalog=self._labels)
+        title = headline or stockpile.name or self._labels.stockpile_type(stockpile.type)
         return [
             self._encode(
                 self._draw_page(
@@ -147,7 +148,12 @@ class StockpileImageRenderer:
                     image=image, draw=draw, line=line, x=x, y=_HEADER_HEIGHT + row * ROW_HEIGHT
                 )
         if not page.columns:
-            self._text(draw, xy=(_MARGIN, _HEADER_HEIGHT), text="No items", size=_ROW_TEXT_SIZE)
+            self._text(
+                draw,
+                xy=(_MARGIN, _HEADER_HEIGHT),
+                text=self._labels.no_items(),
+                size=_ROW_TEXT_SIZE,
+            )
         self._draw_footer(
             draw=draw, stockpile=stockpile, page_label=page_label, width=width, height=height
         )
@@ -188,7 +194,11 @@ class StockpileImageRenderer:
         """
         room = width - 2 * _MARGIN
         self._text(draw, xy=(_MARGIN, 14), text=title, size=_TITLE_SIZE, max_width=room)
-        details = [str(stockpile.type or ""), stockpile.hex or "", stockpile.shard or ""]
+        details = [
+            self._labels.stockpile_type(stockpile.type),
+            stockpile.hex or "",
+            stockpile.shard or "",
+        ]
         self._text(
             draw,
             xy=(_MARGIN, 54),
@@ -255,7 +265,7 @@ class StockpileImageRenderer:
             height (int): The height of the image.
         """
         parts = [
-            f"Total: {total_quantity(stockpile)}",
+            self._labels.total(total_quantity(stockpile)),
             stockpile.timestamp.strftime("%Y-%m-%d %H:%M"),
             page_label,
         ]

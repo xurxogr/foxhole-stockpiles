@@ -14,8 +14,10 @@ from foxhole_stockpiles.handlers.base_handler import BaseOutputDestinationHandle
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.services.discord_cooldown import record_post, seconds_until_allowed
 from foxhole_stockpiles.services.stockpile_image.aggregation import stockpiles_to_draw
-from foxhole_stockpiles.services.stockpile_image.placeholders import fill_template
-from foxhole_stockpiles.services.stockpile_image.rendering import render_stockpile
+from foxhole_stockpiles.services.stockpile_image.rendering import (
+    fill_stockpile_text,
+    render_stockpile,
+)
 
 _SECONDS_PER_MINUTE: Final[int] = 60
 
@@ -121,9 +123,10 @@ class DiscordOutputHandler(BaseOutputDestinationHandler):
         pages = await asyncio.to_thread(
             render_stockpile, settings=self._settings, stockpile=stockpile
         )
-        message = (self._settings.message or "").strip()
         await self._connector.send_images(
-            content=fill_template(template=message, stockpile=stockpile) if message else None,
+            content=fill_stockpile_text(
+                settings=self._settings, template=self._settings.message, stockpile=stockpile
+            ),
             images=pages,
         )
 

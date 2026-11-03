@@ -8,18 +8,19 @@ from foxhole_stockpiles.models.stockpile import Stockpile
 _PLACEHOLDER: Final[re.Pattern[str]] = re.compile(r"\{(\w+)\}")
 
 
-def _build_values(stockpile: Stockpile) -> dict[str, str]:
+def _build_values(stockpile: Stockpile, type_label: str) -> dict[str, str]:
     """Build the value of each placeholder.
 
     Args:
         stockpile (Stockpile): The stockpile.
+        type_label (str): The name of its type.
 
     Returns:
         dict[str, str]: The text of each placeholder name.
     """
     return {
         "name": stockpile.name or "",
-        "type": str(stockpile.type or ""),
+        "type": type_label,
         "hex": stockpile.hex or "",
         "shard": stockpile.shard or "",
         "ingame_timestamp": stockpile.ingame_timestamp or "",
@@ -43,7 +44,7 @@ def total_quantity(stockpile: Stockpile) -> int:
     return sum(item.quantity for item in stockpile.items if item.quantity >= 0)
 
 
-def fill_template(template: str, stockpile: Stockpile) -> str:
+def fill_template(template: str, stockpile: Stockpile, type_label: str = "") -> str:
     """Replace the placeholders of a template with the values of a stockpile.
 
     Not ``str.format``: a template must not reach attributes of the values, and a
@@ -52,9 +53,10 @@ def fill_template(template: str, stockpile: Stockpile) -> str:
     Args:
         template (str): The text, with placeholders such as ``{name}``.
         stockpile (Stockpile): The stockpile.
+        type_label (str): The name of its type, which depends on the language.
 
     Returns:
         str: The text with its values.
     """
-    values = _build_values(stockpile)
+    values = _build_values(stockpile=stockpile, type_label=type_label)
     return _PLACEHOLDER.sub(lambda match: values.get(match[1], match[0]), template)

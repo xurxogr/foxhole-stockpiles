@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Stockpiles as images.** The new `image` output saves a picture of each stockpile, with
   the icon of each item, and the new `discord` output posts them to a channel through a
-  webhook. Each output chooses its headline, its icon mod and its font, and can merge all
+  webhook. Each output chooses its language, headline, icon mod and font, and can merge all
   the stockpiles of a send into one. See [Images and Discord](docs/images-and-discord.md).
   Based on the work of Gabylot.
 

@@ -14,6 +14,8 @@ from foxhole_stockpiles.core.settings.sections.output.stockpile_image_settings i
 from foxhole_stockpiles.enums.stockpile_type import StockpileType
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
+from foxhole_stockpiles.services.catalog_service import get_catalog_service
+from foxhole_stockpiles.services.stockpile_image.image_text import ImageText
 
 AGGREGATE_NAME: Final[str] = "All Stockpiles"
 _UNKNOWN: Final[int] = -1
@@ -57,11 +59,12 @@ def _shared[T](stockpiles: list[Stockpile], read: Callable[[Stockpile], T | None
     return values.pop() if len(values) == 1 else None
 
 
-def aggregate(stockpiles: list[Stockpile]) -> Stockpile:
+def aggregate(stockpiles: list[Stockpile], name: str = AGGREGATE_NAME) -> Stockpile:
     """Merge some stockpiles into a new one.
 
     Args:
         stockpiles (list[Stockpile]): The stockpiles, at least one.
+        name (str): The name of the result.
 
     Returns:
         Stockpile: Their items, with the newest timestamp and what they share.
@@ -69,7 +72,7 @@ def aggregate(stockpiles: list[Stockpile]) -> Stockpile:
     # Scans have naive times and save files aware ones, which cannot be compared.
     newest = max(stockpiles, key=lambda stockpile: stockpile.timestamp.timestamp())
     return Stockpile(
-        name=AGGREGATE_NAME,
+        name=name,
         type=StockpileType.UNDEFINED,
         hex=_shared(stockpiles=stockpiles, read=lambda stockpile: stockpile.hex),
         shard=_shared(stockpiles=stockpiles, read=lambda stockpile: stockpile.shard),
@@ -93,5 +96,6 @@ def stockpiles_to_draw(
         list[Stockpile]: The same stockpiles, or their merge if the settings ask for it.
     """
     if settings.aggregate and stockpiles:
-        return [aggregate(stockpiles)]
+        labels = ImageText(catalog=get_catalog_service(), language=settings.language)
+        return [aggregate(stockpiles=stockpiles, name=labels.all_stockpiles())]
     return stockpiles

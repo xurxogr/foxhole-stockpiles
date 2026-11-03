@@ -13,6 +13,7 @@ outputs can show the same data differently.
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `headline` | name of the stockpile | Title of the image |
+| `language` | `en` | Language of the text of the image, which can differ from the one of the window |
 | `icon_mod` | `vanilla` | Mod of the template database whose icons replace those of the base game |
 | `font_path` | none | Font file tried before the fonts of the system |
 | `aggregate` | `false` | Draw all the stockpiles of a send as one, adding up their items |
@@ -27,8 +28,12 @@ A large stockpile is split into pages, each one a separate image.
 an item the mod does not have, the image shows only the text.
 
 **Text.** Names of stockpiles can be in any alphabet, as long as an installed font covers
-it. If yours shows empty boxes, set `font_path` to a font that does. Item names, categories
-and totals are always in English.
+it. If yours shows empty boxes, set `font_path` to a font that does.
+
+**Language.** Each output has its own, so a channel can read the images in another language
+than the window. Item names come from the game, which does not translate all of them, mostly
+vehicles, and has no Spanish: those keep their English name. The rest of the text is
+translated. In the `{type}` placeholder too.
 
 **Merging.** With `aggregate`, crated and loose items stay apart. If the quantity of an
 item could not be read in one of the stockpiles, its total shows `?`, because a number would

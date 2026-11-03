@@ -3,13 +3,16 @@
 import io
 from datetime import UTC, datetime
 from typing import Any
+from unittest.mock import patch
 
 from PIL import Image
 
+from foxhole_stockpiles.enums.stockpile_type import StockpileType
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
 from foxhole_stockpiles.services.stockpile_image import layout, renderer
 from foxhole_stockpiles.services.stockpile_image.font_selector import FontSelector
+from foxhole_stockpiles.services.stockpile_image.image_text import ImageText
 from foxhole_stockpiles.services.stockpile_image.renderer import StockpileImageRenderer
 
 _MARK = (1, 200, 3)
@@ -18,11 +21,12 @@ _MARK = (1, 200, 3)
 class _Catalog:
     """A catalog that names items after their code."""
 
-    def get_display_name(self, code: str) -> str:
+    def get_display_name(self, code: str, language: str | None = None) -> str:
         """Get the name of an item.
 
         Args:
             code (str): Its code.
+            language (str | None): Not used.
 
         Returns:
             str: The code.
@@ -52,7 +56,9 @@ def _stockpile(count: int = 3) -> Stockpile:
 
 def _render(stockpile: Stockpile, icons: dict[Any, Image.Image] | None = None) -> list[Image.Image]:
     drawer = StockpileImageRenderer(
-        catalog=_Catalog(), font_selector=FontSelector(), icons=icons or {}
+        text=ImageText(catalog=_Catalog(), language="en"),
+        font_selector=FontSelector(),
+        icons=icons or {},
     )
     return [
         Image.open(io.BytesIO(png)) for png in drawer.render_png(stockpile=stockpile, headline=None)
@@ -146,7 +152,9 @@ def test_a_very_long_name_does_not_widen_the_image() -> None:
 
 def test_the_headline_can_be_given() -> None:
     """A long one is shortened to fit, and does not change the size."""
-    drawer = StockpileImageRenderer(catalog=_Catalog(), font_selector=FontSelector(), icons={})
+    drawer = StockpileImageRenderer(
+        text=ImageText(catalog=_Catalog(), language="en"), font_selector=FontSelector(), icons={}
+    )
 
     assert drawer.render_png(stockpile=_stockpile(), headline="H" * 500)
 
@@ -160,3 +168,42 @@ def test_shorten_cuts_a_text_that_does_not_fit() -> None:
     assert shortened.endswith("...")
     assert font.getlength(shortened) <= 100
     assert renderer.shorten(text="abc", font=font, max_width=1000) == "abc"
+
+
+def _drawn_texts(stockpile: Stockpile, language: str = "en") -> list[str]:
+    drawer = StockpileImageRenderer(
+        text=ImageText(catalog=_Catalog(), language=language),
+        font_selector=FontSelector(),
+        icons={},
+    )
+    with patch.object(drawer, "_text", wraps=drawer._text) as spy:
+        drawer.render_png(stockpile=stockpile, headline=None)
+    return [call.kwargs["text"] for call in spy.call_args_list]
+
+
+def test_an_unknown_type_is_not_drawn_under_the_title() -> None:
+    """Only what locates the stockpile, if there is anything."""
+    texts = _drawn_texts(Stockpile(name="Depot", hex="Westgate"))
+
+    assert "Westgate" in texts
+    assert not any("Undefined" in text for text in texts)
+
+
+def test_a_known_type_is_drawn_by_its_name_in_the_language_of_the_image() -> None:
+    """Not by the code of the game."""
+    stockpile = Stockpile(name="Depot", type=StockpileType.ENCAMPMENT, hex="Westgate")
+
+    assert "Feldlager · Westgate" in _drawn_texts(stockpile, language="de")
+
+
+def test_a_stockpile_without_name_or_known_type_has_no_title() -> None:
+    """Rather than an internal value."""
+    assert _drawn_texts(Stockpile())[0] == ""
+
+
+def test_the_fixed_text_is_in_the_language_of_the_image() -> None:
+    """The total and the empty stockpile."""
+    texts = _drawn_texts(Stockpile(name="Depot"), language="de")
+
+    assert "Keine Gegenstände" in texts
+    assert any(text.startswith("Gesamt: 0") for text in texts)

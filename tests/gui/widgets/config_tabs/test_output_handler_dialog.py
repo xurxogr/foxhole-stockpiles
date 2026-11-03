@@ -372,3 +372,30 @@ def test_discord_handler_minimum_interval(qtbot: Any) -> None:
     handler = widget.get_handler_config().handler
     assert isinstance(handler, DiscordHandlerSettings)
     assert handler.min_interval_minutes == 30
+
+
+def test_image_language_is_its_own(qtbot: Any) -> None:
+    """The window can be in one language and the image in another."""
+    config = OutputHandlerConfig(
+        name="image", handler=ImageHandlerSettings(path="a.png", language="de")
+    )
+    widget = OutputHandlerDialog(handler_config=config)
+    qtbot.addWidget(widget)
+    combo = widget.image_group.appearance.language_input
+
+    assert combo.currentData() == "de"
+    combo.setCurrentIndex(combo.findData("ru"))
+    handler = widget.get_handler_config().handler
+    assert isinstance(handler, ImageHandlerSettings)
+    assert handler.language == "ru"
+
+
+def test_image_language_that_does_not_exist_shows_english(qtbot: Any) -> None:
+    """The configuration can be edited by hand."""
+    config = OutputHandlerConfig(
+        name="image", handler=ImageHandlerSettings(path="a.png", language="xx")
+    )
+    widget = OutputHandlerDialog(handler_config=config)
+    qtbot.addWidget(widget)
+
+    assert widget.image_group.appearance.language_input.currentData() == "en"

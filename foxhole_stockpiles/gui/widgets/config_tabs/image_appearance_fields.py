@@ -16,8 +16,9 @@ from foxhole_stockpiles.core.settings import get_settings
 from foxhole_stockpiles.core.settings.sections.output.stockpile_image_settings import (
     StockpileImageSettings,
 )
-from foxhole_stockpiles.i18n import t
+from foxhole_stockpiles.i18n import get_available_languages, t
 from foxhole_stockpiles.services.stockpile_image.icons import BASE_GAME_MOD, list_icon_mods
+from foxhole_stockpiles.services.stockpile_image.image_text import DEFAULT_LANGUAGE
 
 
 class ImageAppearanceFields:
@@ -32,6 +33,13 @@ class ImageAppearanceFields:
         self.headline_label = QLabel()
         self.headline_input = QLineEdit()
         form.addRow(self.headline_label, self.headline_input)
+
+        self.language_label = QLabel()
+        self.language_input = QComboBox()
+        for code, name in get_available_languages():
+            self.language_input.addItem(name, code)
+        self._select_language(DEFAULT_LANGUAGE)
+        form.addRow(self.language_label, self.language_input)
 
         self.icon_mod_label = QLabel()
         self.icon_mod_input = QComboBox()
@@ -63,6 +71,8 @@ class ImageAppearanceFields:
             t("output_tab.handler_dialog.image_headline_placeholder")
         )
         self.headline_label.setToolTip(t("output_tab.handler_dialog.image_headline_tooltip"))
+        self.language_label.setText(t("output_tab.handler_dialog.image_language"))
+        self.language_label.setToolTip(t("output_tab.handler_dialog.image_language_tooltip"))
         self.icon_mod_label.setText(t("output_tab.handler_dialog.image_icon_mod"))
         self.icon_mod_label.setToolTip(t("output_tab.handler_dialog.image_icon_mod_tooltip"))
         self.font_path_label.setText(t("output_tab.handler_dialog.image_font"))
@@ -78,6 +88,7 @@ class ImageAppearanceFields:
             settings (StockpileImageSettings): The settings.
         """
         self.headline_input.setText(settings.headline or "")
+        self._select_language(settings.language)
         self.icon_mod_input.setCurrentText(settings.icon_mod)
         self.font_path_input.setText(settings.font_path or "")
         self.aggregate_input.setChecked(settings.aggregate)
@@ -90,10 +101,22 @@ class ImageAppearanceFields:
         """
         return {
             "headline": self.headline_input.text().strip() or None,
+            "language": self.language_input.currentData(),
             "icon_mod": self.icon_mod_input.currentText().strip() or BASE_GAME_MOD,
             "font_path": self.font_path_input.text().strip() or None,
             "aggregate": self.aggregate_input.isChecked(),
         }
+
+    def _select_language(self, language: str) -> None:
+        """Select a language, or the default one if it does not exist.
+
+        Args:
+            language (str): The language code.
+        """
+        index = self.language_input.findData(language)
+        if index < 0:
+            index = self.language_input.findData(DEFAULT_LANGUAGE)
+        self.language_input.setCurrentIndex(index)
 
     def _browse_font(self) -> None:
         """Choose the font file."""

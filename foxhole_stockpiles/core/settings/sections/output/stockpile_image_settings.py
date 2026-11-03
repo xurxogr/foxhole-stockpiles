@@ -26,6 +26,13 @@ class StockpileImageSettings(BaseModel):
         description="Font tried before the ones of the system",
         default=None,
     )
+    language: str = Field(
+        description=(
+            "Language of the text of the image, which can differ from the one of the "
+            "window. Items the game has no translation for keep their English name"
+        ),
+        default="en",
+    )
     aggregate: bool = Field(
         description="Draw all the stockpiles of a batch as one, adding up their items",
         default=False,

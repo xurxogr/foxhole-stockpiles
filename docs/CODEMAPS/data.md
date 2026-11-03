@@ -110,7 +110,7 @@ binds the hotkey from `capture_key` and saves each capture to
 (`creds_path`, `spreadsheet_url`, `sheet_id`, `start_cell`, `row_format`),
 **`image_handler.py`** (`path`) and **`discord_handler.py`** (`url`, `username`, `avatar_url`,
 `message`, `min_interval_minutes`; `is_discord_webhook_url`), both on
-`stockpile_image_settings.py` (`headline`, `icon_mod`, `font_path`, `aggregate`), plus
+`stockpile_image_settings.py` (`headline`, `language`, `icon_mod`, `font_path`, `aggregate`), plus
 format models `json_format.py`, `csv_format.py`. `handler_config.py` is the
 discriminated-union wrapper.
 
