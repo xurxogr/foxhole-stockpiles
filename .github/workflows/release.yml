@@ -13,8 +13,14 @@ permissions:
   contents: read
 
 jobs:
+  ci:
+    name: Lint, test and build
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
   release:
     name: Build and publish Windows executables
+    needs: ci
     timeout-minutes: 30
     runs-on: windows-latest
     permissions:
