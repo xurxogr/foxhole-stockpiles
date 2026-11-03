@@ -36,6 +36,8 @@ class OutputCoordinator:
         """
         self.output_settings = output_settings
         self.logger = logging.getLogger(__name__)
+        # By handler position, then stockpile key: what that handler still has to receive.
+        self._undelivered: dict[int, dict[str, Stockpile]] = {}
 
     def _create_handler(self, handler_config: OutputHandlerConfig) -> BaseOutputDestinationHandler:
         """Create a handler instance from configuration.
@@ -80,6 +82,9 @@ class OutputCoordinator:
         Handlers are processed in configuration order, so place the handler whose
         response should be returned first in the list.
 
+        A handler that fails receives that batch again with the next call, while the
+        ones that delivered it do not, so a retry cannot duplicate rows in a sheet.
+
         Args:
             stockpiles (list[Stockpile]): The stockpile data to output
             **kwargs: Additional handler-specific parameters (e.g., token for webhooks)
@@ -95,9 +100,11 @@ class OutputCoordinator:
             self.logger.warning("No output handlers configured")
             return None
 
-        for handler_config in handlers:
+        for position, handler_config in enumerate(handlers):
             handler = self._create_handler(handler_config)
             handler_type = handler_config.handler.type
+            batch = self._batch_for(position=position, stockpiles=stockpiles)
+            delivered = False
 
             self.logger.debug(
                 "Processing handler '%s' (type: %s)",
@@ -106,7 +113,8 @@ class OutputCoordinator:
             )
 
             try:
-                handler_result = await handler.handle(stockpiles=stockpiles, **kwargs)
+                handler_result = await handler.handle(stockpiles=batch, **kwargs)
+                delivered = handler.delivered
 
                 # First handler that returns data becomes the API response
                 if handler_result is not None and result is None:
@@ -126,7 +134,49 @@ class OutputCoordinator:
             finally:
                 await self._close_handler(handler=handler, name=handler_config.name)
 
+            self._track_delivery(
+                position=position, name=handler_config.name, batch=batch, delivered=delivered
+            )
+
         return result
+
+    def _batch_for(self, position: int, stockpiles: list[Stockpile]) -> list[Stockpile]:
+        """Add what a handler still has to receive to a new batch.
+
+        Args:
+            position (int): The position of the handler in the configuration.
+            stockpiles (list[Stockpile]): The new stockpiles.
+
+        Returns:
+            list[Stockpile]: The stockpiles to send, a newer version replacing an
+                undelivered one of the same stockpile.
+        """
+        undelivered = self._undelivered.get(position)
+        if not undelivered:
+            return stockpiles
+        merged = {**undelivered, **{stockpile.to_key(): stockpile for stockpile in stockpiles}}
+        return list(merged.values())
+
+    def _track_delivery(
+        self, position: int, name: str, batch: list[Stockpile], delivered: bool
+    ) -> None:
+        """Remember a batch its handler failed to deliver, or forget a delivered one.
+
+        Args:
+            position (int): The position of the handler in the configuration.
+            name (str): Its configured name, for the log.
+            batch (list[Stockpile]): The stockpiles it was given.
+            delivered (bool): Whether they reached the destination.
+        """
+        if delivered:
+            self._undelivered.pop(position, None)
+            return
+        self._undelivered[position] = {stockpile.to_key(): stockpile for stockpile in batch}
+        self.logger.warning(
+            "Handler '%s' did not deliver %d stockpile(s); they go again with the next batch",
+            name,
+            len(batch),
+        )
 
     async def _close_handler(self, handler: BaseOutputDestinationHandler, name: str) -> None:
         """Release a handler's resources without affecting the remaining handlers.

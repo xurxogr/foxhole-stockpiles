@@ -7,7 +7,15 @@ from foxhole_stockpiles.models.stockpile import Stockpile
 
 
 class BaseOutputDestinationHandler(ABC):
-    """Abstract base class for output destination handlers."""
+    """Abstract base class for output destination handlers.
+
+    Attributes:
+        delivered (bool): False after ``handle`` when the data did not reach the
+            destination but the failure was reported through its response instead
+            of raising. The batch is then sent again with the next one.
+    """
+
+    delivered: bool = True
 
     @abstractmethod
     async def handle(

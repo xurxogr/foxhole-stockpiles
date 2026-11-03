@@ -128,12 +128,14 @@ class SheetsOutputHandler(BaseOutputDestinationHandler):
         try:
             creds = await asyncio.to_thread(self._credentials.load)
         except CredentialsUnavailableError as e:
+            self.delivered = False
             return {"message": str(e)}
 
         rows = self.stockpiles_to_rows(stockpiles)
         try:
             await asyncio.to_thread(self._append_rows, creds=creds, rows=rows)
         except HttpError:
+            self.delivered = False
             return {"message": "Appending failed"}
         return {"status": "ok"}
 

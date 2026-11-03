@@ -102,6 +102,8 @@ class WebhookConnector:
         self._output_settings = output_settings
         self._logger = logging.getLogger(__name__)
         self._client = AsyncClient(timeout=30.0)
+        # False after a send whose data did not reach the endpoint.
+        self.delivered = True
         self._warn_if_token_unencrypted()
 
     def _warn_if_token_unencrypted(self) -> None:
@@ -203,6 +205,7 @@ class WebhookConnector:
 
         headers = self._build_auth_headers(token)
         return_data: list[str] = []
+        self.delivered = True
 
         try:
             response = await self._client.post(
@@ -214,6 +217,7 @@ class WebhookConnector:
                 res_data = response.json()
                 return_data = self._extract_response_messages(res_data)
             except httpx.HTTPStatusError as e:
+                self.delivered = False
                 return [f"HTTP {e.response.status_code} error from server"]
             except ValueError:
                 return [f"HTTP {response.status_code}: {response.text[:MAX_ERROR_BODY_CHARS]}"]
@@ -221,9 +225,11 @@ class WebhookConnector:
             raise
         except (httpx.LocalProtocolError, UnicodeEncodeError):
             # The text of these errors can quote the header value, which holds the token.
+            self.delivered = False
             self._logger.error(self.MESSAGE_ILLEGAL_CREDENTIALS)
             return_data = [self.MESSAGE_ILLEGAL_CREDENTIALS]
         except Exception as e:  # noqa: BLE001 - report any send failure back as a response message
+            self.delivered = False
             error_message = f"{self.DEFAULT_ERROR_PREFIX}: ({type(e).__name__}, {str(e)})"
             self._logger.error(error_message)
             return_data = [error_message]

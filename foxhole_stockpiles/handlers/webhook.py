@@ -43,6 +43,7 @@ class WebhookOutputHandler(BaseOutputDestinationHandler):
         token = kwargs.get("token")
 
         response = await self._webhook_connector.send_stockpile(payload=payload, token=token)
+        self.delivered = self._webhook_connector.delivered
         truncated = [msg[:_MAX_LOGGED_RESPONSE_CHARS] for msg in response]
         self.logger.debug("Webhook response: %s", truncated)
         return response
