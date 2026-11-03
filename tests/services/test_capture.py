@@ -164,3 +164,14 @@ def test_capture_ignores_other_titles_with_the_same_prefix(
 
     with pytest.raises(CaptureError, match="No window"):
         capture_window()
+
+
+def test_save_screenshot_keeps_the_name_readable_and_inside_the_folder(tmp_path: Path) -> None:
+    """A name in any alphabet is kept, and a separator can't leave the day folder."""
+    stockpile = Stockpile(name="../Склад", type="Seaport", resolution="1920x1080", items=[])
+
+    path = save_screenshot(b"PNGDATA", tmp_path, stockpile)
+
+    assert path is not None
+    assert path.parent.parent == tmp_path
+    assert "Склад" in path.name

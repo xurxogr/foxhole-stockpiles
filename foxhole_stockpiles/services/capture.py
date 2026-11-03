@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import io
 import logging
-import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -22,6 +21,7 @@ from typing import Any
 
 from PIL import ImageGrab
 
+from foxhole_stockpiles.core.safe_path_segment import safe_path_segment
 from foxhole_stockpiles.models.stockpile import Stockpile
 
 try:
@@ -39,9 +39,6 @@ CAPTURE_PLATFORM = "win32"
 # The Foxhole game window is titled "War"; capture targets that window. Windows are
 # searched by this prefix and then filtered by _is_game_window.
 _WINDOW_TITLE_PREFIX = "War"
-
-# Characters not allowed in the generated screenshot filenames.
-_UNSAFE_FILENAME = re.compile(r"[^A-Za-z0-9._-]+")
 
 
 class CaptureError(RuntimeError):
@@ -82,7 +79,7 @@ def save_screenshot(
             if text:
                 parts.append(text)
 
-    stem = _UNSAFE_FILENAME.sub("-", "_".join(parts)).strip("-_") or now.strftime("%H%M%S")
+    stem = safe_path_segment("_".join(parts))
     path = day_dir / f"{stem}.png"
     path.write_bytes(image)
     logger.debug("Saved screenshot to %s", path)

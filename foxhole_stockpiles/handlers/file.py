@@ -4,11 +4,11 @@ import asyncio
 import datetime
 import json
 import logging
-import re
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from foxhole_stockpiles.core.safe_path_segment import safe_path_segment
 from foxhole_stockpiles.core.settings.sections.output.csv_format import (
     CSV_FIELDS,
     CSV_HEADERS,
@@ -23,34 +23,6 @@ from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
 
 FormatSettings = JsonFormatSettings | CsvFormatSettings
-
-# Path separators, control characters and what else Windows refuses in a name.
-_UNSAFE_PATH_CHARS = re.compile(r'[\\/<>:"|?*\x00-\x1f]')
-# Windows device names, reserved with or without an extension.
-_RESERVED_NAME = re.compile(r"^(con|prn|aux|nul|com\d|lpt\d)(\..*)?$", re.IGNORECASE)
-
-
-def _sanitize_placeholder_value(value: str) -> str:
-    """Make a value substituted into a path template safe as one path segment.
-
-    Stockpile-derived placeholders (name, hex, type) originate from OCR-read
-    in-game text, `.sav` data or the clipboard, which others can control. Without
-    this, a stockpile named e.g. ".." or "../../etc/foo" could escape the configured
-    output directory, and "a:b" would write to an NTFS alternate data stream.
-
-    Args:
-        value (str): The raw placeholder value.
-
-    Returns:
-        str: A non-empty value that is neither a relative segment nor a reserved
-            name. Letters of any alphabet are kept.
-    """
-    cleaned = _UNSAFE_PATH_CHARS.sub("_", value).strip(" .")
-    if not cleaned:
-        return "_"
-    if _RESERVED_NAME.match(cleaned):
-        return f"_{cleaned}"
-    return cleaned
 
 
 class FileOutputHandler(BaseOutputDestinationHandler):
@@ -121,7 +93,7 @@ class FileOutputHandler(BaseOutputDestinationHandler):
         # Fix the extension first: a dot in a substituted value is not an extension.
         file = self._fix_extension(file)
         for placeholder, value in placeholders.items():
-            file = file.replace(placeholder, _sanitize_placeholder_value(value))
+            file = file.replace(placeholder, safe_path_segment(value))
 
         output_path = Path(file)
         output_path.parent.mkdir(parents=True, exist_ok=True)
