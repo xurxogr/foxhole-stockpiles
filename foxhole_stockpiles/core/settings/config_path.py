@@ -1,8 +1,11 @@
 """Resolution and one-time migration of the on-disk config file location."""
 
+import logging
 from pathlib import Path
 
 import platformdirs
+
+logger = logging.getLogger(__name__)
 
 _APP_NAME = "foxhole-stockpiles"
 
@@ -26,6 +29,9 @@ def migrate_legacy_config_file(target_path: Path) -> None:
     legacy file), the legacy file exists, and nothing already lives at the
     new location. Safe to call unconditionally since it is a no-op otherwise.
 
+    A failed move leaves the old file in place and is only logged: the application
+    still starts, with a new configuration.
+
     Args:
         target_path (Path): The config path the caller is about to use.
     """
@@ -34,6 +40,9 @@ def migrate_legacy_config_file(target_path: Path) -> None:
     if target_path.exists() or not LEGACY_CONFIG_PATH.exists():
         return
 
-    target_path.parent.mkdir(parents=True, exist_ok=True)
-    LEGACY_CONFIG_PATH.replace(target_path)
-    target_path.chmod(0o600)
+    try:
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        LEGACY_CONFIG_PATH.replace(target_path)
+        target_path.chmod(0o600)
+    except OSError as e:
+        logger.warning("Could not move the old config file to %s: %s", target_path, e)

@@ -26,7 +26,6 @@ from foxhole_stockpiles.core.settings.sections import (
 )
 
 _config_path = default_config_path()
-migrate_legacy_config_file(_config_path)
 
 
 class AppSettings(BaseSettings):
@@ -97,6 +96,7 @@ class AppSettings(BaseSettings):
         Returns:
             tuple: Settings sources in priority order (highest to lowest)
         """
+        migrate_legacy_config_file(_config_path)
         return (
             init_settings,
             env_settings,
