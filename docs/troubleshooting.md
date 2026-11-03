@@ -30,9 +30,9 @@ brew install python@3.12
 Scans fail because the OCR engine cannot start.
 
 **Solution:**
-OCR is handled by the external `fs-ocr` Rust engine (installed from PyPI).
-Tesseract is consumed internally by that engine and is no longer a direct
-dependency of the runtime. Verify the engine is installed:
+OCR is handled by the external `fs-ocr` Rust engine (installed from PyPI), which
+needs no system dependencies except for Chinese screenshots (see
+[Tesseract](advanced.md#tesseract-only-for-chinese-ocr)). Verify the engine is installed:
 ```bash
 pip show fs-ocr
 ```
@@ -257,8 +257,7 @@ Items detected correctly but quantities are wrong.
 **Possible Causes:**
 
 1. **OCR model issue**
-   - OCR runs inside the external `fs-ocr` Rust engine (which uses a custom
-     Tesseract model internally)
+   - OCR runs inside the external `fs-ocr` Rust engine, with its embedded model
    - Check logs for OCR warnings
 
 2. **Screenshot quality**

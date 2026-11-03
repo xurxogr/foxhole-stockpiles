@@ -177,3 +177,6 @@ screenshots/
 data/
 .claude
 .fs_config
+.codegraph/
+.reports/
+coverage.json

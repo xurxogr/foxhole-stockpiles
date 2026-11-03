@@ -116,11 +116,11 @@ class OutputCoordinator:
                 handler_result = await handler.handle(stockpiles=batch, **kwargs)
                 delivered = handler.delivered
 
-                # First handler that returns data becomes the API response
+                # First handler that returns data becomes the result of the send
                 if handler_result is not None and result is None:
                     result = handler_result
                     self.logger.debug(
-                        "Handler '%s' response will be returned to client",
+                        "Handler '%s' response will be the result of the send",
                         handler_config.name,
                     )
 
