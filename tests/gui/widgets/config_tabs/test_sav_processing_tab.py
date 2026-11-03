@@ -77,19 +77,19 @@ def test_language_change_retranslates(tab: SavProcessingTab) -> None:
 def test_set_and_get_values_roundtrip(tab: SavProcessingTab, tmp_path: Path) -> None:
     """set_values loads a settings object and get_values reads it back."""
     from foxhole_stockpiles.core.settings.sections.sav_processing import SavProcessingSettings
-    from foxhole_stockpiles.enums.sav_mode import SavMode
+    from foxhole_stockpiles.enums.capture_mode import CaptureMode
 
     sav = tmp_path / "World.sav"
     sav.write_text("x")
     settings = SavProcessingSettings(
-        mode=SavMode.MONITOR,
+        mode=CaptureMode.MONITOR,
         sav_capture_key="<ctrl>+d",
         sav_file_path=sav,
         poll_interval=2.0,
     )
     tab.set_values(settings)
     result = tab.get_values()
-    assert result.mode == SavMode.MONITOR
+    assert result.mode == CaptureMode.MONITOR
     assert result.sav_capture_key == "<ctrl>+d"
     assert result.sav_file_path == sav
     assert result.poll_interval == 2.0

@@ -66,7 +66,7 @@ The external `fs-ocr` exposes `StockpileScanner`, `ScanConfig`,
 | `OutputDestination` | return, file, webhook, console, **sheets** |
 | `OutputHandlerType` | return, file, webhook, console, **google sheets** |
 | `AuthType` | basic, bearer, header (removed obsolete `forward`) — webhook output handler only (header = send token in user-chosen header name) |
-| `SavMode` | manual (hotkey scans once), monitor (poll `.sav` + emit changes) |
+| `CaptureMode` | manual (hotkey reads once), monitor (poll clipboard or `.sav` + emit changes) |
 
 ## Configuration (`core/settings/`)
 

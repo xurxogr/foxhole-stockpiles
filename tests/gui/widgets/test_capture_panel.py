@@ -16,8 +16,7 @@ import pytest
 from PySide6.QtCore import QObject, Signal
 
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
-from foxhole_stockpiles.enums.clip_mode import ClipMode
-from foxhole_stockpiles.enums.sav_mode import SavMode
+from foxhole_stockpiles.enums.capture_mode import CaptureMode
 from foxhole_stockpiles.gui.controllers import (
     clip_pipeline,
     monitor_pipeline,
@@ -393,7 +392,7 @@ class TestSav:
     ) -> None:
         """The single button starts SAV listening in manual mode."""
         _use_settings(monkeypatch, _configured(tmp_path))
-        panel.sav_pipeline.mode = SavMode.MANUAL
+        panel.sav_pipeline.mode = CaptureMode.MANUAL
         panel.toggle_all()
         assert panel.sav_pipeline.listening is True
 
@@ -431,10 +430,10 @@ class TestSav:
     ) -> None:
         """Applying monitor mode updates the stored mode."""
         settings = _configured(tmp_path)
-        settings.sav_processing.mode = SavMode.MONITOR
+        settings.sav_processing.mode = CaptureMode.MONITOR
         _use_settings(monkeypatch, settings)
         panel.sav_pipeline.apply_mode()
-        assert panel.sav_pipeline.mode == SavMode.MONITOR
+        assert panel.sav_pipeline.mode == CaptureMode.MONITOR
 
 
 class TestClip:
@@ -445,7 +444,7 @@ class TestClip:
     ) -> None:
         """The single button starts clipboard listening in manual mode."""
         _use_settings(monkeypatch, _configured(tmp_path))
-        panel.clip_pipeline.mode = ClipMode.MANUAL
+        panel.clip_pipeline.mode = CaptureMode.MANUAL
         panel.toggle_all()
         assert panel.clip_pipeline.listening is True
 
@@ -485,10 +484,10 @@ class TestClip:
     ) -> None:
         """Applying monitor mode updates the stored clipboard mode."""
         settings = _configured(tmp_path)
-        settings.clipboard.mode = ClipMode.MONITOR
+        settings.clipboard.mode = CaptureMode.MONITOR
         _use_settings(monkeypatch, settings)
         panel.clip_pipeline.apply_mode()
-        assert panel.clip_pipeline.mode == ClipMode.MONITOR
+        assert panel.clip_pipeline.mode == CaptureMode.MONITOR
 
 
 class TestEdgeCases:
@@ -573,7 +572,7 @@ class TestEdgeCases:
         """A settings read failure falls back to manual SAV mode."""
         _patch(monkeypatch, "AppSettings", MagicMock(side_effect=RuntimeError("boom")))
         panel.sav_pipeline.apply_mode()
-        assert panel.sav_pipeline.mode == SavMode.MANUAL
+        assert panel.sav_pipeline.mode == CaptureMode.MANUAL
 
     def test_apply_clip_mode_settings_error(
         self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch
@@ -581,19 +580,19 @@ class TestEdgeCases:
         """A settings read failure falls back to manual clipboard mode."""
         _patch(monkeypatch, "AppSettings", MagicMock(side_effect=RuntimeError("boom")))
         panel.clip_pipeline.apply_mode()
-        assert panel.clip_pipeline.mode == ClipMode.MANUAL
+        assert panel.clip_pipeline.mode == CaptureMode.MANUAL
 
     def test_apply_sav_mode_switch_stops_active(
         self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         """Switching SAV mode stops the previously-active pipeline."""
         settings = _configured(tmp_path)
-        settings.sav_processing.mode = SavMode.MONITOR
+        settings.sav_processing.mode = CaptureMode.MONITOR
         _use_settings(monkeypatch, settings)
-        panel.sav_pipeline.mode = SavMode.MANUAL
+        panel.sav_pipeline.mode = CaptureMode.MANUAL
         panel.sav_pipeline.listening = True
         panel.sav_pipeline.apply_mode()
-        assert panel.sav_pipeline.mode == SavMode.MONITOR
+        assert panel.sav_pipeline.mode == CaptureMode.MONITOR
         assert panel.sav_pipeline.listening is False
 
 
@@ -721,9 +720,9 @@ class TestRemainingBranches:
     ) -> None:
         """Switching SAV mode stops an active monitor."""
         settings = _configured(tmp_path)
-        settings.sav_processing.mode = SavMode.MONITOR
+        settings.sav_processing.mode = CaptureMode.MONITOR
         _use_settings(monkeypatch, settings)
-        panel.sav_pipeline.mode = SavMode.MANUAL
+        panel.sav_pipeline.mode = CaptureMode.MANUAL
         panel.sav_pipeline.monitoring = True
         panel.sav_pipeline.apply_mode()
         assert panel.sav_pipeline.monitoring is False
@@ -733,7 +732,7 @@ class TestRemainingBranches:
     ) -> None:
         """The single button starts SAV monitoring in monitor mode."""
         _use_settings(monkeypatch, _configured(tmp_path))
-        panel.sav_pipeline.mode = SavMode.MONITOR
+        panel.sav_pipeline.mode = CaptureMode.MONITOR
         panel.toggle_all()
         assert panel.sav_pipeline.monitoring is True
 
@@ -777,9 +776,9 @@ class TestRemainingBranches:
     ) -> None:
         """Switching clipboard mode stops active listening."""
         settings = _configured(tmp_path)
-        settings.clipboard.mode = ClipMode.MONITOR
+        settings.clipboard.mode = CaptureMode.MONITOR
         _use_settings(monkeypatch, settings)
-        panel.clip_pipeline.mode = ClipMode.MANUAL
+        panel.clip_pipeline.mode = CaptureMode.MANUAL
         panel.clip_pipeline.listening = True
         panel.clip_pipeline.apply_mode()
         assert panel.clip_pipeline.listening is False
@@ -789,9 +788,9 @@ class TestRemainingBranches:
     ) -> None:
         """Switching clipboard mode stops active monitoring."""
         settings = _configured(tmp_path)
-        settings.clipboard.mode = ClipMode.MONITOR
+        settings.clipboard.mode = CaptureMode.MONITOR
         _use_settings(monkeypatch, settings)
-        panel.clip_pipeline.mode = ClipMode.MANUAL
+        panel.clip_pipeline.mode = CaptureMode.MANUAL
         panel.clip_pipeline.monitoring = True
         panel.clip_pipeline.apply_mode()
         assert panel.clip_pipeline.monitoring is False
@@ -801,7 +800,7 @@ class TestRemainingBranches:
     ) -> None:
         """The single button starts clipboard monitoring in monitor mode."""
         _use_settings(monkeypatch, _configured(tmp_path))
-        panel.clip_pipeline.mode = ClipMode.MONITOR
+        panel.clip_pipeline.mode = CaptureMode.MONITOR
         panel.toggle_all()
         assert panel.clip_pipeline.monitoring is True
 

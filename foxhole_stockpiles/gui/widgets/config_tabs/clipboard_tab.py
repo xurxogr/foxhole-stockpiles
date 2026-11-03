@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
 
 from foxhole_stockpiles.core.constants import DATA_DOWNLOAD_URL
 from foxhole_stockpiles.core.settings.sections.clipboard import ClipboardSettings
-from foxhole_stockpiles.enums.clip_mode import ClipMode
+from foxhole_stockpiles.enums.capture_mode import CaptureMode
 from foxhole_stockpiles.gui.widgets.hotkey_field import HotkeyField
 from foxhole_stockpiles.i18n import on_language_changed, t
 
@@ -65,8 +65,8 @@ class ClipboardTab(QWidget):
         # Clipboard mode (manual hotkey read vs. auto-monitor)
         self.mode_label = QLabel()
         self.mode_combo = QComboBox()
-        self.mode_combo.addItem("", ClipMode.MANUAL)
-        self.mode_combo.addItem("", ClipMode.MONITOR)
+        self.mode_combo.addItem("", CaptureMode.MANUAL)
+        self.mode_combo.addItem("", CaptureMode.MONITOR)
         form_layout.addRow(self.mode_label, self.mode_combo)
 
         # Clipboard hotkey (used in manual mode)

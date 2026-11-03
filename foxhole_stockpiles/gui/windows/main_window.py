@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
 
 from foxhole_stockpiles import __version__
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
-from foxhole_stockpiles.enums.sav_mode import SavMode
+from foxhole_stockpiles.enums.capture_mode import CaptureMode
 from foxhole_stockpiles.gui.utils.qt_log_handler import QtLogHandler
 from foxhole_stockpiles.gui.widgets.capture_panel import CapturePanel
 from foxhole_stockpiles.gui.windows.config_window import ConfigWindow
@@ -223,7 +223,7 @@ class MainWindow(QMainWindow):
     def _apply_sav_menu_state(self) -> None:
         """Enable File → Scan SAV only in manual mode (disabled while monitoring)."""
         try:
-            is_manual = AppSettings().sav_processing.mode == SavMode.MANUAL
+            is_manual = AppSettings().sav_processing.mode == CaptureMode.MANUAL
         except Exception as e:  # noqa: BLE001 - default to manual if settings fail to load
             logger.warning("Failed to read SAV mode: %s", e)
             is_manual = True

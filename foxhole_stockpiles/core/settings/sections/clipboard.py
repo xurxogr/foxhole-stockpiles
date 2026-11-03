@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from foxhole_stockpiles.enums.clip_mode import ClipMode
+from foxhole_stockpiles.enums.capture_mode import CaptureMode
 
 
 class ClipboardSettings(BaseModel):
@@ -13,13 +13,13 @@ class ClipboardSettings(BaseModel):
     SAV processing controls.
     """
 
-    mode: ClipMode = Field(
+    mode: CaptureMode = Field(
         description=(
             "Clipboard control mode for the main window. 'manual' uses a hotkey "
             "to read the clipboard once per press; 'monitor' auto-polls the "
             "clipboard and emits each new stockpile export."
         ),
-        default=ClipMode.MANUAL,
+        default=CaptureMode.MANUAL,
     )
     clip_capture_key: str | None = Field(
         description=(

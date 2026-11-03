@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 
 from foxhole_stockpiles.core.settings.sections.clipboard import ClipboardSettings
-from foxhole_stockpiles.enums.clip_mode import ClipMode
+from foxhole_stockpiles.enums.capture_mode import CaptureMode
 from foxhole_stockpiles.gui.widgets.config_tabs.clipboard_tab import ClipboardTab
 
 
@@ -43,10 +43,10 @@ def test_set_values(clipboard_tab: ClipboardTab) -> None:
         clipboard_tab: ClipboardTab instance.
     """
     clipboard_tab.set_values(
-        ClipboardSettings(mode=ClipMode.MONITOR, clip_capture_key="F11", poll_interval=2.5)
+        ClipboardSettings(mode=CaptureMode.MONITOR, clip_capture_key="F11", poll_interval=2.5)
     )
 
-    assert clipboard_tab.mode_combo.currentData() == ClipMode.MONITOR
+    assert clipboard_tab.mode_combo.currentData() == CaptureMode.MONITOR
     assert clipboard_tab.clip_key_field.display.text() == "F11"
     assert clipboard_tab.poll_interval_input.value() == 2.5
 
@@ -58,12 +58,12 @@ def test_get_values_roundtrip(clipboard_tab: ClipboardTab) -> None:
         clipboard_tab: ClipboardTab instance.
     """
     clipboard_tab.set_values(
-        ClipboardSettings(mode=ClipMode.MANUAL, clip_capture_key="F9", poll_interval=1.5)
+        ClipboardSettings(mode=CaptureMode.MANUAL, clip_capture_key="F9", poll_interval=1.5)
     )
 
     settings = clipboard_tab.get_values()
 
-    assert settings.mode == ClipMode.MANUAL
+    assert settings.mode == CaptureMode.MANUAL
     assert settings.clip_capture_key == "F9"
     assert settings.poll_interval == 1.5
 

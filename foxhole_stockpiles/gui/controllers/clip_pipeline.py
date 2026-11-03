@@ -1,12 +1,11 @@
 """Clipboard input method: one-shot reads and clipboard monitoring."""
 
 import logging
-from enum import StrEnum
 
 from PySide6.QtWidgets import QMessageBox, QWidget
 
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
-from foxhole_stockpiles.enums.clip_mode import ClipMode
+from foxhole_stockpiles.enums.capture_mode import CaptureMode
 from foxhole_stockpiles.gui.controllers.monitor_pipeline import MonitorPipeline
 from foxhole_stockpiles.gui.controllers.pipeline_host import PipelineHost
 from foxhole_stockpiles.gui.utils.capture_feed_formatting import stockpile_summary
@@ -40,14 +39,14 @@ class ClipPipeline(MonitorPipeline):
             host (PipelineHost): The widget this pipeline reports to.
             parent (QWidget): Owner of this pipeline and parent of its dialogs.
         """
-        super().__init__(host=host, parent=parent, manual_mode=ClipMode.MANUAL)
+        super().__init__(host=host, parent=parent)
         self._service: ClipboardScanService | None = None
 
-    def _read_mode(self) -> StrEnum:
+    def _read_mode(self) -> CaptureMode:
         """Read the configured clipboard mode from settings.
 
         Returns:
-            StrEnum: The configured mode.
+            CaptureMode: The configured mode.
         """
         return AppSettings().clipboard.mode
 

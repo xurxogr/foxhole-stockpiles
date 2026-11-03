@@ -1,11 +1,11 @@
 """Shared lifecycle of an input method that runs on a hotkey or as a monitor."""
 
 import logging
-from enum import StrEnum
 
 from PySide6.QtCore import QObject
 from PySide6.QtWidgets import QWidget
 
+from foxhole_stockpiles.enums.capture_mode import CaptureMode
 from foxhole_stockpiles.gui.controllers.pipeline_host import PipelineHost
 from foxhole_stockpiles.gui.utils.clipboard_monitor_worker import ClipboardMonitorWorker
 from foxhole_stockpiles.gui.utils.clipboard_scan_worker import ClipboardScanWorker
@@ -33,29 +33,27 @@ class MonitorPipeline(QObject):
     _monitor_stopped_key = ""
     _error_key = ""
 
-    def __init__(self, host: PipelineHost, parent: QWidget, manual_mode: StrEnum) -> None:
+    def __init__(self, host: PipelineHost, parent: QWidget) -> None:
         """Initialize the pipeline in manual mode.
 
         Args:
             host (PipelineHost): The widget this pipeline reports to.
             parent (QWidget): Owner of this pipeline and parent of its dialogs.
-            manual_mode (StrEnum): The mode used until settings say otherwise.
         """
         super().__init__(parent)
         self._host = host
         self._parent = parent
-        self._manual_mode = manual_mode
-        self.mode = manual_mode
+        self.mode = CaptureMode.MANUAL
         self.listening = False
         self.monitoring = False
         self._scan_worker: SavScanWorker | ClipboardScanWorker | None = None
         self._monitor_worker: SavMonitorWorker | ClipboardMonitorWorker | None = None
 
-    def _read_mode(self) -> StrEnum:
+    def _read_mode(self) -> CaptureMode:
         """Read the configured mode from settings.
 
         Returns:
-            StrEnum: The configured mode.
+            CaptureMode: The configured mode.
 
         Raises:
             NotImplementedError: If the subclass does not override this.
@@ -80,7 +78,7 @@ class MonitorPipeline(QObject):
             mode = self._read_mode()
         except Exception as e:  # noqa: BLE001 - default to manual if settings fail to load
             logger.warning("Could not read %s mode: %s", self._monitor_name, e)
-            mode = self._manual_mode
+            mode = CaptureMode.MANUAL
 
         if mode != self.mode:
             if self._host.is_active():

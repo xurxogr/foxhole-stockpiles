@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 
 from foxhole_stockpiles.core.settings.sections.sav_processing import SavProcessingSettings
 from foxhole_stockpiles.core.utils import auto_detect_savefile
-from foxhole_stockpiles.enums.sav_mode import SavMode
+from foxhole_stockpiles.enums.capture_mode import CaptureMode
 from foxhole_stockpiles.gui.widgets.hotkey_field import HotkeyField
 from foxhole_stockpiles.i18n import on_language_changed, t
 
@@ -45,8 +45,8 @@ class SavProcessingTab(QWidget):
         # SAV mode (manual hotkey scan vs. auto-monitor)
         self.mode_label = QLabel()
         self.mode_combo = QComboBox()
-        self.mode_combo.addItem("", SavMode.MANUAL)
-        self.mode_combo.addItem("", SavMode.MONITOR)
+        self.mode_combo.addItem("", CaptureMode.MANUAL)
+        self.mode_combo.addItem("", CaptureMode.MONITOR)
         form_layout.addRow(self.mode_label, self.mode_combo)
 
         # SAV hotkey (used in manual mode)

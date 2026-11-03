@@ -4,7 +4,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from foxhole_stockpiles.enums.sav_mode import SavMode
+from foxhole_stockpiles.enums.capture_mode import CaptureMode
 
 
 class SavProcessingSettings(BaseModel):
@@ -14,12 +14,12 @@ class SavProcessingSettings(BaseModel):
     for stockpile data extraction.
     """
 
-    mode: SavMode = Field(
+    mode: CaptureMode = Field(
         description=(
             "SAV control mode for the main window. 'manual' uses a hotkey to scan "
             "the .sav once per press; 'monitor' auto-polls the .sav for changes."
         ),
-        default=SavMode.MANUAL,
+        default=CaptureMode.MANUAL,
     )
     sav_capture_key: str | None = Field(
         description=(

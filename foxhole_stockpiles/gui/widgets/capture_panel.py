@@ -24,8 +24,7 @@ from PySide6.QtWidgets import (
 )
 
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
-from foxhole_stockpiles.enums.clip_mode import ClipMode
-from foxhole_stockpiles.enums.sav_mode import SavMode
+from foxhole_stockpiles.enums.capture_mode import CaptureMode
 from foxhole_stockpiles.gui.controllers.clip_pipeline import ClipPipeline
 from foxhole_stockpiles.gui.controllers.ocr_pipeline import OcrPipeline
 from foxhole_stockpiles.gui.controllers.sav_pipeline import SavPipeline
@@ -264,7 +263,7 @@ class CapturePanel(QWidget):
         Returns:
             str: The configured-state descriptor for the SAV method.
         """
-        if self.sav_pipeline.mode == SavMode.MONITOR:
+        if self.sav_pipeline.mode == CaptureMode.MONITOR:
             if sav_file_available(settings):
                 return t("server_panel.status_monitoring")
             return t("server_panel.status_not_configured")
@@ -284,7 +283,7 @@ class CapturePanel(QWidget):
         """
         if not catalog_available(settings):
             return t("server_panel.status_not_configured")
-        if self.clip_pipeline.mode == ClipMode.MONITOR:
+        if self.clip_pipeline.mode == CaptureMode.MONITOR:
             return t("server_panel.status_monitoring")
         key = settings.clipboard.clip_capture_key
         if key:
@@ -350,7 +349,7 @@ class CapturePanel(QWidget):
             announce.append((self._arm_capture, settings.scanner.capture_key))
 
         if (
-            self.sav_pipeline.mode == SavMode.MANUAL
+            self.sav_pipeline.mode == CaptureMode.MANUAL
             and settings.sav_processing.sav_capture_key
             and self._hotkeys_available
         ):
@@ -358,7 +357,7 @@ class CapturePanel(QWidget):
             announce.append((self.sav_pipeline.arm, settings.sav_processing.sav_capture_key))
 
         if (
-            self.clip_pipeline.mode == ClipMode.MANUAL
+            self.clip_pipeline.mode == CaptureMode.MANUAL
             and catalog_available(settings)
             and settings.clipboard.clip_capture_key
             and self._hotkeys_available
@@ -403,9 +402,9 @@ class CapturePanel(QWidget):
             arm(key)
 
         # Monitors are independent pollers, not hotkey listeners.
-        if self.sav_pipeline.mode == SavMode.MONITOR and sav_file_available(settings):
+        if self.sav_pipeline.mode == CaptureMode.MONITOR and sav_file_available(settings):
             self.sav_pipeline.start_monitor()
-        if self.clip_pipeline.mode == ClipMode.MONITOR and catalog_available(settings):
+        if self.clip_pipeline.mode == CaptureMode.MONITOR and catalog_available(settings):
             self.clip_pipeline.start_monitor()
 
         self.refresh_controls()
@@ -482,13 +481,13 @@ class CapturePanel(QWidget):
         db_valid = db_path is not None and db_path.exists()
         capture_ok = db_valid and bool(settings.scanner.capture_key) and self._hotkeys_available
 
-        if self.sav_pipeline.mode == SavMode.MONITOR:
+        if self.sav_pipeline.mode == CaptureMode.MONITOR:
             sav_ok = sav_file_available(settings)
         else:
             sav_ok = bool(settings.sav_processing.sav_capture_key) and self._hotkeys_available
 
         catalog_ok = catalog_available(settings)
-        if self.clip_pipeline.mode == ClipMode.MONITOR:
+        if self.clip_pipeline.mode == CaptureMode.MONITOR:
             clip_ok = catalog_ok
         else:
             clip_ok = (

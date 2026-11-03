@@ -54,7 +54,7 @@ capture-and-scan. The HDF5 template DB is built and edited by the external
 - **core/** — `settings/` (Pydantic `AppSettings` v16 + `config_migrator/` package + nested `sections/`), `logging.py`, `utils.py`, `version.py`.
 - **models/** — Pydantic v2: `stockpile.py` (`hex`/`coords`/`is_reserve`/`to_key()`), `stockpile_item.py` (`x`/`y`/`candidates`), `item_candidate.py`, `stockpile_coords.py`, memory-stat models.
 - **handlers/** — output sinks taking `list[Stockpile]`: `console.py`, `file.py`, `webhook.py`, `response.py` (return), **`sheets.py`** (Google Sheets), `stockpile_json.py` (shared JSON payload builder); interface in `base_handler.py`.
-- **enums/** — StrEnums: stockpile_type (~28), item_faction, item_category, supported_language, supported_resolution, output_format/destination/handler_type, auth_type, sav_mode.
+- **enums/** — StrEnums: stockpile_type (~28), item_faction, item_category, supported_language, supported_resolution, output_format/destination/handler_type, auth_type, capture_mode.
 - **gui/** — PySide6 desktop app: `windows/` (main, config), `widgets/capture_panel.py` (refactored init_ui + pure helpers) + `config_tabs/`, `utils/` (hotkey listener, capture+scan worker, SAV workers, activity feed formatter).
 - **connectors/**, **i18n/** — webhook connector, translations.
 
