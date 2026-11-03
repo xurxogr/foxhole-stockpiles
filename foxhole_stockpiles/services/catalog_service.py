@@ -35,12 +35,28 @@ def _read_category(item: dict[str, Any]) -> str | None:
     return stockpile_category if isinstance(stockpile_category, str) else None
 
 
+def _read_names(item: dict[str, Any]) -> dict[str, str]:
+    """Read the name of an item in each language the game has it.
+
+    Args:
+        item (dict[str, Any]): One catalog entry.
+
+    Returns:
+        dict[str, str]: The name by language code, without the unusable ones.
+    """
+    names = item.get("DisplayNameLocales")
+    if not isinstance(names, dict):
+        return {}
+    return {language: name for language, name in names.items() if isinstance(name, str) and name}
+
+
 class CatalogEntry(BaseModel):
-    """Catalog entry with item code, display name and category."""
+    """Catalog entry with item code, display names and category."""
 
     code: str
     display_name: str
     category: str | None = None
+    names: dict[str, str] = {}
 
 
 class CatalogService:
@@ -83,7 +99,10 @@ class CatalogService:
                 display_name = item.get("DisplayName", code)
                 if code:
                     self._catalog[code] = CatalogEntry(
-                        code=code, display_name=display_name, category=_read_category(item)
+                        code=code,
+                        display_name=display_name,
+                        category=_read_category(item),
+                        names=_read_names(item),
                     )
 
             logger.info("Loaded %d items from catalog", len(self._catalog))
@@ -93,18 +112,22 @@ class CatalogService:
         except Exception as e:  # noqa: BLE001 - keep the app usable with an empty catalog
             logger.error("Failed to load catalog: %s", e)
 
-    def get_display_name(self, code: str) -> str:
+    def get_display_name(self, code: str, language: str | None = None) -> str:
         """Get display name for an item code.
 
         Args:
-            code: The item code to look up.
+            code (str): The item code to look up.
+            language (str | None): The language of the name. The game does not translate
+                every item, so the default name is used when it has none.
 
         Returns:
-            The display name if found, otherwise returns the code itself.
+            str: The display name if found, otherwise the code itself.
         """
         self._load()
         entry = self._catalog.get(code)
-        return entry.display_name if entry else code
+        if entry is None:
+            return code
+        return entry.names.get(language or "", entry.display_name)
 
     def get_category(self, code: str) -> str | None:
         """Get the category an item is grouped under.

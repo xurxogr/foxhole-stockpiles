@@ -172,3 +172,52 @@ class TestCategory:
     def test_unknown_code_has_none(self, service: CatalogService) -> None:
         """A code missing from the catalog has no category."""
         assert service.get_category("Nope") is None
+
+
+class TestNamesByLanguage:
+    """The name of an item in another language."""
+
+    @pytest.fixture
+    def service(self, tmp_path: Path) -> CatalogService:
+        """Build a service with translated and untranslated names.
+
+        Args:
+            tmp_path (Path): The temporary directory.
+
+        Returns:
+            CatalogService: The service.
+        """
+        path = tmp_path / "catalog.json"
+        entries = [
+            {
+                "CodeName": "Rifle",
+                "DisplayName": "Rifle",
+                "DisplayNameLocales": {"de": "Gewehr", "ru": "", "fr": 3},
+            },
+            {"CodeName": "Tank", "DisplayName": "Tank"},
+        ]
+        path.write_text(json.dumps(entries), encoding="utf-8")
+        return CatalogService(catalog_path=path)
+
+    def test_the_name_in_that_language(self, service: CatalogService) -> None:
+        """When the catalog has it."""
+        assert service.get_display_name("Rifle", language="de") == "Gewehr"
+
+    def test_no_language_is_the_default_name(self, service: CatalogService) -> None:
+        """As for everything that does not ask for one."""
+        assert service.get_display_name("Rifle") == "Rifle"
+
+    @pytest.mark.parametrize("language", ["es", "ru", "fr"])
+    def test_a_missing_or_wrong_name_is_the_default_one(
+        self, service: CatalogService, language: str
+    ) -> None:
+        """The game does not translate every item, nor has all the languages."""
+        assert service.get_display_name("Rifle", language=language) == "Rifle"
+
+    def test_an_item_without_translations(self, service: CatalogService) -> None:
+        """Most vehicles have none."""
+        assert service.get_display_name("Tank", language="de") == "Tank"
+
+    def test_an_unknown_item_is_its_code(self, service: CatalogService) -> None:
+        """In any language."""
+        assert service.get_display_name("Nope", language="de") == "Nope"
