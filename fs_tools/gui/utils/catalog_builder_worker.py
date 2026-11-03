@@ -63,11 +63,12 @@ class CatalogBuilderWorker(QThread):
                 full=self.full,
                 progress=self._on_progress,
             )
-        except InterruptedError:
-            logger.info("Catalog build cancelled")
-            self.finished.emit(False)
-            return
         except Exception as e:  # noqa: BLE001 - report any failure via the error signal
+            # fs-assets also raises InterruptedError for an interrupted I/O operation.
+            if self._should_stop and isinstance(e, InterruptedError):
+                logger.info("Catalog build cancelled")
+                self.finished.emit(False)
+                return
             logger.error("Catalog build failed: %s", e)
             self.error.emit(str(e))
             self.finished.emit(False)

@@ -114,3 +114,14 @@ def test_stop_cancels_through_the_progress_callback(worker: CatalogBuilderWorker
 
     finished.assert_called_once_with(False)
     error.assert_not_called()
+
+
+def test_an_interrupted_read_nobody_asked_for_is_an_error(worker: CatalogBuilderWorker) -> None:
+    """fs-assets raises the OSError matching an I/O error, also InterruptedError."""
+    finished, error, _ = _listen(worker)
+
+    with patch(_BUILD_CATALOG, side_effect=InterruptedError("reading War.pak: interrupted")):
+        worker.run()
+
+    error.assert_called_once_with("reading War.pak: interrupted")
+    finished.assert_called_once_with(False)
