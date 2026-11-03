@@ -6,6 +6,7 @@ from typing import Any
 from foxhole_stockpiles.core.settings.sections.output import (
     ConsoleHandlerSettings,
     FileHandlerSettings,
+    ImageHandlerSettings,
     OutputHandlerConfig,
     OutputSettings,
     ReturnHandlerSettings,
@@ -15,6 +16,7 @@ from foxhole_stockpiles.core.settings.sections.output import (
 from foxhole_stockpiles.handlers.base_handler import BaseOutputDestinationHandler
 from foxhole_stockpiles.handlers.console import ConsoleOutputHandler
 from foxhole_stockpiles.handlers.file import FileOutputHandler
+from foxhole_stockpiles.handlers.image import ImageOutputHandler
 from foxhole_stockpiles.handlers.response import ReturnOutputHandler
 from foxhole_stockpiles.handlers.sheets import SheetsOutputHandler
 from foxhole_stockpiles.handlers.webhook import WebhookOutputHandler
@@ -67,6 +69,8 @@ class OutputCoordinator:
                 return ConsoleOutputHandler()
             case SheetsHandlerSettings():
                 return SheetsOutputHandler(sheets_settings=handler_settings)
+            case ImageHandlerSettings():
+                return ImageOutputHandler(image_settings=handler_settings)
             case _:
                 raise ValueError(f"Unsupported handler type: {type(handler_settings)}")
 

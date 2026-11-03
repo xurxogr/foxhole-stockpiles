@@ -6,7 +6,12 @@ from unittest.mock import patch
 
 import pytest
 
-from foxhole_stockpiles.core.settings.sections import FileHandlerSettings, SheetsHandlerSettings
+from foxhole_stockpiles.core.settings.sections import (
+    FileHandlerSettings,
+    ImageHandlerSettings,
+    OutputHandlerConfig,
+    SheetsHandlerSettings,
+)
 from foxhole_stockpiles.enums.output_format import OutputFormat
 from foxhole_stockpiles.enums.output_handler_type import OutputHandlerType
 from foxhole_stockpiles.gui.widgets.config_tabs import output_handler_dialog as dialog_mod
@@ -179,3 +184,76 @@ def test_the_selected_format_survives_saving_and_loading(
     dialog.load_handler(config)
 
     assert dialog.format_input.currentText() == selected
+
+
+class TestImageHandler:
+    """The fields of the handler that saves stockpiles as images."""
+
+    @pytest.fixture
+    def image_dialog(self, qtbot: Any) -> OutputHandlerDialog:
+        """Build a dialog set to the image handler.
+
+        Args:
+            qtbot (Any): PyQt test fixture.
+
+        Returns:
+            OutputHandlerDialog: The dialog.
+        """
+        widget = OutputHandlerDialog()
+        qtbot.addWidget(widget)
+        widget.handler_type_input.setCurrentText(OutputHandlerType.IMAGE.value)
+        return widget
+
+    def test_only_its_fields_are_shown(self, image_dialog: OutputHandlerDialog) -> None:
+        """The other handlers keep theirs hidden, as does the output format."""
+        assert not image_dialog.image_group.isHidden()
+        assert image_dialog.file_group.isHidden()
+        assert image_dialog.format_input.isHidden()
+
+    def test_values_become_its_settings(self, image_dialog: OutputHandlerDialog) -> None:
+        """What is typed ends up in the configuration."""
+        image_dialog.image_group.path_input.setText("out/{stockpile_name}.png")
+        image_dialog.image_group.appearance.headline_input.setText("Report {name}")
+        image_dialog.image_group.appearance.icon_mod_input.setCurrentText("mymod")
+
+        handler = image_dialog.get_handler_config().handler
+
+        assert isinstance(handler, ImageHandlerSettings)
+        assert handler.path == "out/{stockpile_name}.png"
+        assert handler.headline == "Report {name}"
+        assert handler.icon_mod == "mymod"
+        assert handler.font_path is None
+
+    def test_settings_are_shown_when_editing(self, qtbot: Any) -> None:
+        """An existing handler can be changed."""
+        config = OutputHandlerConfig(
+            name="image",
+            handler=ImageHandlerSettings(path="a.png", icon_mod="mymod", font_path="f.ttf"),
+        )
+        widget = OutputHandlerDialog(handler_config=config)
+        qtbot.addWidget(widget)
+
+        assert widget.image_group.path_input.text() == "a.png"
+        assert widget.image_group.appearance.icon_mod_input.currentText() == "mymod"
+        assert widget.image_group.appearance.font_path_input.text() == "f.ttf"
+
+    def test_path_is_required(self, image_dialog: OutputHandlerDialog) -> None:
+        """Without it the dialog stays open and says why."""
+        image_dialog.image_group.path_input.setText("  ")
+        with patch.object(dialog_mod.QMessageBox, "warning") as warning:
+            image_dialog._validate_and_accept()
+
+        warning.assert_called_once()
+
+    def test_mods_of_the_database_are_offered(self, qtbot: Any) -> None:
+        """They come from the template database of the scanner."""
+        with patch(
+            "foxhole_stockpiles.gui.widgets.config_tabs.image_appearance_fields.list_icon_mods",
+            return_value=["mymod", "vanilla"],
+        ):
+            widget = OutputHandlerDialog()
+        qtbot.addWidget(widget)
+        combo = widget.image_group.appearance.icon_mod_input
+
+        assert [combo.itemText(index) for index in range(combo.count())] == ["mymod", "vanilla"]
+        assert combo.currentText() == "vanilla"

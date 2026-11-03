@@ -23,6 +23,7 @@ from foxhole_stockpiles.core.settings.sections.output import (
     ConsoleHandlerSettings,
     CsvFormatSettings,
     FileHandlerSettings,
+    ImageHandlerSettings,
     JsonFormatSettings,
     OutputHandlerConfig,
     ReturnHandlerSettings,
@@ -33,6 +34,7 @@ from foxhole_stockpiles.core.settings.sections.output.sheets_handler import SPRE
 from foxhole_stockpiles.enums.auth_type import AuthType
 from foxhole_stockpiles.enums.output_format import OutputFormat
 from foxhole_stockpiles.enums.output_handler_type import OutputHandlerType
+from foxhole_stockpiles.gui.widgets.config_tabs.image_output_group import ImageOutputGroup
 from foxhole_stockpiles.i18n import on_language_changed, t
 
 _DEFAULT_NAMES = {
@@ -41,6 +43,7 @@ _DEFAULT_NAMES = {
     OutputHandlerType.CONSOLE: "Console",
     OutputHandlerType.SHEETS: "Append rows (Google Sheets)",
     OutputHandlerType.RETURN: "API Response",
+    OutputHandlerType.IMAGE: "Image",
 }
 
 
@@ -74,6 +77,8 @@ class OutputHandlerDialog(QDialog):
         layout.addWidget(self._build_file_group())
         layout.addWidget(self._build_webhook_group())
         layout.addWidget(self._build_sheets_group())
+        self.image_group = ImageOutputGroup()
+        layout.addWidget(self.image_group)
 
         # Button box
         button_box = QDialogButtonBox(
@@ -287,12 +292,15 @@ class OutputHandlerDialog(QDialog):
         )
         self.row_format_input.setToolTip(t("output_tab.handler_dialog.row_format_tooltip"))
 
+        self.image_group.retranslate()
+
     def _on_handler_type_changed(self) -> None:
         """Handle handler type change to show/hide relevant sections."""
         handler_type = OutputHandlerType(self.handler_type_input.currentText())
         self.file_group.setVisible(handler_type == OutputHandlerType.FILE)
         self.webhook_group.setVisible(handler_type == OutputHandlerType.WEBHOOK)
         self.sheets_group.setVisible(handler_type == OutputHandlerType.SHEETS)
+        self.image_group.setVisible(handler_type == OutputHandlerType.IMAGE)
         # Show format selection only for file handler (webhook/return are JSON-only)
         show_format = handler_type == OutputHandlerType.FILE
         self.format_label.setVisible(show_format)
@@ -352,6 +360,8 @@ class OutputHandlerDialog(QDialog):
             self.sheet_id_input.setText(handler.sheet_id or "")
             self.start_cell_input.setText(handler.start_cell or "")
             self.row_format_input.setText(handler.row_format or "")
+        elif isinstance(handler, ImageHandlerSettings):
+            self.image_group.load(handler)
 
         self._on_handler_type_changed()
         self._on_webhook_auth_changed()
@@ -374,6 +384,9 @@ class OutputHandlerDialog(QDialog):
                 (self.creds_path_input, "output_tab.handler_dialog.creds_path_required"),
                 (self.spreadsheet_url_input, "output_tab.handler_dialog.spreadsheet_url_required"),
                 (self.sheet_id_input, "output_tab.handler_dialog.sheet_id_required"),
+            ),
+            OutputHandlerType.IMAGE: (
+                (self.image_group.path_input, "output_tab.handler_dialog.image_path_required"),
             ),
         }
 
@@ -466,6 +479,7 @@ class OutputHandlerDialog(QDialog):
         | WebhookHandlerSettings
         | ConsoleHandlerSettings
         | SheetsHandlerSettings
+        | ImageHandlerSettings
     ):
         """Read the fields of a handler type.
 
@@ -474,7 +488,8 @@ class OutputHandlerDialog(QDialog):
 
         Returns:
             ReturnHandlerSettings | FileHandlerSettings | WebhookHandlerSettings
-                | ConsoleHandlerSettings | SheetsHandlerSettings: Its settings.
+                | ConsoleHandlerSettings | SheetsHandlerSettings | ImageHandlerSettings:
+                Its settings.
         """
         match handler_type:
             case OutputHandlerType.FILE:
@@ -497,6 +512,8 @@ class OutputHandlerDialog(QDialog):
                     start_cell=self.start_cell_input.text(),
                     row_format=self.row_format_input.text(),
                 )
+            case OutputHandlerType.IMAGE:
+                return self.image_group.read()
             case _:  # RETURN
                 return ReturnHandlerSettings()
 

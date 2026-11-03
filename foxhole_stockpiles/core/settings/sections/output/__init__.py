@@ -14,6 +14,7 @@ from foxhole_stockpiles.core.settings.sections.output.handler_config import (
     HandlerSettings,
     OutputHandlerConfig,
 )
+from foxhole_stockpiles.core.settings.sections.output.image_handler import ImageHandlerSettings
 from foxhole_stockpiles.core.settings.sections.output.json_format import JsonFormatSettings
 from foxhole_stockpiles.core.settings.sections.output.return_handler import ReturnHandlerSettings
 from foxhole_stockpiles.core.settings.sections.output.settings import OutputSettings
@@ -30,6 +31,7 @@ __all__ = [
     "FileHandlerSettings",
     "FormatSettings",
     "HandlerSettings",
+    "ImageHandlerSettings",
     "JsonFormatSettings",
     "OutputHandlerConfig",
     "OutputSettings",

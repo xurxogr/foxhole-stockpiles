@@ -35,6 +35,9 @@ def get_fs_hidden_imports() -> list[str]:
         # External Rust engines
         "fs_ocr",
         "fs_sav",
+        # Item icons of the stockpile images
+        "fs_assets",
+        "fs_assets._fs_assets",
         # Screenshot capture (window detection + global hotkey)
         "pynput",
         "pynput.keyboard",

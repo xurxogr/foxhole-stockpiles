@@ -11,3 +11,4 @@ class OutputHandlerType(StrEnum):
     WEBHOOK = "webhook"
     CONSOLE = "console"
     SHEETS = "google sheets"
+    IMAGE = "image"
