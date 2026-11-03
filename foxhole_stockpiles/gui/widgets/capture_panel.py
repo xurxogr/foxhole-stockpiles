@@ -117,9 +117,12 @@ class CapturePanel(QWidget):
         # not configured.
         top_layout = QHBoxLayout()
         top_layout.addWidget(self._build_controls_group(), 1)
-        top_layout.addWidget(self._build_capture_group(), 1)
-        top_layout.addWidget(self._build_sav_group(), 1)
-        top_layout.addWidget(self._build_clip_group(), 1)
+        self.capture_group, self.ocr_status = self._build_status_group()
+        self.sav_group, self.sav_status = self._build_status_group()
+        self.clip_group, self.clip_status = self._build_status_group()
+        top_layout.addWidget(self.capture_group, 1)
+        top_layout.addWidget(self.sav_group, 1)
+        top_layout.addWidget(self.clip_group, 1)
         layout.addLayout(top_layout)
 
         layout.addWidget(self._build_logs_group(), 1)
@@ -142,44 +145,18 @@ class CapturePanel(QWidget):
         controls_layout.addWidget(self.start_stop_button)
         return self.controls_group
 
-    def _build_capture_group(self) -> QGroupBox:
-        """Build the OCR (screenshot) status group.
+    @staticmethod
+    def _build_status_group() -> tuple[QGroupBox, QLabel]:
+        """Build the group showing the status of one capture method.
 
         Returns:
-            QGroupBox: The capture status group box.
+            tuple[QGroupBox, QLabel]: The group box and its status label.
         """
-        self.capture_group = QGroupBox("")
-        self.capture_group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-        capture_layout = QVBoxLayout(self.capture_group)
-        self.ocr_status = QLabel("")
-        capture_layout.addWidget(self.ocr_status)
-        return self.capture_group
-
-    def _build_sav_group(self) -> QGroupBox:
-        """Build the SAV status group.
-
-        Returns:
-            QGroupBox: The SAV status group box.
-        """
-        self.sav_group = QGroupBox("")
-        self.sav_group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-        sav_layout = QVBoxLayout(self.sav_group)
-        self.sav_status = QLabel("")
-        sav_layout.addWidget(self.sav_status)
-        return self.sav_group
-
-    def _build_clip_group(self) -> QGroupBox:
-        """Build the clipboard status group.
-
-        Returns:
-            QGroupBox: The clipboard status group box.
-        """
-        self.clip_group = QGroupBox("")
-        self.clip_group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-        clip_layout = QVBoxLayout(self.clip_group)
-        self.clip_status = QLabel("")
-        clip_layout.addWidget(self.clip_status)
-        return self.clip_group
+        group = QGroupBox("")
+        group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        status = QLabel("")
+        QVBoxLayout(group).addWidget(status)
+        return group, status
 
     def _build_logs_group(self) -> QGroupBox:
         """Build the activity feed group.
