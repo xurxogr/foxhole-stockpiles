@@ -1,7 +1,6 @@
 """Icon import window for importing new icons to the database."""
 
 import logging
-from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import Signal
@@ -14,7 +13,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QListWidget,
-    QMainWindow,
     QMessageBox,
     QPushButton,
     QVBoxLayout,
@@ -23,7 +21,6 @@ from PySide6.QtWidgets import (
 
 from foxhole_stockpiles.core.settings import get_settings
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
-from foxhole_stockpiles.gui.utils.qt_log_handler import QtLogHandler
 from foxhole_stockpiles.i18n import on_language_changed, t
 from fs_tools.core.pak_directory import default_pak_directory
 from fs_tools.gui.utils.icon_import_worker import IconImportWorker
@@ -32,12 +29,12 @@ from fs_tools.gui.utils.pak_validation_controller import (
     STATUS_COLOR_WARNING,
     PakValidationController,
 )
-from fs_tools.gui.widgets.log_table_widget import LogTableWidget
+from fs_tools.gui.windows.process_log_window import ProcessLogWindow
 
 logger = logging.getLogger(__name__)
 
 
-class IconImportWindow(QMainWindow):
+class IconImportWindow(ProcessLogWindow):
     """Window for importing new icons to the database."""
 
     # Signal emitted when database is successfully updated (passes the database path)
@@ -49,26 +46,18 @@ class IconImportWindow(QMainWindow):
         Args:
             parent (QWidget | None): Parent widget. Defaults to None.
         """
-        super().__init__(parent)
+        # The launcher only enables this window once it is configured, so the
+        # full UI is always built.
+        super().__init__(settings=get_settings(), log_module="icon_import", parent=parent)
         self.import_worker: IconImportWorker | None = None
         self.vanilla_pak_file: str | None = None
         self.mod_pak_files: list[str] = []
 
-        # The launcher only enables this window once it is configured, so the
-        # full UI is always built.
-        self.settings = get_settings()
         self.pak_validation = PakValidationController(
             view=self, settings=self.settings, parent=self
         )
 
-        # Setup log handler (shared across all imports)
-        # Use log level from settings
-        self.log_handler = QtLogHandler()
-        log_level = getattr(logging, self.settings.logging.log_level.upper(), logging.INFO)
-        self.log_handler.setLevel(log_level)
-
         self.init_ui()
-        self.log_handler.log_message.connect(self.log_display.append_log)
 
     def init_ui(self) -> None:
         """Initialize the user interface."""
@@ -232,15 +221,6 @@ class IconImportWindow(QMainWindow):
         Args:
             layout (QVBoxLayout): Parent layout to add the section to.
         """
-        # Logs Section
-        self.logs_group = QGroupBox()
-        logs_layout = QVBoxLayout()
-        self.logs_group.setLayout(logs_layout)
-
-        self.log_display = LogTableWidget()
-
-        logs_layout.addWidget(self.log_display)
-
         layout.addWidget(self.logs_group, stretch=1)  # Expand to use maximum available space
 
     def _build_action_buttons(self, layout: QVBoxLayout) -> None:
@@ -531,13 +511,7 @@ class IconImportWindow(QMainWindow):
         # Clear logs
         self.clear_logs()
 
-        # Add log handler to root logger and apply configured log level
-        root_logger = logging.getLogger()
-        root_logger.addHandler(self.log_handler)
-
-        # Apply user's configured log level to root logger
-        configured_level = getattr(logging, self.settings.logging.log_level.upper(), logging.INFO)
-        root_logger.setLevel(configured_level)
+        self.start_log_capture()
 
         # Get catalog from settings
         catalog_path = self.settings.database_builder.catalog_file
@@ -584,29 +558,12 @@ class IconImportWindow(QMainWindow):
         Args:
             success (bool): Whether the import was successful
         """
-        # Remove log handler from root logger (but don't close it - reused for next import)
-        root_logger = logging.getLogger()
-        root_logger.removeHandler(self.log_handler)
-
-        # Add final status message to logs
+        self.stop_log_capture()
 
         if success:
-            status_log = {
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "level": "INFO",
-                "module": "icon_import",
-                "message": t("database_builder.import_completed"),
-                "color": "#00FF00",  # Green
-            }
+            self.log_success(t("database_builder.import_completed"))
         else:
-            status_log = {
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "level": "WARNING",
-                "module": "icon_import",
-                "message": t("database_builder.import_cancelled"),
-                "color": "#FFA500",  # Orange
-            }
-        self.log_display.append_log(status_log)
+            self.log_warning(t("database_builder.import_cancelled"))
 
         # Re-enable inputs
         self._re_enable_inputs()
@@ -621,16 +578,7 @@ class IconImportWindow(QMainWindow):
         Args:
             error_msg (str): Error message
         """
-        # Add error message to logs
-
-        error_log = {
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "level": "ERROR",
-            "module": "icon_import",
-            "message": t("database_builder.import_error", error=error_msg),
-            "color": "#FF0000",  # Red
-        }
-        self.log_display.append_log(error_log)
+        self.log_error(t("database_builder.import_error", error=error_msg))
 
     def on_import_progress(self, message: str) -> None:
         """Handle import progress update.
@@ -638,19 +586,7 @@ class IconImportWindow(QMainWindow):
         Args:
             message (str): Progress message
         """
-        self.log_display.append_log(
-            {
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "level": "INFO",
-                "module": "icon_import",
-                "message": message,
-                "color": "#2196F3",  # Blue
-            }
-        )
-
-    def clear_logs(self) -> None:
-        """Clear the log display."""
-        self.log_display.setRowCount(0)
+        self.log_info(message)
 
     def closeEvent(self, event: object) -> None:
         """Handle window close event.
@@ -675,13 +611,3 @@ class IconImportWindow(QMainWindow):
         else:
             self.pak_validation.wait_for_workers()
             self._cleanup_and_accept(event)
-
-    def _cleanup_and_accept(self, event: object) -> None:
-        """Clean up resources and accept close event.
-
-        Args:
-            event (object): Close event
-        """
-        # Close the log handler to prevent further emissions
-        self.log_handler.close()
-        event.accept()  # type: ignore[attr-defined]

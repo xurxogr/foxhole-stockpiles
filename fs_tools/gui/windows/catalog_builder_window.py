@@ -1,7 +1,6 @@
 """Catalog builder window for building item catalog from PAK files."""
 
 import logging
-from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtWidgets import (
@@ -11,7 +10,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QMainWindow,
     QMessageBox,
     QPushButton,
     QVBoxLayout,
@@ -20,16 +18,15 @@ from PySide6.QtWidgets import (
 
 from foxhole_stockpiles.core.settings import get_settings
 from foxhole_stockpiles.core.settings.app_settings import AppSettings
-from foxhole_stockpiles.gui.utils.qt_log_handler import QtLogHandler
 from foxhole_stockpiles.i18n import on_language_changed, t
 from fs_tools.core.pak_directory import default_pak_directory
 from fs_tools.gui.utils.catalog_builder_worker import CatalogBuilderWorker
-from fs_tools.gui.widgets.log_table_widget import LogTableWidget
+from fs_tools.gui.windows.process_log_window import ProcessLogWindow
 
 logger = logging.getLogger(__name__)
 
 
-class CatalogBuilderWindow(QMainWindow):
+class CatalogBuilderWindow(ProcessLogWindow):
     """Window for building item catalog from PAK files."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -38,21 +35,13 @@ class CatalogBuilderWindow(QMainWindow):
         Args:
             parent (QWidget | None): Parent widget. Defaults to None.
         """
-        super().__init__(parent)
+        # The launcher only enables this window once it is configured, so the
+        # full UI is always built.
+        super().__init__(settings=get_settings(), log_module="catalog_builder", parent=parent)
         self.build_worker: CatalogBuilderWorker | None = None
         self.pak_file: str | None = None
 
-        # The launcher only enables this window once it is configured, so the
-        # full UI is always built.
-        self.settings = get_settings()
-
-        # Setup log handler
-        self.log_handler = QtLogHandler()
-        log_level = getattr(logging, self.settings.logging.log_level.upper(), logging.INFO)
-        self.log_handler.setLevel(log_level)
-
         self.init_ui()
-        self.log_handler.log_message.connect(self.log_display.append_log)
 
     def init_ui(self) -> None:
         """Initialize the user interface."""
@@ -112,14 +101,6 @@ class CatalogBuilderWindow(QMainWindow):
 
         layout.addWidget(self.output_group)
 
-        # Logs Section
-        self.logs_group = QGroupBox()
-        logs_layout = QVBoxLayout()
-        self.logs_group.setLayout(logs_layout)
-
-        self.log_display = LogTableWidget()
-
-        logs_layout.addWidget(self.log_display)
         layout.addWidget(self.logs_group, stretch=1)
 
         # Action Buttons
@@ -254,11 +235,7 @@ class CatalogBuilderWindow(QMainWindow):
         # Clear logs
         self.clear_logs()
 
-        # Add log handler
-        root_logger = logging.getLogger()
-        root_logger.addHandler(self.log_handler)
-        configured_level = getattr(logging, self.settings.logging.log_level.upper(), logging.INFO)
-        root_logger.setLevel(configured_level)
+        self.start_log_capture()
 
         # Create and start worker
         self.build_worker = CatalogBuilderWorker(
@@ -287,26 +264,12 @@ class CatalogBuilderWindow(QMainWindow):
         Args:
             success (bool): Whether the build was successful
         """
-        root_logger = logging.getLogger()
-        root_logger.removeHandler(self.log_handler)
+        self.stop_log_capture()
 
         if success:
-            status_log = {
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "level": "INFO",
-                "module": "catalog_builder",
-                "message": t("catalog_builder.build_completed"),
-                "color": "#00FF00",
-            }
+            self.log_success(t("catalog_builder.build_completed"))
         else:
-            status_log = {
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "level": "WARNING",
-                "module": "catalog_builder",
-                "message": t("catalog_builder.build_cancelled"),
-                "color": "#FFA500",
-            }
-        self.log_display.append_log(status_log)
+            self.log_warning(t("catalog_builder.build_cancelled"))
 
         # Re-enable inputs
         self.start_button.setEnabled(True)
@@ -321,14 +284,7 @@ class CatalogBuilderWindow(QMainWindow):
         Args:
             error_msg (str): Error message
         """
-        error_log = {
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "level": "ERROR",
-            "module": "catalog_builder",
-            "message": t("catalog_builder.build_error", error=error_msg),
-            "color": "#FF0000",
-        }
-        self.log_display.append_log(error_log)
+        self.log_error(t("catalog_builder.build_error", error=error_msg))
 
     def on_build_progress(self, message: str) -> None:
         """Handle build progress update.
@@ -336,18 +292,7 @@ class CatalogBuilderWindow(QMainWindow):
         Args:
             message (str): Progress message
         """
-        progress_log = {
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "level": "INFO",
-            "module": "catalog_builder",
-            "message": message,
-            "color": "#2196F3",
-        }
-        self.log_display.append_log(progress_log)
-
-    def clear_logs(self) -> None:
-        """Clear the log display."""
-        self.log_display.setRowCount(0)
+        self.log_info(message)
 
     def closeEvent(self, event: object) -> None:
         """Handle window close event.
@@ -371,12 +316,3 @@ class CatalogBuilderWindow(QMainWindow):
                 event.ignore()  # type: ignore[attr-defined]
         else:
             self._cleanup_and_accept(event)
-
-    def _cleanup_and_accept(self, event: object) -> None:
-        """Clean up resources and accept close event.
-
-        Args:
-            event (object): Close event
-        """
-        self.log_handler.close()
-        event.accept()  # type: ignore[attr-defined]
