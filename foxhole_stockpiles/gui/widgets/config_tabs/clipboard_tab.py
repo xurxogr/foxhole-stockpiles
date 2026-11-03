@@ -2,8 +2,6 @@
 
 from pathlib import Path
 
-from PySide6.QtCore import QUrl
-from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
@@ -17,9 +15,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from foxhole_stockpiles.core.constants import DATA_DOWNLOAD_URL
 from foxhole_stockpiles.core.settings.sections.clipboard import ClipboardSettings
 from foxhole_stockpiles.enums.capture_mode import CaptureMode
+from foxhole_stockpiles.gui.utils.data_folder import open_data_folder
 from foxhole_stockpiles.gui.widgets.hotkey_field import HotkeyField
 from foxhole_stockpiles.i18n import on_language_changed, t
 
@@ -54,7 +52,7 @@ class ClipboardTab(QWidget):
         # fs-tools External Tools tab convention.
         self.catalog_download = QPushButton()
         self.catalog_download.setMaximumWidth(80)
-        self.catalog_download.clicked.connect(self._open_data_url)
+        self.catalog_download.clicked.connect(open_data_folder)
         self.catalog_browse = QPushButton()
         self.catalog_browse.clicked.connect(self.browse_catalog)
         catalog_layout.addWidget(self.catalog_path_input)
@@ -122,10 +120,6 @@ class ClipboardTab(QWidget):
     def _update_catalog_download_visibility(self) -> None:
         """Show the download button only while no catalog file is set."""
         self.catalog_download.setVisible(not self.catalog_path_input.text().strip())
-
-    def _open_data_url(self) -> None:
-        """Open the repository data folder in the default browser."""
-        QDesktopServices.openUrl(QUrl(DATA_DOWNLOAD_URL))
 
     def browse_catalog(self) -> None:
         """Open a file dialog to choose the catalog file."""

@@ -3,8 +3,7 @@
 import logging
 from pathlib import Path
 
-from PySide6.QtCore import QUrl
-from PySide6.QtGui import QDesktopServices, QShowEvent
+from PySide6.QtGui import QShowEvent
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -22,9 +21,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from foxhole_stockpiles.core.constants import DATA_DOWNLOAD_URL
 from foxhole_stockpiles.core.settings import get_settings
 from foxhole_stockpiles.gui.utils.config_manager import ConfigManager
+from foxhole_stockpiles.gui.utils.data_folder import open_data_folder
 from foxhole_stockpiles.i18n import (
     get_available_languages,
     on_language_changed,
@@ -110,7 +109,7 @@ class SettingsDialog(QDialog):
         # Download button (shown only while the field is empty).
         self.database_download_btn = QPushButton()
         self.database_download_btn.setMaximumWidth(80)
-        self.database_download_btn.clicked.connect(self._open_data_url)
+        self.database_download_btn.clicked.connect(open_data_folder)
         database_path_layout.addWidget(self.database_download_btn)
         self.database_browse_btn = QPushButton()
         self.database_browse_btn.clicked.connect(self._browse_database)
@@ -217,10 +216,6 @@ class SettingsDialog(QDialog):
     def _update_db_download_visibility(self) -> None:
         """Show the download button only while no database path is set."""
         self.database_download_btn.setVisible(not self.database_path_input.text().strip())
-
-    def _open_data_url(self) -> None:
-        """Open the repository data folder in the default browser."""
-        QDesktopServices.openUrl(QUrl(DATA_DOWNLOAD_URL))
 
     def _browse_database(self) -> None:
         """Open file dialog to select the template database file."""

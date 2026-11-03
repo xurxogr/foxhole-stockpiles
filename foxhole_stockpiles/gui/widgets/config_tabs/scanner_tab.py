@@ -2,8 +2,6 @@
 
 from pathlib import Path
 
-from PySide6.QtCore import QUrl
-from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFileDialog,
@@ -16,8 +14,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from foxhole_stockpiles.core.constants import DATA_DOWNLOAD_URL
 from foxhole_stockpiles.core.settings.sections.scanner import ScannerSettings
+from foxhole_stockpiles.gui.utils.data_folder import open_data_folder
 from foxhole_stockpiles.gui.widgets.hotkey_field import HotkeyField
 from foxhole_stockpiles.i18n import on_language_changed, t
 
@@ -51,7 +49,7 @@ class ScannerTab(QWidget):
         # fs-tools External Tools tab convention.
         self.db_download = QPushButton()
         self.db_download.setMaximumWidth(80)
-        self.db_download.clicked.connect(self._open_data_url)
+        self.db_download.clicked.connect(open_data_folder)
         self.db_browse = QPushButton()
         self.db_browse.clicked.connect(self.browse_database)
         db_layout.addWidget(self.database_path_input)
@@ -130,10 +128,6 @@ class ScannerTab(QWidget):
     def _update_db_download_visibility(self) -> None:
         """Show the download button only while no database path is set."""
         self.db_download.setVisible(not self.database_path_input.text().strip())
-
-    def _open_data_url(self) -> None:
-        """Open the repository data folder in the default browser."""
-        QDesktopServices.openUrl(QUrl(DATA_DOWNLOAD_URL))
 
     def browse_database(self) -> None:
         """Open file dialog for database path."""
