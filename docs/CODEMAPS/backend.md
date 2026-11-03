@@ -93,7 +93,17 @@ Handlers (`handlers/`), all `handle(stockpiles: list[Stockpile])`:
 `console.py`, `file.py` (JSON/CSV/TSV w/ table-driven field dispatch),
 `webhook.py` (HTTP POST, supports basic/bearer/**header** auth), `response.py`
 (`ReturnOutputHandler` → returns the dict), **`sheets.py`** (Google Sheets append),
-`stockpile_json.py` (shared JSON payload builder), `formula_guard.py`. Interface: `base_handler.py`.
+**`image.py`** (PNG files), **`discord.py`** (images to a webhook),
+`stockpile_json.py` (shared JSON payload builder), `path_template.py` (file path placeholders),
+`formula_guard.py`. Interface: `base_handler.py` (`undelivered(batch)`: what to send again;
+Discord overrides it, as it fails stockpile by stockpile).
+
+Drawing (`services/stockpile_image/`): `rendering.py` (`render_stockpile(settings, stockpile)`)
+→ `layout.py` (pages of columns) + `renderer.py` (Pillow) + `icons.py` (`fs_assets.read_templates`)
++ `fonts.py`/`font_selector.py` (per-text font choice) + `placeholders.py`; `aggregation.py`
+merges a batch. `connectors/discord.py`: multipart `payload_json` + `files[n]`, no mentions, 429
+and `X-RateLimit-*` handling, never logs the URL. `services/discord_cooldown.py`:
+`min_interval_minutes` state in `discord_cooldowns.json`, keyed by hash of the URL.
 
 Webhook **auth types** (removed obsolete `forward`): `auth_type` ∈ {basic, bearer, header}.
 **header auth**: `WebhookHandlerSettings.auth_type="header"` + `auth_header` —

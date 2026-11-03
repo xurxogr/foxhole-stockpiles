@@ -148,6 +148,9 @@ Example: `{timestamp}_{stockpile_type}_{stockpile_name}_{resolution}.json` → `
 | `start_cell` | string\|null | No | Anchor cell where writing begins (e.g. `"A1"`) |
 | `row_format` | object\|null | No | Row layout settings controlling how values are written |
 
+**Image and Discord Handlers** - Draw each stockpile as an image and save it (`"image"`) or
+post it to a Discord webhook (`"discord"`). See [Images and Discord](images-and-discord.md).
+
 #### Example: Multiple Handlers
 
 ```json
@@ -473,5 +476,5 @@ export FS_OUTPUT__HANDLERS='[
 ]'
 ```
 
-Handler types: `return`, `file`, `webhook`, `console`, `sheets`
+Handler types: `return`, `file`, `webhook`, `console`, `sheets`, `image`, `discord`
 Format types: `json`, `csv`, `tsv`

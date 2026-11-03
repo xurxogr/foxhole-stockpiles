@@ -68,7 +68,7 @@ The external `fs-ocr` exposes `StockpileScanner`, `ScanConfig`,
 | `SupportedResolution` | 16 (664px … 2880px) |
 | `OutputFormat` | JSON, CSV, TSV |
 | `OutputDestination` | return, file, webhook, console, **sheets** |
-| `OutputHandlerType` | return, file, webhook, console, **google sheets** |
+| `OutputHandlerType` | return, file, webhook, console, **google sheets**, **image**, **discord** |
 | `AuthType` | basic, bearer, header (removed obsolete `forward`) — webhook output handler only (header = send token in user-chosen header name) |
 | `CaptureMode` | manual (hotkey reads once), monitor (poll clipboard or `.sav` + emit changes) |
 
@@ -107,7 +107,10 @@ binds the hotkey from `capture_key` and saves each capture to
 `OutputSettings.handlers: list[OutputHandlerConfig]`; per-handler models:
 `console_handler.py`, `file_handler.py`, `webhook_handler.py` (`auth_type` +
 `token`/`auth_header`), `return_handler.py`, **`sheets_handler.py`**
-(`creds_path`, `spreadsheet_url`, `sheet_id`, `start_cell`, `row_format`), plus
+(`creds_path`, `spreadsheet_url`, `sheet_id`, `start_cell`, `row_format`),
+**`image_handler.py`** (`path`) and **`discord_handler.py`** (`url`, `username`, `avatar_url`,
+`message`, `min_interval_minutes`; `is_discord_webhook_url`), both on
+`stockpile_image_settings.py` (`headline`, `icon_mod`, `font_path`, `aggregate`), plus
 format models `json_format.py`, `csv_format.py`. `handler_config.py` is the
 discriminated-union wrapper.
 

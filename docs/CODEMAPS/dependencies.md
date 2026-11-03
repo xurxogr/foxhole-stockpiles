@@ -9,7 +9,7 @@ Source of truth: `pyproject.toml`. Python **3.12+**.
 | Package | Min | Role |
 |---|---|---|
 | numpy | 2.5.0 | arrays / image buffers |
-| pillow | 13.0.0 | image I/O + **screen grab** (`ImageGrab`) |
+| pillow | 13.0.0 | image I/O + **screen grab** (`ImageGrab`) + drawing of the stockpile images |
 | pydantic | 2.13.4 | models / validation |
 | pydantic-settings | 2.14.2 | env + file config |
 | platformdirs | 4.10.0 | platform config dir |

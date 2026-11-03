@@ -141,8 +141,10 @@ A scan produces one stockpile result, fanned out to the handlers configured unde
 - **webhook** — HTTP POST to a URL (basic, bearer, and header auth; "header" puts the token in a user-chosen header)
 - **return** — returns the result to the caller in-process
 - **sheets** — appends rows to a Google Sheet
+- **image** — saves a picture of each stockpile
+- **discord** — posts those pictures to a Discord webhook. See [Images and Discord](images-and-discord.md)
 
-> There is no built-in notification system. To send scans to Discord, use a **webhook** handler pointed at a Discord webhook URL (or any HTTP endpoint).
+> There is no built-in notification system. To send scan data to another HTTP endpoint, use a **webhook** handler.
 
 More configuration guides:
 

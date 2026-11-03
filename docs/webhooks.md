@@ -1,5 +1,8 @@
 # Webhook Integration
 
+> To post stockpiles to a Discord channel, use the [Discord output](images-and-discord.md):
+> it sends images, which a Discord webhook accepts, instead of this JSON.
+
 Foxhole Stockpiles can send scan results to a webhook, enabling integration with
 external systems, Discord bots, databases, and more. The webhook is one of the
 configurable **output handlers** — after a screenshot is captured and scanned (or

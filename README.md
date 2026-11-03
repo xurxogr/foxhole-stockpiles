@@ -77,8 +77,10 @@ A scan is sent to whichever outputs you enable in **Settings → Output**:
 
 - **Console** — prints the result.
 - **File** — writes JSON, CSV, or TSV to disk.
-- **Webhook** — sends each result to a web address you choose. **Want it in Discord?** Paste your Discord channel's webhook URL here and results post straight to the channel.
+- **Webhook** — sends each result to a web address you choose.
 - **Google Sheets** — appends rows to a sheet.
+- **Image** — saves a picture of each stockpile, with the icons of its items.
+- **Discord** — posts those pictures to a channel. See [Images and Discord](docs/images-and-discord.md).
 
 ## Languages
 
