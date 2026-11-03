@@ -242,3 +242,32 @@ async def test_sav_monitor_sends_a_failed_change_with_the_next_change() -> None:
         await processor._process_file()
 
     assert handler.batch_names() == [["a"], ["a", "b"]]
+
+
+@pytest.mark.asyncio
+async def test_a_handler_that_cannot_be_created_does_not_block_the_others() -> None:
+    """The next handlers still run, and the failed one gets the batch once it can."""
+    recovered = _FakeHandler()
+    other = _FakeHandler()
+    coordinator = _coordinator(recovered, other)
+    configs = coordinator.output_settings.handlers
+    created = {
+        id(configs[0]): [RuntimeError("bad config"), recovered],
+        id(configs[1]): [other, other],
+    }
+
+    def create(config: OutputHandlerConfig) -> BaseOutputDestinationHandler:
+        next_result = created[id(config)].pop(0)
+        if isinstance(next_result, Exception):
+            raise next_result
+        return next_result
+
+    coordinator._create_handler = create  # type: ignore[method-assign]
+
+    await coordinator.handle_output([_stockpile("a")])
+    assert other.batch_names() == [["a"]]
+    assert recovered.batch_names() == []
+
+    await coordinator.handle_output([_stockpile("b")])
+    assert other.batch_names() == [["a"], ["b"]]
+    assert recovered.batch_names() == [["a", "b"]]

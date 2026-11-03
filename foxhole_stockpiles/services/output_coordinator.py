@@ -101,44 +101,58 @@ class OutputCoordinator:
             return None
 
         for position, handler_config in enumerate(handlers):
-            handler = self._create_handler(handler_config)
-            handler_type = handler_config.handler.type
             batch = self._batch_for(position=position, stockpiles=stockpiles)
-            delivered = False
-
-            self.logger.debug(
-                "Processing handler '%s' (type: %s)",
-                handler_config.name,
-                handler_type,
+            handler_result, delivered = await self._run_handler(
+                handler_config=handler_config, batch=batch, **kwargs
             )
-
-            try:
-                handler_result = await handler.handle(stockpiles=batch, **kwargs)
-                delivered = handler.delivered
-
-                # First handler that returns data becomes the result of the send
-                if handler_result is not None and result is None:
-                    result = handler_result
-                    self.logger.debug(
-                        "Handler '%s' response will be the result of the send",
-                        handler_config.name,
-                    )
-
-            except Exception as e:  # noqa: BLE001 - one handler's failure must not block the rest
-                self.logger.error(
-                    "Handler '%s' failed: %s",
+            # First handler that returns data becomes the result of the send
+            if handler_result is not None and result is None:
+                result = handler_result
+                self.logger.debug(
+                    "Handler '%s' response will be the result of the send",
                     handler_config.name,
-                    str(e),
                 )
-                # Continue processing other handlers even if one fails
-            finally:
-                await self._close_handler(handler=handler, name=handler_config.name)
-
             self._track_delivery(
                 position=position, name=handler_config.name, batch=batch, delivered=delivered
             )
 
         return result
+
+    async def _run_handler(
+        self, handler_config: OutputHandlerConfig, batch: list[Stockpile], **kwargs: Any
+    ) -> tuple[OutputResponse, bool]:
+        """Give a batch to one handler; its failure must not block the rest.
+
+        Args:
+            handler_config (OutputHandlerConfig): The configuration of the handler.
+            batch (list[Stockpile]): The stockpiles to give it.
+            **kwargs: Additional handler-specific parameters.
+
+        Returns:
+            tuple[OutputResponse, bool]: What the handler returned, and whether the
+                stockpiles reached the destination.
+        """
+        self.logger.debug(
+            "Processing handler '%s' (type: %s)",
+            handler_config.name,
+            handler_config.handler.type,
+        )
+        result: OutputResponse = None
+        delivered = False
+        try:
+            handler = self._create_handler(handler_config)
+        except Exception as e:  # noqa: BLE001 - one handler's failure must not block the rest
+            self.logger.error("Handler '%s' could not be created: %s", handler_config.name, e)
+            return result, delivered
+
+        try:
+            result = await handler.handle(stockpiles=batch, **kwargs)
+            delivered = handler.delivered
+        except Exception as e:  # noqa: BLE001 - one handler's failure must not block the rest
+            self.logger.error("Handler '%s' failed: %s", handler_config.name, e)
+        finally:
+            await self._close_handler(handler=handler, name=handler_config.name)
+        return result, delivered
 
     def _batch_for(self, position: int, stockpiles: list[Stockpile]) -> list[Stockpile]:
         """Add what a handler still has to receive to a new batch.
