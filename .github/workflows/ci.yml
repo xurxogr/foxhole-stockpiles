@@ -63,7 +63,7 @@ jobs:
         run: uv sync --frozen --extra dev
 
       - name: Run tests with coverage
-        run: uv run --frozen pytest --ignore=tests/gui --ignore=tests/commands/gui --ignore=fs_tools/tests/gui -p no:pytest-qt --junitxml=junit.xml
+        run: uv run --frozen pytest --junitxml=junit.xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7
