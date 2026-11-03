@@ -3,7 +3,7 @@
 from typing import ClassVar, Self
 from urllib.parse import urlsplit
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from foxhole_stockpiles.enums.auth_type import AuthType
 from foxhole_stockpiles.enums.output_handler_type import OutputHandlerType
@@ -40,6 +40,21 @@ class WebhookHandlerSettings(BaseModel):
     model_config = ConfigDict(extra="forbid", hide_input_in_errors=True)
 
     ALLOWED_URL_SCHEMES: ClassVar[frozenset[str]] = frozenset({"http", "https"})
+
+    @field_validator("token", "auth_header")
+    @classmethod
+    def strip_pasted_whitespace(cls, value: str | None) -> str | None:
+        """Remove the whitespace a pasted credential often carries.
+
+        HTTP rejects a header value that starts or ends with whitespace.
+
+        Args:
+            value (str | None): The configured value.
+
+        Returns:
+            str | None: The value without surrounding whitespace.
+        """
+        return value.strip() if value else value
 
     @model_validator(mode="after")
     def validate_auth_consistency(self) -> Self:

@@ -89,6 +89,9 @@ class WebhookConnector:
     DEFAULT_MESSAGE_EMPTY: Final[str] = "FS: Stockpile is Empty"
     DEFAULT_MESSAGE_NO_URL: Final[str] = "FS: Webhook URL is not set"
     DEFAULT_ERROR_PREFIX: Final[str] = "FS: Error sending stockpile to the webhook"
+    MESSAGE_ILLEGAL_CREDENTIALS: Final[str] = (
+        "FS: The webhook token or header name has characters that cannot be sent"
+    )
 
     def __init__(self, output_settings: WebhookHandlerSettings) -> None:
         """Initialize the WebhookConnector.
@@ -216,6 +219,10 @@ class WebhookConnector:
                 return [f"HTTP {response.status_code}: {response.text[:MAX_ERROR_BODY_CHARS]}"]
         except ConnectTimeout:
             raise
+        except (httpx.LocalProtocolError, UnicodeEncodeError):
+            # The text of these errors can quote the header value, which holds the token.
+            self._logger.error(self.MESSAGE_ILLEGAL_CREDENTIALS)
+            return_data = [self.MESSAGE_ILLEGAL_CREDENTIALS]
         except Exception as e:  # noqa: BLE001 - report any send failure back as a response message
             error_message = f"{self.DEFAULT_ERROR_PREFIX}: ({type(e).__name__}, {str(e)})"
             self._logger.error(error_message)

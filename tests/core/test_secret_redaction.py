@@ -8,6 +8,7 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
+from foxhole_stockpiles.connectors.webhook import WebhookConnector
 from foxhole_stockpiles.core.logging import setup_logging
 from foxhole_stockpiles.core.settings import AppSettings
 from foxhole_stockpiles.core.settings.sections.logging import LoggingSettings
@@ -110,6 +111,63 @@ def test_configured_httpx_level_wins() -> None:
     setup_logging(LoggingSettings(loggers={"httpx": "INFO"}))
 
     assert logging.getLogger("httpx").level == logging.INFO
+
+
+def test_pasted_whitespace_is_removed_from_the_credentials() -> None:
+    """A token pasted with a stray space or line break must still be usable."""
+    settings = WebhookHandlerSettings(
+        url="https://hooks.example/x",
+        auth_type="header",
+        token=f"  {_TOKEN}\n",
+        auth_header=" X-Api-Key ",
+    )
+
+    assert settings.token == _TOKEN
+    assert settings.auth_header == "X-Api-Key"
+
+
+def test_a_token_of_only_whitespace_counts_as_missing() -> None:
+    """Stripping must not let a blank token through the consistency check."""
+    with pytest.raises(ValidationError):
+        WebhookHandlerSettings(url="https://hooks.example/x", auth_type="bearer", token="  \n")
+
+
+@pytest.mark.asyncio
+async def test_rejected_header_stays_out_of_the_response_and_the_logs(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The HTTP layer quotes the whole illegal header value in its error."""
+
+    def reject(_request: httpx.Request) -> httpx.Response:
+        raise httpx.LocalProtocolError(f"Illegal header value b'Bearer {_TOKEN}\\x00'")
+
+    connector = WebhookConnector(
+        WebhookHandlerSettings(url="https://hooks.example/x", auth_type="bearer", token=_TOKEN)
+    )
+    await connector.close()
+    connector._client = httpx.AsyncClient(transport=httpx.MockTransport(reject))
+
+    with caplog.at_level(logging.DEBUG):
+        response = await connector.send_stockpile({"stockpiles": []})
+    await connector.close()
+
+    assert response == [WebhookConnector.MESSAGE_ILLEGAL_CREDENTIALS]
+    assert _TOKEN not in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_non_ascii_token_reports_the_same_message() -> None:
+    """A token that cannot be encoded as a header gets the same explanation."""
+    connector = WebhookConnector(
+        WebhookHandlerSettings(
+            url="https://hooks.example/x", auth_type="bearer", token=f"{_TOKEN}ñ"
+        )
+    )
+
+    response = await connector.send_stockpile({"stockpiles": []})
+    await connector.close()
+
+    assert response == [WebhookConnector.MESSAGE_ILLEGAL_CREDENTIALS]
 
 
 @pytest.mark.parametrize("logger_name", [f"{name}.child" for name in _OAUTH_LOGGERS])
