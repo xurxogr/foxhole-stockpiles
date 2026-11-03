@@ -1449,3 +1449,26 @@ class TestDebugImageWindowCreateIconDisplay:
         )
 
         assert widget is not None
+
+
+def test_summary_shows_scanned_text_as_text_and_not_as_markup(
+    debug_window: DebugImageWindow,
+) -> None:
+    """Text read from a screenshot is displayed literally in the rich text label.
+
+    Args:
+        debug_window: Window fixture.
+    """
+    markup = "<img src='x'>&"
+    stockpile = Stockpile(name=markup, type=markup, shard=markup, ingame_timestamp=markup, items=[])
+    scan_result = ScanResult(
+        stockpile=stockpile,
+        detected_icons=[],
+        original_image=np.zeros((1080, 1920, 3), dtype=np.uint8),
+    )
+
+    debug_window._update_summary(scan_result)
+
+    text = debug_window.summary_label.text()
+    assert markup not in text
+    assert text.count("&lt;img src=&#x27;x&#x27;&gt;&amp;") == 4

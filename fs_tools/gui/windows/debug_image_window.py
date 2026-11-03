@@ -1,6 +1,7 @@
 """Debug image viewer window for analyzing screenshot scanning results."""
 
 import logging
+from html import escape
 from pathlib import Path
 
 import numpy as np
@@ -312,19 +313,20 @@ class DebugImageWindow(QDialog):
             )
         else:
             type_str = t("debug_viewer.unknown")
-        parts.append(f"<b>{t('debug_viewer.summary_type')}:</b> {type_str}")
+        parts.append(f"<b>{t('debug_viewer.summary_type')}:</b> {escape(type_str)}")
 
         # Stockpile name (if present)
         if stockpile.name:
-            parts.append(f"<b>{t('debug_viewer.summary_name')}:</b> {stockpile.name}")
+            parts.append(f"<b>{t('debug_viewer.summary_name')}:</b> {escape(stockpile.name)}")
 
         # Shard
         if stockpile.shard:
-            parts.append(f"<b>{t('debug_viewer.summary_shard')}:</b> {stockpile.shard}")
+            parts.append(f"<b>{t('debug_viewer.summary_shard')}:</b> {escape(stockpile.shard)}")
 
         # In-game time
         if stockpile.ingame_timestamp:
-            parts.append(f"<b>{t('debug_viewer.summary_time')}:</b> {stockpile.ingame_timestamp}")
+            timestamp = escape(stockpile.ingame_timestamp)
+            parts.append(f"<b>{t('debug_viewer.summary_time')}:</b> {timestamp}")
 
         self.summary_label.setText("  |  ".join(parts))
 

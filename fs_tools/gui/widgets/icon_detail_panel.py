@@ -1,5 +1,7 @@
 """Panel showing a template's details next to its highest resolution counterpart."""
 
+from html import escape
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QPixmap
 from PySide6.QtWidgets import (
@@ -155,10 +157,10 @@ class IconDetailPanel(QWidget):
             highest_resolution (SupportedResolution): The highest resolution available.
         """
         self.info_label_left.setText(
-            f"<b>{t('database_visualizer.info.code')}</b> {template.code}<br>"
+            f"<b>{t('database_visualizer.info.code')}</b> {escape(template.code)}<br>"
             f"<b>{t('database_visualizer.info.faction')}</b> {template.faction.value}<br>"
             f"<b>{t('database_visualizer.info.category')}</b> {template.category.value}<br>"
-            f"<b>{t('database_visualizer.info.mod')}</b> {template.mod}<br>"
+            f"<b>{t('database_visualizer.info.mod')}</b> {escape(template.mod)}<br>"
             f"<b>{t('database_visualizer.info.crated')}</b> {template.crated}"
         )
 
