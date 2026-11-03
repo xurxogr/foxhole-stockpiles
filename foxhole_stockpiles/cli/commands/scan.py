@@ -192,9 +192,9 @@ def scan(
         None,
         "--token",
         envvar="FS_WEBHOOK_TOKEN",
-        help="Override the webhook token from the configuration file. "
-        "Prefer the FS_WEBHOOK_TOKEN environment variable over this flag "
-        "to avoid exposing the token via `ps`/shell history.",
+        help="Override the webhook token from the configuration file "
+        "(basic and bearer auth only). Prefer the FS_WEBHOOK_TOKEN environment variable "
+        "over this flag to avoid exposing the token via `ps`/shell history.",
     ),
 ) -> None:
     """Scan a stockpile screenshot and emit the detected items.

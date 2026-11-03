@@ -131,3 +131,44 @@ async def test_coordinator_closes_every_handler_it_creates() -> None:
 
     assert len(created) == 1
     assert created[0].is_closed
+
+
+@pytest.mark.parametrize(
+    "settings",
+    [
+        WebhookHandlerSettings(
+            url="https://hooks.example/x",
+            auth_type="header",
+            auth_header="X-Api-Key",
+            token="configured",
+        ),
+        WebhookHandlerSettings(url="https://hooks.example/x"),
+    ],
+    ids=["header-auth", "no-auth"],
+)
+def test_an_override_token_that_cannot_apply_is_reported(
+    settings: WebhookHandlerSettings, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Only basic and bearer use the override, and ignoring it must not be silent."""
+    connector = WebhookConnector(settings)
+
+    with caplog.at_level(logging.WARNING):
+        connector._build_auth_headers(token="runtime-token")
+
+    assert "ignored" in caplog.text
+    assert "runtime-token" not in caplog.text
+
+
+def test_an_override_token_in_use_is_not_reported(caplog: pytest.LogCaptureFixture) -> None:
+    """Bearer auth uses the override, so there is nothing to warn about."""
+    connector = WebhookConnector(
+        WebhookHandlerSettings(
+            url="https://hooks.example/x", auth_type="bearer", token="configured"
+        )
+    )
+
+    with caplog.at_level(logging.WARNING):
+        headers = connector._build_auth_headers(token="runtime-token")
+
+    assert headers == {"Authorization": "Bearer runtime-token"}
+    assert "ignored" not in caplog.text

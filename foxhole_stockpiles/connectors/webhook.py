@@ -135,6 +135,11 @@ class WebhookConnector:
 
         auth_type = self._output_settings.auth_type
 
+        if token and auth_type not in (AuthType.BASIC, AuthType.BEARER):
+            self._logger.warning(
+                "The override token is ignored: it only applies to basic and bearer auth"
+            )
+
         if auth_type is None:
             return headers
 
