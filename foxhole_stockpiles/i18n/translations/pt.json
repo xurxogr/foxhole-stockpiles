@@ -240,6 +240,8 @@
       "discord_avatar_tooltip": "Imagem opcional para publicar, em vez da imagem do webhook.",
       "discord_message": "Mensagem:",
       "discord_message_tooltip": "Texto opcional publicado com as imagens de cada stockpile. Aceita os mesmos marcadores do título.\n\nAs menções que contiver não notificam ninguém.",
+      "discord_min_interval": "Intervalo mínimo (minutos):",
+      "discord_min_interval_tooltip": "Tempo mínimo entre publicações neste webhook, 0 para nenhum.\n\nO que chegar antes não é publicado: segue com o envio seguinte após esse tempo, para que o canal receba os dados mais recentes. Nada é publicado até haver outro envio. Uma análise isolada de um ficheiro guardado não é conservada.",
       "webhook_url_required": "O URL do webhook é obrigatório."
     },
     "remove_handler_title": "Remover handler",

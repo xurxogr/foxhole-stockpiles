@@ -240,6 +240,8 @@
       "discord_avatar_tooltip": "可选的发布头像，用于替代 Webhook 的头像。",
       "discord_message": "消息：",
       "discord_message_tooltip": "随每个库存的图片发布的可选文字。支持与标题相同的占位符。\n\n其中的提及不会通知任何人。",
+      "discord_min_interval": "最小间隔（分钟）：",
+      "discord_min_interval_tooltip": "向此 Webhook 发布的最短间隔，0 表示不限制。\n\n提前到达的内容不会发布：它会在该时间之后随下一次发送一起发布，以便频道收到最新数据。在下一次发送之前不会发布任何内容。单次扫描存档文件的结果不会保留。",
       "webhook_url_required": "Webhook URL 是必需的。"
     },
     "remove_handler_title": "移除处理器",

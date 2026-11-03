@@ -240,6 +240,8 @@
       "discord_avatar_tooltip": "Optionales Bild zum Posten anstelle des Webhook-Bildes.",
       "discord_message": "Nachricht:",
       "discord_message_tooltip": "Optionaler Text, der mit den Bildern jedes Lagers gepostet wird. Es gelten dieselben Platzhalter wie bei der Überschrift.\n\nErwähnungen darin benachrichtigen niemanden.",
+      "discord_min_interval": "Mindestabstand (Minuten):",
+      "discord_min_interval_tooltip": "Mindestzeit zwischen Beiträgen an diesen Webhook, 0 für keine.\n\nWas früher eintrifft, wird nicht gepostet: Es geht mit dem nächsten Versand nach dieser Zeit, damit der Kanal die neuesten Daten erhält. Bis zum nächsten Versand wird nichts gepostet. Ein einzelner Scan einer Speicherdatei wird nicht aufbewahrt.",
       "webhook_url_required": "Webhook-URL ist erforderlich."
     },
     "remove_handler_title": "Handler entfernen",

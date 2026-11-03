@@ -2,7 +2,8 @@
 
 import asyncio
 import logging
-from typing import Any
+import math
+from typing import Any, Final
 
 from foxhole_stockpiles.connectors.discord import DiscordConnector
 from foxhole_stockpiles.core.settings.sections.output.discord_handler import (
@@ -11,9 +12,12 @@ from foxhole_stockpiles.core.settings.sections.output.discord_handler import (
 )
 from foxhole_stockpiles.handlers.base_handler import BaseOutputDestinationHandler
 from foxhole_stockpiles.models.stockpile import Stockpile
+from foxhole_stockpiles.services.discord_cooldown import record_post, seconds_until_allowed
 from foxhole_stockpiles.services.stockpile_image.aggregation import stockpiles_to_draw
 from foxhole_stockpiles.services.stockpile_image.placeholders import fill_template
 from foxhole_stockpiles.services.stockpile_image.rendering import render_stockpile
+
+_SECONDS_PER_MINUTE: Final[int] = 60
 
 logger = logging.getLogger(__name__)
 
@@ -56,15 +60,16 @@ class DiscordOutputHandler(BaseOutputDestinationHandler):
             self._undelivered = stockpiles
             return self._report("the URL is not a Discord webhook")
 
-        drawn = stockpiles_to_draw(settings=self._settings, stockpiles=stockpiles)
-        for position, stockpile in enumerate(drawn):
-            try:
-                await self._post(stockpile)
-            except Exception as e:  # noqa: BLE001 - what was posted must not be posted again
-                self._undelivered = stockpiles if self._settings.aggregate else drawn[position:]
-                return self._report(str(e))
-        logger.info("Posted %d stockpile(s) to Discord", len(drawn))
-        return None
+        wait = seconds_until_allowed(
+            url=self._settings.url, minutes=self._settings.min_interval_minutes
+        )
+        if wait > 0:
+            self._undelivered = stockpiles
+            minutes = math.ceil(wait / _SECONDS_PER_MINUTE)
+            message = f"FS: Discord waits {minutes} minutes before its next post"
+            logger.info(message)
+            return [message]
+        return await self._post_all(stockpiles)
 
     def undelivered(self, batch: list[Stockpile]) -> list[Stockpile]:
         """Tell which stockpiles were not posted.
@@ -80,6 +85,32 @@ class DiscordOutputHandler(BaseOutputDestinationHandler):
     async def close(self) -> None:
         """Close the HTTP client of the connector."""
         await self._connector.close()
+
+    async def _post_all(self, stockpiles: list[Stockpile]) -> list[str] | None:
+        """Post some stockpiles, stopping at the first failure.
+
+        Args:
+            stockpiles (list[Stockpile]): The stockpiles.
+
+        Returns:
+            list[str] | None: Why they could not all be posted, or None if they were.
+        """
+        drawn = stockpiles_to_draw(settings=self._settings, stockpiles=stockpiles)
+        problem: list[str] | None = None
+        posted = 0
+        for stockpile in drawn:
+            try:
+                await self._post(stockpile)
+            except Exception as e:  # noqa: BLE001 - what was posted must not be posted again
+                self._undelivered = stockpiles if self._settings.aggregate else drawn[posted:]
+                problem = self._report(str(e))
+                break
+            posted += 1
+        if posted and self._settings.min_interval_minutes > 0:
+            record_post(self._settings.url)
+        if problem is None:
+            logger.info("Posted %d stockpile(s) to Discord", posted)
+        return problem
 
     async def _post(self, stockpile: Stockpile) -> None:
         """Draw and post one stockpile.

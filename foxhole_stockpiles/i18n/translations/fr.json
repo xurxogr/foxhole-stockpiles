@@ -240,6 +240,8 @@
       "discord_avatar_tooltip": "Image facultative pour publier, à la place de celle du webhook.",
       "discord_message": "Message :",
       "discord_message_tooltip": "Texte facultatif publié avec les images de chaque stock. Il accepte les mêmes paramètres substituables que le titre.\n\nLes mentions qu'il contient ne notifient personne.",
+      "discord_min_interval": "Intervalle minimum (minutes) :",
+      "discord_min_interval_tooltip": "Temps minimum entre les publications sur ce webhook, 0 pour aucun.\n\nCe qui arrive plus tôt n'est pas publié : il part avec le prochain envoi après ce délai, afin que le salon reçoive les données les plus récentes. Rien n'est publié avant un nouvel envoi. Une analyse ponctuelle d'un fichier de sauvegarde n'est pas conservée.",
       "webhook_url_required": "L'URL webhook est requise."
     },
     "remove_handler_title": "Supprimer le gestionnaire",

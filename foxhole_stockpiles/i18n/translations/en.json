@@ -240,6 +240,8 @@
       "discord_avatar_tooltip": "Optional image to post with, instead of the one of the webhook.",
       "discord_message": "Message:",
       "discord_message_tooltip": "Optional text posted with the images of each stockpile. It accepts the same placeholders as the headline.\n\nMentions in it do not notify anyone.",
+      "discord_min_interval": "Minimum interval (minutes):",
+      "discord_min_interval_tooltip": "Minimum time between posts to this webhook, 0 for none.\n\nWhat arrives sooner is not posted: it goes with the next send after that time, so the channel gets the latest data. Nothing is posted until there is another send. A one-off scan of a save file is not kept.",
       "webhook_url_required": "Webhook URL is required.",
       "creds_path": "OAuth Credentials Path:",
       "creds_path_placeholder": ".../creds.json",

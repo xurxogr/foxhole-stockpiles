@@ -49,5 +49,13 @@ class DiscordHandlerSettings(StockpileImageSettings):
         ),
         default=None,
     )
+    min_interval_minutes: int = Field(
+        description=(
+            "Minimum time between posts, 0 for none. What arrives sooner goes with the "
+            "next batch after that time, so the channel always gets the latest data"
+        ),
+        default=0,
+        ge=0,
+    )
 
     model_config = ConfigDict(extra="forbid", hide_input_in_errors=True)

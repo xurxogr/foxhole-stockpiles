@@ -353,3 +353,22 @@ class TestDiscordHandler:
             discord_dialog._validate_and_accept()
 
         accept.assert_called_once()
+
+
+def test_discord_handler_minimum_interval(qtbot: Any) -> None:
+    """The setting is shown when editing and read back."""
+    config = OutputHandlerConfig(
+        name="discord",
+        handler=DiscordHandlerSettings(
+            url="https://discord.com/api/webhooks/1/a", min_interval_minutes=15
+        ),
+    )
+    widget = OutputHandlerDialog(handler_config=config)
+    qtbot.addWidget(widget)
+    interval_input = widget.discord_group.min_interval_input
+
+    assert interval_input.value() == 15
+    interval_input.setValue(30)
+    handler = widget.get_handler_config().handler
+    assert isinstance(handler, DiscordHandlerSettings)
+    assert handler.min_interval_minutes == 30

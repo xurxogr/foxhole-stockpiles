@@ -1,6 +1,6 @@
 """The fields of the handler that posts stockpiles to Discord."""
 
-from PySide6.QtWidgets import QFormLayout, QGroupBox, QLabel, QLineEdit
+from PySide6.QtWidgets import QFormLayout, QGroupBox, QLabel, QLineEdit, QSpinBox
 
 from foxhole_stockpiles.core.settings.sections.output.discord_handler import (
     DiscordHandlerSettings,
@@ -11,6 +11,7 @@ from foxhole_stockpiles.gui.widgets.config_tabs.image_appearance_fields import (
 from foxhole_stockpiles.i18n import t
 
 _MAX_USERNAME_CHARS = 80
+_MAX_INTERVAL_MINUTES = 7 * 24 * 60
 
 
 class DiscordOutputGroup(QGroupBox):
@@ -39,6 +40,11 @@ class DiscordOutputGroup(QGroupBox):
         self.message_input = QLineEdit()
         form.addRow(self.message_label, self.message_input)
 
+        self.min_interval_label = QLabel()
+        self.min_interval_input = QSpinBox()
+        self.min_interval_input.setRange(0, _MAX_INTERVAL_MINUTES)
+        form.addRow(self.min_interval_label, self.min_interval_input)
+
         self.appearance = ImageAppearanceFields(form)
 
     def retranslate(self) -> None:
@@ -53,6 +59,10 @@ class DiscordOutputGroup(QGroupBox):
         self.avatar_url_label.setToolTip(t("output_tab.handler_dialog.discord_avatar_tooltip"))
         self.message_label.setText(t("output_tab.handler_dialog.discord_message"))
         self.message_label.setToolTip(t("output_tab.handler_dialog.discord_message_tooltip"))
+        self.min_interval_label.setText(t("output_tab.handler_dialog.discord_min_interval"))
+        self.min_interval_label.setToolTip(
+            t("output_tab.handler_dialog.discord_min_interval_tooltip")
+        )
         self.appearance.retranslate()
 
     def load(self, settings: DiscordHandlerSettings) -> None:
@@ -65,6 +75,7 @@ class DiscordOutputGroup(QGroupBox):
         self.username_input.setText(settings.username or "")
         self.avatar_url_input.setText(settings.avatar_url or "")
         self.message_input.setText(settings.message or "")
+        self.min_interval_input.setValue(settings.min_interval_minutes)
         self.appearance.load(settings)
 
     def read(self) -> DiscordHandlerSettings:
@@ -79,6 +90,7 @@ class DiscordOutputGroup(QGroupBox):
                 "username": self.username_input.text().strip() or None,
                 "avatar_url": self.avatar_url_input.text().strip() or None,
                 "message": self.message_input.text().strip() or None,
+                "min_interval_minutes": self.min_interval_input.value(),
                 **self.appearance.values(),
             }
         )
