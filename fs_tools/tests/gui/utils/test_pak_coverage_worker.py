@@ -55,14 +55,17 @@ def test_run_reports_the_coverage_of_every_pak(tmp_path: Path) -> None:
     failed.assert_not_called()
 
 
-def test_run_reports_failures(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "error_type", [RuntimeError, ValueError, FileNotFoundError, PermissionError]
+)
+def test_run_reports_failures(tmp_path: Path, error_type: type[Exception]) -> None:
     """A failing check is reported through the failed signal."""
     worker = PakCoverageWorker(catalog_path=tmp_path / "catalog.json", pak_files=["a.pak"])
     ready, failed = MagicMock(), MagicMock()
     worker.coverage_ready.connect(ready)
     worker.failed.connect(failed)
 
-    with patch(_PAK_COVERAGE, side_effect=RuntimeError("not a pak")):
+    with patch(_PAK_COVERAGE, side_effect=error_type("not a pak")):
         worker.run()
 
     failed.assert_called_once_with("not a pak")

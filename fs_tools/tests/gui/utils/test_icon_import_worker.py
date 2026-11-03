@@ -118,12 +118,15 @@ def test_stage_starts_are_reported_as_progress(tmp_path: Path) -> None:
     assert "380" in messages[2]
 
 
-def test_import_failure_is_reported(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "error_type", [RuntimeError, ValueError, FileNotFoundError, PermissionError]
+)
+def test_import_failure_is_reported(tmp_path: Path, error_type: type[Exception]) -> None:
     """An fs_assets error is emitted and the run ends unsuccessfully."""
     worker = make_worker(tmp_path)
     finished, error, _ = _listen(worker)
 
-    with patch(_ADD_MOD, side_effect=RuntimeError("Mod_1.pak has none of the catalog's icons")):
+    with patch(_ADD_MOD, side_effect=error_type("Mod_1.pak has none of the catalog's icons")):
         worker.run()
 
     error.assert_called_once_with("Mod_1.pak has none of the catalog's icons")

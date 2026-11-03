@@ -84,11 +84,16 @@ def test_stage_starts_are_reported_as_progress(worker: CatalogBuilderWorker) -> 
     assert "7" in messages[1]
 
 
-def test_build_failure_is_reported(worker: CatalogBuilderWorker) -> None:
+@pytest.mark.parametrize(
+    "error_type", [RuntimeError, ValueError, FileNotFoundError, PermissionError]
+)
+def test_build_failure_is_reported(
+    worker: CatalogBuilderWorker, error_type: type[Exception]
+) -> None:
     """An fs_assets error is emitted and the run ends unsuccessfully."""
     finished, error, _ = _listen(worker)
 
-    with patch(_BUILD_CATALOG, side_effect=RuntimeError("pak has no catalog inputs")):
+    with patch(_BUILD_CATALOG, side_effect=error_type("pak has no catalog inputs")):
         worker.run()
 
     error.assert_called_once_with("pak has no catalog inputs")
