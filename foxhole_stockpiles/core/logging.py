@@ -2,9 +2,11 @@
 
 import logging
 import sys
-from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 from typing import Final, Protocol
+
+from foxhole_stockpiles.core.private_file_handler import PrivateFileHandler
+from foxhole_stockpiles.core.private_rotating_file_handler import PrivateRotatingFileHandler
 
 # Handler names used to identify handlers and avoid duplicates
 QT_GUI_HANDLER_NAME = "foxhole_qt_gui_handler"
@@ -113,13 +115,13 @@ def setup_logging(settings: LoggingConfig) -> None:
         log_path.parent.mkdir(parents=True, exist_ok=True)
 
         if settings.rotate_logs:
-            handler: logging.Handler = TimedRotatingFileHandler(
+            handler: logging.Handler = PrivateRotatingFileHandler(
                 filename=log_path,
                 when="midnight",
                 encoding="utf-8",
             )
         else:
-            handler = logging.FileHandler(log_path, encoding="utf-8")
+            handler = PrivateFileHandler(log_path, encoding="utf-8")
 
         handler.set_name(APP_FILE_HANDLER_NAME)
     else:
