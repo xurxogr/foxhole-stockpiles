@@ -1,0 +1,1 @@
+"""Render stockpiles as images."""
