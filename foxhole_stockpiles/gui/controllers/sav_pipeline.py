@@ -48,51 +48,50 @@ class SavPipeline(MonitorPipeline):
         """
         return AppSettings().sav_processing.mode
 
-    def _validate_config(self) -> tuple[Path | None, str | None]:
-        """Validate SAV processing configuration.
+    def _configured_sav_path(self) -> Path:
+        """Find the .sav file to process.
 
         Returns:
-            tuple[Path | None, str | None]: The (sav_path, error_message) pair.
-                If error_message is not None, the sav_path is invalid.
+            Path: The configured or auto-detected file, which exists.
+
+        Raises:
+            ValueError: If there is none, with the message to show to the user.
         """
         try:
             settings = AppSettings()
         except Exception as e:  # noqa: BLE001 - surface config errors to the user
-            return None, t("server_panel.sav.error_loading_settings", error=str(e))
+            raise ValueError(t("server_panel.sav.error_loading_settings", error=str(e))) from e
 
-        sav_path = settings.sav_processing.sav_file_path
+        sav_path = settings.sav_processing.sav_file_path or auto_detect_savefile()
         if not sav_path:
-            sav_path = auto_detect_savefile()
-
-        if not sav_path:
-            return None, t("server_panel.sav.error_no_sav_file")
-
+            raise ValueError(t("server_panel.sav.error_no_sav_file"))
         if not sav_path.exists():
-            return None, t("server_panel.sav.error_sav_not_found")
-
-        return sav_path, None
+            raise ValueError(t("server_panel.sav.error_sav_not_found"))
+        return sav_path
 
     def scan_from_menu(self) -> None:
         """Scan the configured .sav file once (called from the File menu)."""
-        sav_path, error = self._validate_config()
-        if error:
-            QMessageBox.warning(self._parent, t("server_panel.sav.error_title"), error)
+        try:
+            sav_path = self._configured_sav_path()
+        except ValueError as e:
+            QMessageBox.warning(self._parent, t("server_panel.sav.error_title"), str(e))
             return
         self._run_scan(sav_path)
 
     def on_capture_triggered(self) -> None:
         """Scan the .sav file once when the SAV hotkey is pressed (GUI thread)."""
-        sav_path, error = self._validate_config()
-        if error:
-            logger.error("[SAV] %s", error)
+        try:
+            sav_path = self._configured_sav_path()
+        except ValueError as e:
+            logger.error("[SAV] %s", e)
             return
         self._run_scan(sav_path)
 
-    def _run_scan(self, sav_path: Path | None) -> None:
+    def _run_scan(self, sav_path: Path) -> None:
         """Start a one-shot SAV scan worker for the given path.
 
         Args:
-            sav_path (Path | None): Validated path to the .sav file to scan.
+            sav_path (Path): Validated path to the .sav file to scan.
         """
         if self._scan_running():
             logger.warning("SAV scan already in progress")
@@ -103,8 +102,6 @@ class SavPipeline(MonitorPipeline):
         except Exception as e:  # noqa: BLE001 - surface config/output errors in the log
             logger.error("[SAV] %s", t("server_panel.sav.error_output", error=str(e)))
             return
-
-        assert sav_path is not None
 
         logger.info("Starting SAV scan: %s", sav_path)
         worker = SavScanWorker(sav_path=sav_path, output_coordinator=output_coordinator)
@@ -117,9 +114,10 @@ class SavPipeline(MonitorPipeline):
             logger.warning("Cannot start monitor: previous monitor still stopping")
             return
 
-        sav_path, error = self._validate_config()
-        if error:
-            QMessageBox.warning(self._parent, t("server_panel.sav.error_title"), error)
+        try:
+            sav_path = self._configured_sav_path()
+        except ValueError as e:
+            QMessageBox.warning(self._parent, t("server_panel.sav.error_title"), str(e))
             return
 
         try:
@@ -133,8 +131,6 @@ class SavPipeline(MonitorPipeline):
                 t("server_panel.sav.error_output", error=str(e)),
             )
             return
-
-        assert sav_path is not None
 
         logger.info("Starting SAV monitor: %s (poll: %ss)", sav_path, poll_interval)
         self._mark_monitoring()

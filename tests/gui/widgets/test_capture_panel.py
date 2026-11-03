@@ -365,17 +365,15 @@ class TestSav:
 
     def test_validate_no_sav_file(self, panel: cp.CapturePanel) -> None:
         """No configured/auto-detected .sav yields an error."""
-        _path, error = panel.sav_pipeline._validate_config()
-        assert error is not None
+        with pytest.raises(ValueError):
+            panel.sav_pipeline._configured_sav_path()
 
     def test_validate_success(
         self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         """A configured, existing .sav validates."""
         _use_settings(monkeypatch, _configured(tmp_path))
-        path, error = panel.sav_pipeline._validate_config()
-        assert error is None
-        assert path is not None
+        assert panel.sav_pipeline._configured_sav_path().exists()
 
     def test_validate_missing_file(
         self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
@@ -384,8 +382,8 @@ class TestSav:
         settings = AppSettings()
         settings.sav_processing.sav_file_path = tmp_path / "nope.sav"
         _use_settings(monkeypatch, settings)
-        _path, error = panel.sav_pipeline._validate_config()
-        assert error is not None
+        with pytest.raises(ValueError):
+            panel.sav_pipeline._configured_sav_path()
 
     def test_toggle_all_starts_sav_manual(
         self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
@@ -681,9 +679,8 @@ class TestRemainingBranches:
     ) -> None:
         """A settings read failure yields a validation error."""
         _patch(monkeypatch, "AppSettings", MagicMock(side_effect=RuntimeError("boom")))
-        path, error = panel.sav_pipeline._validate_config()
-        assert path is None
-        assert error is not None
+        with pytest.raises(ValueError, match="boom"):
+            panel.sav_pipeline._configured_sav_path()
 
     def test_scan_sav_from_menu_success(
         self, panel: cp.CapturePanel, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
