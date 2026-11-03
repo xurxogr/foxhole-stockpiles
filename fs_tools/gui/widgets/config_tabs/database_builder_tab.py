@@ -210,6 +210,24 @@ class DatabaseBuilderTab(QWidget):
             # Reconnect
             self.resolution_list.itemChanged.connect(self._handle_resolution_selection)
 
+    def _check_resolutions(self, target_resolutions: list[str] | None) -> None:
+        """Check the resolutions configured, and "All" (the first row) if that is all of them.
+
+        Args:
+            target_resolutions (list[str] | None): The resolutions; None means all of them.
+        """
+        items = [self.resolution_list.item(i) for i in range(self.resolution_list.count())]
+        all_item, *resolution_items = [item for item in items if item is not None]
+
+        all_checked = True
+        for item in resolution_items:
+            value = item.data(Qt.ItemDataRole.UserRole)
+            checked = target_resolutions is None or value in target_resolutions
+            item.setCheckState(Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked)
+            all_checked = all_checked and checked
+
+        all_item.setCheckState(Qt.CheckState.Checked if all_checked else Qt.CheckState.Unchecked)
+
     def set_values(self, settings: DatabaseBuilderSettings) -> None:
         """Set widget values from settings.
 
@@ -228,48 +246,7 @@ class DatabaseBuilderTab(QWidget):
             pass
 
         try:
-            target_resolutions = settings.target_resolutions
-
-            if target_resolutions is None:
-                # None explicitly means all resolutions
-                for i in range(self.resolution_list.count()):
-                    item = self.resolution_list.item(i)
-                    if item:
-                        item.setCheckState(Qt.CheckState.Checked)
-            elif len(target_resolutions) == 0:
-                # Empty list means no resolutions (uncheck all)
-                for i in range(self.resolution_list.count()):
-                    item = self.resolution_list.item(i)
-                    if item:
-                        item.setCheckState(Qt.CheckState.Unchecked)
-            else:
-                # Specific resolutions selected
-                # First uncheck all
-                for i in range(self.resolution_list.count()):
-                    item = self.resolution_list.item(i)
-                    if item:
-                        item.setCheckState(Qt.CheckState.Unchecked)
-
-                # Check only the selected resolutions
-                for i in range(1, self.resolution_list.count()):  # Skip "All" at index 0
-                    item = self.resolution_list.item(i)
-                    if item:
-                        res_value = item.data(Qt.ItemDataRole.UserRole)
-                        if res_value in target_resolutions:
-                            item.setCheckState(Qt.CheckState.Checked)
-
-                # Check "All" if all individual items are now checked
-                all_checked = all(
-                    item.checkState() == Qt.CheckState.Checked
-                    for i in range(1, self.resolution_list.count())
-                    if (item := self.resolution_list.item(i)) is not None
-                )
-                all_item = self.resolution_list.item(0)
-                if all_item:
-                    all_item.setCheckState(
-                        Qt.CheckState.Checked if all_checked else Qt.CheckState.Unchecked
-                    )
-
+            self._check_resolutions(settings.target_resolutions)
         finally:
             # Reconnect
             self.resolution_list.itemChanged.connect(self._handle_resolution_selection)
