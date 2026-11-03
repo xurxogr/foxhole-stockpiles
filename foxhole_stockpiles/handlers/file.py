@@ -65,18 +65,38 @@ class FileOutputHandler(BaseOutputDestinationHandler):
 
         file = str(file_path_arg) if file_path_arg else self.default_file_path or "output.json"
 
-        # Support placeholders in filename/path
-        # For stockpile-specific placeholders, use first stockpile's values
-        resolution = stockpiles[0].resolution or "Unknown"
-        if len(stockpiles) == 1:
-            name = stockpiles[0].name or "Unknown"
-        else:
-            name = "multiple_stockpiles"
+        # Fix the extension first: a dot in a substituted value is not an extension.
+        file = self._fix_extension(file)
+        for placeholder, value in self._build_placeholders(stockpiles).items():
+            file = file.replace(placeholder, safe_path_segment(value))
+
+        output_path = Path(file)
+        content = self._format_output(stockpiles)
+
+        def write_file() -> None:
+            """Write stockpile data to file synchronously."""
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            with output_path.open("w", encoding="utf-8") as f:
+                f.write(content)
+
+        await asyncio.to_thread(write_file)
+
+        self.logger.debug("Output saved to: %s", output_path)
+
+    def _build_placeholders(self, stockpiles: list[Stockpile]) -> dict[str, str]:
+        """Build the values a path template can use.
+
+        What depends on a stockpile is taken from the first one.
+
+        Args:
+            stockpiles (list[Stockpile]): The stockpiles being written, at least one.
+
+        Returns:
+            dict[str, str]: The value of each placeholder, not yet safe for a path.
+        """
+        first = stockpiles[0]
         now = datetime.datetime.now()
-        hex_name = stockpiles[0].hex or "Unknown"
-        coords = stockpiles[0].coords
-        coords_str = coords.to_key().replace("_", "-") if coords else "0-0"
-        placeholders = {
+        return {
             "{timestamp}": now.strftime("%Y-%m-%d_%H-%M-%S"),
             "{year}": now.strftime("%Y"),
             "{month}": now.strftime("%m"),
@@ -84,31 +104,14 @@ class FileOutputHandler(BaseOutputDestinationHandler):
             "{hour}": now.strftime("%H"),
             "{minute}": now.strftime("%M"),
             "{second}": now.strftime("%S"),
-            "{stockpile_type}": self._get_stockpile_type_str(stockpiles[0]),
-            "{stockpile_name}": name,
-            "{resolution}": resolution,
-            "{hex}": hex_name,
-            "{coords}": coords_str,
+            "{stockpile_type}": self._get_stockpile_type_str(first),
+            "{stockpile_name}": (first.name or "Unknown")
+            if len(stockpiles) == 1
+            else "multiple_stockpiles",
+            "{resolution}": first.resolution or "Unknown",
+            "{hex}": first.hex or "Unknown",
+            "{coords}": first.coords.to_key().replace("_", "-") if first.coords else "0-0",
         }
-        # Fix the extension first: a dot in a substituted value is not an extension.
-        file = self._fix_extension(file)
-        for placeholder, value in placeholders.items():
-            file = file.replace(placeholder, safe_path_segment(value))
-
-        output_path = Path(file)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-
-        # Format the output based on settings
-        content = self._format_output(stockpiles)
-
-        def write_file() -> None:
-            """Write stockpile data to file synchronously."""
-            with output_path.open("w", encoding="utf-8") as f:
-                f.write(content)
-
-        await asyncio.to_thread(write_file)
-
-        self.logger.debug("Output saved to: %s", output_path)
 
     def _get_stockpile_type_str(self, stockpile: Stockpile | None) -> str:
         """Get stockpile type as string for placeholders.

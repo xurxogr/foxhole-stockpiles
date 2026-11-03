@@ -1,6 +1,9 @@
 """Tests for how handlers.file builds output paths from stockpile data."""
 
+import threading
 from pathlib import Path
+from typing import Any
+from unittest.mock import patch
 
 import pytest
 
@@ -95,3 +98,23 @@ def test_tab_prefixed_formula_is_neutralized_in_csv() -> None:
     handler = FileOutputHandler()
 
     assert handler._escape_csv_value(" =1+1", ",") == "' =1+1"
+
+
+@pytest.mark.asyncio
+async def test_directories_are_created_off_the_event_loop(tmp_path: Path) -> None:
+    """A slow disk or network folder must not freeze whoever runs the event loop."""
+    threads: list[threading.Thread] = []
+    real_mkdir = Path.mkdir
+
+    def recording_mkdir(path: Path, *args: Any, **kwargs: Any) -> None:
+        threads.append(threading.current_thread())
+        real_mkdir(path, *args, **kwargs)
+
+    handler = FileOutputHandler(default_file_path=str(tmp_path / "new" / "out.json"))
+    stockpile = Stockpile(name="Logi", type="Seaport", items=[])
+
+    with patch.object(Path, "mkdir", recording_mkdir):
+        await handler.handle(stockpiles=[stockpile])
+
+    assert threads
+    assert threading.current_thread() not in threads
