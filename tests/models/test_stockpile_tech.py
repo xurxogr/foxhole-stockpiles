@@ -91,6 +91,23 @@ class TestStockpileTechField:
         assert stockpile.tech is not None
         assert stockpile.tech.t2_garrison == 100
 
+    @pytest.mark.parametrize(
+        "stockpile_type",
+        [
+            StockpileType.SAFE_HOUSE,
+            StockpileType.SAFE_HOUSE_1,
+            StockpileType.SAFE_HOUSE_2,
+            StockpileType.SAFE_HOUSE_TOWN,
+            StockpileType.RELIC_BASE_2,
+            StockpileType.RELIC_BASE_3,
+        ],
+    )
+    def test_tech_on_every_variant_of_a_base(self, stockpile_type: StockpileType) -> None:
+        """fs-sav reads the tech of all of them, so none may be rejected."""
+        tech = StockpileTech.model_validate({"ProvisionalGarrison": 100})
+
+        assert Stockpile(type=stockpile_type, tech=tech).tech is not None
+
     def test_base_without_tech_valid(self) -> None:
         """A base does not require tech data."""
         assert Stockpile(type=StockpileType.BUNKER_BASE_1).tech is None

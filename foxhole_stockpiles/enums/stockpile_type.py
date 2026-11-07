@@ -93,6 +93,7 @@ class StockpileType(StrEnum):
 _TECH_TYPES: frozenset[str] = frozenset(
     {
         StockpileType.SAFE_HOUSE,
+        StockpileType.SAFE_HOUSE_1,
         StockpileType.SAFE_HOUSE_2,
         StockpileType.SAFE_HOUSE_TOWN,
         StockpileType.KEEP,

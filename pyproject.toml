@@ -43,11 +43,11 @@ dependencies = [
     # CLI framework for fs-ocr
     "typer>=0.26.7",
     # SAV file parsing (Rust implementation)
-    "fs-sav>=0.4.0",
+    "fs-sav>=0.4.1",
     # OCR engine (Rust implementation)
     "fs-ocr>=1.1.0",
     # Game asset tools: catalog and icon-template database (Rust implementation)
-    "fs-assets>=0.3.2",
+    "fs-assets>=0.4.0",
 ]
 
 [project.optional-dependencies]

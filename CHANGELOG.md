@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - `fs.exe` now includes `fs-assets`, which reads the icons, so it is somewhat larger.
 
+### Fixed
+- **Tech of every Safe House.** Save files now report it for all of them (fs-sav 0.4.1),
+  and it is no longer rejected for the ones that were not recognised as bases.
+
 ## [1.2.0] - 2026-11-03
 
 ### Added
