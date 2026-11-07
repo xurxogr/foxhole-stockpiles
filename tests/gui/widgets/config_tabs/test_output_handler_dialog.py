@@ -15,8 +15,10 @@ from foxhole_stockpiles.core.settings.sections import (
 )
 from foxhole_stockpiles.enums.output_format import OutputFormat
 from foxhole_stockpiles.enums.output_handler_type import OutputHandlerType
+from foxhole_stockpiles.enums.stockpile_grouping import StockpileGrouping
 from foxhole_stockpiles.gui.widgets.config_tabs import output_handler_dialog as dialog_mod
 from foxhole_stockpiles.gui.widgets.config_tabs.output_handler_dialog import OutputHandlerDialog
+from foxhole_stockpiles.i18n import t
 
 _URL = "https://docs.google.com/spreadsheets/d/ABC-123"
 
@@ -218,7 +220,9 @@ class TestImageHandler:
         appearance = image_dialog.image_group.appearance
 
         assert not appearance.headline_input.isEnabled()
-        appearance.aggregate_input.setChecked(True)
+        appearance.grouping_input.setCurrentIndex(
+            appearance.grouping_input.findData(StockpileGrouping.HEX.value)
+        )
         assert appearance.headline_input.isEnabled()
 
     def test_values_become_its_settings(self, image_dialog: OutputHandlerDialog) -> None:
@@ -270,20 +274,37 @@ class TestImageHandler:
         assert combo.currentText() == "vanilla"
 
 
-def test_image_handler_can_merge_stockpiles(qtbot: Any) -> None:
+def test_image_handler_can_group_stockpiles(qtbot: Any) -> None:
     """The setting is shown when editing and read back."""
     config = OutputHandlerConfig(
-        name="image", handler=ImageHandlerSettings(path="a.png", aggregate=True)
+        name="image",
+        handler=ImageHandlerSettings(path="a.png", grouping=StockpileGrouping.LOCATION),
     )
     widget = OutputHandlerDialog(handler_config=config)
     qtbot.addWidget(widget)
-    aggregate_input = widget.image_group.appearance.aggregate_input
+    grouping_input = widget.image_group.appearance.grouping_input
 
-    assert aggregate_input.isChecked()
-    aggregate_input.setChecked(False)
+    assert grouping_input.currentData() == StockpileGrouping.LOCATION.value
+    assert widget.image_group.appearance.headline_input.isEnabled()
+    grouping_input.setCurrentIndex(grouping_input.findData(StockpileGrouping.NONE.value))
     handler = widget.get_handler_config().handler
     assert isinstance(handler, ImageHandlerSettings)
-    assert handler.aggregate is False
+    assert handler.grouping == StockpileGrouping.NONE
+
+
+def test_grouping_options_are_translated(qtbot: Any) -> None:
+    """Not the values of the configuration."""
+    widget = OutputHandlerDialog()
+    qtbot.addWidget(widget)
+    grouping_input = widget.image_group.appearance.grouping_input
+
+    texts = [grouping_input.itemText(index) for index in range(grouping_input.count())]
+
+    assert texts == [
+        t(f"output_tab.handler_dialog.image_grouping_{grouping.value}")
+        for grouping in StockpileGrouping
+    ]
+    assert grouping_input.currentData() == StockpileGrouping.NONE.value
 
 
 class TestDiscordHandler:

@@ -193,10 +193,12 @@ class StockpileImageRenderer:
         """
         room = width - 2 * _MARGIN
         self._text(draw, xy=(_MARGIN, 14), text=title, size=_TITLE_SIZE, max_width=room)
+        place = hex_name(stockpile.hex)
         self._text(
             draw,
             xy=(_MARGIN, 54),
-            text=hex_name(stockpile.hex),
+            # The merge of a hex is already titled by it.
+            text="" if place == title else place,
             size=_SUBTITLE_SIZE,
             fill=_MUTED_TEXT,
             max_width=room,

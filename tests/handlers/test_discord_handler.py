@@ -15,6 +15,7 @@ from foxhole_stockpiles.core.settings.sections.output import (
 from foxhole_stockpiles.core.settings.sections.output.discord_handler import (
     is_discord_webhook_url,
 )
+from foxhole_stockpiles.enums.stockpile_grouping import StockpileGrouping
 from foxhole_stockpiles.handlers import discord as discord_module
 from foxhole_stockpiles.handlers.discord import DiscordOutputHandler
 from foxhole_stockpiles.models.stockpile import Stockpile
@@ -120,7 +121,7 @@ async def test_only_what_was_not_posted_stays_pending() -> None:
 @pytest.mark.asyncio
 async def test_a_merged_image_that_fails_keeps_the_real_stockpiles() -> None:
     """The next batch can then be merged with them again."""
-    handler, send = _handler(aggregate=True)
+    handler, send = _handler(grouping=StockpileGrouping.ALL)
     send.side_effect = DiscordSendError("no")
     stockpiles = [_stockpile("A"), _stockpile("B")]
 
@@ -128,6 +129,19 @@ async def test_a_merged_image_that_fails_keeps_the_real_stockpiles() -> None:
 
     assert send.await_count == 1
     assert handler.undelivered(stockpiles) == stockpiles
+
+
+@pytest.mark.asyncio
+async def test_a_group_that_fails_keeps_its_real_stockpiles_and_those_after_it() -> None:
+    """The group already posted does not go again."""
+    handler, send = _handler(grouping=StockpileGrouping.HEX)
+    send.side_effect = [None, DiscordSendError("no")]
+    west = [_stockpile("A").model_copy(update={"hex": "WestgateHex"})] * 2
+    heart = [_stockpile("B").model_copy(update={"hex": "HeartlandsHex"})] * 2
+
+    await handler.handle([west[0], heart[0], west[1], heart[1]])
+
+    assert handler.undelivered([]) == heart
 
 
 @pytest.mark.asyncio

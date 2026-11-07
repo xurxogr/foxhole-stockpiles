@@ -206,6 +206,13 @@ def test_the_hex_is_drawn_by_its_name() -> None:
     assert _drawn_texts(stockpile)[1] == "Heartlands"
 
 
+def test_the_hex_is_not_repeated_under_a_title_that_is_the_hex() -> None:
+    """As in the merge of a hex."""
+    stockpile = Stockpile(name="Heartlands", hex="HeartlandsHex")
+
+    assert _drawn_texts(stockpile)[:2] == ["Heartlands", ""]
+
+
 def test_the_shard_is_not_drawn() -> None:
     """Whoever reads the image already knows it."""
     stockpile = Stockpile(name="Depot", type=StockpileType.SEAPORT, hex="Westgate", shard="ABLE")

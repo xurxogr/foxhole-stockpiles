@@ -1,7 +1,6 @@
 """The fields of how a stockpile is drawn, shared by the handlers that draw images."""
 
 from PySide6.QtWidgets import (
-    QCheckBox,
     QComboBox,
     QFileDialog,
     QFormLayout,
@@ -16,6 +15,7 @@ from foxhole_stockpiles.core.settings import get_settings
 from foxhole_stockpiles.core.settings.sections.output.stockpile_image_settings import (
     StockpileImageSettings,
 )
+from foxhole_stockpiles.enums.stockpile_grouping import StockpileGrouping
 from foxhole_stockpiles.i18n import get_available_languages, t
 from foxhole_stockpiles.services.stockpile_image.icons import BASE_GAME_MOD, list_icon_mods
 from foxhole_stockpiles.services.stockpile_image.image_text import DEFAULT_LANGUAGE
@@ -61,11 +61,14 @@ class ImageAppearanceFields:
         font_layout.addWidget(self.font_browse_btn)
         form.addRow(self.font_path_label, font_row)
 
-        self.aggregate_input = QCheckBox()
+        self.grouping_label = QLabel()
+        self.grouping_input = QComboBox()
+        for grouping in StockpileGrouping:
+            self.grouping_input.addItem(grouping.value, grouping.value)
         # The headline only titles a merge: a lone stockpile shows its type and name.
-        self.aggregate_input.toggled.connect(self.headline_input.setEnabled)
-        self.headline_input.setEnabled(False)
-        form.addRow(self.aggregate_input)
+        self.grouping_input.currentIndexChanged.connect(self._update_headline)
+        self._update_headline()
+        form.addRow(self.grouping_label, self.grouping_input)
 
     def retranslate(self) -> None:
         """Update all translatable strings."""
@@ -81,8 +84,13 @@ class ImageAppearanceFields:
         self.font_path_label.setText(t("output_tab.handler_dialog.image_font"))
         self.font_path_label.setToolTip(t("output_tab.handler_dialog.image_font_tooltip"))
         self.font_browse_btn.setText(t("common.browse"))
-        self.aggregate_input.setText(t("output_tab.handler_dialog.image_aggregate"))
-        self.aggregate_input.setToolTip(t("output_tab.handler_dialog.image_aggregate_tooltip"))
+        self.grouping_label.setText(t("output_tab.handler_dialog.image_grouping"))
+        self.grouping_label.setToolTip(t("output_tab.handler_dialog.image_grouping_tooltip"))
+        for index in range(self.grouping_input.count()):
+            value = self.grouping_input.itemData(index)
+            self.grouping_input.setItemText(
+                index, t(f"output_tab.handler_dialog.image_grouping_{value}")
+            )
 
     def load(self, settings: StockpileImageSettings) -> None:
         """Show some settings in the fields.
@@ -94,21 +102,25 @@ class ImageAppearanceFields:
         self._select_language(settings.language)
         self.icon_mod_input.setCurrentText(settings.icon_mod)
         self.font_path_input.setText(settings.font_path or "")
-        self.aggregate_input.setChecked(settings.aggregate)
+        self.grouping_input.setCurrentIndex(self.grouping_input.findData(settings.grouping.value))
 
-    def values(self) -> dict[str, str | bool | None]:
+    def values(self) -> dict[str, str | None]:
         """Read the fields.
 
         Returns:
-            dict[str, str | bool | None]: The values of the settings they edit.
+            dict[str, str | None]: The values of the settings they edit.
         """
         return {
             "headline": self.headline_input.text().strip() or None,
             "language": self.language_input.currentData(),
             "icon_mod": self.icon_mod_input.currentText().strip() or BASE_GAME_MOD,
             "font_path": self.font_path_input.text().strip() or None,
-            "aggregate": self.aggregate_input.isChecked(),
+            "grouping": self.grouping_input.currentData(),
         }
+
+    def _update_headline(self) -> None:
+        """Let the headline be edited only when stockpiles are merged."""
+        self.headline_input.setEnabled(self.grouping_input.currentData() != StockpileGrouping.NONE)
 
     def _select_language(self, language: str) -> None:
         """Select a language, or the default one if it does not exist.

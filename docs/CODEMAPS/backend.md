@@ -101,8 +101,8 @@ Discord overrides it, as it fails stockpile by stockpile).
 Drawing (`services/stockpile_image/`): `rendering.py` (`render_stockpile(settings, stockpile)`)
 → `layout.py` (pages of columns) + `renderer.py` (Pillow) + `icons.py` (`fs_assets.read_templates`)
 + `fonts.py`/`font_selector.py` (per-text font choice) + `placeholders.py` + `image_text.py`
-(all text in the `language` of the output, own `Translator`, not the window's); `aggregation.py`
-merges a batch. `connectors/discord.py`: multipart `payload_json` + `files[n]`, no mentions, 429
+(all text in the `language` of the output, own `Translator`, not the window's); `grouping.py`
+(`group_stockpiles` → `StockpileGroup`: none/all/hex/location) and `aggregation.py` merge a batch. `connectors/discord.py`: multipart `payload_json` + `files[n]`, no mentions, 429
 and `X-RateLimit-*` handling, never logs the URL. `services/discord_cooldown.py`:
 `min_interval_minutes` state in `discord_cooldowns.json`, keyed by hash of the URL.
 

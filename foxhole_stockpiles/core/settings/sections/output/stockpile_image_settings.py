@@ -2,6 +2,8 @@
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from foxhole_stockpiles.enums.stockpile_grouping import StockpileGrouping
+
 
 class StockpileImageSettings(BaseModel):
     """How a stockpile is drawn.
@@ -12,8 +14,8 @@ class StockpileImageSettings(BaseModel):
 
     headline: str | None = Field(
         description=(
-            "Title of the image that merges the stockpiles of a send, by default "
-            "'All Stockpiles'; one stockpile shows its type and name. Supports the "
+            "Title of each image that merges stockpiles, by default what they share; "
+            "one stockpile shows its type and name. Supports the "
             "placeholders {name}, {type}, {hex}, {ingame_timestamp}, "
             "{timestamp}, {resolution}, {item_count} and {total_items}"
         ),
@@ -34,9 +36,12 @@ class StockpileImageSettings(BaseModel):
         ),
         default="en",
     )
-    aggregate: bool = Field(
-        description="Draw all the stockpiles of a batch as one, adding up their items",
-        default=False,
+    grouping: StockpileGrouping = Field(
+        description=(
+            "Which stockpiles of a send are drawn as one, adding up their items: none, "
+            "all, those of one hex, or those of one place (same coordinates)"
+        ),
+        default=StockpileGrouping.NONE,
     )
 
     model_config = ConfigDict(extra="forbid")

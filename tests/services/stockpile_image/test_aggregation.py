@@ -1,10 +1,7 @@
-"""Merging several stockpiles into one image."""
+"""Merging several stockpiles into one."""
 
 from datetime import UTC, datetime
 
-from foxhole_stockpiles.core.settings.sections.output.stockpile_image_settings import (
-    StockpileImageSettings,
-)
 from foxhole_stockpiles.enums.stockpile_type import StockpileType
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
@@ -12,7 +9,6 @@ from foxhole_stockpiles.services.stockpile_image.aggregation import (
     AGGREGATE_NAME,
     aggregate,
     merge_items,
-    stockpiles_to_draw,
 )
 
 
@@ -79,72 +75,3 @@ def test_what_all_of_them_share_is_kept() -> None:
 
     assert same.hex == "Westgate"
     assert mixed.hex is None
-
-
-def test_nothing_is_merged_unless_asked() -> None:
-    """Each stockpile has its own image by default."""
-    stockpiles = [Stockpile(name="A"), Stockpile(name="B")]
-
-    assert stockpiles_to_draw(settings=StockpileImageSettings(), stockpiles=stockpiles) == (
-        stockpiles
-    )
-
-
-def test_merging_when_asked() -> None:
-    """All of them become one."""
-    stockpiles = [Stockpile(name="A"), Stockpile(name="B")]
-
-    drawn = stockpiles_to_draw(
-        settings=StockpileImageSettings(aggregate=True), stockpiles=stockpiles
-    )
-
-    assert [stockpile.name for stockpile in drawn] == [AGGREGATE_NAME]
-
-
-def test_no_stockpiles_are_not_merged_into_an_empty_image() -> None:
-    """There is nothing to draw."""
-    assert stockpiles_to_draw(settings=StockpileImageSettings(aggregate=True), stockpiles=[]) == []
-
-
-def test_a_lone_stockpile_keeps_its_name_and_type() -> None:
-    """Merging one stockpile would only lose its name and type."""
-    seaport = Stockpile(name="Port", type=StockpileType.SEAPORT)
-
-    drawn = stockpiles_to_draw(
-        settings=StockpileImageSettings(aggregate=True), stockpiles=[seaport]
-    )
-
-    assert drawn == [seaport]
-
-
-def test_the_headline_names_the_merge() -> None:
-    """Filled with the values of the merge."""
-    stockpiles = [Stockpile(name="A", hex="Westgate"), Stockpile(name="B", hex="Westgate")]
-
-    drawn = stockpiles_to_draw(
-        settings=StockpileImageSettings(aggregate=True, headline="Stock of {hex}"),
-        stockpiles=stockpiles,
-    )
-
-    assert [stockpile.name for stockpile in drawn] == ["Stock of Westgate"]
-
-
-def test_a_blank_headline_leaves_the_default_name_of_the_merge() -> None:
-    """Spaces are not a title."""
-    drawn = stockpiles_to_draw(
-        settings=StockpileImageSettings(aggregate=True, headline="  "),
-        stockpiles=[Stockpile(name="A"), Stockpile(name="B")],
-    )
-
-    assert [stockpile.name for stockpile in drawn] == [AGGREGATE_NAME]
-
-
-def test_the_headline_does_not_rename_a_lone_stockpile() -> None:
-    """It keeps the title the game gives it."""
-    seaport = Stockpile(name="Public", type=StockpileType.SEAPORT)
-
-    drawn = stockpiles_to_draw(
-        settings=StockpileImageSettings(aggregate=True, headline="Report"), stockpiles=[seaport]
-    )
-
-    assert drawn == [seaport]

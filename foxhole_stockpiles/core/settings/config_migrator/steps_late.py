@@ -1,4 +1,4 @@
-"""Config migration steps v7 -> v15."""
+"""Config migration steps v7 -> v17."""
 
 from typing import Any
 
@@ -263,3 +263,53 @@ def migrate_v15_to_v16(data: dict[str, Any]) -> dict[str, Any]:
         data["database_builder"].pop("workers", None)
 
     return data
+
+
+# The handlers that draw stockpiles as images.
+_IMAGE_HANDLER_TYPES = frozenset({"image", "discord"})
+
+
+def _with_grouping(handler: dict[str, Any]) -> dict[str, Any]:
+    """Replace the ``aggregate`` switch of an image handler with ``grouping``.
+
+    Args:
+        handler (dict[str, Any]): The settings of one handler.
+
+    Returns:
+        dict[str, Any]: A copy with ``grouping``, or the same handler if it has no
+            ``aggregate`` or already has a ``grouping``.
+    """
+    if handler.get("type") not in _IMAGE_HANDLER_TYPES or "aggregate" not in handler:
+        return handler
+    updated = {key: value for key, value in handler.items() if key != "aggregate"}
+    if "grouping" not in updated:
+        updated["grouping"] = "all" if handler["aggregate"] is True else "none"
+    return updated
+
+
+def migrate_v16_to_v17(data: dict[str, Any]) -> dict[str, Any]:
+    """Migrate from v16 to v17 (image handlers group stockpiles in several ways).
+
+    The ``aggregate`` switch of the ``image`` and ``discord`` handlers, which
+    merged every stockpile of a send, becomes ``grouping``, which can also
+    group them by hex or by place: ``true`` is ``"all"`` and ``false`` is
+    ``"none"``. The old field is dropped, as the settings models forbid
+    unknown fields.
+
+    Args:
+        data (dict[str, Any]): V16 configuration data.
+
+    Returns:
+        dict[str, Any]: V17 configuration data.
+    """
+    output = data.get("output")
+    if not isinstance(output, dict) or not isinstance(output.get("handlers"), list):
+        return data
+
+    handlers = [
+        {**config, "handler": _with_grouping(config["handler"])}
+        if isinstance(config, dict) and isinstance(config.get("handler"), dict)
+        else config
+        for config in output["handlers"]
+    ]
+    return {**data, "output": {**output, "handlers": handlers}}
