@@ -11,7 +11,7 @@ import pytest
 from pydantic import ValidationError
 
 from foxhole_stockpiles.core.settings import AppSettings, get_settings, reload_settings
-from foxhole_stockpiles.core.settings.config_migrator import ConfigMigrator
+from foxhole_stockpiles.core.settings.config_migrator import ConfigMigrator, steps_late
 from foxhole_stockpiles.core.settings.sections import SheetsHandlerSettings
 from foxhole_stockpiles.core.settings.sections.logging import LoggingSettings
 from foxhole_stockpiles.core.settings.sections.output import (
@@ -772,8 +772,8 @@ class TestSharedSelectionMigration:
     def _v17(entry: dict[str, Any]) -> dict[str, Any]:
         return {"config_version": 17, "output": {"handlers": [{"name": "out", **entry}]}}
 
-    def test_grouping_and_headline_move_beside_the_handler(self) -> None:
-        """The headline names each merge, so it becomes the group name."""
+    def test_grouping_moves_beside_the_handler(self) -> None:
+        """The headline is gone by v19, so only the grouping is left."""
         handler = {"type": "image", "grouping": "hex", "headline": "Stock {name}", "language": "es"}
 
         migrated = ConfigMigrator.apply_migrations(self._v17({"handler": handler}))
@@ -781,11 +781,18 @@ class TestSharedSelectionMigration:
         entry = migrated["output"]["handlers"][0]
         assert entry["handler"] == {"type": "image", "language": "es"}
         assert entry["grouping"] == "hex"
-        assert entry["group_name"] == "Stock {name}"
+        assert "group_name" not in entry
         config = AppSettings(**migrated).output.handlers[0]
         assert config.grouping == StockpileGrouping.HEX
-        assert config.group_name == "Stock {name}"
         assert config.public_stockpiles == PublicStockpileFilter.ALL
+
+    def test_the_headline_becomes_the_group_name_of_v18(self) -> None:
+        """What v18 received from the headline."""
+        handler = {"type": "discord", "headline": "Stock {name}"}
+
+        migrated = steps_late.migrate_v17_to_v18(self._v17({"handler": handler}))
+
+        assert migrated["output"]["handlers"][0]["group_name"] == "Stock {name}"
 
     def test_a_value_already_beside_the_handler_is_kept(self) -> None:
         """Nothing overwrites what the output already says."""
@@ -808,6 +815,27 @@ class TestSharedSelectionMigration:
         migrated = ConfigMigrator.apply_migrations({"config_version": 17})
 
         assert migrated == {"config_version": ConfigMigrator.CURRENT_VERSION}
+
+
+class TestGroupNameRemoval:
+    """v18->v19 drops the group name: merges are named by what they share."""
+
+    def test_the_group_name_is_dropped(self) -> None:
+        """Everything else of the output stays."""
+        entry = {"name": "out", "grouping": "hex", "group_name": "Stock {hex}"}
+
+        migrated = ConfigMigrator.apply_migrations(
+            {"config_version": 18, "output": {"handlers": [entry]}}
+        )
+
+        assert migrated["output"]["handlers"] == [{"name": "out", "grouping": "hex"}]
+        assert entry["group_name"] == "Stock {hex}"
+
+    def test_a_config_without_handlers_is_unchanged(self) -> None:
+        """Nothing to migrate."""
+        migrated = ConfigMigrator.apply_migrations({"config_version": 18, "output": {}})
+
+        assert migrated == {"config_version": ConfigMigrator.CURRENT_VERSION, "output": {}}
 
 
 class TestAppSettings:

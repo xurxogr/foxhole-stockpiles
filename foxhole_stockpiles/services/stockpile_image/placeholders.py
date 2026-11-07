@@ -37,17 +37,43 @@ def _build_values(stockpile: Stockpile, type_label: str) -> dict[str, str]:
     Returns:
         dict[str, str]: The text of each placeholder name.
     """
+    name = stockpile.name or ""
+    when = stockpile.timestamp
     return {
-        "name": stockpile.name or "",
+        "name": name,
         "type": type_label,
+        # The names of the paths, so one template works in every field.
+        "stockpile_name": name,
+        "stockpile_type": type_label,
         "hex": hex_name(stockpile.hex),
+        "coords": coords_text(stockpile),
         "ingame_timestamp": stockpile.ingame_timestamp or "",
-        "timestamp": stockpile.timestamp.strftime("%Y-%m-%d %H:%M"),
+        "timestamp": when.strftime("%Y-%m-%d %H:%M"),
+        "year": when.strftime("%Y"),
+        "month": when.strftime("%m"),
+        "day": when.strftime("%d"),
+        "hour": when.strftime("%H"),
+        "minute": when.strftime("%M"),
+        "second": when.strftime("%S"),
         "resolution": stockpile.resolution or "",
         "item_count": str(len(stockpile.items)),
         # A negative quantity means unknown.
         "total_items": str(total_quantity(stockpile)),
     }
+
+
+def coords_text(stockpile: Stockpile) -> str:
+    """Write the position of a stockpile on the map of its hex.
+
+    Args:
+        stockpile (Stockpile): The stockpile.
+
+    Returns:
+        str: Such as ``X: 0.46 Y: 0.66``, as the game writes it, or empty without
+            coordinates.
+    """
+    coords = stockpile.coords
+    return f"X: {coords.x:.2f} Y: {coords.y:.2f}" if coords else ""
 
 
 def total_quantity(stockpile: Stockpile) -> int:

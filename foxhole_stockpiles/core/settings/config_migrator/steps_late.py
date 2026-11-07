@@ -1,4 +1,4 @@
-"""Config migration steps v7 -> v18."""
+"""Config migration steps v7 -> v19."""
 
 from typing import Any
 
@@ -357,6 +357,31 @@ def migrate_v17_to_v18(data: dict[str, Any]) -> dict[str, Any]:
 
     handlers = [
         _with_shared_selection(config) if isinstance(config, dict) else config
+        for config in output["handlers"]
+    ]
+    return {**data, "output": {**output, "handlers": handlers}}
+
+
+def migrate_v18_to_v19(data: dict[str, Any]) -> dict[str, Any]:
+    """Migrate from v18 to v19 (merges are named by what they share).
+
+    The ``group_name`` of each output is dropped: a merge is now always named
+    after its hex and its place, so a template had nothing left to add.
+
+    Args:
+        data (dict[str, Any]): V18 configuration data.
+
+    Returns:
+        dict[str, Any]: V19 configuration data.
+    """
+    output = data.get("output")
+    if not isinstance(output, dict) or not isinstance(output.get("handlers"), list):
+        return data
+
+    handlers = [
+        {key: value for key, value in config.items() if key != "group_name"}
+        if isinstance(config, dict)
+        else config
         for config in output["handlers"]
     ]
     return {**data, "output": {**output, "handlers": handlers}}

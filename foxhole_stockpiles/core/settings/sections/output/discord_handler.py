@@ -44,8 +44,8 @@ class DiscordHandlerSettings(StockpileImageSettings):
     )
     message: str | None = Field(
         description=(
-            "Text posted with the images of each stockpile. Supports the same "
-            "placeholders as the headline. Mentions in it do not notify anyone"
+            "Text posted with the images of each stockpile, with placeholders such as "
+            "{name} or {hex}. Mentions in it do not notify anyone"
         ),
         default=None,
     )

@@ -26,11 +26,11 @@ export FS_LOGGING__LOG_FILE=/var/log/foxhole-scanner.log
 
 Create a JSON file at `<platform config dir>/foxhole-stockpiles/config.json` (on Linux, `~/.config/foxhole-stockpiles/config.json`; on Windows, under `%LOCALAPPDATA%`). A legacy `~/.fs_config` file is moved there automatically:
 
-**Note on Config Versioning:** The configuration includes a `config_version` field (current: **18**). Old configs are automatically migrated when loaded via `ConfigMigrator` - no manual action required. V5 introduced the `output.handlers` array structure (multiple output destinations); later versions added the `sav_processing` section for Foxhole save-file processing; V10 removed the obsolete `api_server` and `api_auth` sections (the FastAPI server was removed in favor of local screenshot capture); V11 removed the `stockpile_types` section (type detection now happens inside the external `fs-ocr` engine, so the aliases had no effect); V12 removed the `notifications` section (the notifier stack was never wired into the scan flow); V13 removed `gui.config_level` (the basic/advanced/developer setting no longer gated anything after OCR/template settings moved to `fs-ocr`/`fs-tools`); V14 reworked the webhook `forward` auth type into `header` (`client_auth_header` → `auth_header`); V15 dropped two dead fields, `scanner.early_exit_threshold` and `sav_processing.emit_all_on_start`; V16 removed the `external_tools` section (`repak`/`umodel`/`uassetgui`) and `database_builder.workers` (the catalog and template database are now built by the external `fs-assets` package, which reads the PAK directly); V17 turned the `aggregate` switch of the `image`/`discord` handlers into `grouping`; V18 moved `grouping` beside the handler of every output, renamed `headline` to `group_name`, and added `public_stockpiles`.
+**Note on Config Versioning:** The configuration includes a `config_version` field (current: **19**). Old configs are automatically migrated when loaded via `ConfigMigrator` - no manual action required. V5 introduced the `output.handlers` array structure (multiple output destinations); later versions added the `sav_processing` section for Foxhole save-file processing; V10 removed the obsolete `api_server` and `api_auth` sections (the FastAPI server was removed in favor of local screenshot capture); V11 removed the `stockpile_types` section (type detection now happens inside the external `fs-ocr` engine, so the aliases had no effect); V12 removed the `notifications` section (the notifier stack was never wired into the scan flow); V13 removed `gui.config_level` (the basic/advanced/developer setting no longer gated anything after OCR/template settings moved to `fs-ocr`/`fs-tools`); V14 reworked the webhook `forward` auth type into `header` (`client_auth_header` → `auth_header`); V15 dropped two dead fields, `scanner.early_exit_threshold` and `sav_processing.emit_all_on_start`; V16 removed the `external_tools` section (`repak`/`umodel`/`uassetgui`) and `database_builder.workers` (the catalog and template database are now built by the external `fs-assets` package, which reads the PAK directly); V17 turned the `aggregate` switch of the `image`/`discord` handlers into `grouping`; V18 moved `grouping` beside the handler of every output, renamed `headline` to `group_name`, and added `public_stockpiles`; V19 dropped `group_name`, since each merge is named after what its stockpiles share.
 
 ```json
 {
-  "config_version": 18,
+  "config_version": 19,
   "scanner": {
     "database_path": "/path/to/database.h5",
     "capture_key": "F9"
@@ -89,7 +89,6 @@ Each handler in the array has the following structure:
 | `handler` | object | Yes | Handler-specific settings |
 | `public_stockpiles` | string | No | Which public stockpiles it receives: `all` (default), `none`, or `non_reservable` |
 | `grouping` | string | No | Which stockpiles of a send it receives as one: `none` (default), `all`, `hex` or `location` |
-| `group_name` | string | No | Name of each merge, with placeholders. By default, what its stockpiles share |
 
 #### Choosing the stockpiles of each output
 
@@ -107,23 +106,21 @@ and a CSV file with everything.
 
 **2. Grouping** (`grouping`). Each group is received as one stockpile, adding up its items.
 
-| Value | One stockpile for | Named, without a `group_name` |
-|-------|-------------------|-------------------------------|
+| Value | One stockpile for | Named |
+|-------|-------------------|-------|
 | `none` | each stockpile | |
 | `all` | the whole send | `All Stockpiles` |
 | `hex` | each hex | the hex, such as `Heartlands` |
-| `location` | each place: the stockpiles of one hex at the same coordinates, such as the public and reserve stockpiles of a seaport | its type, such as `Seaport` |
+| `location` | each place: the stockpiles of one hex at the same coordinates, such as the public and reserve stockpiles of a seaport | the hex and the position, such as `Westgate - X: 0.46 Y: 0.66` |
 
 - A group of a single stockpile is received as it is, with its own name and type.
 - Stockpiles from screenshots have no hex or coordinates, so `hex` and `location` leave them alone.
 - In a merge, crated and loose items stay apart. If the quantity of an item could not be read
   in one of the stockpiles, its total is unknown (`-1`, shown as `?` in images), because a number
   would hide the stock that could not be read.
-- The default names are in the language of the images for the `image` and `discord` outputs,
+- `All Stockpiles` is in the language of the images for the `image` and `discord` outputs,
   and in English for the others. A merge has no type (`Undefined`), and Google Sheets writes
   its name in `stockpile_name`.
-- `group_name` accepts the placeholders `{name}` (the default name), `{type}`, `{hex}`,
-  `{ingame_timestamp}`, `{timestamp}`, `{resolution}`, `{item_count}` and `{total_items}`.
 
 If an output fails to deliver a merge, it receives the stockpiles of that merge again with the
 next send, so a newer version of one of them replaces the old one instead of adding up twice.
@@ -154,15 +151,36 @@ For CSV/TSV formats, additional settings are available:
 | `type` | string | Yes | Must be `"file"` |
 | `path` | string | Yes | File path with optional placeholders |
 
-Supported placeholders for file path:
-- `{timestamp}` - Full timestamp (e.g., 2025-01-24_14-30-52)
-- `{year}`, `{month}`, `{day}` - Date components (e.g., 2025, 01, 24)
-- `{hour}`, `{minute}`, `{second}` - Time components (e.g., 14, 30, 52)
-- `{stockpile_type}` - Stockpile type (e.g., Seaport, Storage Depot)
-- `{stockpile_name}` - Name of the stockpile
-- `{resolution}` - Screen resolution (e.g., 1920x1080)
+The path accepts the [placeholders](#placeholders). Example:
+`{timestamp}_{type}_{name}_{resolution}.json` → `2025-01-24_14-30-52_Seaport_MyStockpile_1920x1080.json`
 
-Example: `{timestamp}_{stockpile_type}_{stockpile_name}_{resolution}.json` → `2025-01-24_14-30-52_Seaport_MyStockpile_1920x1080.json`
+#### Placeholders
+
+The file and image paths and the Discord message accept the same placeholders, replaced with
+the values of each stockpile. In the window, the `?` button beside each of those fields lists them.
+
+| Placeholder | Value |
+|-------------|-------|
+| `{name}` | Name of the stockpile |
+| `{type}` | Its type, such as `Seaport` |
+| `{hex}` | Its hex, such as `Westgate` |
+| `{coords}` | Its position on the map of its hex |
+| `{resolution}` | Resolution of the screenshot, such as `1920x1080` |
+| `{timestamp}` | Date and time |
+| `{year}`, `{month}`, `{day}`, `{hour}`, `{minute}`, `{second}` | Parts of the date and time |
+| `{ingame_timestamp}` | Date in the game |
+| `{item_count}` | Number of different items |
+| `{total_items}` | Sum of the quantities that could be read |
+
+- In a path, the date and time are those of writing it, `{timestamp}` is written as
+  `2025-01-24_14-30-52` and `{coords}` as `0.457745,0.664469`. A file with several stockpiles
+  is named `multiple_stockpiles` by `{name}`, and its counts add up all of them. Values that
+  could leave the folder or that Windows refuses in a name are made safe.
+- In a message, the date and time are those of the stockpile, `{timestamp}` is written as
+  `2025-01-24 14:30`, `{coords}` as `X: 0.46 Y: 0.66`, and `{type}` is in the language of the images.
+- `{stockpile_name}` and `{stockpile_type}` are the former names of `{name}` and `{type}`, and
+  still work everywhere.
+- An unknown placeholder stays as written.
 
 **Webhook Handler** - POSTs results to a URL:
 | Setting | Type | Required | Description |
@@ -370,7 +388,7 @@ This example shows all available settings with their default values:
 
 ```json
 {
-  "config_version": 18,
+  "config_version": 19,
   "logging": {
     "loggers": {},
     "log_level": "INFO",
@@ -386,8 +404,7 @@ This example shows all available settings with their default values:
         "format": {"type": "json"},
         "handler": {"type": "return"},
         "public_stockpiles": "all",
-        "grouping": "none",
-        "group_name": null
+        "grouping": "none"
       }
     ]
   },

@@ -2,7 +2,7 @@
 
 from enum import StrEnum
 
-from PySide6.QtWidgets import QComboBox, QFormLayout, QGroupBox, QLabel, QLineEdit
+from PySide6.QtWidgets import QComboBox, QFormLayout, QGroupBox, QLabel
 
 from foxhole_stockpiles.enums.public_stockpile_filter import PublicStockpileFilter
 from foxhole_stockpiles.enums.stockpile_grouping import StockpileGrouping
@@ -62,14 +62,7 @@ class StockpileSelectionGroup(QGroupBox):
 
         self.grouping_label = QLabel()
         self.grouping_input = _combo(StockpileGrouping)
-        # The name is only for merges: a lone stockpile keeps its own.
-        self.grouping_input.currentIndexChanged.connect(self._update_group_name)
         form.addRow(self.grouping_label, self.grouping_input)
-
-        self.group_name_label = QLabel()
-        self.group_name_input = QLineEdit()
-        form.addRow(self.group_name_label, self.group_name_input)
-        self._update_group_name()
 
     def retranslate(self) -> None:
         """Update all translatable strings."""
@@ -80,41 +73,24 @@ class StockpileSelectionGroup(QGroupBox):
         self.grouping_label.setText(t(f"{_KEYS}.grouping"))
         self.grouping_label.setToolTip(t(f"{_KEYS}.grouping_tooltip"))
         _retranslate_combo(self.grouping_input, f"{_KEYS}.grouping")
-        self.group_name_label.setText(t(f"{_KEYS}.group_name"))
-        self.group_name_label.setToolTip(t(f"{_KEYS}.group_name_tooltip"))
-        self.group_name_input.setPlaceholderText(t(f"{_KEYS}.group_name_placeholder"))
 
-    def load(
-        self,
-        public_stockpiles: PublicStockpileFilter,
-        grouping: StockpileGrouping,
-        group_name: str | None,
-    ) -> None:
+    def load(self, public_stockpiles: PublicStockpileFilter, grouping: StockpileGrouping) -> None:
         """Show the selection of an output.
 
         Args:
             public_stockpiles (PublicStockpileFilter): Which public stockpiles it receives.
             grouping (StockpileGrouping): Which stockpiles it receives as one.
-            group_name (str | None): The name of each merge.
         """
         _select(self.public_input, public_stockpiles.value)
         _select(self.grouping_input, grouping.value)
-        self.group_name_input.setText(group_name or "")
 
-    def values(self) -> dict[str, str | None]:
+    def values(self) -> dict[str, str]:
         """Read the fields.
 
         Returns:
-            dict[str, str | None]: The values of the settings they edit.
+            dict[str, str]: The values of the settings they edit.
         """
         return {
             "public_stockpiles": self.public_input.currentData(),
             "grouping": self.grouping_input.currentData(),
-            "group_name": self.group_name_input.text().strip() or None,
         }
-
-    def _update_group_name(self) -> None:
-        """Let the name of the merges be edited only when stockpiles are merged."""
-        self.group_name_input.setEnabled(
-            self.grouping_input.currentData() != StockpileGrouping.NONE
-        )

@@ -268,7 +268,6 @@ def test_any_output_can_filter_and_group_its_stockpiles(qtbot: Any) -> None:
         handler=FileHandlerSettings(path="out.json"),
         public_stockpiles=PublicStockpileFilter.NON_RESERVABLE,
         grouping=StockpileGrouping.LOCATION,
-        group_name="Stock {name}",
     )
     widget = OutputHandlerDialog(handler_config=config)
     qtbot.addWidget(widget)
@@ -277,7 +276,6 @@ def test_any_output_can_filter_and_group_its_stockpiles(qtbot: Any) -> None:
     assert not selection.isHidden()
     assert selection.public_input.currentData() == PublicStockpileFilter.NON_RESERVABLE.value
     assert selection.grouping_input.currentData() == StockpileGrouping.LOCATION.value
-    assert selection.group_name_input.isEnabled()
     selection.public_input.setCurrentIndex(
         selection.public_input.findData(PublicStockpileFilter.NONE.value)
     )
@@ -287,8 +285,6 @@ def test_any_output_can_filter_and_group_its_stockpiles(qtbot: Any) -> None:
     read = widget.get_handler_config()
     assert read.public_stockpiles == PublicStockpileFilter.NONE
     assert read.grouping == StockpileGrouping.NONE
-    assert read.group_name == "Stock {name}"
-    assert not selection.group_name_input.isEnabled()
 
 
 def test_a_new_output_receives_everything_ungrouped(qtbot: Any) -> None:
@@ -315,7 +311,6 @@ def test_a_new_output_receives_everything_ungrouped(qtbot: Any) -> None:
     read = widget.get_handler_config()
     assert read.public_stockpiles == PublicStockpileFilter.ALL
     assert read.grouping == StockpileGrouping.NONE
-    assert read.group_name is None
 
 
 class TestDiscordHandler:

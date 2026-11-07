@@ -84,14 +84,6 @@ class OutputHandlerConfig(BaseModel):
         ),
         default=StockpileGrouping.NONE,
     )
-    group_name: str | None = Field(
-        description=(
-            "Name of each merge, by default what its stockpiles share. Supports the "
-            "placeholders {name}, {type}, {hex}, {ingame_timestamp}, {timestamp}, "
-            "{resolution}, {item_count} and {total_items}"
-        ),
-        default=None,
-    )
 
     @model_validator(mode="after")
     def enforce_json_for_non_file_handlers(self) -> "OutputHandlerConfig":

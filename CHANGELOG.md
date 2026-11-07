@@ -13,11 +13,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   aircraft depots, where the reserves are what matters) and receive the rest grouped: all of
   them, those of one hex or those of one place. Two outputs can receive the same send
   differently. See [Configuration](docs/configuration.md#choosing-the-stockpiles-of-each-output).
+- **Help with placeholders.** A `?` button beside the file and image paths and the Discord
+  message lists the placeholders they accept. See [Placeholders](docs/configuration.md#placeholders).
 
 ### Changed
 - Grouping and the headline of the `image` and `discord` outputs moved to the settings shared
   by every output, as `grouping` and `group_name`. Existing configurations are migrated.
 - Dependencies updated to their latest versions.
+- **The same placeholders everywhere.** Paths now also accept `{name}`, `{type}`,
+  `{ingame_timestamp}`, `{item_count}` and `{total_items}`, and the Discord message `{coords}`
+  and the parts of the date. `{stockpile_name}` and `{stockpile_type}` still work.
+- `{hex}` in a path is now the name of the hex, such as `Westgate`, instead of its code.
+- **Merges are named after what they share.** By location, a merge is named after its hex and
+  position, such as `Westgate - X: 0.46 Y: 0.66`, instead of its type. The `group_name` of each
+  output is gone: existing configurations are migrated.
+
+### Fixed
+- The help of the Discord message no longer refers to the headline, which no longer exists.
 
 ## [1.3.0] - 2026-11-07
 

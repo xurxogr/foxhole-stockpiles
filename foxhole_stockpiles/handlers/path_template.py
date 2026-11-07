@@ -5,6 +5,7 @@ from pathlib import Path
 
 from foxhole_stockpiles.core.safe_path_segment import safe_path_segment
 from foxhole_stockpiles.models.stockpile import Stockpile
+from foxhole_stockpiles.services.stockpile_image.placeholders import hex_name, total_quantity
 
 
 def stockpile_type_label(stockpile: Stockpile | None) -> str:
@@ -36,6 +37,8 @@ def _build_placeholders(stockpiles: list[Stockpile]) -> dict[str, str]:
     """
     first = stockpiles[0]
     now = datetime.datetime.now()
+    name = (first.name or "Unknown") if len(stockpiles) == 1 else "multiple_stockpiles"
+    stockpile_type = stockpile_type_label(first)
     return {
         "{timestamp}": now.strftime("%Y-%m-%d_%H-%M-%S"),
         "{year}": now.strftime("%Y"),
@@ -44,13 +47,18 @@ def _build_placeholders(stockpiles: list[Stockpile]) -> dict[str, str]:
         "{hour}": now.strftime("%H"),
         "{minute}": now.strftime("%M"),
         "{second}": now.strftime("%S"),
-        "{stockpile_type}": stockpile_type_label(first),
-        "{stockpile_name}": (first.name or "Unknown")
-        if len(stockpiles) == 1
-        else "multiple_stockpiles",
+        "{stockpile_type}": stockpile_type,
+        "{stockpile_name}": name,
+        # The names of the text of images and messages, so one template works in
+        # every field.
+        "{type}": stockpile_type,
+        "{name}": name,
         "{resolution}": first.resolution or "Unknown",
-        "{hex}": first.hex or "Unknown",
+        "{hex}": hex_name(first.hex) or "Unknown",
         "{coords}": first.coords.to_key().replace("_", "-") if first.coords else "0-0",
+        "{ingame_timestamp}": first.ingame_timestamp or "Unknown",
+        "{item_count}": str(sum(len(stockpile.items) for stockpile in stockpiles)),
+        "{total_items}": str(sum(total_quantity(stockpile) for stockpile in stockpiles)),
     }
 
 

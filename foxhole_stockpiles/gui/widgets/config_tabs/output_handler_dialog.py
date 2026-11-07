@@ -43,6 +43,7 @@ from foxhole_stockpiles.gui.widgets.config_tabs.image_output_group import ImageO
 from foxhole_stockpiles.gui.widgets.config_tabs.stockpile_selection_group import (
     StockpileSelectionGroup,
 )
+from foxhole_stockpiles.gui.widgets.placeholder_help_button import PlaceholderHelpButton
 from foxhole_stockpiles.i18n import on_language_changed, t
 
 _DEFAULT_NAMES = {
@@ -153,7 +154,9 @@ class OutputHandlerDialog(QDialog):
         self.file_path_input = QLineEdit()
         self.file_browse_btn = QPushButton()
         self.file_browse_btn.clicked.connect(self._browse_file)
+        self.file_path_help = PlaceholderHelpButton()
         file_path_layout.addWidget(self.file_path_input)
+        file_path_layout.addWidget(self.file_path_help)
         file_path_layout.addWidget(self.file_browse_btn)
         file_layout.addRow(self.file_path_label, file_path_layout)
 
@@ -260,6 +263,7 @@ class OutputHandlerDialog(QDialog):
             t("output_tab.handler_dialog.file_path_placeholder")
         )
         self.file_browse_btn.setText(t("common.browse"))
+        self.file_path_help.retranslate()
 
         # Webhook settings
         self.webhook_group.setTitle(t("output_tab.handler_dialog.webhook_settings"))
@@ -365,7 +369,6 @@ class OutputHandlerDialog(QDialog):
         self.selection_group.load(
             public_stockpiles=handler_config.public_stockpiles,
             grouping=handler_config.grouping,
-            group_name=handler_config.group_name,
         )
 
         if isinstance(handler, FileHandlerSettings):

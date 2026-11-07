@@ -55,14 +55,3 @@ def test_an_output_of_data_names_its_merges_in_english() -> None:
     (group,) = select_for_output(handler_config=config, stockpiles=[_RESERVE_A, _RESERVE_B])
 
     assert group.drawn.name == "All Stockpiles"
-
-
-def test_the_group_name_of_the_output_names_its_merges() -> None:
-    """With the values of the merge."""
-    config = OutputHandlerConfig(
-        name="out", grouping=StockpileGrouping.HEX, group_name="Stock of {hex}"
-    )
-
-    (group,) = select_for_output(handler_config=config, stockpiles=[_RESERVE_A, _RESERVE_B])
-
-    assert group.drawn.name == "Stock of Westgate"

@@ -74,7 +74,7 @@ The external `fs-ocr` exposes `StockpileScanner`, `ScanConfig`,
 
 ## Configuration (`core/settings/`)
 
-### AppSettings root (schema **v18**)
+### AppSettings root (schema **v19**)
 ```python
 class AppSettings(BaseSettings):
     config_version: int        # CURRENT_VERSION = 16
@@ -94,7 +94,8 @@ both dead fields with no consumer; v15→v16 drops `external_tools`
 (repak/umodel/uassetgui) and `database_builder.workers` — `DatabaseBuilderSettings`
 keeps `catalog_file` + `target_resolutions`; v16→v17 turns the `aggregate` of the
 `image`/`discord` handlers into `grouping` (`true` → `all`); v17→v18 moves `grouping` and
-`headline` (→ `group_name`) beside the handler and adds `public_stockpiles`.)
+`headline` (→ `group_name`) beside the handler and adds `public_stockpiles`; v18→v19 drops
+`group_name`.)
 (The old `OCRSettings` icon-geometry model was removed; its
 one live value is `fs_tools/constants.py:ICON_BOX_SCALE = 64/2160` (fs_tools-only).)
 
@@ -116,7 +117,7 @@ binds the hotkey from `capture_key` and saves each capture to
 format models `json_format.py`, `csv_format.py`. `handler_config.py` is the
 discriminated-union wrapper, with the selection shared by every output: `public_stockpiles`
 (`enums/public_stockpile_filter.py`: all/none/non_reservable), `grouping`
-(`enums/stockpile_grouping.py`) and `group_name`.
+(`enums/stockpile_grouping.py`). Merges are named after what they share (no template).
 
 ### Sources & migration
 Priority: env `FS_<SECTION>__<KEY>` → JSON file (platform config dir,
@@ -125,7 +126,7 @@ Priority: env `FS_<SECTION>__<KEY>` → JSON file (platform config dir,
 `stockpile_types`; v11→v12 drops `notifications`; v12→v13 drops `gui.config_level`;
 v13→v14 reworks webhook `forward` auth into `header`; v14→v15 drops
 `scanner.early_exit_threshold` and `sav_processing.emit_all_on_start`; v15→v16 drops
-`external_tools` and `database_builder.workers`; v16→v17 turns `aggregate` into `grouping`; v17→v18 moves it beside the handler.
+`external_tools` and `database_builder.workers`; v16→v17 turns `aggregate` into `grouping`; v17→v18 moves it beside the handler; v18→v19 drops `group_name`.
 
 ## Template database (HDF5) — owned by `fs_tools`
 
@@ -168,7 +169,7 @@ populated (no `x`/`y`); change-tracking keyed by `Stockpile.to_key()`.
 
 ## Key files
 1. `models/stockpile.py`, `models/stockpile_item.py`
-2. `core/settings/app_settings.py` + `config_migrator/` package (v18)
+2. `core/settings/app_settings.py` + `config_migrator/` package (v19)
 3. `core/settings/sections/scanner.py` — incl. `capture_key`
 4. `core/settings/sections/output/webhook_handler.py` — auth types (basic/bearer/header)
 5. `fs_tools/core/template_store.py` — tools-side HDF5 access via `fs-assets`

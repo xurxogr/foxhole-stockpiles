@@ -16,9 +16,8 @@ outputs can show the same data differently.
 | `icon_mod` | `vanilla` | Mod of the template database whose icons replace those of the base game |
 | `font_path` | none | Font file tried before the fonts of the system |
 
-The Discord `message` accepts these placeholders: `{name}`, `{type}`,
-`{hex}`, `{ingame_timestamp}`, `{timestamp}`, `{resolution}`, `{item_count}`
-and `{total_items}`.
+The Discord `message` accepts the [placeholders](configuration.md#placeholders), such as
+`{name}` or `{hex}`.
 
 A large stockpile is split into pages, each one a separate image.
 
@@ -37,7 +36,7 @@ vehicles, and has no Spanish: those keep their English name. The rest of the tex
 translated. In the `{type}` placeholder too.
 
 **Grouping.** Like every output, these can leave out public stockpiles and group the rest,
-each group drawn as one image titled with its name: see
+each group drawn as one image titled with what it shares: see
 [Choosing the stockpiles of each output](configuration.md#choosing-the-stockpiles-of-each-output).
 A send with a single stockpile is drawn as it is, with its own title.
 
@@ -45,7 +44,7 @@ A send with a single stockpile is drawn as it is, with its own title.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `path` | `{timestamp}_{stockpile_name}.png` | Where to save each image. It accepts the placeholders of the [file output](configuration.md), and the extension is always `.png` |
+| `path` | `{timestamp}_{stockpile_name}.png` | Where to save each image. It accepts the [placeholders](configuration.md#placeholders), and the extension is always `.png` |
 
 ## Discord output
 

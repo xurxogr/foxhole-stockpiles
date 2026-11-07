@@ -34,23 +34,17 @@ def _stockpile(
 
 
 def _group(
-    stockpiles: list[Stockpile],
-    grouping: StockpileGrouping,
-    group_name: str | None = None,
-    language: str = "en",
+    stockpiles: list[Stockpile], grouping: StockpileGrouping, language: str = "en"
 ) -> list[StockpileGroup]:
     return group_stockpiles(
         stockpiles=stockpiles,
         grouping=grouping,
-        group_name=group_name,
         labels=ImageText(catalog=CatalogService(), language=language),
     )
 
 
-def _names(
-    grouping: StockpileGrouping, stockpiles: list[Stockpile], group_name: str | None = None
-) -> list[str]:
-    return [group.drawn.name for group in _group(stockpiles, grouping, group_name)]
+def _names(grouping: StockpileGrouping, stockpiles: list[Stockpile]) -> list[str]:
+    return [group.drawn.name for group in _group(stockpiles, grouping)]
 
 
 def test_nothing_is_grouped_with_none() -> None:
@@ -94,7 +88,7 @@ def test_by_hex_each_hex_is_one_merge_named_after_it() -> None:
     assert _names(StockpileGrouping.HEX, stockpiles) == ["Westgate", "B"]
 
 
-def test_by_location_the_stockpiles_of_one_place_are_named_by_its_type() -> None:
+def test_by_location_the_stockpiles_of_one_place_are_named_by_its_hex_and_position() -> None:
     """The public and reserve stockpiles of a seaport, but not another place of the hex."""
     stockpiles = [
         _stockpile("Public", "WestgateHex", _PORT),
@@ -102,7 +96,17 @@ def test_by_location_the_stockpiles_of_one_place_are_named_by_its_type() -> None
         _stockpile("Depot", "WestgateHex", _DEPOT, StockpileType.STORAGE_DEPOT),
     ]
 
-    assert _names(StockpileGrouping.LOCATION, stockpiles) == ["Seaport", "Depot"]
+    assert _names(StockpileGrouping.LOCATION, stockpiles) == [
+        "Westgate - X: 0.10 Y: 0.20",
+        "Depot",
+    ]
+
+
+def test_a_place_without_hex_is_named_by_its_position() -> None:
+    """There is no hex to name."""
+    stockpiles = [_stockpile("A", coords=_PORT), _stockpile("B", coords=_PORT)]
+
+    assert _names(StockpileGrouping.LOCATION, stockpiles) == ["X: 0.10 Y: 0.20"]
 
 
 def test_the_same_coordinates_in_another_hex_are_another_place() -> None:
@@ -110,16 +114,6 @@ def test_the_same_coordinates_in_another_hex_are_another_place() -> None:
     stockpiles = [_stockpile("A", "WestgateHex", _PORT), _stockpile("B", "HeartlandsHex", _PORT)]
 
     assert _names(StockpileGrouping.LOCATION, stockpiles) == ["A", "B"]
-
-
-def test_a_place_with_several_types_is_named_for_all_its_stockpiles() -> None:
-    """No single type describes it."""
-    stockpiles = [
-        _stockpile("A", "WestgateHex", _PORT),
-        _stockpile("B", "WestgateHex", _PORT, StockpileType.STORAGE_DEPOT),
-    ]
-
-    assert _names(StockpileGrouping.LOCATION, stockpiles) == [AGGREGATE_NAME]
 
 
 @pytest.mark.parametrize("grouping", [StockpileGrouping.HEX, StockpileGrouping.LOCATION])
@@ -134,31 +128,9 @@ def test_a_lone_stockpile_keeps_its_name_and_type() -> None:
     """Merging one stockpile would only lose its name and type."""
     seaport = _stockpile("Public", "WestgateHex")
 
-    groups = _group([seaport], StockpileGrouping.ALL, "Report")
+    groups = _group([seaport], StockpileGrouping.ALL)
 
     assert [group.drawn for group in groups] == [seaport]
-
-
-def test_the_group_name_names_each_merge_with_its_values() -> None:
-    """Its {name} is the name the merge would have had."""
-    stockpiles = [
-        _stockpile("A", "WestgateHex"),
-        _stockpile("B", "WestgateHex"),
-        _stockpile("C", "HeartlandsHex"),
-        _stockpile("D", "HeartlandsHex"),
-    ]
-
-    assert _names(StockpileGrouping.HEX, stockpiles, "Stock: {name}") == [
-        "Stock: Westgate",
-        "Stock: Heartlands",
-    ]
-
-
-def test_a_blank_group_name_leaves_the_default_name() -> None:
-    """Spaces are not a name."""
-    stockpiles = [_stockpile("A"), _stockpile("B")]
-
-    assert _names(StockpileGrouping.ALL, stockpiles, "  ") == [AGGREGATE_NAME]
 
 
 def test_no_stockpiles_make_no_groups() -> None:

@@ -13,14 +13,3 @@ class GroupLabels(Protocol):
             str: The name.
         """
         ...
-
-    def stockpile_type(self, stockpile_type: str) -> str:
-        """Get the name of a stockpile type.
-
-        Args:
-            stockpile_type (str): Its CodeName.
-
-        Returns:
-            str: Its name, or empty if it is unknown.
-        """
-        ...

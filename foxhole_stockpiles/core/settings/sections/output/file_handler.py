@@ -13,7 +13,7 @@ class FileHandlerSettings(BaseModel):
         description=(
             "Path to the output file. Supports placeholders: "
             "{timestamp}, {year}, {month}, {day}, {hour}, {minute}, {second}, "
-            "{stockpile_type}, {stockpile_name}, {resolution}"
+            "{type}, {name}, {hex}, {resolution}"
         ),
         default="output.json",
     )

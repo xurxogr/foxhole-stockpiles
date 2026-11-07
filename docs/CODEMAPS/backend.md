@@ -100,7 +100,7 @@ Handlers (`handlers/`), all `handle(stockpiles: list[Stockpile])`:
 `webhook.py` (HTTP POST, supports basic/bearer/**header** auth), `response.py`
 (`ReturnOutputHandler` → returns the dict), **`sheets.py`** (Google Sheets append),
 **`image.py`** (PNG files), **`discord.py`** (images to a webhook),
-`stockpile_json.py` (shared JSON payload builder), `path_template.py` (file path placeholders),
+`stockpile_json.py` (shared JSON payload builder), `path_template.py` (path placeholders, same names as `placeholders.py`),
 `formula_guard.py`. Interface: `base_handler.py` (`undelivered(batch)`: what to send again;
 Discord overrides it, as it fails stockpile by stockpile).
 

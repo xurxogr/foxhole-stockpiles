@@ -3,6 +3,7 @@
 from datetime import UTC, datetime
 
 from foxhole_stockpiles.models.stockpile import Stockpile
+from foxhole_stockpiles.models.stockpile_coords import StockpileCoords
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
 from foxhole_stockpiles.services.stockpile_image.placeholders import fill_template, hex_name
 
@@ -62,3 +63,23 @@ def test_the_hex_is_written_by_its_name() -> None:
 def test_an_unknown_hex_keeps_its_code() -> None:
     """A new hex is not lost while the application does not know it."""
     assert hex_name("NewHex") == "NewHex"
+
+
+def test_the_text_accepts_the_names_of_the_paths_too() -> None:
+    """One template works in every field: {stockpile_name} as in a path."""
+    filled = fill_template(
+        template="{stockpile_name} {stockpile_type}", stockpile=_stockpile(), type_label="Seaport"
+    )
+
+    assert filled == "Depot Seaport"
+
+
+def test_the_parts_of_the_date_and_the_position_are_filled_in() -> None:
+    """As in a path, from the time of the stockpile."""
+    stockpile = _stockpile().model_copy(update={"coords": StockpileCoords(x=0.457, y=0.664)})
+
+    filled = fill_template(
+        template="{year}{month}{day} {hour}{minute} {coords}", stockpile=stockpile
+    )
+
+    assert filled == "20260104 0900 X: 0.46 Y: 0.66"

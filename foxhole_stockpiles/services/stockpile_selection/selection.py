@@ -44,6 +44,5 @@ def select_for_output(
     return group_stockpiles(
         stockpiles=wanted,
         grouping=handler_config.grouping,
-        group_name=handler_config.group_name,
         labels=ImageText(catalog=get_catalog_service(), language=_language_of(handler_config)),
     )

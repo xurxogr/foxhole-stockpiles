@@ -1,6 +1,6 @@
 """The fields of the handler that posts stockpiles to Discord."""
 
-from PySide6.QtWidgets import QFormLayout, QGroupBox, QLabel, QLineEdit, QSpinBox
+from PySide6.QtWidgets import QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QSpinBox
 
 from foxhole_stockpiles.core.settings.sections.output.discord_handler import (
     DiscordHandlerSettings,
@@ -8,6 +8,7 @@ from foxhole_stockpiles.core.settings.sections.output.discord_handler import (
 from foxhole_stockpiles.gui.widgets.config_tabs.image_appearance_fields import (
     ImageAppearanceFields,
 )
+from foxhole_stockpiles.gui.widgets.placeholder_help_button import PlaceholderHelpButton
 from foxhole_stockpiles.i18n import t
 
 _MAX_USERNAME_CHARS = 80
@@ -38,7 +39,11 @@ class DiscordOutputGroup(QGroupBox):
 
         self.message_label = QLabel()
         self.message_input = QLineEdit()
-        form.addRow(self.message_label, self.message_input)
+        self.message_help = PlaceholderHelpButton()
+        message_row = QHBoxLayout()
+        message_row.addWidget(self.message_input)
+        message_row.addWidget(self.message_help)
+        form.addRow(self.message_label, message_row)
 
         self.min_interval_label = QLabel()
         self.min_interval_input = QSpinBox()
@@ -59,6 +64,7 @@ class DiscordOutputGroup(QGroupBox):
         self.avatar_url_label.setToolTip(t("output_tab.handler_dialog.discord_avatar_tooltip"))
         self.message_label.setText(t("output_tab.handler_dialog.discord_message"))
         self.message_label.setToolTip(t("output_tab.handler_dialog.discord_message_tooltip"))
+        self.message_help.retranslate()
         self.min_interval_label.setText(t("output_tab.handler_dialog.discord_min_interval"))
         self.min_interval_label.setToolTip(
             t("output_tab.handler_dialog.discord_min_interval_tooltip")

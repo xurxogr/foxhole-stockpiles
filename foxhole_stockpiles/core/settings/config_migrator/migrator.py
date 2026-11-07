@@ -24,6 +24,7 @@ _MIGRATIONS: Final[dict[int, Callable[[dict[str, Any]], dict[str, Any]]]] = {
     15: steps_late.migrate_v15_to_v16,
     16: steps_late.migrate_v16_to_v17,
     17: steps_late.migrate_v17_to_v18,
+    18: steps_late.migrate_v18_to_v19,
 }
 
 

@@ -14,6 +14,7 @@ from foxhole_stockpiles.core.settings.sections.output import ImageHandlerSetting
 from foxhole_stockpiles.gui.widgets.config_tabs.image_appearance_fields import (
     ImageAppearanceFields,
 )
+from foxhole_stockpiles.gui.widgets.placeholder_help_button import PlaceholderHelpButton
 from foxhole_stockpiles.i18n import t
 
 
@@ -31,7 +32,9 @@ class ImageOutputGroup(QGroupBox):
         self.browse_btn = QPushButton()
         self.browse_btn.clicked.connect(self._browse)
         path_row = QHBoxLayout()
+        self.path_help = PlaceholderHelpButton()
         path_row.addWidget(self.path_input)
+        path_row.addWidget(self.path_help)
         path_row.addWidget(self.browse_btn)
         form.addRow(self.path_label, path_row)
 
@@ -44,6 +47,7 @@ class ImageOutputGroup(QGroupBox):
         self.path_label.setToolTip(t("output_tab.handler_dialog.image_path_tooltip"))
         self.path_input.setPlaceholderText(t("output_tab.handler_dialog.image_path_placeholder"))
         self.browse_btn.setText(t("common.browse"))
+        self.path_help.retranslate()
         self.appearance.retranslate()
 
     def load(self, settings: ImageHandlerSettings) -> None:
