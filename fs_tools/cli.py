@@ -1,8 +1,9 @@
 """CLI for the fs_tools package.
 
 Provides the ``fs-tools`` command. With no subcommand it launches the GUI;
-``visualize`` and ``debug`` open a single tool window. Catalog and template
-database builds are done by the ``fs-assets`` command.
+``visualize`` and ``debug`` open a single tool window, and ``import-display-names``
+copies the names of the stockpile types from the game into the translations. Catalog
+and template database builds are done by the ``fs-assets`` command.
 """
 
 from __future__ import annotations
@@ -10,8 +11,13 @@ from __future__ import annotations
 from pathlib import Path
 
 import typer
+from pydantic import ValidationError
 
+import foxhole_stockpiles.i18n
+from fs_tools.core.display_names_import import import_stockpile_names
 from fs_tools.gui import run_debug_viewer, run_gui, run_visualizer
+
+_TRANSLATIONS_DIR = Path(foxhole_stockpiles.i18n.__file__).parent / "translations"
 
 app = typer.Typer(
     no_args_is_help=False,
@@ -44,6 +50,26 @@ def debug(
 ) -> None:
     """Open the debug image viewer for a screenshot."""
     run_debug_viewer(Path(image), Path(database))
+
+
+@app.command("import-display-names")
+def import_display_names(
+    display_names: str = typer.Argument(..., help="Display names extracted by fs-assets"),
+    translations: str = typer.Option(
+        str(_TRANSLATIONS_DIR), "--translations", "-t", help="Directory of the translations"
+    ),
+) -> None:
+    """Copy the names of the stockpile types from the game into the translations."""
+    try:
+        report = import_stockpile_names(
+            display_names=Path(display_names), translations_dir=Path(translations)
+        )
+    except (OSError, ValueError, ValidationError) as e:
+        typer.echo(f"Could not import the display names: {e}", err=True)
+        raise typer.Exit(code=1) from None
+    typer.echo(f"Imported {report.imported} stockpile types into: {', '.join(report.languages)}")
+    if report.not_in_enum:
+        typer.echo(f"Not in StockpileType: {', '.join(report.not_in_enum)}")
 
 
 def main() -> None:

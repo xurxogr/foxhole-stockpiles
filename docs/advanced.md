@@ -67,6 +67,7 @@ Running `fs` with no subcommand launches the GUI. Run `fs <command> --help` for 
 
 - **`fs-tools visualize --database db.h5`** — open the database visualizer GUI.
 - **`fs-tools debug screenshot.png --database db.h5`** — open the debug image viewer for a screenshot.
+- **`fs-tools import-display-names display_names.json`** — copy the names of the stockpile types, extracted from the game by `fs-assets`, into every translation. A language the game has no name in gets the English one. Review the diff and commit it.
 - **`fs-tools-gui`** (or `fs-tools` with no subcommand) — the tooling GUI (catalog & database builder).
 
 The item catalog and the icon-template database are built by

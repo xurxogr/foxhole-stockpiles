@@ -6,11 +6,14 @@ tests cover the CLI wiring (option parsing and forwarding) without opening any.
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 from typer.testing import CliRunner
 
 from fs_tools import cli
+from fs_tools.models.display_names_report import DisplayNamesReport
 
 runner = CliRunner()
 
@@ -52,3 +55,24 @@ def test_main_runs_app() -> None:
     with patch.object(cli, "app") as app:
         cli.main()
     app.assert_called_once()
+
+
+def test_import_display_names_reports_what_it_wrote(tmp_path: Any) -> None:
+    """The languages, and the stockpiles the enum lacks."""
+    report = DisplayNamesReport(languages=["de", "en"], imported=31, not_in_enum=["SulfurMine"])
+    with patch("fs_tools.cli.import_stockpile_names", return_value=report) as run:
+        result = runner.invoke(cli.app, ["import-display-names", "names.json"])
+
+    assert result.exit_code == 0
+    assert run.call_args.kwargs["display_names"] == Path("names.json")
+    assert "31" in result.output
+    assert "SulfurMine" in result.output
+
+
+def test_import_display_names_fails_with_the_reason() -> None:
+    """Without a traceback."""
+    with patch("fs_tools.cli.import_stockpile_names", side_effect=ValueError("no Keep")):
+        result = runner.invoke(cli.app, ["import-display-names", "names.json"])
+
+    assert result.exit_code == 1
+    assert "no Keep" in result.output
