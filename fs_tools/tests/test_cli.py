@@ -14,6 +14,7 @@ from typer.testing import CliRunner
 
 from fs_tools import cli
 from fs_tools.models.display_names_report import DisplayNamesReport
+from fs_tools.models.map_locations_report import MapLocationsReport
 
 runner = CliRunner()
 
@@ -76,3 +77,25 @@ def test_import_display_names_fails_with_the_reason() -> None:
 
     assert result.exit_code == 1
     assert "no Keep" in result.output
+
+
+def test_import_map_locations_reports_what_it_wrote() -> None:
+    """The places, and the hexes the enum lacks."""
+    report = MapLocationsReport(hexes=53, locations=987, not_in_enum=["AtlantisHex"])
+    with patch("fs_tools.cli.import_map_locations", return_value=report) as run:
+        result = runner.invoke(cli.app, ["import-map-locations", "locations.json"])
+
+    assert result.exit_code == 0
+    assert run.call_args.kwargs["map_locations"] == Path("locations.json")
+    assert run.call_args.kwargs["output"].name == "location_table.py"
+    assert "987" in result.output
+    assert "AtlantisHex" in result.output
+
+
+def test_import_map_locations_fails_with_the_reason() -> None:
+    """Without a traceback."""
+    with patch("fs_tools.cli.import_map_locations", side_effect=ValueError("no place")):
+        result = runner.invoke(cli.app, ["import-map-locations", "locations.json"])
+
+    assert result.exit_code == 1
+    assert "no place" in result.output

@@ -25,10 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the parts of the date. `{stockpile_name}` and `{stockpile_type}` still work.
 - `{hex}` in a path is now the name of the hex, such as `Westgate`, instead of its code.
 - **Merges are named after what they share.** By location, a merge is named after its hex and
-  town, such as `Westgate - Lord's Mouth`, when its stockpiles were copied from the game, or
-  else after its hex and position, such as `Westgate - X: 0.46 Y: 0.66`, instead of its type.
-  The `group_name` of each output is gone: existing configurations are migrated.
-- Stockpiles copied from the game keep the town the copy names, as `town` in the data outputs.
+  town, such as `Westgate - Lord's Mouth`, or after its hex and position, such as
+  `Westgate - X: 0.46 Y: 0.66`, when its town is not known, instead of its type. The
+  `group_name` of each output is gone: existing configurations are migrated.
+- **Stockpiles know their town**, as `town` in the data outputs. One copied from the game keeps
+  the town the copy names; one from a save file, which has none, takes the nearest named place
+  of the map of its hex, as the game does. The places come from the game files, through the new
+  `fs-tools import-map-locations`.
+- fs-assets 0.5.0.
 
 ### Fixed
 - The help of the Discord message no longer refers to the headline, which no longer exists.

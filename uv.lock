@@ -604,7 +604,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fs-assets", specifier = ">=0.4.0" },
+    { name = "fs-assets", specifier = ">=0.5.0" },
     { name = "fs-ocr", specifier = ">=1.1.0" },
     { name = "fs-sav", specifier = ">=0.4.1" },
     { name = "google-api-python-client", specifier = ">=2.201.0" },
@@ -636,13 +636,13 @@ provides-extras = ["dev", "build", "capture"]
 
 [[package]]
 name = "fs-assets"
-version = "0.4.0"
+version = "0.5.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/b1/2c/2d7c04967313289e38cbc492d7de58fb4f8c72135370ecc79e48ac6e3b99/fs_assets-0.4.0.tar.gz", hash = "sha256:ded9d994214e9775633c187c1ff3b28bf5ef1da0a48280062324045cd63dfdc4", size = 210617, upload-time = "2026-11-07T03:38:57.602Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/62/e0/1984ee11003d5e7a7e34bbadd8547be70e62fd9399e73d72e5deddbaba0b/fs_assets-0.5.0.tar.gz", hash = "sha256:b4ac3cc9d2cc119661f5bfca32b6e97a939567d45519c7cafb37c2d9feca6535", size = 219687, upload-time = "2026-11-07T12:04:35.229Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7d/d5/2c08fac13f705616e33276bce318c0eec3e4e33fd62395b9ad3f965c3d36/fs_assets-0.4.0-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:6880dc07cb69aaf9ac1994535716170032f86b5e21f0ac352739a35fb91f4b70", size = 3737750, upload-time = "2026-11-07T03:38:50.551Z" },
-    { url = "https://files.pythonhosted.org/packages/0d/8c/f0942e4d2573fab24708f2fd912c8c6e993d96399c846c702e3dd7d1d8a8/fs_assets-0.4.0-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:e25d9f2ebcd573ce6b813abb3853a4c88864be6963becfecc37d1b587bcc1543", size = 4464224, upload-time = "2026-11-07T03:38:53.619Z" },
-    { url = "https://files.pythonhosted.org/packages/df/96/50fa1d88537efbd0a18b311dab0af140162c983f6360f574477b7bcb4578/fs_assets-0.4.0-cp310-abi3-win_amd64.whl", hash = "sha256:239d0ed0e766e5feae90685ae6fa6b7f38c16f4ce2b61dde3612c142baa47aa3", size = 5923722, upload-time = "2026-11-07T03:38:55.568Z" },
+    { url = "https://files.pythonhosted.org/packages/0c/0d/e5bc1bebd787267094b317f39988b0844fe7935f23587c3d0b7fef475d16/fs_assets-0.5.0-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:ebbdfaaedcc75976ca1107fa0c2ebc7305f2646b5408ce34f74e99dcb4474857", size = 3761292, upload-time = "2026-11-07T12:04:30.344Z" },
+    { url = "https://files.pythonhosted.org/packages/24/39/38d2b000417254a435e5765abcdd43be3ba151172bcd4be40101aa889379/fs_assets-0.5.0-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:c3527b7c432aed0a35a883e67f4cfffab152586ec6bc5703d9371e027a975ba3", size = 4483889, upload-time = "2026-11-07T12:04:32.163Z" },
+    { url = "https://files.pythonhosted.org/packages/38/fa/13ee9741efed6e66bc06742a30a2dd225397f6ceabe3edcb3e01e3d4082a/fs_assets-0.5.0-cp310-abi3-win_amd64.whl", hash = "sha256:6c59d605f5d0c2383d05001ec62eee4e22a9064cfb9f9911055c81b03c787a4b", size = 5949529, upload-time = "2026-11-07T12:04:33.73Z" },
 ]
 
 [[package]]

@@ -166,6 +166,7 @@ class TestConvertToStockpile:
         assert result.name == ""
         assert result.type == StockpileType.SEAPORT
         assert result.hex == "TerminusHex"
+        assert result.town == "Rising Loom"
         assert result.coords is not None
         assert result.coords.x == 0.5
         assert result.coords.y == 0.6

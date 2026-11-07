@@ -22,6 +22,7 @@ from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_coords import StockpileCoords
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
 from foxhole_stockpiles.models.stockpile_tech import StockpileTech
+from foxhole_stockpiles.services.map_locations.location_lookup import location_at
 
 logger = logging.getLogger(__name__)
 
@@ -311,6 +312,8 @@ def _convert_to_stockpile(data: dict[str, Any]) -> Stockpile:
         faction=ItemFaction.parse_optional(data.get("faction")),
         hex=data.get("hex"),
         coords=coords,
+        # The save has no town: the game names it after the nearest place of the map.
+        town=location_at(hex_code=data.get("hex"), coords=coords),
         is_reserve=data.get("is_reserve", False),
         items=items,
         tech=tech,

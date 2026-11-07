@@ -96,7 +96,8 @@ Sends: `X-API-Key: your-webhook-token`
 }
 ```
 
-`.sav`-sourced results additionally include `hex`, `coords`, and `is_reserve`
+`.sav`-sourced results additionally include `hex`, `coords`, `town` (the nearest named place of
+the map, as the game names it in a copy) and `is_reserve`
 and omit per-item `x`/`y` pixel coordinates. Stockpiles copied from the game (Ctrl+C) include
 `hex`, `coords` and `town`, the town the game names in the copy.
 

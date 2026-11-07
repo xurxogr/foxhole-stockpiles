@@ -111,10 +111,12 @@ and a CSV file with everything.
 | `none` | each stockpile | |
 | `all` | the whole send | `All Stockpiles` |
 | `hex` | each hex | the hex, such as `Heartlands` |
-| `location` | each place: the stockpiles of one hex at the same coordinates, such as the public and reserve stockpiles of a seaport | the hex and the town, such as `Westgate - Lord's Mouth`, when the stockpiles were copied from the game; otherwise the hex and the position, such as `Westgate - X: 0.46 Y: 0.66` |
+| `location` | each place: the stockpiles of one hex at the same coordinates, such as the public and reserve stockpiles of a seaport | the hex and the town, such as `Westgate - Lord's Mouth`; without a known town, the hex and the position, such as `Westgate - X: 0.46 Y: 0.66` |
 
 - A group of a single stockpile is received as it is, with its own name and type.
 - Stockpiles from screenshots have no hex or coordinates, so `hex` and `location` leave them alone.
+- The town is the one the game names when it copies a stockpile (Ctrl+C). A save file has none,
+  so a stockpile from one takes the nearest named place of the map of its hex, as the game does.
 - In a merge, crated and loose items stay apart. If the quantity of an item could not be read
   in one of the stockpiles, its total is unknown (`-1`, shown as `?` in images), because a number
   would hide the stock that could not be read.
