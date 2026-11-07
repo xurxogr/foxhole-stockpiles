@@ -7,12 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-07
+
 ### Added
 - **Stockpiles as images.** The new `image` output saves a picture of each stockpile, with
   the icon of each item, and the new `discord` output posts them to a channel through a
   webhook. Each output chooses its language, headline, icon mod and font, and can group the
-  stockpiles of a send into one image: all of them, those of one hex or those of one place. See [Images and Discord](docs/images-and-discord.md).
-  Based on the work of Gabylot.
+  stockpiles of a send into one image: all of them, those of one hex or those of one place.
+  See [Images and Discord](docs/images-and-discord.md). Based on the work of Gabylot.
 
 ### Changed
 - `fs.exe` now includes `fs-assets`, which reads the icons, so it is somewhat larger.
@@ -361,7 +363,8 @@ Initial beta release.
 - Test coverage >80%
 - CI/CD with GitHub Actions
 
-[Unreleased]: https://github.com/xurxogr/foxhole-stockpiles/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/xurxogr/foxhole-stockpiles/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/xurxogr/foxhole-stockpiles/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/xurxogr/foxhole-stockpiles/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/xurxogr/foxhole-stockpiles/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/xurxogr/foxhole-stockpiles/compare/v0.4.0...v1.0.0

@@ -3,7 +3,7 @@
 # Foxhole Stockpiles — Codemap Index
 
 **Last Updated:** 2026-11-03
-**Version:** 1.2.0 | **Config schema:** v16 | **Python:** 3.12+
+**Version:** 1.3.0 | **Config schema:** v17 | **Python:** 3.12+
 
 ## What it is
 
@@ -51,7 +51,7 @@ capture-and-scan. The HDF5 template DB is built and edited by the external
 
 - **cli/** — Typer app (`app.py`); commands `scan`, `gui`, `sav`, `clip`; `_settings.py` loads `AppSettings`, `_console.py` Rich output.
 - **services/** — `scanner.py` (**OCR seam → external `fs_ocr`**), `capture.py` (grab the Foxhole window), `clipboard_scan.py` + `clipboard_parser/` (clipboard exports), `local_scan.py` (`LocalScanService`: scan → outputs), `output_coordinator.py` (sink routing), `catalog_service.py`, `clipboard_parser/` package (clipboard scan parsing), `sav_parser.py`, `savefile_processor.py`.
-- **core/** — `settings/` (Pydantic `AppSettings` v16 + `config_migrator/` package + nested `sections/`), `logging.py`, `utils.py`, `safe_path_segment.py`, owner-only log files (`private_*`).
+- **core/** — `settings/` (Pydantic `AppSettings` v17 + `config_migrator/` package + nested `sections/`), `logging.py`, `utils.py`, `safe_path_segment.py`, owner-only log files (`private_*`).
 - **models/** — Pydantic v2: `stockpile.py` (`hex`/`coords`/`is_reserve`/`to_key()`), `stockpile_item.py` (`x`/`y`/`candidates`), `item_candidate.py`, `stockpile_coords.py`, memory-stat models.
 - **handlers/** — output sinks taking `list[Stockpile]`: `console.py`, `file.py`, `webhook.py`, `response.py` (return), **`sheets.py`** (Google Sheets), **`image.py`**, **`discord.py`**, `formula_guard.py` (spreadsheet formula neutralizing), `stockpile_json.py` (shared JSON payload builder); interface in `base_handler.py`.
 - **enums/** — StrEnums: stockpile_type (~42), item_faction, item_category, supported_resolution, output_format/destination/handler_type, auth_type, capture_mode.

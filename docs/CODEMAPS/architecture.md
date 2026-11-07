@@ -3,7 +3,7 @@
 # Architecture & Design Patterns
 
 **Type:** multi-package Python workspace (flat layout), **2 installable packages**.
-Config schema **v16**. Desktop app — **no REST server**.
+Config schema **v17**. Desktop app — **no REST server**.
 
 ## Package boundaries
 
@@ -94,7 +94,7 @@ Global hotkeys work only on Windows with the `capture` extra
 
 ## Settings architecture
 
-`core/settings/app_settings.py` → `AppSettings(BaseSettings)`, schema **v16**.
+`core/settings/app_settings.py` → `AppSettings(BaseSettings)`, schema **v17**.
 Top-level sections: `logging`, `output`, `scanner`, `database_builder`
 (`catalog_file`, `target_resolutions`), `gui`, `sav_processing`, `clipboard`.
 (The capture hotkey is `scanner.capture_key`. Icon geometry is the single constant
@@ -106,7 +106,8 @@ platform config dir → defaults. Stepwise migration via `config_migrator/` pack
 `stockpile_types`, v11→v12 drops `notifications`, v12→v13 drops `gui.config_level`,
 v13→v14 reworks webhook `forward` auth into `header`, v14→v15 drops
 `scanner.early_exit_threshold` and `sav_processing.emit_all_on_start`, v15→v16 drops
-`external_tools` and `database_builder.workers`).
+`external_tools` and `database_builder.workers`, v16→v17 turns the `aggregate` of the
+`image`/`discord` handlers into `grouping`).
 
 ## GUI structure
 
@@ -143,4 +144,4 @@ clipboard, SAV), Output, General.
 2. `services/capture.py` + `services/local_scan.py` — capture + local scan→output
 3. `gui/widgets/capture_panel.py` — capture UI + hotkey
 4. `services/output_coordinator.py` — output routing (list-based)
-5. `core/settings/app_settings.py` — configuration (v16)
+5. `core/settings/app_settings.py` — configuration (v17)
