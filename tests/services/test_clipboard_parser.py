@@ -54,10 +54,11 @@ def test_returns_none_for_non_stockpile_text(code_map: ClipboardCodeMap) -> None
 
 
 def test_parses_header_fields(code_map: ClipboardCodeMap) -> None:
-    """Header maps to hex, type, name, and coords (town/city dropped)."""
+    """Header maps to hex, town, type, name, and coords."""
     stockpile = parse_clipboard(SAMPLE, code_map)
     assert stockpile is not None
     assert stockpile.hex == "TerminusHex"
+    assert stockpile.town == "Rising Loom"
     assert stockpile.type == StockpileType.SEAPORT
     assert stockpile.name == "Public"
     assert stockpile.coords is not None

@@ -167,6 +167,7 @@ def _build_stockpile(
         "faction": inferred_faction,
         "hex": hex_name,
         "coords": header.coords,
+        "town": header.town or None,
         "items": items,
     }
     if header.timestamp is not None:

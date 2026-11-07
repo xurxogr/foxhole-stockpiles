@@ -38,15 +38,16 @@ def _group_key(grouping: StockpileGrouping, stockpile: Stockpile, index: int) ->
 
 
 def _place_name(stockpile: Stockpile) -> str:
-    """Name the place of a stockpile by its hex and its coordinates.
+    """Name the place of a stockpile by its hex and its town, or its coordinates.
 
     Args:
         stockpile (Stockpile): A stockpile with coordinates.
 
     Returns:
-        str: Such as ``Westgate - X: 0.46 Y: 0.66``, as the game writes them.
+        str: Such as ``Westgate - Lord's Mouth``, or ``Westgate - X: 0.46 Y: 0.66``
+            when its town is not known.
     """
-    parts = (hex_name(stockpile.hex), coords_text(stockpile))
+    parts = (hex_name(stockpile.hex), stockpile.town or coords_text(stockpile))
     return " - ".join(part for part in parts if part)
 
 

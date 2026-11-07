@@ -68,6 +68,7 @@ def aggregate(stockpiles: list[Stockpile], name: str = AGGREGATE_NAME) -> Stockp
         name=name,
         type=StockpileType.UNDEFINED,
         hex=_shared(stockpiles=stockpiles, read=lambda stockpile: stockpile.hex),
+        town=_shared(stockpiles=stockpiles, read=lambda stockpile: stockpile.town),
         shard=_shared(stockpiles=stockpiles, read=lambda stockpile: stockpile.shard),
         faction=_shared(stockpiles=stockpiles, read=lambda stockpile: stockpile.faction),
         timestamp=newest.timestamp,

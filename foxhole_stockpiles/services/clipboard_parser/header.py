@@ -49,9 +49,10 @@ def _parse_header(line: str) -> ClipboardHeader | None:
     if len(parts) < 3:
         return None
 
-    # parts: [hex, town, type, name...]. The town/city is dropped. The name may
-    # itself contain " - ", so any extra segments are folded back into it.
+    # parts: [hex, town, type, name...]. The name may itself contain " - ", so any
+    # extra segments are folded back into it.
     hex_name = parts[0]
+    town = parts[1]
     type_display = parts[2]
     name = " - ".join(parts[3:]) if len(parts) > 3 else ""
 
@@ -68,6 +69,7 @@ def _parse_header(line: str) -> ClipboardHeader | None:
 
     return ClipboardHeader(
         hex=hex_name,
+        town=town,
         type=_type_from_display(type_display),
         name=name,
         coords=coords,

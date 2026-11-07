@@ -102,6 +102,19 @@ def test_by_location_the_stockpiles_of_one_place_are_named_by_its_hex_and_positi
     ]
 
 
+def test_a_place_with_a_known_town_is_named_by_it() -> None:
+    """The game names it in a copied stockpile, so it beats the coordinates."""
+    stockpiles = [
+        _stockpile("Public", "WestgateHex", _PORT).model_copy(update={"town": "Lord's Mouth"}),
+        _stockpile("Reserve", "WestgateHex", _PORT).model_copy(update={"town": "Lord's Mouth"}),
+    ]
+
+    (group,) = _group(stockpiles, StockpileGrouping.LOCATION)
+
+    assert group.drawn.name == "Westgate - Lord's Mouth"
+    assert group.drawn.town == "Lord's Mouth"
+
+
 def test_a_place_without_hex_is_named_by_its_position() -> None:
     """There is no hex to name."""
     stockpiles = [_stockpile("A", coords=_PORT), _stockpile("B", coords=_PORT)]

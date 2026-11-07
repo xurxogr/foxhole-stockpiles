@@ -111,7 +111,7 @@ and a CSV file with everything.
 | `none` | each stockpile | |
 | `all` | the whole send | `All Stockpiles` |
 | `hex` | each hex | the hex, such as `Heartlands` |
-| `location` | each place: the stockpiles of one hex at the same coordinates, such as the public and reserve stockpiles of a seaport | the hex and the position, such as `Westgate - X: 0.46 Y: 0.66` |
+| `location` | each place: the stockpiles of one hex at the same coordinates, such as the public and reserve stockpiles of a seaport | the hex and the town, such as `Westgate - Lord's Mouth`, when the stockpiles were copied from the game; otherwise the hex and the position, such as `Westgate - X: 0.46 Y: 0.66` |
 
 - A group of a single stockpile is received as it is, with its own name and type.
 - Stockpiles from screenshots have no hex or coordinates, so `hex` and `location` leave them alone.

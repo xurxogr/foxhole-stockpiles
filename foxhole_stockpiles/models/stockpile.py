@@ -28,6 +28,10 @@ class Stockpile(BaseModel):
     )
     hex: str | None = Field(description="Hex region name", default=None)
     coords: StockpileCoords | None = Field(description="Map coordinates", default=None)
+    town: str | None = Field(
+        description="Town of the map the stockpile belongs to, as the game names it",
+        default=None,
+    )
     is_reserve: bool = Field(description="Whether this is a reserve stockpile", default=False)
     items: list[StockpileItem] = Field(description="List of items", default_factory=list)
     timestamp: datetime = Field(description="last update datetime", default_factory=datetime.now)

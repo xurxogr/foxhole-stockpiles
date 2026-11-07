@@ -74,3 +74,11 @@ def test_a_long_stockpile_name_is_still_a_header() -> None:
 
     assert header is not None
     assert header.name == "n" * 200
+
+
+def test_the_town_of_the_game_is_kept() -> None:
+    """The game names the town of the stockpile, so nothing has to work it out."""
+    header = _parse_header(_header(x="0.5"))
+
+    assert header is not None
+    assert header.town == "Town"

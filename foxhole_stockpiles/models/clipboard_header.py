@@ -8,9 +8,10 @@ from foxhole_stockpiles.models.stockpile_coords import StockpileCoords
 
 
 class ClipboardHeader(BaseModel):
-    """Parsed header line fields of a clipboard export (town/city intentionally dropped)."""
+    """Parsed header line fields of a clipboard export."""
 
     hex: str
+    town: str
     type: str
     name: str
     coords: StockpileCoords
