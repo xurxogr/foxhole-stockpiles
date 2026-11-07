@@ -18,6 +18,7 @@ from foxhole_stockpiles.core.settings.sections.output.sheets_handler import (
     SPREADSHEET_URL_PATTERN,
     SheetsHandlerSettings,
 )
+from foxhole_stockpiles.enums.stockpile_type import StockpileType
 from foxhole_stockpiles.handlers.base_handler import BaseOutputDestinationHandler
 from foxhole_stockpiles.handlers.formula_guard import neutralize_formula
 from foxhole_stockpiles.models.stockpile import Stockpile
@@ -28,6 +29,22 @@ _SCOPES: Final[list[str]] = ["https://www.googleapis.com/auth/spreadsheets"]
 
 CellValue = Callable[[Stockpile, StockpileItem], Any]
 
+
+def _stockpile_name(stockpile: Stockpile) -> str:
+    """Name a stockpile in its row.
+
+    Args:
+        stockpile (Stockpile): The stockpile.
+
+    Returns:
+        str: The name of a reserve or of a merge of stockpiles, which has no type,
+            or "Public" for the public stockpile of a structure.
+    """
+    if stockpile.is_reserve or stockpile.type == StockpileType.UNDEFINED:
+        return stockpile.name
+    return "Public"
+
+
 # What each column name of the configured row format writes.
 _CELL_VALUES: Final[dict[str, CellValue]] = {
     "timestamp": lambda stockpile, _item: stockpile.timestamp.timestamp(),
@@ -36,7 +53,7 @@ _CELL_VALUES: Final[dict[str, CellValue]] = {
     "region": lambda stockpile, _item: stockpile.hex,
     "structure_x": lambda stockpile, _item: stockpile.coords.x if stockpile.coords else 0,
     "structure_y": lambda stockpile, _item: stockpile.coords.y if stockpile.coords else 0,
-    "stockpile_name": lambda stockpile, _item: stockpile.name if stockpile.is_reserve else "Public",
+    "stockpile_name": lambda stockpile, _item: _stockpile_name(stockpile),
     "item_code_name": lambda _stockpile, item: item.code,
     "item_display_name": lambda _stockpile, item: get_catalog_service().get_display_name(item.code),
     "item_quantity": lambda _stockpile, item: item.quantity,

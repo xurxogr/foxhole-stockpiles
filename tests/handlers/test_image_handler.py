@@ -12,7 +12,6 @@ from foxhole_stockpiles.core.settings.sections.output import (
     OutputHandlerConfig,
     OutputSettings,
 )
-from foxhole_stockpiles.enums.stockpile_grouping import StockpileGrouping
 from foxhole_stockpiles.handlers import image as image_module
 from foxhole_stockpiles.handlers.image import ImageOutputHandler
 from foxhole_stockpiles.models.stockpile import Stockpile
@@ -126,13 +125,3 @@ def test_unknown_setting_is_refused() -> None:
     """A typo in the configuration is reported."""
     with pytest.raises(ValueError, match="nope"):
         ImageHandlerSettings.model_validate({"nope": 1})
-
-
-@pytest.mark.asyncio
-async def test_stockpiles_can_share_one_image(tmp_path: Path) -> None:
-    """With the setting on, a batch is a single file."""
-    handler = _handler(tmp_path / "{stockpile_name}.png", grouping=StockpileGrouping.ALL)
-
-    await handler.handle([_stockpile("A"), _stockpile("B")])
-
-    assert [path.name for path in tmp_path.iterdir()] == ["All Stockpiles.png"]

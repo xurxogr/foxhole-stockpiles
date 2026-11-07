@@ -19,6 +19,8 @@ from foxhole_stockpiles.core.settings.sections.output import (
     WebhookHandlerSettings,
 )
 from foxhole_stockpiles.enums.auth_type import AuthType
+from foxhole_stockpiles.enums.public_stockpile_filter import PublicStockpileFilter
+from foxhole_stockpiles.enums.stockpile_grouping import StockpileGrouping
 from foxhole_stockpiles.enums.stockpile_type import StockpileType
 from foxhole_stockpiles.handlers.base_handler import BaseOutputDestinationHandler
 from foxhole_stockpiles.models.stockpile import Stockpile
@@ -420,3 +422,80 @@ async def test_only_what_did_not_arrive_is_sent_again() -> None:
         await coordinator.handle_output(stockpiles=[third])
 
     assert handler.received == [["A", "B"], ["B", "C"]]
+
+
+class _Records(BaseOutputDestinationHandler):
+    """Keeps what it receives, and fails to deliver it while told to."""
+
+    def __init__(self, fails: bool = False) -> None:
+        self.received: list[list[Stockpile]] = []
+        self.fails = fails
+
+    async def handle(self, stockpiles: list[Stockpile], **kwargs: Any) -> None:
+        self.received.append(stockpiles)
+
+    def undelivered(self, batch: list[Stockpile]) -> list[Stockpile]:
+        return batch if self.fails else []
+
+
+def _seaport(name: str, quantity: int = 1) -> Stockpile:
+    return Stockpile(
+        name=name,
+        type=StockpileType.SEAPORT,
+        hex="WestgateHex",
+        is_reserve=name != "Public",
+        items=[StockpileItem(code="Rifle", quantity=quantity)],
+    )
+
+
+@pytest.mark.asyncio
+async def test_each_handler_receives_the_public_stockpiles_it_asks_for() -> None:
+    """One output can leave them out while another receives everything."""
+    everything, reserves = _Records(), _Records()
+    coordinator = OutputCoordinator(
+        OutputSettings(
+            handlers=[
+                OutputHandlerConfig(name="all"),
+                OutputHandlerConfig(name="reserves", public_stockpiles=PublicStockpileFilter.NONE),
+            ]
+        )
+    )
+    public, reserve = _seaport("Public"), _seaport("Reserve")
+
+    with patch.object(coordinator, "_create_handler", side_effect=[everything, reserves]):
+        await coordinator.handle_output(stockpiles=[public, reserve])
+
+    assert everything.received == [[public, reserve]]
+    assert reserves.received == [[reserve]]
+
+
+@pytest.mark.asyncio
+async def test_a_handler_receives_its_stockpiles_grouped() -> None:
+    """Grouped by hex, both stockpiles arrive as one."""
+    handler = _Records()
+    config = OutputHandlerConfig(name="grouped", grouping=StockpileGrouping.HEX)
+    coordinator = OutputCoordinator(OutputSettings(handlers=[config]))
+
+    with patch.object(coordinator, "_create_handler", return_value=handler):
+        await coordinator.handle_output(stockpiles=[_seaport("A", 2), _seaport("B", 3)])
+
+    (merged,) = handler.received[0]
+    assert merged.name == "Westgate"
+    assert merged.items[0].quantity == 5
+
+
+@pytest.mark.asyncio
+async def test_an_undelivered_merge_is_sent_again_from_its_stockpiles() -> None:
+    """A newer version of a stockpile replaces the old one instead of adding up twice."""
+    handler = _Records(fails=True)
+    config = OutputHandlerConfig(name="grouped", grouping=StockpileGrouping.ALL)
+    coordinator = OutputCoordinator(OutputSettings(handlers=[config]))
+
+    with patch.object(coordinator, "_create_handler", return_value=handler):
+        await coordinator.handle_output(stockpiles=[_seaport("A", 2), _seaport("B", 3)])
+        handler.fails = False
+        await coordinator.handle_output(stockpiles=[_seaport("A", 10)])
+        await coordinator.handle_output(stockpiles=[_seaport("C", 1)])
+
+    totals = [[stockpile.items[0].quantity for stockpile in batch] for batch in handler.received]
+    assert totals == [[5], [13], [1]]

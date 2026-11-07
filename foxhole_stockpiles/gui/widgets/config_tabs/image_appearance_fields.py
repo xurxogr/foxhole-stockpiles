@@ -15,14 +15,13 @@ from foxhole_stockpiles.core.settings import get_settings
 from foxhole_stockpiles.core.settings.sections.output.stockpile_image_settings import (
     StockpileImageSettings,
 )
-from foxhole_stockpiles.enums.stockpile_grouping import StockpileGrouping
 from foxhole_stockpiles.i18n import get_available_languages, t
 from foxhole_stockpiles.services.stockpile_image.icons import BASE_GAME_MOD, list_icon_mods
 from foxhole_stockpiles.services.stockpile_image.image_text import DEFAULT_LANGUAGE
 
 
 class ImageAppearanceFields:
-    """Adds the headline, icon mod and font fields to the form of a handler."""
+    """Adds the language, icon mod and font fields to the form of a handler."""
 
     def __init__(self, form: QFormLayout) -> None:
         """Create the fields.
@@ -30,10 +29,6 @@ class ImageAppearanceFields:
         Args:
             form (QFormLayout): The form they are added to.
         """
-        self.headline_label = QLabel()
-        self.headline_input = QLineEdit()
-        form.addRow(self.headline_label, self.headline_input)
-
         self.language_label = QLabel()
         self.language_input = QComboBox()
         for code, name in get_available_languages():
@@ -61,22 +56,8 @@ class ImageAppearanceFields:
         font_layout.addWidget(self.font_browse_btn)
         form.addRow(self.font_path_label, font_row)
 
-        self.grouping_label = QLabel()
-        self.grouping_input = QComboBox()
-        for grouping in StockpileGrouping:
-            self.grouping_input.addItem(grouping.value, grouping.value)
-        # The headline only titles a merge: a lone stockpile shows its type and name.
-        self.grouping_input.currentIndexChanged.connect(self._update_headline)
-        self._update_headline()
-        form.addRow(self.grouping_label, self.grouping_input)
-
     def retranslate(self) -> None:
         """Update all translatable strings."""
-        self.headline_label.setText(t("output_tab.handler_dialog.image_headline"))
-        self.headline_input.setPlaceholderText(
-            t("output_tab.handler_dialog.image_headline_placeholder")
-        )
-        self.headline_label.setToolTip(t("output_tab.handler_dialog.image_headline_tooltip"))
         self.language_label.setText(t("output_tab.handler_dialog.image_language"))
         self.language_label.setToolTip(t("output_tab.handler_dialog.image_language_tooltip"))
         self.icon_mod_label.setText(t("output_tab.handler_dialog.image_icon_mod"))
@@ -84,13 +65,6 @@ class ImageAppearanceFields:
         self.font_path_label.setText(t("output_tab.handler_dialog.image_font"))
         self.font_path_label.setToolTip(t("output_tab.handler_dialog.image_font_tooltip"))
         self.font_browse_btn.setText(t("common.browse"))
-        self.grouping_label.setText(t("output_tab.handler_dialog.image_grouping"))
-        self.grouping_label.setToolTip(t("output_tab.handler_dialog.image_grouping_tooltip"))
-        for index in range(self.grouping_input.count()):
-            value = self.grouping_input.itemData(index)
-            self.grouping_input.setItemText(
-                index, t(f"output_tab.handler_dialog.image_grouping_{value}")
-            )
 
     def load(self, settings: StockpileImageSettings) -> None:
         """Show some settings in the fields.
@@ -98,11 +72,9 @@ class ImageAppearanceFields:
         Args:
             settings (StockpileImageSettings): The settings.
         """
-        self.headline_input.setText(settings.headline or "")
         self._select_language(settings.language)
         self.icon_mod_input.setCurrentText(settings.icon_mod)
         self.font_path_input.setText(settings.font_path or "")
-        self.grouping_input.setCurrentIndex(self.grouping_input.findData(settings.grouping.value))
 
     def values(self) -> dict[str, str | None]:
         """Read the fields.
@@ -111,16 +83,10 @@ class ImageAppearanceFields:
             dict[str, str | None]: The values of the settings they edit.
         """
         return {
-            "headline": self.headline_input.text().strip() or None,
             "language": self.language_input.currentData(),
             "icon_mod": self.icon_mod_input.currentText().strip() or BASE_GAME_MOD,
             "font_path": self.font_path_input.text().strip() or None,
-            "grouping": self.grouping_input.currentData(),
         }
-
-    def _update_headline(self) -> None:
-        """Let the headline be edited only when stockpiles are merged."""
-        self.headline_input.setEnabled(self.grouping_input.currentData() != StockpileGrouping.NONE)
 
     def _select_language(self, language: str) -> None:
         """Select a language, or the default one if it does not exist.

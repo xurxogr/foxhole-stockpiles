@@ -225,3 +225,11 @@ class TestStockpilesToRows:
         )
         rows = handler.stockpiles_to_rows([stockpile])
         assert rows == [["Public", 0, 0]]
+
+
+def test_a_merge_of_stockpiles_is_named_by_its_name() -> None:
+    """It has no type, and is not the public stockpile of a structure."""
+    settings = SheetsHandlerSettings(creds_path="mock", row_format="stockpile_name")
+    merged = Stockpile(name="Westgate", items=[StockpileItem(code="X", quantity=1)])
+
+    assert SheetsOutputHandler(settings).stockpiles_to_rows([merged]) == [["Westgate"]]

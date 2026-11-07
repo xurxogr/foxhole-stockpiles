@@ -85,6 +85,12 @@ async def handle_output(stockpiles: list[Stockpile], **kwargs) -> dict | None:
     # all handlers run even if one raises (errors logged, not propagated)
 ```
 
+Before each handler, `services/stockpile_selection/selection.py` (`select_for_output`)
+filters its public stockpiles (`public_filter.py`; `StockpileType.has_reserves`: Seaport,
+Storage Depot, Aircraft Depot) and groups the rest (`grouping.py` + `aggregation.py` →
+`StockpileGroup(drawn, sources)`; merges named in the image language or English). An
+undelivered merge is kept as its `sources`, so a retry regroups instead of double counting.
+
 A handler is created and closed per send. What a handler failed to deliver stays
 pending in memory for that handler only and is retried on the next send, so a retry
 cannot duplicate rows in the outputs that already got it.
@@ -101,8 +107,8 @@ Discord overrides it, as it fails stockpile by stockpile).
 Drawing (`services/stockpile_image/`): `rendering.py` (`render_stockpile(settings, stockpile)`)
 → `layout.py` (pages of columns) + `renderer.py` (Pillow) + `icons.py` (`fs_assets.read_templates`)
 + `fonts.py`/`font_selector.py` (per-text font choice) + `placeholders.py` + `image_text.py`
-(all text in the `language` of the output, own `Translator`, not the window's); `grouping.py`
-(`group_stockpiles` → `StockpileGroup`: none/all/hex/location) and `aggregation.py` merge a batch. `connectors/discord.py`: multipart `payload_json` + `files[n]`, no mentions, 429
+(all text in the `language` of the output, own `Translator`, not the window's). Grouping is
+done before the handler (see Output routing). `connectors/discord.py`: multipart `payload_json` + `files[n]`, no mentions, 429
 and `X-RateLimit-*` handling, never logs the URL. `services/discord_cooldown.py`:
 `min_interval_minutes` state in `discord_cooldowns.json`, keyed by hash of the URL.
 

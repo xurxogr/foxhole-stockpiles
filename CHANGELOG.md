@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Choose the stockpiles of each output.** Every output, not only images and Discord, can
+  leave out public stockpiles (all of them, or only those of seaports, storage depots and
+  aircraft depots, where the reserves are what matters) and receive the rest grouped: all of
+  them, those of one hex or those of one place. Two outputs can receive the same send
+  differently. See [Configuration](docs/configuration.md#choosing-the-stockpiles-of-each-output).
+
+### Changed
+- Grouping and the headline of the `image` and `discord` outputs moved to the settings shared
+  by every output, as `grouping` and `group_name`. Existing configurations are migrated.
+
 ## [1.3.0] - 2026-11-07
 
 ### Added

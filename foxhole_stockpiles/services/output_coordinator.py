@@ -23,10 +23,31 @@ from foxhole_stockpiles.handlers.response import ReturnOutputHandler
 from foxhole_stockpiles.handlers.sheets import SheetsOutputHandler
 from foxhole_stockpiles.handlers.webhook import WebhookOutputHandler
 from foxhole_stockpiles.models.stockpile import Stockpile
+from foxhole_stockpiles.models.stockpile_group import StockpileGroup
+from foxhole_stockpiles.services.stockpile_selection.selection import select_for_output
 
 # The response surfaced by the first return/webhook handler: a dict (return /
 # sheets), a list of messages (webhook), or None (console / file only).
 OutputResponse = dict[str, Any] | list[str] | None
+
+
+def _sources_of(groups: list[StockpileGroup], undelivered: list[Stockpile]) -> list[Stockpile]:
+    """Find the stockpiles of a send behind what a handler did not deliver.
+
+    A merge is not sent again as it is: its stockpiles are, so the next send can
+    group them with their newer versions instead of adding them up twice.
+
+    Args:
+        groups (list[StockpileGroup]): What the handler received.
+        undelivered (list[Stockpile]): The ones it did not deliver.
+
+    Returns:
+        list[Stockpile]: The stockpiles of the send they stand for.
+    """
+    pending = {id(stockpile) for stockpile in undelivered}
+    return [
+        stockpile for group in groups if id(group.drawn) in pending for stockpile in group.sources
+    ]
 
 
 class OutputCoordinator:
@@ -90,8 +111,9 @@ class OutputCoordinator:
         Handlers are processed in configuration order, so place the handler whose
         response should be returned first in the list.
 
-        A handler that fails receives that batch again with the next call, while the
-        ones that delivered it do not, so a retry cannot duplicate rows in a sheet.
+        Each handler receives the stockpiles its configuration lets in, grouped as it
+        asks. A handler that fails receives that batch again with the next call, while
+        the ones that delivered it do not, so a retry cannot duplicate rows in a sheet.
 
         Args:
             stockpiles (list[Stockpile]): The stockpile data to output
@@ -146,21 +168,23 @@ class OutputCoordinator:
             handler_config.handler.type,
         )
         result: OutputResponse = None
-        undelivered = batch
         try:
+            groups = select_for_output(handler_config=handler_config, stockpiles=batch)
             handler = self._create_handler(handler_config)
         except Exception as e:  # noqa: BLE001 - one handler's failure must not block the rest
             self.logger.error("Handler '%s' could not be created: %s", handler_config.name, e)
-            return result, undelivered
+            return result, batch
 
+        drawn = [group.drawn for group in groups]
+        undelivered = drawn
         try:
-            result = await handler.handle(stockpiles=batch, **kwargs)
-            undelivered = handler.undelivered(batch)
+            result = await handler.handle(stockpiles=drawn, **kwargs)
+            undelivered = handler.undelivered(drawn)
         except Exception as e:  # noqa: BLE001 - one handler's failure must not block the rest
             self.logger.error("Handler '%s' failed: %s", handler_config.name, e)
         finally:
             await self._close_handler(handler=handler, name=handler_config.name)
-        return result, undelivered
+        return result, _sources_of(groups=groups, undelivered=undelivered)
 
     def _batch_for(self, position: int, stockpiles: list[Stockpile]) -> list[Stockpile]:
         """Add what a handler still has to receive to a new batch.

@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from foxhole_stockpiles.enums.stockpile_type import StockpileType
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
-from foxhole_stockpiles.services.stockpile_image.aggregation import (
+from foxhole_stockpiles.services.stockpile_selection.aggregation import (
     AGGREGATE_NAME,
     aggregate,
     merge_items,

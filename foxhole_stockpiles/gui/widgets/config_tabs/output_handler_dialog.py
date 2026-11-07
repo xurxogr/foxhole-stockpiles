@@ -40,6 +40,9 @@ from foxhole_stockpiles.enums.output_format import OutputFormat
 from foxhole_stockpiles.enums.output_handler_type import OutputHandlerType
 from foxhole_stockpiles.gui.widgets.config_tabs.discord_output_group import DiscordOutputGroup
 from foxhole_stockpiles.gui.widgets.config_tabs.image_output_group import ImageOutputGroup
+from foxhole_stockpiles.gui.widgets.config_tabs.stockpile_selection_group import (
+    StockpileSelectionGroup,
+)
 from foxhole_stockpiles.i18n import on_language_changed, t
 
 _DEFAULT_NAMES = {
@@ -87,6 +90,8 @@ class OutputHandlerDialog(QDialog):
         layout.addWidget(self.image_group)
         self.discord_group = DiscordOutputGroup()
         layout.addWidget(self.discord_group)
+        self.selection_group = StockpileSelectionGroup()
+        layout.addWidget(self.selection_group)
 
         # Button box
         button_box = QDialogButtonBox(
@@ -302,6 +307,7 @@ class OutputHandlerDialog(QDialog):
 
         self.image_group.retranslate()
         self.discord_group.retranslate()
+        self.selection_group.retranslate()
 
     def _on_handler_type_changed(self) -> None:
         """Handle handler type change to show/hide relevant sections."""
@@ -356,6 +362,11 @@ class OutputHandlerDialog(QDialog):
 
         # Load format setting
         self.format_input.setCurrentText(str(handler_config.format.type))
+        self.selection_group.load(
+            public_stockpiles=handler_config.public_stockpiles,
+            grouping=handler_config.grouping,
+            group_name=handler_config.group_name,
+        )
 
         if isinstance(handler, FileHandlerSettings):
             self.file_path_input.setText(handler.path)
@@ -475,10 +486,13 @@ class OutputHandlerDialog(QDialog):
             OutputHandlerConfig with current values.
         """
         handler_type = OutputHandlerType(self.handler_type_input.currentText())
-        return OutputHandlerConfig(
-            name=self.name_input.text().strip() or _DEFAULT_NAMES[handler_type],
-            format=self._read_format(),
-            handler=self._read_handler_settings(handler_type),
+        return OutputHandlerConfig.model_validate(
+            {
+                "name": self.name_input.text().strip() or _DEFAULT_NAMES[handler_type],
+                "format": self._read_format(),
+                "handler": self._read_handler_settings(handler_type),
+                **self.selection_group.values(),
+            }
         )
 
     def _read_format(self) -> JsonFormatSettings | CsvFormatSettings:

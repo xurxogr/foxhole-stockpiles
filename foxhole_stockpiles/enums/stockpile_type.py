@@ -89,6 +89,18 @@ class StockpileType(StrEnum):
         """
         return value in _FACTORY_ORDER_TYPES
 
+    @staticmethod
+    def has_reserves(value: str) -> bool:
+        """Tell whether a stockpile type can hold reserve stockpiles.
+
+        Args:
+            value (str): Stockpile type CodeName (may be unknown).
+
+        Returns:
+            bool: True for Seaport, Storage Depot and Aircraft Depot.
+        """
+        return value in _RESERVE_TYPES
+
 
 _TECH_TYPES: frozenset[str] = frozenset(
     {
@@ -113,4 +125,8 @@ _TECH_TYPES: frozenset[str] = frozenset(
 
 _FACTORY_ORDER_TYPES: frozenset[str] = frozenset(
     {StockpileType.FACTORY, StockpileType.MASS_PRODUCTION_FACTORY}
+)
+
+_RESERVE_TYPES: frozenset[str] = frozenset(
+    {StockpileType.SEAPORT, StockpileType.STORAGE_DEPOT, StockpileType.AIRCRAFT_DEPOT}
 )

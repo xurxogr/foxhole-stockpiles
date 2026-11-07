@@ -15,6 +15,7 @@ from foxhole_stockpiles.core.settings.sections import (
 )
 from foxhole_stockpiles.enums.output_format import OutputFormat
 from foxhole_stockpiles.enums.output_handler_type import OutputHandlerType
+from foxhole_stockpiles.enums.public_stockpile_filter import PublicStockpileFilter
 from foxhole_stockpiles.enums.stockpile_grouping import StockpileGrouping
 from foxhole_stockpiles.gui.widgets.config_tabs import output_handler_dialog as dialog_mod
 from foxhole_stockpiles.gui.widgets.config_tabs.output_handler_dialog import OutputHandlerDialog
@@ -213,29 +214,15 @@ class TestImageHandler:
         assert image_dialog.file_group.isHidden()
         assert image_dialog.format_input.isHidden()
 
-    def test_the_headline_is_only_editable_when_merging(
-        self, image_dialog: OutputHandlerDialog
-    ) -> None:
-        """A lone stockpile is titled by its type and name."""
-        appearance = image_dialog.image_group.appearance
-
-        assert not appearance.headline_input.isEnabled()
-        appearance.grouping_input.setCurrentIndex(
-            appearance.grouping_input.findData(StockpileGrouping.HEX.value)
-        )
-        assert appearance.headline_input.isEnabled()
-
     def test_values_become_its_settings(self, image_dialog: OutputHandlerDialog) -> None:
         """What is typed ends up in the configuration."""
         image_dialog.image_group.path_input.setText("out/{stockpile_name}.png")
-        image_dialog.image_group.appearance.headline_input.setText("Report {name}")
         image_dialog.image_group.appearance.icon_mod_input.setCurrentText("mymod")
 
         handler = image_dialog.get_handler_config().handler
 
         assert isinstance(handler, ImageHandlerSettings)
         assert handler.path == "out/{stockpile_name}.png"
-        assert handler.headline == "Report {name}"
         assert handler.icon_mod == "mymod"
         assert handler.font_path is None
 
@@ -274,37 +261,61 @@ class TestImageHandler:
         assert combo.currentText() == "vanilla"
 
 
-def test_image_handler_can_group_stockpiles(qtbot: Any) -> None:
-    """The setting is shown when editing and read back."""
+def test_any_output_can_filter_and_group_its_stockpiles(qtbot: Any) -> None:
+    """The selection is shown when editing and read back, whatever the handler."""
     config = OutputHandlerConfig(
-        name="image",
-        handler=ImageHandlerSettings(path="a.png", grouping=StockpileGrouping.LOCATION),
+        name="file",
+        handler=FileHandlerSettings(path="out.json"),
+        public_stockpiles=PublicStockpileFilter.NON_RESERVABLE,
+        grouping=StockpileGrouping.LOCATION,
+        group_name="Stock {name}",
     )
     widget = OutputHandlerDialog(handler_config=config)
     qtbot.addWidget(widget)
-    grouping_input = widget.image_group.appearance.grouping_input
+    selection = widget.selection_group
 
-    assert grouping_input.currentData() == StockpileGrouping.LOCATION.value
-    assert widget.image_group.appearance.headline_input.isEnabled()
-    grouping_input.setCurrentIndex(grouping_input.findData(StockpileGrouping.NONE.value))
-    handler = widget.get_handler_config().handler
-    assert isinstance(handler, ImageHandlerSettings)
-    assert handler.grouping == StockpileGrouping.NONE
+    assert not selection.isHidden()
+    assert selection.public_input.currentData() == PublicStockpileFilter.NON_RESERVABLE.value
+    assert selection.grouping_input.currentData() == StockpileGrouping.LOCATION.value
+    assert selection.group_name_input.isEnabled()
+    selection.public_input.setCurrentIndex(
+        selection.public_input.findData(PublicStockpileFilter.NONE.value)
+    )
+    selection.grouping_input.setCurrentIndex(
+        selection.grouping_input.findData(StockpileGrouping.NONE.value)
+    )
+    read = widget.get_handler_config()
+    assert read.public_stockpiles == PublicStockpileFilter.NONE
+    assert read.grouping == StockpileGrouping.NONE
+    assert read.group_name == "Stock {name}"
+    assert not selection.group_name_input.isEnabled()
 
 
-def test_grouping_options_are_translated(qtbot: Any) -> None:
-    """Not the values of the configuration."""
+def test_a_new_output_receives_everything_ungrouped(qtbot: Any) -> None:
+    """The options are translated, and the defaults change nothing."""
     widget = OutputHandlerDialog()
     qtbot.addWidget(widget)
-    grouping_input = widget.image_group.appearance.grouping_input
+    selection = widget.selection_group
 
-    texts = [grouping_input.itemText(index) for index in range(grouping_input.count())]
-
-    assert texts == [
-        t(f"output_tab.handler_dialog.image_grouping_{grouping.value}")
-        for grouping in StockpileGrouping
+    grouping_texts = [
+        selection.grouping_input.itemText(index)
+        for index in range(selection.grouping_input.count())
     ]
-    assert grouping_input.currentData() == StockpileGrouping.NONE.value
+    public_texts = [
+        selection.public_input.itemText(index) for index in range(selection.public_input.count())
+    ]
+
+    assert grouping_texts == [
+        t(f"output_tab.handler_dialog.grouping_{grouping.value}") for grouping in StockpileGrouping
+    ]
+    assert public_texts == [
+        t(f"output_tab.handler_dialog.public_stockpiles_{option.value}")
+        for option in PublicStockpileFilter
+    ]
+    read = widget.get_handler_config()
+    assert read.public_stockpiles == PublicStockpileFilter.ALL
+    assert read.grouping == StockpileGrouping.NONE
+    assert read.group_name is None
 
 
 class TestDiscordHandler:

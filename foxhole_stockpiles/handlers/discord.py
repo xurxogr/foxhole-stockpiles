@@ -13,7 +13,6 @@ from foxhole_stockpiles.core.settings.sections.output.discord_handler import (
 from foxhole_stockpiles.handlers.base_handler import BaseOutputDestinationHandler
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.services.discord_cooldown import record_post, seconds_until_allowed
-from foxhole_stockpiles.services.stockpile_image.grouping import group_stockpiles
 from foxhole_stockpiles.services.stockpile_image.rendering import (
     fill_stockpile_text,
     render_stockpile,
@@ -97,17 +96,13 @@ class DiscordOutputHandler(BaseOutputDestinationHandler):
         Returns:
             list[str] | None: Why they could not all be posted, or None if they were.
         """
-        groups = group_stockpiles(settings=self._settings, stockpiles=stockpiles)
         problem: list[str] | None = None
         posted = 0
-        for group in groups:
+        for stockpile in stockpiles:
             try:
-                await self._post(group.drawn)
+                await self._post(stockpile)
             except Exception as e:  # noqa: BLE001 - what was posted must not be posted again
-                # The real stockpiles, so the next send can group them again.
-                self._undelivered = [
-                    stockpile for pending in groups[posted:] for stockpile in pending.sources
-                ]
+                self._undelivered = stockpiles[posted:]
                 problem = self._report(str(e))
                 break
             posted += 1

@@ -22,10 +22,10 @@ def _render(settings: ImageHandlerSettings, stockpile: Stockpile | None = None) 
 
 
 def test_the_stockpile_is_drawn_as_it_is() -> None:
-    """Its title comes from its type and name, not from the headline."""
+    """Its title comes from its type and name."""
     stockpile = Stockpile(name="Depot")
 
-    renderer, _ = _render(ImageHandlerSettings(headline="Report {name}"), stockpile=stockpile)
+    renderer, _ = _render(ImageHandlerSettings(), stockpile=stockpile)
 
     renderer.return_value.render_png.assert_called_once_with(stockpile)
 

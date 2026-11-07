@@ -9,7 +9,6 @@ from foxhole_stockpiles.core.settings.sections.output.image_handler import Image
 from foxhole_stockpiles.handlers.base_handler import BaseOutputDestinationHandler
 from foxhole_stockpiles.handlers.path_template import fill_path_template, with_extension
 from foxhole_stockpiles.models.stockpile import Stockpile
-from foxhole_stockpiles.services.stockpile_image.grouping import group_stockpiles
 from foxhole_stockpiles.services.stockpile_image.rendering import render_stockpile
 
 _EXTENSION: Final[str] = ".png"
@@ -69,8 +68,7 @@ class ImageOutputHandler(BaseOutputDestinationHandler):
         """
         template = with_extension(path=self._settings.path, extension=_EXTENSION)
         taken: set[Path] = set()
-        for group in group_stockpiles(settings=self._settings, stockpiles=stockpiles):
-            stockpile = group.drawn
+        for stockpile in stockpiles:
             filled = fill_path_template(template=template, stockpiles=[stockpile])
             pages = render_stockpile(settings=self._settings, stockpile=stockpile)
             for page in pages:

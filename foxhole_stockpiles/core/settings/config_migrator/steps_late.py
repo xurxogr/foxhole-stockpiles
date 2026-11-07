@@ -1,4 +1,4 @@
-"""Config migration steps v7 -> v17."""
+"""Config migration steps v7 -> v18."""
 
 from typing import Any
 
@@ -310,6 +310,53 @@ def migrate_v16_to_v17(data: dict[str, Any]) -> dict[str, Any]:
         {**config, "handler": _with_grouping(config["handler"])}
         if isinstance(config, dict) and isinstance(config.get("handler"), dict)
         else config
+        for config in output["handlers"]
+    ]
+    return {**data, "output": {**output, "handlers": handlers}}
+
+
+def _with_shared_selection(config: dict[str, Any]) -> dict[str, Any]:
+    """Move the grouping of an image handler to its output.
+
+    Args:
+        config (dict[str, Any]): One entry of ``output.handlers``.
+
+    Returns:
+        dict[str, Any]: A copy with ``grouping`` and ``group_name`` beside the
+            handler, or the same entry if its handler does not draw images.
+    """
+    handler = config.get("handler")
+    if not isinstance(handler, dict) or handler.get("type") not in _IMAGE_HANDLER_TYPES:
+        return config
+    moved = {"grouping": "grouping", "headline": "group_name"}
+    updated = {**config, "handler": {k: v for k, v in handler.items() if k not in moved}}
+    for old_key, new_key in moved.items():
+        if old_key in handler and new_key not in updated:
+            updated[new_key] = handler[old_key]
+    return updated
+
+
+def migrate_v17_to_v18(data: dict[str, Any]) -> dict[str, Any]:
+    """Migrate from v17 to v18 (every output filters and groups its stockpiles).
+
+    Grouping was a setting of the ``image`` and ``discord`` handlers; it now
+    belongs to every output, beside its handler, as does the new
+    ``public_stockpiles`` filter. For those two handlers, ``grouping`` moves
+    up a level and ``headline``, the name of each merge, becomes
+    ``group_name``.
+
+    Args:
+        data (dict[str, Any]): V17 configuration data.
+
+    Returns:
+        dict[str, Any]: V18 configuration data.
+    """
+    output = data.get("output")
+    if not isinstance(output, dict) or not isinstance(output.get("handlers"), list):
+        return data
+
+    handlers = [
+        _with_shared_selection(config) if isinstance(config, dict) else config
         for config in output["handlers"]
     ]
     return {**data, "output": {**output, "handlers": handlers}}

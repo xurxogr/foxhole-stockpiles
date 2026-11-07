@@ -12,13 +12,11 @@ outputs can show the same data differently.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `headline` | what they share | Title of each image that merges stockpiles (`grouping`) |
 | `language` | `en` | Language of the text of the image, which can differ from the one of the window |
 | `icon_mod` | `vanilla` | Mod of the template database whose icons replace those of the base game |
 | `font_path` | none | Font file tried before the fonts of the system |
-| `grouping` | `none` | Which stockpiles of a send share an image: `none`, `all`, `hex` or `location` |
 
-The `headline` and the Discord `message` accept these placeholders: `{name}`, `{type}`,
+The Discord `message` accepts these placeholders: `{name}`, `{type}`,
 `{hex}`, `{ingame_timestamp}`, `{timestamp}`, `{resolution}`, `{item_count}`
 and `{total_items}`.
 
@@ -38,22 +36,10 @@ than the window. Item names come from the game, which does not translate all of 
 vehicles, and has no Spanish: those keep their English name. The rest of the text is
 translated. In the `{type}` placeholder too.
 
-**Grouping.** Each group of stockpiles is drawn as one, adding up their items:
-
-| `grouping` | One image for | Named, without a `headline` |
-|------------|---------------|-----------------------------|
-| `none` | each stockpile | |
-| `all` | the whole send | `All Stockpiles` |
-| `hex` | each hex | the hex, such as `Heartlands` |
-| `location` | each place, the stockpiles with the same coordinates, such as the public and reserve stockpiles of a seaport | its type, such as `Seaport` |
-
-The `headline` names every merge, and its `{name}` is the name above. Stockpiles from
-screenshots have no hex or coordinates, so `hex` and `location` leave them alone.
-
-In a merge, crated and loose items stay apart. If the quantity of an
-item could not be read in one of the stockpiles, its total shows `?`, because a number would
-hide the stock that could not be read. A send with a single stockpile is drawn as it is,
-with its own title.
+**Grouping.** Like every output, these can leave out public stockpiles and group the rest,
+each group drawn as one image titled with its name: see
+[Choosing the stockpiles of each output](configuration.md#choosing-the-stockpiles-of-each-output).
+A send with a single stockpile is drawn as it is, with its own title.
 
 ## Image output
 
@@ -83,9 +69,10 @@ configuration file.
     "type": "discord",
     "url": "https://discord.com/api/webhooks/ID/TOKEN",
     "message": "{name} in {hex}",
-    "grouping": "hex",
     "min_interval_minutes": 15
-  }
+  },
+  "public_stockpiles": "non_reservable",
+  "grouping": "hex"
 }
 ```
 

@@ -27,6 +27,7 @@ from foxhole_stockpiles.core.settings.sections.output import (
 from foxhole_stockpiles.core.settings.sections.scanner import ScannerSettings
 from foxhole_stockpiles.enums.auth_type import AuthType
 from foxhole_stockpiles.enums.output_format import OutputFormat
+from foxhole_stockpiles.enums.public_stockpile_filter import PublicStockpileFilter
 from foxhole_stockpiles.enums.stockpile_grouping import StockpileGrouping
 
 
@@ -734,11 +735,12 @@ class TestGroupingMigration:
 
         migrated = ConfigMigrator.apply_migrations(self._v16(handler))
 
-        migrated_handler = migrated["output"]["handlers"][0]["handler"]
-        assert "aggregate" not in migrated_handler
-        assert migrated_handler["grouping"] == grouping
+        entry = migrated["output"]["handlers"][0]
+        assert "aggregate" not in entry["handler"]
+        assert "grouping" not in entry["handler"]
+        assert entry["grouping"] == grouping
         settings = AppSettings(**migrated)
-        assert settings.output.handlers[0].handler.grouping == StockpileGrouping(grouping)
+        assert settings.output.handlers[0].grouping == StockpileGrouping(grouping)
 
     def test_other_handlers_are_left_alone(self) -> None:
         """Only the image handlers had the switch."""
@@ -761,6 +763,51 @@ class TestGroupingMigration:
         migrated = ConfigMigrator.apply_migrations({"config_version": 16, "output": {}})
 
         assert migrated == {"config_version": ConfigMigrator.CURRENT_VERSION, "output": {}}
+
+
+class TestSharedSelectionMigration:
+    """v17->v18 moves the grouping of the image handlers to their output."""
+
+    @staticmethod
+    def _v17(entry: dict[str, Any]) -> dict[str, Any]:
+        return {"config_version": 17, "output": {"handlers": [{"name": "out", **entry}]}}
+
+    def test_grouping_and_headline_move_beside_the_handler(self) -> None:
+        """The headline names each merge, so it becomes the group name."""
+        handler = {"type": "image", "grouping": "hex", "headline": "Stock {name}", "language": "es"}
+
+        migrated = ConfigMigrator.apply_migrations(self._v17({"handler": handler}))
+
+        entry = migrated["output"]["handlers"][0]
+        assert entry["handler"] == {"type": "image", "language": "es"}
+        assert entry["grouping"] == "hex"
+        assert entry["group_name"] == "Stock {name}"
+        config = AppSettings(**migrated).output.handlers[0]
+        assert config.grouping == StockpileGrouping.HEX
+        assert config.group_name == "Stock {name}"
+        assert config.public_stockpiles == PublicStockpileFilter.ALL
+
+    def test_a_value_already_beside_the_handler_is_kept(self) -> None:
+        """Nothing overwrites what the output already says."""
+        entry = {"handler": {"type": "discord", "grouping": "all"}, "grouping": "location"}
+
+        migrated = ConfigMigrator.apply_migrations(self._v17(entry))
+
+        assert migrated["output"]["handlers"][0]["grouping"] == "location"
+
+    def test_other_handlers_are_left_alone(self) -> None:
+        """Only the image handlers grouped their stockpiles."""
+        entry = {"handler": {"type": "file", "path": "out.json"}}
+
+        migrated = ConfigMigrator.apply_migrations(self._v17(entry))
+
+        assert migrated["output"]["handlers"][0] == {"name": "out", **entry}
+
+    def test_a_config_without_handlers_is_unchanged(self) -> None:
+        """Nothing to migrate."""
+        migrated = ConfigMigrator.apply_migrations({"config_version": 17})
+
+        assert migrated == {"config_version": ConfigMigrator.CURRENT_VERSION}
 
 
 class TestAppSettings:

@@ -8,14 +8,12 @@ from unittest.mock import patch
 import pytest
 
 from foxhole_stockpiles.core.settings.sections.output import ImageHandlerSettings
-from foxhole_stockpiles.enums.stockpile_grouping import StockpileGrouping
 from foxhole_stockpiles.enums.stockpile_type import StockpileType
 from foxhole_stockpiles.i18n import set_language, t
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.services import catalog_service
 from foxhole_stockpiles.services.catalog_service import CatalogService
 from foxhole_stockpiles.services.stockpile_image import rendering
-from foxhole_stockpiles.services.stockpile_image.grouping import group_stockpiles
 from foxhole_stockpiles.services.stockpile_image.image_text import ImageText
 from foxhole_stockpiles.services.stockpile_image.layout import build_pages
 from foxhole_stockpiles.services.stockpile_image.rendering import fill_stockpile_text
@@ -135,16 +133,6 @@ def test_the_type_placeholder_is_in_the_language_of_the_output() -> None:
     )
 
     assert filled == "Feldlager: Depot"
-
-
-def test_the_merge_of_stockpiles_is_named_in_the_language_of_the_output() -> None:
-    """It is the title of the image."""
-    groups = group_stockpiles(
-        settings=ImageHandlerSettings(language="es", grouping=StockpileGrouping.ALL),
-        stockpiles=[Stockpile(name="A"), Stockpile(name="B")],
-    )
-
-    assert groups[0].drawn.name == _texts("es")["all_stockpiles"]
 
 
 def test_drawing_uses_the_language_of_the_settings() -> None:

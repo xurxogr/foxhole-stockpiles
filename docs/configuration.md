@@ -26,11 +26,11 @@ export FS_LOGGING__LOG_FILE=/var/log/foxhole-scanner.log
 
 Create a JSON file at `<platform config dir>/foxhole-stockpiles/config.json` (on Linux, `~/.config/foxhole-stockpiles/config.json`; on Windows, under `%LOCALAPPDATA%`). A legacy `~/.fs_config` file is moved there automatically:
 
-**Note on Config Versioning:** The configuration includes a `config_version` field (current: **16**). Old configs are automatically migrated when loaded via `ConfigMigrator` - no manual action required. V5 introduced the `output.handlers` array structure (multiple output destinations); later versions added the `sav_processing` section for Foxhole save-file processing; V10 removed the obsolete `api_server` and `api_auth` sections (the FastAPI server was removed in favor of local screenshot capture); V11 removed the `stockpile_types` section (type detection now happens inside the external `fs-ocr` engine, so the aliases had no effect); V12 removed the `notifications` section (the notifier stack was never wired into the scan flow); V13 removed `gui.config_level` (the basic/advanced/developer setting no longer gated anything after OCR/template settings moved to `fs-ocr`/`fs-tools`); V14 reworked the webhook `forward` auth type into `header` (`client_auth_header` → `auth_header`); V15 dropped two dead fields, `scanner.early_exit_threshold` and `sav_processing.emit_all_on_start`; V16 removed the `external_tools` section (`repak`/`umodel`/`uassetgui`) and `database_builder.workers` (the catalog and template database are now built by the external `fs-assets` package, which reads the PAK directly).
+**Note on Config Versioning:** The configuration includes a `config_version` field (current: **18**). Old configs are automatically migrated when loaded via `ConfigMigrator` - no manual action required. V5 introduced the `output.handlers` array structure (multiple output destinations); later versions added the `sav_processing` section for Foxhole save-file processing; V10 removed the obsolete `api_server` and `api_auth` sections (the FastAPI server was removed in favor of local screenshot capture); V11 removed the `stockpile_types` section (type detection now happens inside the external `fs-ocr` engine, so the aliases had no effect); V12 removed the `notifications` section (the notifier stack was never wired into the scan flow); V13 removed `gui.config_level` (the basic/advanced/developer setting no longer gated anything after OCR/template settings moved to `fs-ocr`/`fs-tools`); V14 reworked the webhook `forward` auth type into `header` (`client_auth_header` → `auth_header`); V15 dropped two dead fields, `scanner.early_exit_threshold` and `sav_processing.emit_all_on_start`; V16 removed the `external_tools` section (`repak`/`umodel`/`uassetgui`) and `database_builder.workers` (the catalog and template database are now built by the external `fs-assets` package, which reads the PAK directly); V17 turned the `aggregate` switch of the `image`/`discord` handlers into `grouping`; V18 moved `grouping` beside the handler of every output, renamed `headline` to `group_name`, and added `public_stockpiles`.
 
 ```json
 {
-  "config_version": 16,
+  "config_version": 18,
   "scanner": {
     "database_path": "/path/to/database.h5",
     "capture_key": "F9"
@@ -87,6 +87,46 @@ Each handler in the array has the following structure:
 | `name` | string | Yes | Friendly name for this handler (e.g., "Local Scan", "File Backup") |
 | `format` | object | Yes | Format settings for serialization |
 | `handler` | object | Yes | Handler-specific settings |
+| `public_stockpiles` | string | No | Which public stockpiles it receives: `all` (default), `none`, or `non_reservable` |
+| `grouping` | string | No | Which stockpiles of a send it receives as one: `none` (default), `all`, `hex` or `location` |
+| `group_name` | string | No | Name of each merge, with placeholders. By default, what its stockpiles share |
+
+#### Choosing the stockpiles of each output
+
+Each output receives the stockpiles of a send after two steps, in this order. Two outputs can
+receive the same send differently, such as a Discord channel with only the reserves, grouped,
+and a CSV file with everything.
+
+**1. Public stockpiles** (`public_stockpiles`). Reserve stockpiles always pass.
+
+| Value | Public stockpiles it receives |
+|-------|-------------------------------|
+| `all` | all of them |
+| `none` | none |
+| `non_reservable` | only those of structures that cannot hold reserves, such as a bunker or a safe house. In a seaport, a storage depot or an aircraft depot the reserves are what matters |
+
+**2. Grouping** (`grouping`). Each group is received as one stockpile, adding up its items.
+
+| Value | One stockpile for | Named, without a `group_name` |
+|-------|-------------------|-------------------------------|
+| `none` | each stockpile | |
+| `all` | the whole send | `All Stockpiles` |
+| `hex` | each hex | the hex, such as `Heartlands` |
+| `location` | each place: the stockpiles of one hex at the same coordinates, such as the public and reserve stockpiles of a seaport | its type, such as `Seaport` |
+
+- A group of a single stockpile is received as it is, with its own name and type.
+- Stockpiles from screenshots have no hex or coordinates, so `hex` and `location` leave them alone.
+- In a merge, crated and loose items stay apart. If the quantity of an item could not be read
+  in one of the stockpiles, its total is unknown (`-1`, shown as `?` in images), because a number
+  would hide the stock that could not be read.
+- The default names are in the language of the images for the `image` and `discord` outputs,
+  and in English for the others. A merge has no type (`Undefined`), and Google Sheets writes
+  its name in `stockpile_name`.
+- `group_name` accepts the placeholders `{name}` (the default name), `{type}`, `{hex}`,
+  `{ingame_timestamp}`, `{timestamp}`, `{resolution}`, `{item_count}` and `{total_items}`.
+
+If an output fails to deliver a merge, it receives the stockpiles of that merge again with the
+next send, so a newer version of one of them replaces the old one instead of adding up twice.
 
 #### Format Settings (`output.handlers[].format`)
 
@@ -330,7 +370,7 @@ This example shows all available settings with their default values:
 
 ```json
 {
-  "config_version": 16,
+  "config_version": 18,
   "logging": {
     "loggers": {},
     "log_level": "INFO",
@@ -344,7 +384,10 @@ This example shows all available settings with their default values:
       {
         "name": "Local Scan",
         "format": {"type": "json"},
-        "handler": {"type": "return"}
+        "handler": {"type": "return"},
+        "public_stockpiles": "all",
+        "grouping": "none",
+        "group_name": null
       }
     ]
   },

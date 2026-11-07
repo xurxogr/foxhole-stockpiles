@@ -21,6 +21,8 @@ from foxhole_stockpiles.core.settings.sections.output.webhook_handler import (
 )
 from foxhole_stockpiles.enums.output_format import OutputFormat
 from foxhole_stockpiles.enums.output_handler_type import OutputHandlerType
+from foxhole_stockpiles.enums.public_stockpile_filter import PublicStockpileFilter
+from foxhole_stockpiles.enums.stockpile_grouping import StockpileGrouping
 
 
 def _get_format_discriminator(v: dict[str, Any] | BaseModel) -> str:
@@ -67,6 +69,28 @@ class OutputHandlerConfig(BaseModel):
     handler: HandlerSettings = Field(
         description="Output handler settings",
         default_factory=ReturnHandlerSettings,
+    )
+    public_stockpiles: PublicStockpileFilter = Field(
+        description=(
+            "Which public stockpiles this output receives: all, none, or only those of "
+            "structures that cannot hold reserves. Reserve stockpiles always reach it"
+        ),
+        default=PublicStockpileFilter.ALL,
+    )
+    grouping: StockpileGrouping = Field(
+        description=(
+            "Which stockpiles of a send this output receives as one, adding up their "
+            "items: none, all, those of one hex, or those of one place (same coordinates)"
+        ),
+        default=StockpileGrouping.NONE,
+    )
+    group_name: str | None = Field(
+        description=(
+            "Name of each merge, by default what its stockpiles share. Supports the "
+            "placeholders {name}, {type}, {hex}, {ingame_timestamp}, {timestamp}, "
+            "{resolution}, {item_count} and {total_items}"
+        ),
+        default=None,
     )
 
     @model_validator(mode="after")
