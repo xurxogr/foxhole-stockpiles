@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-11-07
+
 ### Added
 - **Choose the stockpiles of each output.** Every output, not only images and Discord, can
   leave out public stockpiles (all of them, or only those of seaports, storage depots and
@@ -17,8 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   message lists the placeholders they accept. See [Placeholders](docs/configuration.md#placeholders).
 
 ### Changed
-- Grouping and the headline of the `image` and `discord` outputs moved to the settings shared
-  by every output, as `grouping` and `group_name`. Existing configurations are migrated.
+- Grouping of the `image` and `discord` outputs moved to the settings shared by every output,
+  as `grouping`, and their headline is gone. Existing configurations are migrated.
 - Dependencies updated to their latest versions.
 - **The same placeholders everywhere.** Paths now also accept `{name}`, `{type}`,
   `{ingame_timestamp}`, `{item_count}` and `{total_items}`, and the Discord message `{coords}`
@@ -26,16 +28,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `{hex}` in a path is now the name of the hex, such as `Westgate`, instead of its code.
 - **Merges are named after what they share.** By location, a merge is named after its hex and
   town, such as `Westgate - Lord's Mouth`, or after its hex and position, such as
-  `Westgate - X: 0.46 Y: 0.66`, when its town is not known, instead of its type. The
-  `group_name` of each output is gone: existing configurations are migrated.
+  `Westgate - X: 0.46 Y: 0.66`, when its town is not known, instead of its type.
 - **Stockpiles know their town**, as `town` in the data outputs. One copied from the game keeps
   the town the copy names; one from a save file, which has none, takes the nearest named place
   of the map of its hex, as the game does. The places come from the game files, through the new
   `fs-tools import-map-locations`.
 - fs-assets 0.5.0.
-
-### Fixed
-- The help of the Discord message no longer refers to the headline, which no longer exists.
 
 ## [1.3.0] - 2026-11-07
 
@@ -393,7 +391,8 @@ Initial beta release.
 - Test coverage >80%
 - CI/CD with GitHub Actions
 
-[Unreleased]: https://github.com/xurxogr/foxhole-stockpiles/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/xurxogr/foxhole-stockpiles/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/xurxogr/foxhole-stockpiles/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/xurxogr/foxhole-stockpiles/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/xurxogr/foxhole-stockpiles/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/xurxogr/foxhole-stockpiles/compare/v1.0.0...v1.1.0
