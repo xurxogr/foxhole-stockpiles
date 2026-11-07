@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Grouping and the headline of the `image` and `discord` outputs moved to the settings shared
   by every output, as `grouping` and `group_name`. Existing configurations are migrated.
+- Dependencies updated to their latest versions.
 
 ## [1.3.0] - 2026-11-07
 

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68.0", "wheel>=0.46.2"]
+requires = ["setuptools>=84.2.1", "wheel>=0.48.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -25,23 +25,23 @@ requires-python = ">=3.12"
 dependencies = [
     # Core image processing libraries
     "httpx>=0.28.1",
-    "numpy>=2.5.0",
+    "numpy>=2.5.4",
     "pillow>=13.0.0",
-    "pydantic>=2.13.4",
-    "pydantic_settings>=2.14.2",
+    "pydantic>=2.14.3",
+    "pydantic_settings>=2.16.2",
     # Platform-appropriate config directory resolution
-    "platformdirs>=4.10.0",
+    "platformdirs>=4.14.5",
     # Clipboard access (shared by GUI and CLI clipboard scanning)
-    "pyperclip>=1.8",
+    "pyperclip>=1.11.0",
     # Google API
-    "google-api-python-client>=2.197.0",
-    "google-auth-httplib2>=0.4.0",
-    "httplib2>=0.32.0",
-    "google-auth-oauthlib>=1.4.0",
+    "google-api-python-client>=2.201.0",
+    "google-auth-httplib2>=0.4.4",
+    "httplib2>=0.32.1",
+    "google-auth-oauthlib>=1.5.0",
     # PySide6 for GUI (LGPL, official Qt project)
-    "PySide6>=6.6",
+    "PySide6>=6.12.0",
     # CLI framework for fs-ocr
-    "typer>=0.26.7",
+    "typer>=0.28.0",
     # SAV file parsing (Rust implementation)
     "fs-sav>=0.4.1",
     # OCR engine (Rust implementation)
@@ -53,27 +53,27 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     # Testing
-    "pytest>=9.1.1",
-    "pytest-asyncio>=1.4.0",
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.4.1.post1",
     "pytest-cov>=7.1.0",
     "pytest-xdist>=3.8.0",
     "pytest-qt>=4.5.0",
 
     # Code Quality & Formatting (dev-only)
-    "mypy>=2.1.0",
-    "ruff>=0.15.19",
-    "pre-commit>=4.6.0",
+    "mypy>=2.4.1",
+    "ruff>=0.17.4",
+    "pre-commit>=4.7.0",
 
 ]
 # Packaging the standalone executables.
 build = [
-    "pyinstaller>=6.0",
+    "pyinstaller>=6.22.3",
 ]
 # Screenshot capture and global hotkeys (Windows only): game window lookup and
 # the hotkey listener. Without them both features are disabled.
 capture = [
-    "pywinctl>=0.4; sys_platform == 'win32'",
-    "pynput>=1.7.7; sys_platform == 'win32'",
+    "pywinctl>=0.4.1; sys_platform == 'win32'",
+    "pynput>=1.8.2; sys_platform == 'win32'",
 ]
 
 [project.urls]
