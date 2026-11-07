@@ -16,6 +16,7 @@ from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
 from foxhole_stockpiles.services.catalog_service import get_catalog_service
 from foxhole_stockpiles.services.stockpile_image.image_text import ImageText
+from foxhole_stockpiles.services.stockpile_image.rendering import fill_stockpile_text
 
 AGGREGATE_NAME: Final[str] = "All Stockpiles"
 _UNKNOWN: Final[int] = -1
@@ -93,9 +94,13 @@ def stockpiles_to_draw(
         stockpiles (list[Stockpile]): The stockpiles of a batch.
 
     Returns:
-        list[Stockpile]: The same stockpiles, or their merge if the settings ask for it.
+        list[Stockpile]: The same stockpiles, or their merge if the settings ask for it,
+            named with the headline. A lone stockpile is kept as it is, with its own
+            name and type.
     """
-    if settings.aggregate and stockpiles:
-        labels = ImageText(catalog=get_catalog_service(), language=settings.language)
-        return [aggregate(stockpiles=stockpiles, name=labels.all_stockpiles())]
-    return stockpiles
+    if not settings.aggregate or len(stockpiles) < 2:
+        return stockpiles
+    labels = ImageText(catalog=get_catalog_service(), language=settings.language)
+    merged = aggregate(stockpiles=stockpiles, name=labels.all_stockpiles())
+    headline = fill_stockpile_text(settings=settings, template=settings.headline, stockpile=merged)
+    return [merged.model_copy(update={"name": headline})] if headline else [merged]

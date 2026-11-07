@@ -81,18 +81,17 @@ class StockpileImageRenderer:
         self._fonts = font_selector
         self._icons = icons
 
-    def render_png(self, stockpile: Stockpile, headline: str | None) -> list[bytes]:
+    def render_png(self, stockpile: Stockpile) -> list[bytes]:
         """Draw a stockpile.
 
         Args:
             stockpile (Stockpile): The stockpile.
-            headline (str | None): The title, by default its name or else its type.
 
         Returns:
             list[bytes]: The PNG of each page.
         """
         pages = build_pages(stockpile=stockpile, catalog=self._labels)
-        title = headline or stockpile.name or self._labels.stockpile_type(stockpile.type)
+        title = self._labels.title(stockpile)
         return [
             self._encode(
                 self._draw_page(
@@ -184,7 +183,7 @@ class StockpileImageRenderer:
     def _draw_header(
         self, draw: ImageDraw.ImageDraw, stockpile: Stockpile, title: str, width: int
     ) -> None:
-        """Draw the title and what locates the stockpile.
+        """Draw the title and the hex of the stockpile.
 
         Args:
             draw (ImageDraw.ImageDraw): Where to draw.
@@ -194,15 +193,10 @@ class StockpileImageRenderer:
         """
         room = width - 2 * _MARGIN
         self._text(draw, xy=(_MARGIN, 14), text=title, size=_TITLE_SIZE, max_width=room)
-        details = [
-            self._labels.stockpile_type(stockpile.type),
-            stockpile.hex or "",
-            stockpile.shard or "",
-        ]
         self._text(
             draw,
             xy=(_MARGIN, 54),
-            text=" · ".join(detail for detail in details if detail),
+            text=stockpile.hex or "",
             size=_SUBTITLE_SIZE,
             fill=_MUTED_TEXT,
             max_width=room,

@@ -211,6 +211,16 @@ class TestImageHandler:
         assert image_dialog.file_group.isHidden()
         assert image_dialog.format_input.isHidden()
 
+    def test_the_headline_is_only_editable_when_merging(
+        self, image_dialog: OutputHandlerDialog
+    ) -> None:
+        """A lone stockpile is titled by its type and name."""
+        appearance = image_dialog.image_group.appearance
+
+        assert not appearance.headline_input.isEnabled()
+        appearance.aggregate_input.setChecked(True)
+        assert appearance.headline_input.isEnabled()
+
     def test_values_become_its_settings(self, image_dialog: OutputHandlerDialog) -> None:
         """What is typed ends up in the configuration."""
         image_dialog.image_group.path_input.setText("out/{stockpile_name}.png")

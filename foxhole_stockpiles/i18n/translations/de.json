@@ -222,8 +222,8 @@
       "image_path_tooltip": "Wo jedes Bild gespeichert wird. Die Erweiterung ist immer .png.\n\nEs gelten dieselben Platzhalter wie bei der Dateiausgabe.",
       "image_path_required": "Der Bildpfad ist erforderlich.",
       "image_headline": "Überschrift:",
-      "image_headline_placeholder": "Name des Lagers",
-      "image_headline_tooltip": "Titel des Bildes.\n\nUnterstützte Platzhalter:\n{name}, {type}, {hex}, {shard}, {ingame_timestamp}, {timestamp}, {resolution}, {item_count}, {total_items}",
+      "image_headline_placeholder": "Alle Lager",
+      "image_headline_tooltip": "Titel des Bildes, das die Lager eines Versands zusammenfasst.\nEin einzelnes Lager zeigt seinen Typ und Namen, etwa „Seehafen - Öffentlich“.\n\nUnterstützte Platzhalter:\n{name}, {type}, {hex}, {ingame_timestamp}, {timestamp}, {resolution}, {item_count}, {total_items}",
       "image_icon_mod": "Symbol-Mod:",
       "image_icon_mod_tooltip": "Mod der Vorlagendatenbank, dessen Symbole die des Basisspiels ersetzen. Ohne Datenbank enthält das Bild nur Text.",
       "image_font": "Schriftart:",
@@ -314,6 +314,7 @@
   "stockpile_image": {
     "crates": "{category} (Kisten)",
     "all_stockpiles": "Alle Lager",
+    "public": "Öffentlich",
     "no_items": "Keine Gegenstände",
     "total": "Gesamt: {quantity}",
     "categories": {

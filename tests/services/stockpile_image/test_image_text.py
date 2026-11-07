@@ -140,7 +140,7 @@ def test_the_merge_of_stockpiles_is_named_in_the_language_of_the_output() -> Non
     """It is the title of the image."""
     drawn = stockpiles_to_draw(
         settings=ImageHandlerSettings(language="es", aggregate=True),
-        stockpiles=[Stockpile(name="A")],
+        stockpiles=[Stockpile(name="A"), Stockpile(name="B")],
     )
 
     assert drawn[0].name == _texts("es")["all_stockpiles"]

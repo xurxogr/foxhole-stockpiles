@@ -22,7 +22,6 @@ def _build_values(stockpile: Stockpile, type_label: str) -> dict[str, str]:
         "name": stockpile.name or "",
         "type": type_label,
         "hex": stockpile.hex or "",
-        "shard": stockpile.shard or "",
         "ingame_timestamp": stockpile.ingame_timestamp or "",
         "timestamp": stockpile.timestamp.strftime("%Y-%m-%d %H:%M"),
         "resolution": stockpile.resolution or "",

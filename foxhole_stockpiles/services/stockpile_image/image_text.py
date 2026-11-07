@@ -9,6 +9,7 @@ from typing import Final, Protocol
 
 from foxhole_stockpiles.enums.stockpile_type import StockpileType
 from foxhole_stockpiles.i18n import Translator, get_available_languages
+from foxhole_stockpiles.models.stockpile import Stockpile
 
 DEFAULT_LANGUAGE: Final[str] = "en"
 
@@ -142,6 +143,30 @@ class ImageText:
         key = f"{_TYPE_KEYS}.{stockpile_type}"
         name = self._translator.get(key)
         return str(stockpile_type) if name == key else name
+
+    def title(self, stockpile: Stockpile) -> str:
+        """Get the title of a stockpile, as the game shows it.
+
+        Args:
+            stockpile (Stockpile): The stockpile.
+
+        Returns:
+            str: Its type and name, such as ``Seaport - Public``, or only its name if
+                it has no type, as the merge of several stockpiles.
+        """
+        type_label = self.stockpile_type(stockpile.type)
+        if not type_label:
+            return stockpile.name
+        place = stockpile.name if stockpile.is_reserve and stockpile.name else self.public()
+        return f"{type_label} - {place}"
+
+    def public(self) -> str:
+        """Get the name of the public part of a stockpile.
+
+        Returns:
+            str: The name.
+        """
+        return self._translator.get(f"{_KEYS}.public")
 
     def all_stockpiles(self) -> str:
         """Get the name of the merge of several stockpiles.

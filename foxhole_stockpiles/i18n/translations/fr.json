@@ -222,8 +222,8 @@
       "image_path_tooltip": "Où chaque image est enregistrée. L'extension est toujours .png.\n\nLes mêmes paramètres substituables qu'une sortie fichier sont acceptés.",
       "image_path_required": "Le chemin de l'image est obligatoire.",
       "image_headline": "Titre :",
-      "image_headline_placeholder": "Nom du stock",
-      "image_headline_tooltip": "Titre de l'image.\n\nParamètres substituables :\n{name}, {type}, {hex}, {shard}, {ingame_timestamp}, {timestamp}, {resolution}, {item_count}, {total_items}",
+      "image_headline_placeholder": "Tous les stocks",
+      "image_headline_tooltip": "Titre de l'image qui regroupe les stocks d'un envoi.\nUn stock seul affiche son type et son nom, comme « Port - Public ».\n\nVariables prises en charge :\n{name}, {type}, {hex}, {ingame_timestamp}, {timestamp}, {resolution}, {item_count}, {total_items}",
       "image_icon_mod": "Mod d'icônes :",
       "image_icon_mod_tooltip": "Mod de la base de modèles dont les icônes remplacent celles du jeu de base. Sans base de données, l'image ne contient que du texte.",
       "image_font": "Police :",
@@ -314,6 +314,7 @@
   "stockpile_image": {
     "crates": "{category} (caisses)",
     "all_stockpiles": "Tous les stocks",
+    "public": "Public",
     "no_items": "Aucun objet",
     "total": "Total : {quantity}",
     "categories": {

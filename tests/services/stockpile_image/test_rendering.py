@@ -21,18 +21,13 @@ def _render(settings: ImageHandlerSettings, stockpile: Stockpile | None = None) 
     return renderer, icons
 
 
-def test_headline_template_is_filled_with_the_stockpile() -> None:
-    """The drawing gets the final text."""
-    renderer, _ = _render(ImageHandlerSettings(headline="Report {name}"))
+def test_the_stockpile_is_drawn_as_it_is() -> None:
+    """Its title comes from its type and name, not from the headline."""
+    stockpile = Stockpile(name="Depot")
 
-    assert renderer.return_value.render_png.call_args.kwargs["headline"] == "Report Depot"
+    renderer, _ = _render(ImageHandlerSettings(headline="Report {name}"), stockpile=stockpile)
 
-
-def test_empty_headline_counts_as_unset() -> None:
-    """The title falls back to the name of the stockpile."""
-    renderer, _ = _render(ImageHandlerSettings(headline="   "))
-
-    assert renderer.return_value.render_png.call_args.kwargs["headline"] is None
+    renderer.return_value.render_png.assert_called_once_with(stockpile)
 
 
 def test_icons_of_the_chosen_mod_come_from_the_scanner_database(monkeypatch: Any) -> None:

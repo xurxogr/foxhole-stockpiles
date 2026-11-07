@@ -62,6 +62,9 @@ class ImageAppearanceFields:
         form.addRow(self.font_path_label, font_row)
 
         self.aggregate_input = QCheckBox()
+        # The headline only titles a merge: a lone stockpile shows its type and name.
+        self.aggregate_input.toggled.connect(self.headline_input.setEnabled)
+        self.headline_input.setEnabled(False)
         form.addRow(self.aggregate_input)
 
     def retranslate(self) -> None:

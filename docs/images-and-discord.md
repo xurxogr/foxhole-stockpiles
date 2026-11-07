@@ -12,17 +12,20 @@ outputs can show the same data differently.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `headline` | name of the stockpile | Title of the image |
+| `headline` | `All Stockpiles` | Title of the image that merges the stockpiles of a send (`aggregate`) |
 | `language` | `en` | Language of the text of the image, which can differ from the one of the window |
 | `icon_mod` | `vanilla` | Mod of the template database whose icons replace those of the base game |
 | `font_path` | none | Font file tried before the fonts of the system |
 | `aggregate` | `false` | Draw all the stockpiles of a send as one, adding up their items |
 
 The `headline` and the Discord `message` accept these placeholders: `{name}`, `{type}`,
-`{hex}`, `{shard}`, `{ingame_timestamp}`, `{timestamp}`, `{resolution}`, `{item_count}`
+`{hex}`, `{ingame_timestamp}`, `{timestamp}`, `{resolution}`, `{item_count}`
 and `{total_items}`.
 
 A large stockpile is split into pages, each one a separate image.
+
+**Title.** The image of a single stockpile shows its type and name, as the game does:
+`Seaport - Public`, or the name of a reserve stockpile. Below it goes the hex.
 
 **Icons** come from the database in `scanner.database_path`. Without a database, or for
 an item the mod does not have, the image shows only the text.
@@ -37,7 +40,8 @@ translated. In the `{type}` placeholder too.
 
 **Merging.** With `aggregate`, crated and loose items stay apart. If the quantity of an
 item could not be read in one of the stockpiles, its total shows `?`, because a number would
-hide the stock that could not be read.
+hide the stock that could not be read. A send with a single stockpile is drawn as it is,
+with its own title.
 
 ## Image output
 

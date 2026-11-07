@@ -222,8 +222,8 @@
       "image_path_tooltip": "每张图片的保存位置。扩展名始终为 .png。\n\n支持与文件输出相同的占位符。",
       "image_path_required": "必须填写图片路径。",
       "image_headline": "标题：",
-      "image_headline_placeholder": "库存名称",
-      "image_headline_tooltip": "图片的标题。\n\n支持的占位符：\n{name}, {type}, {hex}, {shard}, {ingame_timestamp}, {timestamp}, {resolution}, {item_count}, {total_items}",
+      "image_headline_placeholder": "所有库存",
+      "image_headline_tooltip": "合并一次发送中所有库存的图片标题。\n单个库存显示其类型和名称，例如“海港 - 公共”。\n\n支持的占位符：\n{name}, {type}, {hex}, {ingame_timestamp}, {timestamp}, {resolution}, {item_count}, {total_items}",
       "image_icon_mod": "图标模组：",
       "image_icon_mod_tooltip": "模板数据库中的模组，其图标会替换基础游戏的图标。没有数据库时，图片只包含文字。",
       "image_font": "字体：",
@@ -314,6 +314,7 @@
   "stockpile_image": {
     "crates": "{category}（箱装）",
     "all_stockpiles": "所有库存",
+    "public": "公共",
     "no_items": "没有物品",
     "total": "总计：{quantity}",
     "categories": {

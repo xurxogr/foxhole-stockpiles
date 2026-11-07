@@ -222,8 +222,8 @@
       "image_path_tooltip": "Куда сохраняется каждое изображение. Расширение всегда .png.\n\nПринимаются те же заполнители, что и при выводе в файл.",
       "image_path_required": "Необходимо указать путь к изображению.",
       "image_headline": "Заголовок:",
-      "image_headline_placeholder": "Название склада",
-      "image_headline_tooltip": "Заголовок изображения.\n\nПоддерживаемые заполнители:\n{name}, {type}, {hex}, {shard}, {ingame_timestamp}, {timestamp}, {resolution}, {item_count}, {total_items}",
+      "image_headline_placeholder": "Все склады",
+      "image_headline_tooltip": "Заголовок изображения, объединяющего склады одной отправки.\nОдин склад показывает свой тип и имя, например «Морской порт - Общий».\n\nПоддерживаемые подстановки:\n{name}, {type}, {hex}, {ingame_timestamp}, {timestamp}, {resolution}, {item_count}, {total_items}",
       "image_icon_mod": "Мод значков:",
       "image_icon_mod_tooltip": "Мод базы шаблонов, значки которого заменяют значки базовой игры. Без базы данных изображение содержит только текст.",
       "image_font": "Шрифт:",
@@ -314,6 +314,7 @@
   "stockpile_image": {
     "crates": "{category} (ящики)",
     "all_stockpiles": "Все склады",
+    "public": "Общий",
     "no_items": "Нет предметов",
     "total": "Всего: {quantity}",
     "categories": {

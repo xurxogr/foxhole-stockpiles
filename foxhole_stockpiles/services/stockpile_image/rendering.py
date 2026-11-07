@@ -50,9 +50,4 @@ def render_stockpile(settings: StockpileImageSettings, stockpile: Stockpile) -> 
         font_selector=FontSelector(font_path=settings.font_path),
         icons=load_icons(database_path=get_settings().scanner.database_path, mod=settings.icon_mod),
     )
-    return renderer.render_png(
-        stockpile=stockpile,
-        headline=fill_stockpile_text(
-            settings=settings, template=settings.headline, stockpile=stockpile
-        ),
-    )
+    return renderer.render_png(stockpile)

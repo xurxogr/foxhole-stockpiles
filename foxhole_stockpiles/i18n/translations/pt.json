@@ -222,8 +222,8 @@
       "image_path_tooltip": "Onde cada imagem é guardada. A extensão é sempre .png.\n\nAceita os mesmos marcadores de uma saída para ficheiro.",
       "image_path_required": "O caminho da imagem é obrigatório.",
       "image_headline": "Título:",
-      "image_headline_placeholder": "Nome do stockpile",
-      "image_headline_tooltip": "Título da imagem.\n\nMarcadores aceites:\n{name}, {type}, {hex}, {shard}, {ingame_timestamp}, {timestamp}, {resolution}, {item_count}, {total_items}",
+      "image_headline_placeholder": "Todos os stockpiles",
+      "image_headline_tooltip": "Título da imagem que junta os stockpiles de um envio.\nUm único stockpile mostra o seu tipo e nome, como «Porto - Público».\n\nMarcadores suportados:\n{name}, {type}, {hex}, {ingame_timestamp}, {timestamp}, {resolution}, {item_count}, {total_items}",
       "image_icon_mod": "Mod de ícones:",
       "image_icon_mod_tooltip": "Mod da base de dados de modelos cujos ícones substituem os do jogo base. Sem base de dados, a imagem só tem texto.",
       "image_font": "Tipo de letra:",
@@ -314,6 +314,7 @@
   "stockpile_image": {
     "crates": "{category} (caixas)",
     "all_stockpiles": "Todos os stockpiles",
+    "public": "Público",
     "no_items": "Sem itens",
     "total": "Total: {quantity}",
     "categories": {

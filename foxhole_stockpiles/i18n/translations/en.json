@@ -222,8 +222,8 @@
       "image_path_tooltip": "Where each image is saved. The extension is always .png.\n\nIt accepts the same placeholders as a file output.",
       "image_path_required": "Image path is required.",
       "image_headline": "Headline:",
-      "image_headline_placeholder": "Name of the stockpile",
-      "image_headline_tooltip": "Title of the image.\n\nSupported placeholders:\n{name}, {type}, {hex}, {shard}, {ingame_timestamp}, {timestamp}, {resolution}, {item_count}, {total_items}",
+      "image_headline_placeholder": "All Stockpiles",
+      "image_headline_tooltip": "Title of the image that merges the stockpiles of a send.\nA single stockpile shows its type and name, such as \"Seaport - Public\".\n\nSupported placeholders:\n{name}, {type}, {hex}, {ingame_timestamp}, {timestamp}, {resolution}, {item_count}, {total_items}",
       "image_icon_mod": "Icon Mod:",
       "image_icon_mod_tooltip": "Mod of the template database whose icons replace those of the base game. Without a database, the image has text only.",
       "image_font": "Font:",
@@ -334,6 +334,7 @@
   "stockpile_image": {
     "crates": "{category} (crates)",
     "all_stockpiles": "All Stockpiles",
+    "public": "Public",
     "no_items": "No items",
     "total": "Total: {quantity}",
     "categories": {

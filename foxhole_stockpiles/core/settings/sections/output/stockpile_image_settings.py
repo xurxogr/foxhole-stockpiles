@@ -12,8 +12,9 @@ class StockpileImageSettings(BaseModel):
 
     headline: str | None = Field(
         description=(
-            "Title of the image, by default the name of the stockpile. Supports the "
-            "placeholders {name}, {type}, {hex}, {shard}, {ingame_timestamp}, "
+            "Title of the image that merges the stockpiles of a send, by default "
+            "'All Stockpiles'; one stockpile shows its type and name. Supports the "
+            "placeholders {name}, {type}, {hex}, {ingame_timestamp}, "
             "{timestamp}, {resolution}, {item_count} and {total_items}"
         ),
         default=None,

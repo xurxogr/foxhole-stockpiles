@@ -60,9 +60,7 @@ def _render(stockpile: Stockpile, icons: dict[Any, Image.Image] | None = None) -
         font_selector=FontSelector(),
         icons=icons or {},
     )
-    return [
-        Image.open(io.BytesIO(png)) for png in drawer.render_png(stockpile=stockpile, headline=None)
-    ]
+    return [Image.open(io.BytesIO(png)) for png in drawer.render_png(stockpile)]
 
 
 def _has_color(image: Image.Image, color: tuple[int, int, int]) -> bool:
@@ -150,13 +148,11 @@ def test_a_very_long_name_does_not_widen_the_image() -> None:
     assert _render(stockpile)[0].width == _render(_stockpile(count=1))[0].width
 
 
-def test_the_headline_can_be_given() -> None:
-    """A long one is shortened to fit, and does not change the size."""
-    drawer = StockpileImageRenderer(
-        text=ImageText(catalog=_Catalog(), language="en"), font_selector=FontSelector(), icons={}
-    )
+def test_a_long_title_is_shortened_to_fit() -> None:
+    """It does not change the size of the image."""
+    stockpile = Stockpile(name="H" * 500, type=StockpileType.SEAPORT, is_reserve=True)
 
-    assert drawer.render_png(stockpile=_stockpile(), headline="H" * 500)
+    assert _render(stockpile)[0].width == _render(_stockpile(count=1))[0].width
 
 
 def test_shorten_cuts_a_text_that_does_not_fit() -> None:
@@ -177,7 +173,7 @@ def _drawn_texts(stockpile: Stockpile, language: str = "en") -> list[str]:
         icons={},
     )
     with patch.object(drawer, "_text", wraps=drawer._text) as spy:
-        drawer.render_png(stockpile=stockpile, headline=None)
+        drawer.render_png(stockpile)
     return [call.kwargs["text"] for call in spy.call_args_list]
 
 
@@ -189,11 +185,25 @@ def test_an_unknown_type_is_not_drawn_under_the_title() -> None:
     assert not any("Undefined" in text for text in texts)
 
 
-def test_a_known_type_is_drawn_by_its_name_in_the_language_of_the_image() -> None:
-    """Not by the code of the game."""
-    stockpile = Stockpile(name="Depot", type=StockpileType.ENCAMPMENT, hex="Westgate")
+def test_a_public_stockpile_is_titled_by_its_type_as_the_game_does() -> None:
+    """Its type and "Public", in the language of the image, and the hex below."""
+    stockpile = Stockpile(name="Public", type=StockpileType.ENCAMPMENT, hex="Westgate")
 
-    assert "Feldlager · Westgate" in _drawn_texts(stockpile, language="de")
+    assert _drawn_texts(stockpile, language="de")[:2] == ["Feldlager - Öffentlich", "Westgate"]
+
+
+def test_a_reserve_stockpile_is_titled_by_its_type_and_name() -> None:
+    """The name is the one its owner gave it."""
+    stockpile = Stockpile(name="Depot", type=StockpileType.SEAPORT, is_reserve=True)
+
+    assert _drawn_texts(stockpile)[0] == "Seaport - Depot"
+
+
+def test_the_shard_is_not_drawn() -> None:
+    """Whoever reads the image already knows it."""
+    stockpile = Stockpile(name="Depot", type=StockpileType.SEAPORT, hex="Westgate", shard="ABLE")
+
+    assert not any("ABLE" in text for text in _drawn_texts(stockpile))
 
 
 def test_a_stockpile_without_name_or_known_type_has_no_title() -> None:
