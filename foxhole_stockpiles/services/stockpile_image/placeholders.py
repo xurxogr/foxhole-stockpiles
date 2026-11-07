@@ -3,9 +3,28 @@
 import re
 from typing import Final
 
+from foxhole_stockpiles.enums.hex import Hex
 from foxhole_stockpiles.models.stockpile import Stockpile
 
 _PLACEHOLDER: Final[re.Pattern[str]] = re.compile(r"\{(\w+)\}")
+
+
+def hex_name(hex_code: str | None) -> str:
+    """Get the name of a hex as players know it.
+
+    Args:
+        hex_code (str | None): The code of the game, such as ``HeartlandsHex``.
+
+    Returns:
+        str: Its name, such as ``Heartlands``, the code itself if it is not known,
+            or empty if there is none.
+    """
+    if not hex_code:
+        return ""
+    try:
+        return Hex(hex_code).display_name
+    except ValueError:
+        return hex_code
 
 
 def _build_values(stockpile: Stockpile, type_label: str) -> dict[str, str]:
@@ -21,7 +40,7 @@ def _build_values(stockpile: Stockpile, type_label: str) -> dict[str, str]:
     return {
         "name": stockpile.name or "",
         "type": type_label,
-        "hex": stockpile.hex or "",
+        "hex": hex_name(stockpile.hex),
         "ingame_timestamp": stockpile.ingame_timestamp or "",
         "timestamp": stockpile.timestamp.strftime("%Y-%m-%d %H:%M"),
         "resolution": stockpile.resolution or "",

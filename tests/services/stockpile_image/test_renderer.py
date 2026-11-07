@@ -199,6 +199,13 @@ def test_a_reserve_stockpile_is_titled_by_its_type_and_name() -> None:
     assert _drawn_texts(stockpile)[0] == "Seaport - Depot"
 
 
+def test_the_hex_is_drawn_by_its_name() -> None:
+    """Not by the code the game uses."""
+    stockpile = Stockpile(name="Depot", type=StockpileType.SEAPORT, hex="HeartlandsHex")
+
+    assert _drawn_texts(stockpile)[1] == "Heartlands"
+
+
 def test_the_shard_is_not_drawn() -> None:
     """Whoever reads the image already knows it."""
     stockpile = Stockpile(name="Depot", type=StockpileType.SEAPORT, hex="Westgate", shard="ABLE")

@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 from foxhole_stockpiles.models.stockpile import Stockpile
 from foxhole_stockpiles.models.stockpile_item import StockpileItem
-from foxhole_stockpiles.services.stockpile_image.placeholders import fill_template
+from foxhole_stockpiles.services.stockpile_image.placeholders import fill_template, hex_name
 
 
 def _stockpile() -> Stockpile:
@@ -50,3 +50,15 @@ def test_a_value_is_not_expanded_again() -> None:
     stockpile = Stockpile(name="{hex}", hex="Westgate")
 
     assert fill_template(template="{name}", stockpile=stockpile) == "{hex}"
+
+
+def test_the_hex_is_written_by_its_name() -> None:
+    """Not by the code the game uses."""
+    stockpile = Stockpile(hex="HeartlandsHex")
+
+    assert fill_template(template="{hex}", stockpile=stockpile) == "Heartlands"
+
+
+def test_an_unknown_hex_keeps_its_code() -> None:
+    """A new hex is not lost while the application does not know it."""
+    assert hex_name("NewHex") == "NewHex"

@@ -13,7 +13,7 @@ from foxhole_stockpiles.services.stockpile_image.fonts import Font
 from foxhole_stockpiles.services.stockpile_image.icons import ICON_SIZE, IconKey
 from foxhole_stockpiles.services.stockpile_image.image_text import ImageText
 from foxhole_stockpiles.services.stockpile_image.layout import build_pages
-from foxhole_stockpiles.services.stockpile_image.placeholders import total_quantity
+from foxhole_stockpiles.services.stockpile_image.placeholders import hex_name, total_quantity
 
 ROW_HEIGHT: Final[int] = 40
 
@@ -196,7 +196,7 @@ class StockpileImageRenderer:
         self._text(
             draw,
             xy=(_MARGIN, 54),
-            text=stockpile.hex or "",
+            text=hex_name(stockpile.hex),
             size=_SUBTITLE_SIZE,
             fill=_MUTED_TEXT,
             max_width=room,
