@@ -13,6 +13,8 @@ from foxhole_stockpiles.i18n import Translator, get_available_languages
 DEFAULT_LANGUAGE: Final[str] = "en"
 
 _KEYS: Final[str] = "stockpile_image"
+# Names from the game, copied by ``fs-tools import-display-names``.
+_TYPE_KEYS: Final[str] = "stockpile_types"
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +139,9 @@ class ImageText:
         """
         if not stockpile_type or stockpile_type == StockpileType.UNDEFINED:
             return ""
-        return self._lookup(key=f"types.{stockpile_type}", default=str(stockpile_type))
+        key = f"{_TYPE_KEYS}.{stockpile_type}"
+        name = self._translator.get(key)
+        return str(stockpile_type) if name == key else name
 
     def all_stockpiles(self) -> str:
         """Get the name of the merge of several stockpiles.

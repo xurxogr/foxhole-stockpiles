@@ -33,12 +33,19 @@ def _texts(language: str) -> dict[str, Any]:
     return result
 
 
+def _type_names(language: str) -> dict[str, str]:
+    data = json.loads((_TRANSLATIONS / f"{language}.json").read_text(encoding="utf-8"))
+    result: dict[str, str] = data["stockpile_types"]
+    return result
+
+
 @pytest.mark.parametrize("language", _LANGUAGES)
 def test_every_type_of_stockpile_has_a_name(language: str) -> None:
-    """A new type in the enum cannot be forgotten in a language."""
+    """A new type in the enum cannot be forgotten: import the names of the game again."""
     expected = {member.value for member in StockpileType} - {StockpileType.UNDEFINED.value}
 
-    assert set(_texts(language)["types"]) == expected
+    assert expected <= set(_type_names(language))
+    assert set(_type_names(language)) == set(_type_names("en"))
 
 
 @pytest.mark.parametrize("language", _LANGUAGES)
