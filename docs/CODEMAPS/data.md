@@ -62,7 +62,7 @@ The external `fs-ocr` exposes `StockpileScanner`, `ScanConfig`,
 
 | Enum | Values |
 |---|---|
-| `StockpileType` | ~28 in-game structures (Encampment, Keep, Safe House, Relic Base, Bunker T1/T2/T3, Border/Town T1/T2/T3, Underground Fortress, BMS Longhook/Bluefin, Storage Depot, Seaport, Aircraft Depot, Hospital, Refinery, Maintenance Tunnel, facility/factory types) + Undefined. Values are UE asset names |
+| `StockpileType` | ~42 in-game structures (Encampment, Keep, Safe House, Relic Base, Bunker T1/T2/T3, Border/Town T1/T2/T3, Underground Fortress, BMS Longhook/Bluefin, Storage Depot, Seaport, Aircraft Depot, Hospital, Refinery, Maintenance Tunnel, facility/factory types) + Undefined. Values are UE asset names |
 | `ItemFaction` | Colonials, Wardens, Neutral |
 | `ItemCategory` | 20+ (Ammo, AT Ammo, Weapons, … Vehicles) |
 | `SupportedResolution` | 16 (664px … 2880px) |

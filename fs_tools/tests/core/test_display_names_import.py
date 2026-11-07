@@ -104,12 +104,12 @@ def test_stockpiles_the_enum_lacks_are_imported_and_reported(
     tmp_path: Path, translations: Path
 ) -> None:
     """A save file can have them, and the enum may need them."""
-    source = _write(tmp_path / "names.json", [*_all_types(), _entry("SulfurMine", "Sulfur Mine")])
+    source = _write(tmp_path / "names.json", [*_all_types(), _entry("NewMine", "New Mine")])
 
     report = import_stockpile_names(display_names=source, translations_dir=translations)
 
-    assert report.not_in_enum == ["SulfurMine"]
-    assert _read(translations, "de")["stockpile_types"]["SulfurMine"] == "Sulfur Mine"
+    assert report.not_in_enum == ["NewMine"]
+    assert _read(translations, "de")["stockpile_types"]["NewMine"] == "New Mine"
 
 
 def test_a_type_of_the_enum_missing_from_the_extraction_fails(

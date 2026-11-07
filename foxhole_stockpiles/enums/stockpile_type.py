@@ -15,7 +15,12 @@ class StockpileType(StrEnum):
     ENCAMPMENT = "ForwardBase1"
     KEEP = "Keep"
     SAFE_HOUSE = "GarrisonStation"
+    SAFE_HOUSE_1 = "GarrisonStation1"
+    SAFE_HOUSE_2 = "GarrisonStation2"
+    SAFE_HOUSE_TOWN = "TownCLargeGarrisonGS1"
     RELIC_BASE = "RelicBase1"
+    RELIC_BASE_2 = "RelicBase2"
+    RELIC_BASE_3 = "RelicBase3"
     BUNKER_BASE_1 = "FortBaseT1"
     BUNKER_BASE_2 = "FortBaseT2"
     BUNKER_BASE_3 = "FortBaseT3"
@@ -26,6 +31,8 @@ class StockpileType(StrEnum):
     UNDERGROUND_FORTRESS = "FortGarrisonStation"
     BMS_LONGHOOK = "LargeShipBaseShip"
     BMS_BLUEFIN = "LargeShipStorageShip"
+    POSEIDON = "LargeShipAircraftC"
+    MERCY = "LargeShipBattleshipAircraftW"
 
     # Structures (in-game CodeNames)
     STORAGE_DEPOT = "StorageFacility"
@@ -42,12 +49,19 @@ class StockpileType(StrEnum):
     MAINTENANCE_TUNNEL = "MaintenanceTunnel"
     SMALL_ARMS_FACTORY = "FacilityFactorySmallArms"
     MODIFICATION_CENTER = "FacilityModificationCenter"
+    TRANSFER_CRATE = "FacilityTransferCrate"
     TRANSFER_LIQUID = "FacilityTransferLiquid"
     TRANSFER_MATERIAL = "FacilityTransferMaterial"
     TRANSFER_RESOURCE = "FacilityTransferResource"
     VEHICLE_FACTORY_1 = "FacilityVehicleFactory1"
     VEHICLE_FACTORY_2 = "FacilityVehicleFactory2"
     VEHICLE_FACTORY_3 = "FacilityVehicleFactory3"
+
+    # Mines (in-game CodeNames)
+    COMPONENT_MINE = "ComponentMine"
+    SALVAGE_MINE = "ScrapMine"
+    SULFUR_MINE = "SulfurMine"
+    OFFSHORE_PLATFORM = "FacilityMineOilRig"
 
     UNDEFINED = "Undefined"
 
@@ -79,9 +93,13 @@ class StockpileType(StrEnum):
 _TECH_TYPES: frozenset[str] = frozenset(
     {
         StockpileType.SAFE_HOUSE,
+        StockpileType.SAFE_HOUSE_2,
+        StockpileType.SAFE_HOUSE_TOWN,
         StockpileType.KEEP,
         StockpileType.BORDER_BASE,
         StockpileType.RELIC_BASE,
+        StockpileType.RELIC_BASE_2,
+        StockpileType.RELIC_BASE_3,
         StockpileType.ENCAMPMENT,
         StockpileType.TOWN_BASE_1,
         StockpileType.TOWN_BASE_2,
@@ -89,11 +107,6 @@ _TECH_TYPES: frozenset[str] = frozenset(
         StockpileType.BUNKER_BASE_1,
         StockpileType.BUNKER_BASE_2,
         StockpileType.BUNKER_BASE_3,
-        # Other CodeNames of the same bases, as reported by save files.
-        "GarrisonStation2",
-        "TownCLargeGarrisonGS1",
-        "RelicBase2",
-        "RelicBase3",
     }
 )
 
